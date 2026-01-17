@@ -1,0 +1,61 @@
+{
+  "chunking": {
+    "chunk_minutes": 5,
+    "max_runs": 1
+  },
+
+  "whisper": {
+    "model": "base",
+    "language": "pt",
+    "word_timestamps": true,
+    "condition_on_previous_text": false
+  },
+
+  "gemini": {
+    "api_keys": [
+      "GEMINI_KEY_1",
+      "GEMINI_KEY_2",
+      "GEMINI_KEY_3"
+    ],
+    "model": "models/gemini-1.5-pro",
+    "max_retries_per_key": 2,
+    "max_tokens": 1500
+  },
+
+  "prompt": {
+    "base": "You are a professional viral video editor. Based on the transcript excerpt below, identify the best moments for short-form videos.",
+    "instructions": [
+      "Each clip must be between 30 and 60 seconds",
+      "Focus on emotional, controversial, or insightful moments",
+      "Ignore boring parts",
+      "Return ONLY valid JSON",
+      "Include title and hashtags"
+    ]
+  },
+
+  "video": {
+    "min_clip_duration": 30,
+    "max_clip_duration": 60,
+    "aspect_ratio": "9:16",
+    "burn_subtitles": true,
+    "font_size": 48
+  },
+
+  "cover": {
+    "enabled": false,
+    "title": "THIS WILL CHANGE YOUR MIND",
+    "font": "Arial-Bold"
+  },
+
+  "paths": {
+    "input_videos": "videos/input",
+    "temp_audio": "temp/audio",
+    "temp_chunks": "temp/chunks",
+    "output_clips": "videos/output",
+    "logs": "logs/app.log"
+  },
+
+  "logging": {
+    "level": "INFO"
+  }
+}
