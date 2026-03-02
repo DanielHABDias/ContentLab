@@ -1,102 +1,83 @@
-# PyClips
-Ferramenta em python para criação de clips a partir de video de uma série, filme ou video longo.
+# 🎬 ContentLab
 
-# Configuração do FFmpeg
+**Descrição:**  
+ContentLab é uma plataforma para **criação automatizada de roteiros para vídeos**, geração de títulos, prompts para thumbnails, tags e futuramente gravação e aprimoramento de áudio. O usuário pode gerenciar seus roteiros e histórico de criação de forma rápida, prática e organizada.
 
-## Instalando o FFmpeg no Windows (guia rápido para README)
+---
 
-O FFmpeg é necessário para processamento de áudio e vídeo (MoviePy,
-Whisper, etc.).
+## 🔧 Tecnologias
 
-------------------------------------------------------------------------
+**Frontend:**  
+- [Next.js](https://nextjs.org/)  
+- [Material UI](https://mui.com/)  
 
-### 1) Baixar o FFmpeg
+**Backend:**  
+- [FastAPI](https://fastapi.tiangolo.com/)  
+- [LangGraph](https://www.langgraph.com/) para orquestração de LLMs  
+- RAG (Retrieval-Augmented Generation) para fornecer contexto aos roteiros  
 
-Acesse:
+**Banco de Dados:**  
+- [Supabase](https://supabase.com/) (PostgreSQL) para armazenamento de dados do usuário, roteiros, histórico e configurações do canal  
+- Suporte a vetores via extensão `pgvector` para armazenar embeddings de texto, permitindo buscas semânticas e RAG  
 
-https://www.gyan.dev/ffmpeg/builds/
+---
 
-Baixe o pacote:
+## 🏗 Arquitetura
 
-    ffmpeg-release-essentials.zip
+- **Frontend:** Next.js + Material UI  
+  - Tela de cadastro e configuração do canal do usuário  
+  - Dashboard com histórico dos roteiros criados  
+- **Backend:** FastAPI + LangGraph  
+  - API REST organizada em camadas:
+    1. **Controllers/Routes** – endpoints REST  
+    2. **Services** – lógica de criação de roteiros, títulos, prompts, tags  
+    3. **Repository/DB Layer** – comunicação com Supabase  
+- **RAG:** Utilizado para fornecer contexto dos roteiros existentes ao LLM, usando embeddings armazenados no Supabase  
 
-------------------------------------------------------------------------
+---
 
-### 2) Extrair os arquivos
+## ⚙️ Funcionalidades
 
-Extraia o conteúdo para uma pasta, por exemplo:
+1. Cadastro e configuração do canal do usuário  
+2. Geração automática de:
+   - Roteiro para vídeos longos ou curtos  
+   - Título e descrição do vídeo  
+   - Prompt para thumbnail  
+   - Tags relevantes  
+3. Dashboard com **histórico de roteiros criados**  
+4. Futuramente:
+   - Gravação de áudio via TTS  
+   - Aprimoramento do áudio gerado  
+   - Download de roteiros e áudio aprimorado  
 
-    C:\ffmpeg
+---
 
-Você deve ter:
+## 🗄 Banco de Dados (Supabase)
 
-    C:\ffmpeg\bin\ffmpeg.exe
+- **Tabelas principais:**
+  - `users` – dados do usuário  
+  - `channels` – informações do canal do usuário  
+  - `scripts` – roteiros gerados, títulos, prompts, tags  
+  - `history` – histórico de criação de roteiros  
 
-------------------------------------------------------------------------
+- **Vetores:**
+  - Supabase suporta a extensão `pgvector`  
+  - Permite armazenar embeddings de texto ou prompts  
+  - Facilita buscas semânticas e contextualização de novos roteiros  
 
-### 3) Adicionar ao PATH do Windows
+---
 
-1.  Abra **Configurações avançadas do sistema**
-2.  Clique em **Variáveis de Ambiente**
-3.  Em **Path**, clique em **Editar**
-4.  Clique em **Novo**
-5.  Adicione:
+## 🚀 Próximos passos
 
-```{=html}
-<!-- -->
-```
-    C:\ffmpeg\bin
+- Implementar frontend com Next.js + Material UI  
+- Criar endpoints da API REST no FastAPI  
+- Integrar LangGraph para gerar roteiros e prompts  
+- Implementar RAG utilizando embeddings armazenados no Supabase  
+- Criar dashboard com histórico e buscas inteligentes  
 
-6.  Confirme tudo.
+---
 
-------------------------------------------------------------------------
+## 📝 Observações
 
-### 4) Reiniciar o terminal/IDE
-
-Feche e abra novamente o terminal ou VS Code.
-
-------------------------------------------------------------------------
-
-### 5) Testar instalação
-
-No terminal, execute:
-
-``` bash
-ffmpeg -version
-```
-
-Se aparecer a versão do FFmpeg, está funcionando.
-
-------------------------------------------------------------------------
-
-### Alternativa (sem mexer no PATH)
-
-No Python, pode-se adicionar temporariamente:
-
-``` python
-import os
-os.environ["PATH"] += os.pathsep + r"C:\ffmpeg\bin"
-```
-
-------------------------------------------------------------------------
-
-### Problemas comuns
-
--   FFmpeg não adicionado ao PATH.
--   Terminal não reiniciado após alteração.
--   Caminho incorreto da pasta `bin`.
-
-------------------------------------------------------------------------
-
-# Como Rodar
-
-1) Habilitar a venv e instalar libs:
-    - Habilitar Scripts: Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
-    - Ativar venv: venv\Scripts\activate
-    - Instalar Libs: pip install -r requirements.txt
-
-2) Configurar o config.py.
-
-3) Baixar video .mp4 e adicionar ao diretório.
-
-4) Rodar o arquivo principal: python main.py
+- O projeto foi pensado para ser escalável, permitindo a adição de funcionalidades futuras sem impactar a arquitetura existente.  
+- O uso de vetores e RAG permite que o sistema lembre e melhore roteiros anteriores, tornando o processo de criação cada vez mais inteligente.
