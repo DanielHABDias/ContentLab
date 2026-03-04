@@ -1,6 +1,12 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
 import os
 
+class GeminiServiceError(Exception):
+    def __init__(self, status_code: int, message: str):
+        self.status_code = status_code
+        self.message = message
+        super().__init__(f"GeminiServiceError {status_code}: {message}")
+
 class GeminiService:
     def __init__(self):
         self.llm = ChatGoogleGenerativeAI(
@@ -9,4 +15,8 @@ class GeminiService:
         )
 
     def generate_text(self, prompt: str):
-        return self.llm.invoke(prompt).content
+        try:
+            response = self.llm.invoke(prompt).content
+        except Exception as e:
+            raise GeminiServiceError(500, f"Falha ao gerar texto: {str(e)}")
+        return response

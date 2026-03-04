@@ -1,9 +1,10 @@
 def video_metadata_prompt(
+    script: dict,
     context: str,
     tone: str,
     category: str,
     language: str,
-    video_type: str
+    type: str
 ) -> str:
     return f"""
     You are a YouTube SEO optimization expert.
@@ -11,11 +12,12 @@ def video_metadata_prompt(
     Your task is to generate optimized metadata for a YouTube video.
 
     VIDEO SETTINGS:
+    - Script content: {script.get('content', '')}
     - Context: {context}
     - Tone: {tone}
     - Category: {category}
     - Language: {language}
-    - Type: {video_type}
+    - Type: {type}
 
     TITLE RULES:
     - Highly clickable.

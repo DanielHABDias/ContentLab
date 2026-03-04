@@ -1,4 +1,5 @@
 def thumbnail_prompt(
+    script: dict,
     context: str,
     tone: str,
     category: str,
@@ -10,6 +11,7 @@ def thumbnail_prompt(
     Your task is to create a highly detailed AI image generation prompt in english for a cinematic YouTube thumbnail.
 
     VIDEO SETTINGS:
+    - Script content: {script.get('content', '')}
     - Context: {context}
     - Tone: {tone}
     - Category: {category}
@@ -34,6 +36,6 @@ def thumbnail_prompt(
     EXPECTED FORMAT:
 
     {{
-        "prompt": "highly detailed cinematic AI image prompt"
+        "thumbnail_prompt": "highly detailed cinematic AI image prompt"
     }}
     """

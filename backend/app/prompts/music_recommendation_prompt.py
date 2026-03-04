@@ -1,9 +1,10 @@
 def music_recommendation_prompt(
+    script: dict,
     context: str,
     tone: str,
     category: str,
     language: str,
-    video_type: str
+    type: str
 ) -> str:
     return f"""
     You are a YouTube soundtrack specialist.
@@ -11,11 +12,12 @@ def music_recommendation_prompt(
     Your task is to recommend royalty-free music suitable for a YouTube video.
 
     VIDEO SETTINGS:
+    - Script content: {script.get('content', '')}
     - Context: {context}
     - Tone: {tone}
     - Category: {category}
     - Language: {language}
-    - Type: {video_type}
+    - Type: {type}
 
     INSTRUCTIONS:
 
