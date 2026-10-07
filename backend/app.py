@@ -18,11 +18,13 @@ try:
     from .contentlab.errors import PlanValidationError
     from .contentlab.registry import describe_registry
     from .contentlab.service import validate_edit_plan
+    from .contentlab.project import inspect_project, render_project
 except ImportError:  # Suporte ao executável gerado pelo PyInstaller.
     import ffmpeg_helper
     from contentlab.errors import PlanValidationError
     from contentlab.registry import describe_registry
     from contentlab.service import validate_edit_plan
+    from contentlab.project import inspect_project, render_project
 
 
 def resource_path(relative):
@@ -45,6 +47,8 @@ def no_cache(response):
     return response
 
 JOBS = {}  # job_id -> dict(status, percent, message, error, filepath, folder)
+EDITOR_JOBS = {}
+EDITOR_JOBS_LOCK = threading.Lock()
 PREVIEWS = {}  # preview_id -> dict(url, headers)
 CACHE_LOCKS = {}  # cache_key -> threading.Lock()
 CACHE_LOCKS_GUARD = threading.Lock()
@@ -1169,6 +1173,70 @@ def editor_validate():
         return jsonify({"valid": False, "errors": exc.issues}), 422
 
 
+@app.route("/api/editor/project", methods=["POST"])
+def editor_project():
+    data = request.get_json(silent=True) or {}
+    try:
+        return jsonify(inspect_project(data.get("projectRoot")))
+    except PlanValidationError as exc:
+        return jsonify({"error": "Projeto inválido.", "errors": exc.issues}), 422
+
+
+def _run_editor_job(job_id, root, mode):
+    job = EDITOR_JOBS[job_id]
+
+    def on_progress(stage, current, total, scene_id):
+        job.update(percent=min(90, round(current / max(total, 1) * 90)), message=f"Renderizando cena {current}/{total}: {scene_id}")
+
+    try:
+        report = render_project(root, mode=mode, progress=on_progress)
+        job.update(status="done", percent=100, message="Render concluído.", report=report, filepath=report["output"])
+    except Exception as exc:
+        job.update(status="error", message="Falha no render.", error=str(exc))
+
+
+@app.route("/api/editor/render", methods=["POST"])
+def editor_render():
+    data = request.get_json(silent=True) or {}
+    mode = data.get("mode")
+    if mode not in {"preview", "final"}:
+        return jsonify({"error": "Modo deve ser preview ou final."}), 400
+    try:
+        project = inspect_project(data.get("projectRoot"))
+    except PlanValidationError as exc:
+        return jsonify({"error": "Projeto inválido.", "errors": exc.issues}), 422
+    if not project["validation"]["valid"]:
+        return jsonify({"error": "Há assets ausentes.", "validation": project["validation"]}), 422
+    root = project["projectRoot"]
+    with EDITOR_JOBS_LOCK:
+        if any(job["status"] == "running" and job["projectRoot"] == root for job in EDITOR_JOBS.values()):
+            return jsonify({"error": "Já existe um render em andamento para este projeto."}), 409
+        job_id = uuid.uuid4().hex
+        EDITOR_JOBS[job_id] = {"status": "running", "percent": 0, "message": "Preparando render...", "error": None, "projectRoot": root, "mode": mode, "filepath": None}
+    threading.Thread(target=_run_editor_job, args=(job_id, root, mode), daemon=True).start()
+    return jsonify({"jobId": job_id}), 202
+
+
+@app.route("/api/editor/jobs/<job_id>", methods=["GET"])
+def editor_job(job_id):
+    job = EDITOR_JOBS.get(job_id)
+    if not job:
+        return jsonify({"error": "Render não encontrado."}), 404
+    return jsonify(job)
+
+
+@app.route("/api/editor/media/<job_id>", methods=["GET"])
+def editor_media(job_id):
+    job = EDITOR_JOBS.get(job_id)
+    if not job or job["status"] != "done":
+        return jsonify({"error": "Vídeo ainda não disponível."}), 404
+    path = Path(job["filepath"]).resolve()
+    expected = Path(job["projectRoot"]) / "output" / job["mode"]
+    if expected.resolve() not in path.parents or not path.is_file():
+        return jsonify({"error": "Arquivo não encontrado."}), 404
+    return send_file(path, mimetype="video/mp4", conditional=True)
+
+
 def _shutdown_process(delay=0.6):
     """Encerra o processo inteiro depois de dar tempo da resposta HTTP chegar ao navegador.
 
@@ -1189,6 +1257,7 @@ def shutdown_app():
         job_id for job_id, job in JOBS.items()
         if job.get("status") == "running"
     ]
+    running.extend(job_id for job_id, job in EDITOR_JOBS.items() if job.get("status") == "running")
 
     if running and not force:
         return jsonify({

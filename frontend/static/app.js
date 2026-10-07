@@ -693,3 +693,99 @@ async function requestShutdown(force = false) {
 $("shutdownBtn").addEventListener("click", () => {
   requestShutdown(false);
 });
+
+// ---------- projeto de edição automática ----------
+let editorProject = null;
+let editorPoll = null;
+
+function editorError(message) {
+  $("editorError").textContent = message || "";
+  $("editorError").classList.toggle("hidden", !message);
+}
+
+function editorBusy(busy) {
+  $("editorPreview").disabled = busy || !editorProject?.validation?.valid;
+  $("editorFinal").disabled = busy || !editorProject?.validation?.valid;
+}
+
+$("editorChooseFolder").addEventListener("click", async () => {
+  try {
+    const res = await fetch("/api/choose-folder", { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Não foi possível escolher a pasta.");
+    if (data.folder) $("editorProjectRoot").value = data.folder;
+  } catch (error) { editorError(error.message); }
+});
+
+$("editorLoad").addEventListener("click", async () => {
+  editorError("");
+  $("editorDetails").classList.add("hidden");
+  editorProject = null;
+  try {
+    const res = await fetch("/api/editor/project", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ projectRoot: $("editorProjectRoot").value.trim() }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.errors?.map(item => item.message).join("; ") || data.error || "Projeto inválido.");
+    editorProject = data;
+    $("editorProjectName").textContent = data.name;
+    const validation = data.validation;
+    $("editorSummary").textContent = `${data.scenes.length} cena(s) · ${validation.duration}s · ${validation.resolution.width}×${validation.resolution.height} · ${validation.fps} FPS`;
+    $("editorScenes").replaceChildren();
+    for (const scene of data.scenes) {
+      const row = document.createElement("li");
+      row.textContent = `${scene.id}: ${scene.start}s–${scene.end}s · ${scene.elements} elemento(s)`;
+      $("editorScenes").appendChild(row);
+    }
+    if (!validation.valid) editorError(`Assets ausentes: ${validation.missingAssets.map(item => item.asset).join(", ")}`);
+    $("editorDetails").classList.remove("hidden");
+    $("editorStatus").textContent = "";
+    editorBusy(false);
+  } catch (error) { editorError(error.message); }
+});
+
+async function startEditorRender(mode) {
+  if (!editorProject || !editorProject.validation.valid) return;
+  editorError("");
+  editorBusy(true);
+  $("editorStatus").textContent = "Iniciando render...";
+  try {
+    const res = await fetch("/api/editor/render", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ projectRoot: editorProject.projectRoot, mode }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Não foi possível iniciar o render.");
+    if (editorPoll) clearInterval(editorPoll);
+    editorPoll = setInterval(async () => {
+      try {
+        const statusRes = await fetch(`/api/editor/jobs/${data.jobId}`);
+        const job = await statusRes.json();
+        if (!statusRes.ok) throw new Error(job.error || "Render não encontrado.");
+        $("editorStatus").textContent = `${job.message} ${job.percent || 0}%`;
+        if (job.status === "running") return;
+        clearInterval(editorPoll);
+        editorPoll = null;
+        editorBusy(false);
+        if (job.status === "error") throw new Error(job.error || "Render falhou.");
+        $("editorVideo").src = `/api/editor/media/${data.jobId}`;
+        $("editorVideo").classList.remove("hidden");
+        $("editorOutput").textContent = `Arquivo: ${job.filepath}`;
+        $("editorReport").textContent = JSON.stringify(job.report, null, 2);
+        $("editorReportDetails").classList.remove("hidden");
+      } catch (error) {
+        if (editorPoll) clearInterval(editorPoll);
+        editorPoll = null;
+        editorBusy(false);
+        editorError(error.message);
+      }
+    }, 1000);
+  } catch (error) {
+    editorBusy(false);
+    editorError(error.message);
+  }
+}
+
+$("editorPreview").addEventListener("click", () => startEditorRender("preview"));
+$("editorFinal").addEventListener("click", () => startEditorRender("final"));

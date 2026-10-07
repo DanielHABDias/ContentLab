@@ -216,6 +216,34 @@
       </div>
     </section>
 
+    <section class="block editor-project" aria-labelledby="editorHeading">
+      <h2 id="editorHeading">Editor automático</h2>
+      <p class="helper-text">Abra a pasta de um projeto com <code>edit_plan.json</code>. O preview é leve; o render final usa a resolução e o FPS do plano.</p>
+      <label class="block-label" for="editorProjectRoot">Pasta do projeto</label>
+      <div class="row">
+        <input id="editorProjectRoot" type="text" placeholder="/caminho/para/meu-projeto" autocomplete="off">
+        <button id="editorChooseFolder" class="btn btn-secondary" type="button">Escolher</button>
+        <button id="editorLoad" class="btn btn-primary" type="button">Carregar</button>
+      </div>
+      <p id="editorError" class="error-text hidden" role="alert"></p>
+      <div id="editorDetails" class="hidden">
+        <h3 id="editorProjectName"></h3>
+        <p id="editorSummary" class="helper-text"></p>
+        <ol id="editorScenes" class="editor-scenes"></ol>
+        <div class="editor-actions">
+          <button id="editorPreview" class="btn btn-secondary" type="button">Gerar preview</button>
+          <button id="editorFinal" class="btn btn-primary" type="button">Render final</button>
+        </div>
+        <p id="editorStatus" class="helper-text" role="status" aria-live="polite"></p>
+        <video id="editorVideo" class="editor-video hidden" controls playsinline preload="metadata"></video>
+        <p id="editorOutput" class="mono editor-output"></p>
+        <details id="editorReportDetails" class="hidden">
+          <summary>Relatório do render</summary>
+          <pre id="editorReport"></pre>
+        </details>
+      </div>
+    </section>
+
   </main>
 </div>
 

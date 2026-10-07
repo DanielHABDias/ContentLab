@@ -18,6 +18,7 @@ def build_parser():
     render.add_argument("plan")
     render.add_argument("--project-root")
     render.add_argument("--output-dir")
+    render.add_argument("--mode", choices=("rough", "final"), default="rough")
     commands.add_parser("plugins", help="Lista as capacidades registradas")
     return parser
 
@@ -28,7 +29,7 @@ def main(argv=None):
         if args.command == "plugins":
             result = describe_registry()
         elif args.command == "render":
-            result = render_edit_plan(args.plan, args.output_dir, args.project_root)
+            result = render_edit_plan(args.plan, args.output_dir, args.project_root, mode=args.mode)
         else:
             result = validate_edit_plan(args.plan, args.project_root)
         print(json.dumps(result, ensure_ascii=False, indent=2))

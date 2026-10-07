@@ -239,7 +239,9 @@ def _load_transcript(plan, project_root, warnings):
         return None
 
 
-def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None, runner=subprocess.run, progress=None):
+def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None, runner=subprocess.run, progress=None, mode="rough"):
+    if mode not in {"rough", "preview", "final"}:
+        raise ValueError("Modo de render inválido.")
     started = time.time()
     plan, timeline, narration, validation = prepare_edit_plan(source, project_root)
     if not validation["valid"]:
@@ -257,7 +259,7 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
 
     output_dir = Path(output_dir or (plan.source_path.parent / "output" if plan.source_path else Path.cwd() / "output")).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
-    output = output_dir / "rough_cut.mp4"
+    output = output_dir / {"rough": "rough_cut.mp4", "preview": "preview.mp4", "final": "final.mp4"}[mode]
     report_path = output_dir / "render_report.json"
     warnings = []
     actual_project_root = Path(project_root or (plan.source_path.parent if plan.source_path else Path.cwd())).resolve()
@@ -316,12 +318,12 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
 
             visual = _compose_visual(ffmpeg, segments, boundaries, segment_durations, timeline.duration, plan.project.fps, work, runner)
 
-            temp_output = work / "rough_cut.mp4"
+            temp_output = work / output.name
             applied_audio = _audio_mix(ffmpeg, visual, narration, plan, timeline, validation["resolvedAssets"], temp_output, runner)
             os.replace(temp_output, output)
 
         report = {
-            "status": "completed", "project": plan.project.name, "version": plan.version,
+            "status": "completed", "project": plan.project.name, "version": plan.version, "mode": mode,
             "output": str(output), "duration": timeline.duration, "scenes": len(timeline.scenes),
             "warnings": warnings, "transitions": applied_transitions, "audioLayers": applied_audio,
             "elapsedSeconds": round(time.time() - started, 3),

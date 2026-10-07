@@ -59,4 +59,4 @@
 4. Caption karaoke e preset Nox. **Implementado como caption ASS e vídeo em região sobre background.**
 5. Grid 3x3, boxes e motions. **Implementado com presets de entrada, idle e saída.**
 6. Transições, chroma, música/SFX e relatórios. **Implementado: plugins cut/fade/blur_left, chroma key, mixagem e relatório de camadas.**
-7. UI de projeto, preview e render final.
+7. UI de projeto, preview e render final. **Implementado: painel web, jobs assíncronos, preview reduzido e export final separado.**

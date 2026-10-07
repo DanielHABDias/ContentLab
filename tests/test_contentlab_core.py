@@ -2,6 +2,8 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
+from threading import Event
 
 from backend.contentlab.assets import AssetResolver
 from backend.contentlab.errors import PlanValidationError, UnsafeAssetPathError
@@ -12,6 +14,7 @@ from backend.contentlab.timeline import compile_timeline
 from backend.contentlab.layout import box_geometry, create_card_assets
 from backend.contentlab.motions import motion_filters, overlay_position
 from backend.contentlab.transitions import discover_transitions
+from backend.contentlab.project import inspect_project, render_project
 
 
 def valid_plan():
@@ -75,6 +78,68 @@ class AssetResolverTests(unittest.TestCase):
 
 
 class RendererTests(unittest.TestCase):
+    def test_project_preview_and_final_are_separate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "audio").mkdir()
+            (root / "images").mkdir()
+            (root / "bin").mkdir()
+            (root / "audio" / "narration.wav").touch()
+            (root / "images" / "a.png").touch()
+            (root / "bin" / "ffmpeg").touch()
+            (root / "edit_plan.json").write_text(json.dumps(valid_plan()), encoding="utf-8")
+            self.assertEqual(inspect_project(str(root))["name"], "teste")
+            commands = []
+
+            class Result:
+                returncode = 0
+                stderr = ""
+                stdout = ""
+
+            def fake_runner(command, **kwargs):
+                commands.append(command)
+                Path(command[-1]).touch()
+                return Result()
+
+            preview = render_project(str(root), "preview", ffmpeg_dir=root / "bin", runner=fake_runner)
+            final = render_project(str(root), "final", ffmpeg_dir=root / "bin", runner=fake_runner)
+            self.assertTrue(preview["output"].endswith("/output/preview/preview.mp4"))
+            self.assertTrue(final["output"].endswith("/output/final/final.mp4"))
+            self.assertEqual(preview["mode"], "preview")
+            self.assertEqual(final["mode"], "final")
+            self.assertTrue(any("960x540" in str(part) for part in commands[0]))
+
+    def test_editor_api_loads_project_and_serves_completed_render(self):
+        from backend.app import app, EDITOR_JOBS
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "audio").mkdir()
+            (root / "images").mkdir()
+            (root / "audio" / "narration.wav").touch()
+            (root / "images" / "a.png").touch()
+            (root / "edit_plan.json").write_text(json.dumps(valid_plan()), encoding="utf-8")
+            output = root / "output" / "preview" / "preview.mp4"
+            output.parent.mkdir(parents=True)
+            output.write_bytes(b"test-video")
+            finished = Event()
+
+            def fake_render(*args, **kwargs):
+                finished.set()
+                return {"status": "completed", "output": str(output), "mode": "preview"}
+
+            client = app.test_client()
+            self.assertEqual(client.post("/api/editor/project", json={"projectRoot": str(root)}).status_code, 200)
+            with patch("backend.app.render_project", fake_render):
+                response = client.post("/api/editor/render", json={"projectRoot": str(root), "mode": "preview"})
+                self.assertEqual(response.status_code, 202)
+                self.assertTrue(finished.wait(2))
+            job_id = response.get_json()["jobId"]
+            self.assertEqual(client.get(f"/api/editor/jobs/{job_id}").get_json()["status"], "done")
+            media = client.get(f"/api/editor/media/{job_id}")
+            self.assertEqual(media.data, b"test-video")
+            media.close()
+            EDITOR_JOBS.pop(job_id, None)
+
     def test_phase6_routes_transitions_and_audio_to_ffmpeg(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

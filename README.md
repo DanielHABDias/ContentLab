@@ -65,6 +65,7 @@ Valide um plano de edição ou liste as capacidades registradas:
 python -m backend.contentlab.cli validate examples/minimal-edit-plan.json
 python -m backend.contentlab.cli plugins
 python -m backend.contentlab.cli render caminho/para/edit_plan.json
+python -m backend.contentlab.cli render caminho/para/edit_plan.json --mode final
 ```
 
 O primeiro comando também verifica a existência da narração e dos assets. Um
@@ -99,8 +100,16 @@ silencioso. `audio.music` suporta `trimDb`, `fadeIn` e `fadeOut`; elementos
 `config.similarity` e `config.blend`. O relatório lista as transições e
 camadas de áudio aplicadas, além de avisos.
 
-Transições diferentes de `cut`, `sourceCuts`, música e SFX aparecem como warnings no relatório até suas fases de render
-correspondentes serem implementadas.
+`sourceCuts` ainda aparece como aviso: o recorte da narração de origem não é
+aplicado pelo renderer atual.
+
+Na interface, a seção **Editor automático** abre uma pasta contendo
+`edit_plan.json`, mostra a timeline e verifica assets antes de iniciar o
+render. **Gerar preview** usa no máximo 960 px no maior lado e 15 FPS,
+salvando em `output/preview/preview.mp4`. **Render final** respeita a
+resolução e o FPS do plano e salva em `output/final/final.mp4`. Cada modo
+possui seu próprio `render_report.json`; a prévia pode ser reproduzida na
+página. Um projeto não executa dois renders simultâneos.
 
 A interface chama a API Flask no mesmo endereço, portanto não há etapa de
 compilação para o frontend.
