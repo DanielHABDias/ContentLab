@@ -43,6 +43,8 @@ class ResolvedScene:
     end: float
     transition_out: str
     elements: Tuple[ResolvedElement, ...]
+    background: Mapping[str, Any] = field(default_factory=dict)
+    background_path: Optional[Path] = None
 
 
 @dataclass(frozen=True)

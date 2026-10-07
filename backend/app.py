@@ -398,13 +398,18 @@ def ensure_transcript(job, url, common_opts, ffmpeg_dir, model_name="small"):
         beam_size=5,
         vad_filter=True,
         condition_on_previous_text=True,
+        word_timestamps=True,
     )
     segments = []
     for seg in seg_iter:
         text = (seg.text or "").strip()
         if not text:
             continue
-        segments.append({"start": float(seg.start), "end": float(seg.end), "text": text})
+        words = [
+            {"word": word.word.strip(), "start": float(word.start), "end": float(word.end)}
+            for word in (seg.words or []) if word.word and word.start is not None and word.end is not None
+        ]
+        segments.append({"start": float(seg.start), "end": float(seg.end), "text": text, "words": words})
 
     data = {
         "model": model_name,

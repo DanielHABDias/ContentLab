@@ -6,6 +6,8 @@ from pathlib import Path
 from backend.contentlab.assets import AssetResolver
 from backend.contentlab.errors import PlanValidationError, UnsafeAssetPathError
 from backend.contentlab.parser import parse_edit_plan
+from backend.contentlab.render import render_edit_plan
+from backend.contentlab.text import build_scene_ass, transcript_words
 from backend.contentlab.timeline import compile_timeline
 
 
@@ -54,6 +56,65 @@ class AssetResolverTests(unittest.TestCase):
             resolver = AssetResolver(root, root / "builtin")
             with self.assertRaises(UnsafeAssetPathError):
                 resolver.resolve("project://../secret.txt")
+
+
+class RendererTests(unittest.TestCase):
+    def test_builds_rough_cut_and_report_with_argument_lists(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "audio").mkdir()
+            (root / "images").mkdir()
+            (root / "bin").mkdir()
+            (root / "audio" / "narration.wav").touch()
+            (root / "images" / "a.png").touch()
+            (root / "bin" / "ffmpeg").touch()
+            data = valid_plan()
+            plan_path = root / "edit_plan.json"
+            plan_path.write_text(json.dumps(data), encoding="utf-8")
+            commands = []
+
+            class Result:
+                returncode = 0
+                stderr = ""
+                stdout = ""
+
+            def fake_runner(command, **kwargs):
+                commands.append(command)
+                Path(command[-1]).touch()
+                return Result()
+
+            report = render_edit_plan(
+                plan_path, output_dir=root / "output", ffmpeg_dir=root / "bin", runner=fake_runner
+            )
+            self.assertEqual(report["status"], "completed")
+            self.assertTrue((root / "output" / "rough_cut.mp4").is_file())
+            self.assertTrue((root / "output" / "render_report.json").is_file())
+            self.assertEqual(len(commands), 3)
+            self.assertTrue(all(isinstance(command, list) for command in commands))
+
+
+class TextRendererTests(unittest.TestCase):
+    def test_expands_segment_timestamps_into_words(self):
+        words = transcript_words({"segments": [{"start": 1, "end": 3, "text": "duas palavras"}]})
+        self.assertEqual([item["word"] for item in words], ["duas", "palavras"])
+        self.assertEqual(words[0]["start"], 1)
+        self.assertEqual(words[-1]["end"], 3)
+
+    def test_writes_static_and_kinetic_ass_events(self):
+        data = valid_plan()
+        data["timeline"][0]["elements"] = [
+            {"type": "text", "text": "FASE 2", "style": "impact", "start": 0, "end": 1},
+            {"type": "kinetic_text", "text": "texto em movimento", "style": "word_pop", "sync": "transcript", "start": 1, "end": 3, "emphasis": ["movimento"]},
+        ]
+        timeline = compile_timeline(parse_edit_plan(data))
+        with tempfile.TemporaryDirectory() as directory:
+            ass_path = Path(directory) / "scene.ass"
+            count, warnings = build_scene_ass(timeline.scenes[0], timeline.project, None, ass_path)
+            content = ass_path.read_text(encoding="utf-8-sig")
+            self.assertEqual(count, 4)
+            self.assertIn("FASE 2", content)
+            self.assertIn("movimento", content)
+            self.assertTrue(any(item["code"] == "kinetic_text_timing_fallback" for item in warnings))
 
 
 if __name__ == "__main__":

@@ -53,9 +53,9 @@
 
 ## Plano incremental
 
-1. Parser, schema, resolver, registry, compiler e CLI.
-2. Render mínimo de imagem/vídeo com cortes secos.
-3. Texto e kinetic text.
+1. Parser, schema, resolver, registry, compiler e CLI. **Implementado.**
+2. Render mínimo de imagem/vídeo com cortes secos. **Implementado via CLI.**
+3. Texto e kinetic text. **Implementado com ASS/libass e word timestamps.**
 4. Caption karaoke e preset Nox.
 5. Grid 3x3, boxes e motions.
 6. Transições, chroma, música/SFX e relatórios.

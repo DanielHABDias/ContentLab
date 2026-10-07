@@ -10,3 +10,7 @@ class PlanValidationError(ContentLabError):
 
 class UnsafeAssetPathError(ContentLabError):
     """Uma URI tentou escapar da raiz autorizada."""
+
+
+class RenderError(ContentLabError):
+    """O backend de render não conseguiu produzir a saída."""

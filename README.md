@@ -64,11 +64,22 @@ Valide um plano de edição ou liste as capacidades registradas:
 ```bash
 python -m backend.contentlab.cli validate examples/minimal-edit-plan.json
 python -m backend.contentlab.cli plugins
+python -m backend.contentlab.cli render caminho/para/edit_plan.json
 ```
 
 O primeiro comando também verifica a existência da narração e dos assets. Um
 plano estruturalmente correto pode retornar código 2 enquanto os arquivos do
 projeto exemplo ainda não tiverem sido adicionados.
+
+O renderer inicial gera `output/rough_cut.mp4` e `output/render_report.json`.
+Ele executa imagens, vídeos, fundos sólidos, cortes secos, narração, texto de
+impacto e `kinetic_text` palavra por palavra. Quando a transcrição possui word
+timestamps eles são usados diretamente; caches antigos com timestamps por
+segmento recebem uma distribuição determinística das palavras.
+
+Grid com múltiplos elementos, transições diferentes de `cut`, `sourceCuts`,
+música e SFX aparecem como warnings no relatório até suas fases de render
+correspondentes serem implementadas.
 
 A interface chama a API Flask no mesmo endereço, portanto não há etapa de
 compilação para o frontend.

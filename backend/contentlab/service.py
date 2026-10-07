@@ -22,7 +22,7 @@ def _asset_uris(plan):
     return list(dict.fromkeys(uris))
 
 
-def validate_edit_plan(source, project_root=None, builtin_root=None):
+def prepare_edit_plan(source, project_root=None, builtin_root=None):
     plan = load_edit_plan(source) if isinstance(source, (str, Path)) else parse_edit_plan(source)
     project_root = Path(project_root or (plan.source_path.parent if plan.source_path else Path.cwd())).resolve()
     builtin_root = Path(builtin_root or Path(__file__).resolve().parents[2] / "builtin-assets").resolve()
@@ -51,7 +51,7 @@ def validate_edit_plan(source, project_root=None, builtin_root=None):
         raise PlanValidationError(issues)
 
     timeline = compile_timeline(plan, resolved, DEFAULT_REGISTRY)
-    return {
+    report = {
         "valid": not missing,
         "version": plan.version,
         "project": plan.project.name,
@@ -63,3 +63,8 @@ def validate_edit_plan(source, project_root=None, builtin_root=None):
         "missingAssets": missing,
         "resolvedAssets": resolved,
     }
+    return plan, timeline, narration, report
+
+
+def validate_edit_plan(source, project_root=None, builtin_root=None):
+    return prepare_edit_plan(source, project_root, builtin_root)[3]

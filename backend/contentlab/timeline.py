@@ -62,6 +62,11 @@ def compile_timeline(plan, resolved_assets=None, registry=DEFAULT_REGISTRY):
         scenes.append(ResolvedScene(
             id=scene["id"], start=float(scene["start"]), end=float(scene["end"]),
             transition_out=transition, elements=tuple(sorted(elements, key=lambda item: item.z)),
+            background=scene.get("background", {}),
+            background_path=(
+                Path(resolved_assets[scene["background"]["asset"]])
+                if scene.get("background", {}).get("asset") in resolved_assets else None
+            ),
         ))
     if issues:
         raise PlanValidationError(issues)
