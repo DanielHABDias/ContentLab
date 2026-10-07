@@ -15,6 +15,7 @@ from backend.contentlab.layout import box_geometry, create_card_assets
 from backend.contentlab.motions import motion_filters, overlay_position
 from backend.contentlab.transitions import discover_transitions
 from backend.contentlab.project import inspect_project, render_project
+from backend.contentlab.audio import remap_transcript
 
 
 def valid_plan():
@@ -31,6 +32,12 @@ def valid_plan():
 
 
 class ParserTests(unittest.TestCase):
+    def test_rejects_overlapping_narration_cuts(self):
+        data = valid_plan()
+        data["audio"]["sourceCuts"] = [{"start": 0, "end": 2}, {"start": 1, "end": 3}]
+        with self.assertRaises(PlanValidationError):
+            parse_edit_plan(data)
+
     def test_phase6_plugin_registry_and_audio_validation(self):
         self.assertEqual(set(discover_transitions()), {"cut", "fade", "blur_left"})
         data = valid_plan()
@@ -78,6 +85,16 @@ class AssetResolverTests(unittest.TestCase):
 
 
 class RendererTests(unittest.TestCase):
+    def test_remaps_transcript_to_cleaned_narration(self):
+        transcript = {"words": [
+            {"word": "um", "start": 0.2, "end": 0.5},
+            {"word": "removido", "start": 1.2, "end": 1.6},
+            {"word": "dois", "start": 2.2, "end": 2.5},
+        ]}
+        mapped = remap_transcript(transcript, [{"start": 0, "end": 1}, {"start": 2, "end": 3}])
+        self.assertEqual([word["word"] for word in mapped["words"]], ["um", "dois"])
+        self.assertAlmostEqual(mapped["words"][1]["start"], 1.2)
+
     def test_project_preview_and_final_are_separate(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -107,7 +124,7 @@ class RendererTests(unittest.TestCase):
             self.assertTrue(final["output"].endswith("/output/final/final.mp4"))
             self.assertEqual(preview["mode"], "preview")
             self.assertEqual(final["mode"], "final")
-            self.assertTrue(any("960x540" in str(part) for part in commands[0]))
+            self.assertTrue(any("960x540" in str(part) for command in commands for part in command))
 
     def test_editor_api_loads_project_and_serves_completed_render(self):
         from backend.app import app, EDITOR_JOBS
@@ -170,9 +187,13 @@ class RendererTests(unittest.TestCase):
 
             report = render_edit_plan(data, output_dir=root / "output", project_root=root, ffmpeg_dir=root / "bin", runner=fake_runner)
             self.assertEqual(report["transitions"][0]["type"], "fade")
+            self.assertTrue(report["ducking"]["enabled"])
             self.assertEqual([layer["type"] for layer in report["audioLayers"]], ["music", "sfx"])
             self.assertTrue(any("xfade=transition=fade" in str(part) for command in commands for part in command))
             self.assertTrue(any("amix=inputs=3" in str(part) for command in commands for part in command))
+            self.assertTrue(any("sidechaincompress" in str(part) for command in commands for part in command))
+            self.assertTrue(any("loudnorm" in str(part) for command in commands for part in command))
+            self.assertTrue(any("alimiter" in str(part) for command in commands for part in command))
 
     def test_builds_rough_cut_and_report_with_argument_lists(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -202,9 +223,11 @@ class RendererTests(unittest.TestCase):
                 plan_path, output_dir=root / "output", ffmpeg_dir=root / "bin", runner=fake_runner
             )
             self.assertEqual(report["status"], "completed")
+            self.assertFalse(report["ducking"]["enabled"])
+            self.assertTrue(report["narration"]["normalization"]["enabled"])
             self.assertTrue((root / "output" / "rough_cut.mp4").is_file())
             self.assertTrue((root / "output" / "render_report.json").is_file())
-            self.assertEqual(len(commands), 3)
+            self.assertEqual(len(commands), 4)
             self.assertTrue(all(isinstance(command, list) for command in commands))
 
     def test_three_columns_assigns_visual_regions_and_card_assets(self):

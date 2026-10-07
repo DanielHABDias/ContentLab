@@ -1,0 +1,17 @@
+{
+  "version": "0.1",
+  "project": {"name": "audio-phase8", "format": "custom", "profile": "generic", "resolution": {"width": 640, "height": 360}, "fps": 30},
+  "audio": {
+    "narration": "audio/narration.wav",
+    "sourceCuts": [{"start": 0, "end": 1}, {"start": 2, "end": 4}],
+    "voice": {"normalize": true, "targetLufs": -16, "truePeakDb": -1.5, "highpassHz": 70, "trimDb": 0},
+    "ducking": {"enabled": true, "threshold": 0.02, "ratio": 6, "attackMs": 40, "releaseMs": 350},
+    "music": [{"asset": "project://audio/music.wav", "start": 0, "end": 3, "preset": "subtle", "fadeIn": 0.3, "fadeOut": 0.4}]
+  },
+  "timeline": [
+    {"id": "audio-demo", "start": 0, "end": 3, "background": {"color": "#162438"}, "elements": [
+      {"type": "text", "text": "FASE 8 — ÁUDIO", "style": "impact", "start": 0, "end": 3},
+      {"type": "sfx", "asset": "project://audio/impact.wav", "at": 1.5, "config": {"preset": "subtle", "duration": 0.25}}
+    ]}
+  ]
+}

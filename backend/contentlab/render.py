@@ -11,6 +11,7 @@ from .text import build_scene_ass
 from .layout import box_geometry, create_card_assets
 from .motions import motion_filters, overlay_position
 from .transitions import discover_transitions
+from .audio import prepare_narration, remap_transcript
 
 
 def _creation_flags():
@@ -189,33 +190,57 @@ def _audio_mix(ffmpeg, visual, narration, plan, timeline, resolved_assets, outpu
             if element.type == "sfx":
                 sources.append((element.data, str(element.asset_path), "sfx", element.start, min(duration, element.start + float(element.data.get("config", {}).get("duration", 10)))))
     command = [ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-i", str(visual), "-i", str(narration)]
-    graph = [f"[1:a]apad,atrim=0:{duration},asetpts=PTS-STARTPTS[narration]"]
-    labels = ["[narration]"]
+    voice_trim = float(plan.audio.get("voice", {}).get("trimDb", 0))
+    graph = [f"[1:a]apad,atrim=0:{duration},asetpts=PTS-STARTPTS,volume={voice_trim:g}dB[voice]"]
+    music_labels = []
+    sfx_labels = []
     applied = []
+    input_index = 2
     for item, path, kind, start, end in sources:
         if end <= start or start >= duration:
             continue
         command += (["-stream_loop", "-1"] if kind == "music" else []) + ["-i", str(path)]
-        input_index = 2 + len(applied)
         length = min(end, duration) - start
-        trim_db = float(item.get("trimDb", item.get("config", {}).get("trimDb", -18 if kind == "music" else -6)))
-        filters = [f"atrim=0:{length:.6f}", "asetpts=PTS-STARTPTS", f"volume={trim_db}dB"]
-        fade_in = min(float(item.get("fadeIn", 0)), length)
-        fade_out = min(float(item.get("fadeOut", 0)), length)
+        preset = item.get("preset", item.get("config", {}).get("preset", "normal"))
+        presets = {"music": {"subtle": -22, "normal": -18, "present": -12, "music_only": -6}, "sfx": {"subtle": -12, "normal": -6, "strong": 0}}
+        trim_db = float(item.get("trimDb", item.get("config", {}).get("trimDb", presets[kind].get(preset, presets[kind]["normal"]))))
+        filters = [f"atrim=0:{length:.6f}", "asetpts=PTS-STARTPTS", "loudnorm=I=-16:TP=-1.5:LRA=11", "aresample=48000", "aformat=sample_rates=48000:channel_layouts=stereo", f"volume={trim_db:g}dB"]
+        fade_in = min(float(item.get("fadeIn", item.get("config", {}).get("fadeIn", 0))), length)
+        fade_out = min(float(item.get("fadeOut", item.get("config", {}).get("fadeOut", 0))), length)
         if fade_in:
             filters.append(f"afade=t=in:st=0:d={fade_in:.6f}")
         if fade_out:
             filters.append(f"afade=t=out:st={length - fade_out:.6f}:d={fade_out:.6f}")
         filters.append(f"adelay={round(start * 1000)}:all=1")
+        filters += ["apad", f"atrim=0:{duration}"]
         label = f"audio{input_index}"
         graph.append(f"[{input_index}:a]{','.join(filters)}[{label}]")
-        labels.append(f"[{label}]")
-        applied.append({"type": kind, "asset": item["asset"], "start": start, "end": min(end, duration), "trimDb": trim_db})
-    if len(labels) > 1:
-        graph.append("".join(labels) + f"amix=inputs={len(labels)}:duration=longest:normalize=0,atrim=0:{duration}[mix]")
-        audio_map = "[mix]"
+        (music_labels if kind == "music" else sfx_labels).append(f"[{label}]")
+        applied.append({"type": kind, "asset": item["asset"], "start": start, "end": min(end, duration), "trimDb": trim_db, "preset": preset, "normalized": True, "fadeIn": fade_in, "fadeOut": fade_out})
+        input_index += 1
+    mix_labels = []
+    ducking = plan.audio.get("ducking", {})
+    ducking_enabled = bool(music_labels) and ducking.get("enabled", True)
+    if music_labels:
+        if len(music_labels) == 1:
+            graph.append(f"{music_labels[0]}anull[musicbed]")
+        else:
+            graph.append("".join(music_labels) + f"amix=inputs={len(music_labels)}:duration=longest:normalize=0[musicbed]")
+        if ducking_enabled:
+            graph.append("[voice]asplit=2[voice_mix][voice_side]")
+            threshold = float(ducking.get("threshold", 0.02))
+            ratio = float(ducking.get("ratio", 6))
+            attack = float(ducking.get("attackMs", 40))
+            release = float(ducking.get("releaseMs", 350))
+            graph.append(f"[musicbed][voice_side]sidechaincompress=threshold={threshold:g}:ratio={ratio:g}:attack={attack:g}:release={release:g}[ducked]")
+            mix_labels = ["[voice_mix]", "[ducked]"]
+        else:
+            mix_labels = ["[voice]", "[musicbed]"]
     else:
-        audio_map = "[narration]"
+        mix_labels = ["[voice]"]
+    mix_labels += sfx_labels
+    graph.append("".join(mix_labels) + f"amix=inputs={len(mix_labels)}:duration=longest:normalize=0,alimiter=limit=0.95,atrim=0:{duration}[mix]")
+    audio_map = "[mix]"
     command += ["-filter_complex", ";".join(graph), "-map", "0:v:0", "-map", audio_map, "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-t", str(duration), str(output)]
     _run(command, runner)
     return applied
@@ -264,12 +289,16 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
     warnings = []
     actual_project_root = Path(project_root or (plan.source_path.parent if plan.source_path else Path.cwd())).resolve()
     transcript = _load_transcript(plan, actual_project_root, warnings)
-    if plan.audio.get("sourceCuts"):
-        warnings.append({"code": "source_cuts_not_applied", "message": "sourceCuts será implementado na fase de áudio."})
+    transcript = remap_transcript(transcript, plan.audio.get("sourceCuts", []))
 
     try:
         with tempfile.TemporaryDirectory(prefix="contentlab-render-", dir=output_dir) as work:
             work = Path(work)
+            cleaned_temp = work / "narration.cleaned.wav"
+            narration_report = prepare_narration(
+                ffmpeg, narration, cleaned_temp, plan.audio,
+                lambda command: _run(command, runner),
+            )
             segments = []
             segment_durations = []
             boundaries = []
@@ -319,13 +348,25 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
             visual = _compose_visual(ffmpeg, segments, boundaries, segment_durations, timeline.duration, plan.project.fps, work, runner)
 
             temp_output = work / output.name
-            applied_audio = _audio_mix(ffmpeg, visual, narration, plan, timeline, validation["resolvedAssets"], temp_output, runner)
+            applied_audio = _audio_mix(ffmpeg, visual, cleaned_temp, plan, timeline, validation["resolvedAssets"], temp_output, runner)
             os.replace(temp_output, output)
+            cleaned_output = output_dir / "narration.cleaned.wav"
+            os.replace(cleaned_temp, cleaned_output)
+            narration_report["path"] = str(cleaned_output)
 
         report = {
             "status": "completed", "project": plan.project.name, "version": plan.version, "mode": mode,
             "output": str(output), "duration": timeline.duration, "scenes": len(timeline.scenes),
             "warnings": warnings, "transitions": applied_transitions, "audioLayers": applied_audio,
+            "narration": narration_report,
+            "ducking": {
+                "threshold": plan.audio.get("ducking", {}).get("threshold", 0.02),
+                "ratio": plan.audio.get("ducking", {}).get("ratio", 6),
+                "attackMs": plan.audio.get("ducking", {}).get("attackMs", 40),
+                "releaseMs": plan.audio.get("ducking", {}).get("releaseMs", 350),
+                "enabled": bool(any(layer["type"] == "music" for layer in applied_audio)) and plan.audio.get("ducking", {}).get("enabled", True),
+            },
+            "limiter": {"enabled": True, "limit": 0.95},
             "elapsedSeconds": round(time.time() - started, 3),
         }
         report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")

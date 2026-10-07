@@ -45,9 +45,13 @@ def _semantic_issues(data):
                 rectangle = {row * 3 + col + 1 for row in rows for col in cols}
                 if set(cells) != rectangle:
                     issues.append({"path": f"{epath}.cells", "message": "As células devem formar um retângulo contínuo."})
+    previous_cut_end = 0.0
     for index, cut in enumerate(data.get("audio", {}).get("sourceCuts", [])):
         if cut["end"] <= cut["start"]:
             issues.append({"path": f"audio.sourceCuts.{index}", "message": "O corte deve terminar depois de começar."})
+        if cut["start"] < previous_cut_end:
+            issues.append({"path": f"audio.sourceCuts.{index}", "message": "Cortes da narração devem estar ordenados e não podem se sobrepor."})
+        previous_cut_end = max(previous_cut_end, cut["end"])
     for index, music in enumerate(data.get("audio", {}).get("music", [])):
         if music["end"] <= music["start"]:
             issues.append({"path": f"audio.music.{index}", "message": "A música deve terminar depois de começar."})
@@ -66,6 +70,13 @@ def _semantic_issues(data):
                 value = element["config"]["duration"]
                 if not isinstance(value, (int, float)) or value <= 0:
                     issues.append({"path": f"timeline.{scene_index}.elements.{element_index}.config.duration", "message": "Duração do SFX deve ser positiva."})
+            if element["type"] == "sfx":
+                config = element.get("config", {})
+                for key in ("fadeIn", "fadeOut"):
+                    if key in config and (not isinstance(config[key], (int, float)) or config[key] < 0):
+                        issues.append({"path": f"timeline.{scene_index}.elements.{element_index}.config.{key}", "message": "Fade do SFX deve ser não negativo."})
+                if "trimDb" in config and not isinstance(config["trimDb"], (int, float)):
+                    issues.append({"path": f"timeline.{scene_index}.elements.{element_index}.config.trimDb", "message": "trimDb deve ser numérico."})
     return issues
 
 

@@ -26,7 +26,8 @@
       "properties": {
         "narration": {"type": "string", "minLength": 1},
         "sourceCuts": {"type": "array", "items": {"$ref": "#/$defs/timeRange"}},
-        "voice": {"type": "object", "properties": {"preset": {"type": "string"}, "trimDb": {"type": "number"}}, "additionalProperties": false},
+        "voice": {"type": "object", "properties": {"preset": {"type": "string"}, "trimDb": {"type": "number"}, "normalize": {"type": "boolean"}, "targetLufs": {"type": "number", "minimum": -30, "maximum": -5}, "truePeakDb": {"type": "number", "minimum": -9, "maximum": 0}, "highpassHz": {"type": "number", "minimum": 0, "maximum": 300}}, "additionalProperties": false},
+        "ducking": {"type": "object", "properties": {"enabled": {"type": "boolean"}, "threshold": {"type": "number", "exclusiveMinimum": 0, "maximum": 1}, "ratio": {"type": "number", "minimum": 1, "maximum": 20}, "attackMs": {"type": "number", "minimum": 0.1, "maximum": 2000}, "releaseMs": {"type": "number", "minimum": 1, "maximum": 9000}}, "additionalProperties": false},
         "music": {
           "type": "array",
           "items": {

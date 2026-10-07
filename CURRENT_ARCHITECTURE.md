@@ -60,3 +60,4 @@
 5. Grid 3x3, boxes e motions. **Implementado com presets de entrada, idle e saída.**
 6. Transições, chroma, música/SFX e relatórios. **Implementado: plugins cut/fade/blur_left, chroma key, mixagem e relatório de camadas.**
 7. UI de projeto, preview e render final. **Implementado: painel web, jobs assíncronos, preview reduzido e export final separado.**
+8. Áudio do roadmap original. **Implementado: sourceCuts, narração limpa, remapeamento da transcrição, normalização, ducking, fades, limiter e relatório.** A numeração das fases 6–7 neste resumo local não coincidia com a do roadmap do Drive; a fase 8 segue o escopo de áudio daquele documento.

@@ -100,8 +100,20 @@ silencioso. `audio.music` suporta `trimDb`, `fadeIn` e `fadeOut`; elementos
 `config.similarity` e `config.blend`. O relatório lista as transições e
 camadas de áudio aplicadas, além de avisos.
 
-`sourceCuts` ainda aparece como aviso: o recorte da narração de origem não é
-aplicado pelo renderer atual.
+Na fase 8, `audio.sourceCuts` representa as regiões **mantidas** do áudio
+original, em segundos, ordenadas e sem sobreposição. O renderer as une em
+`narration.cleaned.wav`; se houver transcrição de origem, os timestamps das
+palavras são remapeados para a nova timeline. A voz recebe high-pass opcional
+e normalização de loudness configurável por `audio.voice`. Música e SFX são
+normalizados antes do ganho relativo (`trimDb` ou `preset`), a música sofre
+ducking pela voz (`audio.ducking`) e o mix termina com limiter. O relatório
+registra cortes, parâmetros de normalização, camadas, ducking e limiter.
+Veja [o exemplo de áudio](examples/audio-phase8-edit-plan.json); ele requer
+`audio/narration.wav`, `audio/music.wav` e `audio/impact.wav` na mesma pasta
+do projeto. Para testar via CLI, execute
+`python -m backend.contentlab.cli render examples/audio-phase8-edit-plan.json`
+após adicionar esses arquivos. Os alvos de loudness do exemplo são pontos de
+partida configuráveis, não uma calibração específica do canal.
 
 Na interface, a seção **Editor automático** abre uma pasta contendo
 `edit_plan.json`, mostra a timeline e verifica assets antes de iniciar o
