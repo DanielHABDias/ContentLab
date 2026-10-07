@@ -321,9 +321,9 @@
         <a class="btn btn-primary" href="/api/skill/download" download="skillContentLabEdicao.zip">Baixar skill (.zip)</a>
       </section>
       <section class="block guide-card">
-        <h3>Motion design: próximo passo do editor</h3>
-        <p>Está planejada uma cena contínua: o fundo permanece, enquanto personagens em PNG, palavras e objetos aparecem e a câmera virtual revela outras partes do mesmo espaço. O <code>JSON 0.2</code> será a proposta para descrever esses movimentos.</p>
-        <p><strong>Ainda não renderiza:</strong> o editor aceita hoje <code>version: "0.1"</code>. Não cole o exemplo proposto de motion design em <strong>Validar JSON</strong>. Consulte <code>MOTION_DESIGN_PLAN.md</code> e <code>examples/motion-design-proposal.v0.2.json</code> no repositório para planejar a cena com sua IA.</p>
+        <h3>Motion design: cenas contínuas</h3>
+        <p>O <code>JSON 0.2</code> já permite um fundo estático que permanece enquanto PNGs e textos aparecem, se movem e são revelados pela câmera virtual. Use keyframes de posição, escala, rotação e opacidade. O <code>JSON 0.1</code> continua funcionando para a edição tradicional.</p>
+        <p>Esta é a primeira versão: vídeos dentro da cena, legenda cinética e ajuste visual dos keyframes ainda não fazem parte do <code>0.2</code>. Veja <code>MOTION_DESIGN_PLAN.md</code> e <code>examples/motion-design-proposal.v0.2.json</code> no repositório. Para fundos sólidos use <code>background.color</code>; para arquivos próprios use <code>project://</code>, e para mídia interna use <code>builtin://</code> após adicionar os arquivos à biblioteca.</p>
       </section>
       <section class="block guide-card">
         <h3>1. Organize uma pasta por vídeo</h3>

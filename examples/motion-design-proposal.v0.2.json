@@ -1,6 +1,6 @@
 {
   "version": "0.2",
-  "project": {"name": "diazverso-personagens", "format": "youtube_long", "profile": "diazverso"},
+  "project": {"name": "personagens", "format": "youtube_long", "profile": "generic"},
   "sources": {"assets": "assets", "transcript": "transcript.json"},
   "audio": {"narration": "audio/narracao.wav"},
   "timeline": [
@@ -34,9 +34,9 @@
           ]
         },
         {
-          "id": "homem-de-ferro",
+          "id": "personagem-b",
           "type": "image",
-          "asset": "project://assets/homem-de-ferro.png",
+          "asset": "project://assets/personagem-b.png",
           "start": 5,
           "end": 12,
           "z": 20,
@@ -49,7 +49,7 @@
         {
           "id": "nome-personagem",
           "type": "text",
-          "text": "HOMEM DE FERRO",
+          "text": "PERSONAGEM B",
           "style": "impact",
           "start": 8,
           "end": 11.5,

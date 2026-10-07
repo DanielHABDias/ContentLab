@@ -251,16 +251,28 @@ Windows e no CapCut, está em [MVP_ACCEPTANCE.md](MVP_ACCEPTANCE.md).
 O contrato completo do JSON, as funções implementadas e os parâmetros aceitos
 estão em [EDIT_PLAN_REFERENCE.md](EDIT_PLAN_REFERENCE.md).
 
-## Motion design (planejado)
+## Motion design (primeira versão)
 
-Queremos cenas contínuas com o mesmo fundo, personagens em PNG, palavras e
-objetos entrando ao longo da narração, e uma câmera virtual que revele outras
-partes da composição sem cortar o plano. O [plano de ação](MOTION_DESIGN_PLAN.md)
-define etapas, semântica proposta e critérios de aceite. O
-[exemplo `0.2`](examples/motion-design-proposal.v0.2.json) demonstra essa
-direção, mas **ainda não é aceito pelo editor**: a versão executável do JSON
-continua sendo `0.1`. As skills distinguem planejamento de motion design da
-geração de um plano renderizável.
+O JSON `0.2` aceita cenas contínuas com fundo estático persistente, PNGs
+transparentes e texto em camadas, keyframes de posição, escala, rotação e
+opacidade, e câmera virtual com posição e zoom. O
+[plano de ação](MOTION_DESIGN_PLAN.md) registra o que foi entregue e o que
+ainda falta. O [exemplo `0.2`](examples/motion-design-proposal.v0.2.json)
+é executável quando seus arquivos de narração e mídia existem na pasta do
+projeto. O JSON `0.1` continua aceito. Por enquanto, cenas `0.2` **não**
+aceitam vídeos como camadas/fundo nem kinetic text/captions; use `0.1` para
+esses recursos.
+
+### Assets internos e assets do vídeo
+
+A biblioteca do aplicativo fica em `builtin-assets/backgrounds/`,
+`builtin-assets/music/` e `builtin-assets/sfx/`. Ela está preparada, mas ainda
+sem mídia distribuída. Referencie um arquivo interno como
+`builtin://backgrounds/papel.png`, `builtin://music/tema.mp3` ou
+`builtin://sfx/impacto.wav` **somente depois de adicioná-lo**. Arquivos
+exclusivos de um vídeo ficam na pasta `assets/` do projeto e usam
+`project://assets/nome.png`. Fundos sólidos usam `background.color` e não
+precisam de arquivo. Veja [o guia da biblioteca](builtin-assets/README.md).
 
 ## Dados e cache
 

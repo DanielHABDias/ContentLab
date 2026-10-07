@@ -2,6 +2,8 @@ import json
 import io
 import tempfile
 import unittest
+import wave
+import shutil
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -22,6 +24,8 @@ from backend.contentlab.errors import RenderCancelled
 from backend.contentlab.audio import remap_transcript
 from backend.contentlab.encoding import select_h264_encoder
 from backend.contentlab.transcription import transcribe_narration
+from backend.contentlab.motion_renderer import interpolate
+from PIL import Image
 
 
 def valid_plan():
@@ -38,6 +42,25 @@ def valid_plan():
 
 
 class ParserTests(unittest.TestCase):
+    def test_motion_v02_validates_keyframe_order_and_keeps_v01(self):
+        data = valid_plan()
+        self.assertEqual(parse_edit_plan(data).version, "0.1")
+        data["version"] = "0.2"
+        data["timeline"][0]["layout"] = "fullscreen"
+        element = data["timeline"][0]["elements"][0]
+        element.pop("cells")
+        element["id"] = "hero"
+        element["keyframes"] = [{"t": 0, "opacity": 0}, {"t": 1, "opacity": 1}]
+        data["timeline"][0]["camera"] = {"keyframes": [{"t": 0, "x": 0.5}, {"t": 2, "x": 0.7}]}
+        self.assertEqual(parse_edit_plan(data).version, "0.2")
+        element["keyframes"].append({"t": 0.5, "opacity": 0})
+        with self.assertRaises(PlanValidationError):
+            parse_edit_plan(data)
+
+    def test_motion_interpolation(self):
+        state = interpolate({"x": 0.2, "opacity": 0}, [{"t": 2, "x": 0.8, "opacity": 1, "easing": "linear"}], 1)
+        self.assertAlmostEqual(state["x"], 0.5)
+        self.assertAlmostEqual(state["opacity"], 0.5)
     def test_rejects_overlapping_narration_cuts(self):
         data = valid_plan()
         data["audio"]["sourceCuts"] = [{"start": 0, "end": 2}, {"start": 1, "end": 3}]
@@ -91,6 +114,35 @@ class AssetResolverTests(unittest.TestCase):
 
 
 class RendererTests(unittest.TestCase):
+    @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"), "FFmpeg indisponível")
+    def test_motion_v02_renders_continuous_scene(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "assets").mkdir()
+            (root / "audio").mkdir()
+            Image.new("RGB", (320, 180), "#204060").save(root / "assets" / "background.png")
+            Image.new("RGBA", (80, 80), (255, 40, 40, 230)).save(root / "assets" / "character.png")
+            with wave.open(str(root / "audio" / "voice.wav"), "wb") as output:
+                output.setnchannels(1)
+                output.setsampwidth(2)
+                output.setframerate(16000)
+                output.writeframes(b"\x00\x00" * 16000)
+            plan = {
+                "version": "0.2",
+                "project": {"name": "motion-smoke", "format": "custom", "profile": "generic", "resolution": {"width": 320, "height": 180}, "fps": 4},
+                "audio": {"narration": "audio/voice.wav"},
+                "timeline": [{"id": "continuous", "start": 0, "end": 1,
+                              "background": {"asset": "project://assets/background.png"},
+                              "camera": {"keyframes": [{"t": 0, "x": 0.5}, {"t": 1, "x": 0.6}]},
+                              "elements": [{"id": "hero", "type": "image", "asset": "project://assets/character.png", "transform": {"x": 0.45, "y": 0.5}, "keyframes": [{"t": 0, "opacity": 0}, {"t": 0.5, "opacity": 1}]},
+                                           {"id": "title", "type": "text", "text": "TESTE", "start": 0.25, "end": 1, "transform": {"x": 0.6, "y": 0.7}}]}],
+            }
+            plan_path = root / "edit_plan.json"
+            plan_path.write_text(json.dumps(plan), encoding="utf-8")
+            report = render_edit_plan(plan_path, output_dir=root / "output", ffmpeg_dir=Path(shutil.which("ffmpeg")).parent)
+            self.assertEqual(report["status"], "completed")
+            self.assertTrue(Path(report["output"]).is_file())
+
     def test_gpu_probe_falls_back_to_software(self):
         class Result:
             returncode = 1

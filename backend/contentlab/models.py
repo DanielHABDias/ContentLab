@@ -45,6 +45,7 @@ class ResolvedScene:
     elements: Tuple[ResolvedElement, ...]
     background: Mapping[str, Any] = field(default_factory=dict)
     background_path: Optional[Path] = None
+    camera: Mapping[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

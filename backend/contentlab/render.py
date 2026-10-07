@@ -13,6 +13,7 @@ from .motions import motion_filters, overlay_position
 from .transitions import discover_transitions
 from .audio import prepare_narration, remap_transcript
 from .encoding import select_h264_encoder
+from .motion_renderer import render_motion_scene
 
 
 def _creation_flags():
@@ -380,10 +381,14 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
                     scene_for_render = ResolvedScene(id=f"gap-{index}", start=0, end=duration, transition_out="cut", elements=(), background={"color": "#000000"})
                 if progress:
                     progress("scene", index + 1, len(render_scenes), scene_for_render.id)
-                _render_segment(
-                    ffmpeg, scene_for_render, segment, plan.project, duration, runner, warnings,
-                    transcript=transcript, work_dir=work, video_encoding=video_encoding,
-                )
+                if plan.version == "0.2" and scene is not None:
+                    render_motion_scene(ffmpeg, scene_for_render, segment, plan.project, duration,
+                                        lambda command: _run(command, runner), work, video_encoding)
+                else:
+                    _render_segment(
+                        ffmpeg, scene_for_render, segment, plan.project, duration, runner, warnings,
+                        transcript=transcript, work_dir=work, video_encoding=video_encoding,
+                    )
                 segments.append(segment)
                 segment_durations.append(duration)
 

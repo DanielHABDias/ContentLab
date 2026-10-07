@@ -77,6 +77,7 @@ def compile_timeline(plan, resolved_assets=None, registry=DEFAULT_REGISTRY):
                 Path(resolved_assets[scene["background"]["asset"]])
                 if scene.get("background", {}).get("asset") in resolved_assets else None
             ),
+            camera=scene.get("camera", {}),
         ))
     if issues:
         raise PlanValidationError(issues)
