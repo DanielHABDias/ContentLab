@@ -25,6 +25,70 @@ skillContentLabEdicao.zip  skill para o GPT criar planos de edição JSON
 EDIT_PLAN_REFERENCE.md  funções e parâmetros do editor automático
 ```
 
+## Como organizar um projeto de edição
+
+Crie **uma pasta por vídeo**. A opção **Editor automático → Criar** prepara
+`edit_plan.json`, `audio/` e `assets/`; você acrescenta as mídias. A aba
+**Guia do projeto** mostra esta estrutura dentro do aplicativo:
+
+```text
+meu-video/
+├── edit_plan.json              plano de edição (necessário para abrir o projeto)
+├── audio/
+│   ├── narracao.wav            voz usada no render
+│   ├── musica.mp3              opcional
+│   └── impacto.wav             opcional
+├── assets/
+│   ├── abertura.mp4            vídeos e imagens
+│   ├── personagem.png
+│   └── personagens/
+│       └── heroi.png           subpastas são permitidas
+├── transcript.json             gerado pela aba Transcrição; tempos por palavra
+├── transcript.txt              leitura humana com timestamps
+├── transcript.srt              legendas tradicionais
+└── output/                     criado após renderizar
+```
+
+Os nomes acima são exemplos. **O arquivo e o caminho no JSON devem corresponder
+exatamente**, incluindo extensão e, no Linux, maiúsculas/minúsculas. Use `/`
+como separador nos caminhos do JSON, inclusive no Windows. A narração usa um
+caminho relativo à raiz do projeto: `"narration": "audio/narracao.wav"`.
+Imagens, vídeos, músicas e efeitos usam URIs com `project://` seguido do
+caminho **a partir da raiz do projeto**:
+
+```json
+{
+  "sources": {"assets": "assets", "transcript": "transcript.json"},
+  "audio": {
+    "narration": "audio/narracao.wav",
+    "music": [{"asset": "project://audio/musica.mp3", "start": 0, "end": 30}]
+  },
+  "timeline": [{
+    "id": "intro", "start": 0, "end": 5,
+    "elements": [
+      {"type": "video", "asset": "project://assets/abertura.mp4"},
+      {"type": "image", "asset": "project://assets/personagens/heroi.png"}
+    ]
+  }]
+}
+```
+
+O trecho acima demonstra os caminhos, **não é um plano completo**; um arquivo
+válido precisa também de `version` e `project`. Veja
+[o exemplo mínimo](examples/minimal-edit-plan.json) e
+[a referência completa](EDIT_PLAN_REFERENCE.md). `sources.assets` registra
+uma pasta preferida, mas **não adiciona `assets/` automaticamente** aos URIs:
+escreva o caminho completo em cada `asset`. Arquivos embutidos no aplicativo
+usam `builtin://`; arquivos próprios usam `project://`. O resolver bloqueia
+caminhos que tentem sair dessas raízes. No editor, **Listar** mostra os URIs
+dos arquivos e **Validar JSON** aponta os ausentes antes do render.
+
+A transcrição é opcional para cenas sem texto sincronizado. Para legendas
+karaoke, carregue a narração na aba **Transcrição** e use
+`"sources": {"transcript": "transcript.json"}`. O JSON da transcrição também
+ajuda o GPT, junto da skill `skillContentLabEdicao.zip`, a gerar um plano
+alinhado aos tempos da voz.
+
 ## Linux
 
 Requisitos: Python 3.9 ou superior, suporte a `venv`, FFmpeg e FFprobe.
@@ -135,6 +199,25 @@ bloqueiam o render. A página lista os assets resolvidos, plugins disponíveis,
 progresso e warnings. Se o arquivo mudar fora da página, o salvamento é
 recusado para evitar sobrescrever a edição externa — recarregue o projeto.
 
+A interface está organizada em três abas: **Vídeos e cortes**, **Transcrição**
+e **Editor automático**. Ao carregar outra fonte de vídeo, o rascunho de
+cortes em lote, a validação e os resultados anteriores são limpos; a pasta de
+destino permanece selecionada. Trocar apenas de aba não descarta o trabalho
+em andamento.
+
+Na aba **Transcrição**, selecione a pasta de um projeto já criado e carregue a
+narração. Escolha a qualidade do reconhecimento (`tiny`, `base`, `small` ou
+`medium`), o idioma (português, inglês, espanhol ou detecção automática) e
+como mostrar os tempos no TXT (por palavra ou por trecho). O processamento
+local com faster-whisper sempre grava `transcript.json` com tempos por palavra,
+além de `transcript.txt` e `transcript.srt` na raiz do projeto. A primeira
+execução de cada modelo pode precisar baixá-lo e demorar; resultados devem
+ser revisados, especialmente nomes próprios. Se o mesmo projeto estiver
+aberto no editor, os campos `audio.narration` e `sources.transcript` são
+preenchidos no rascunho do plano; salve o JSON antes do render. Esses arquivos
+podem ser fornecidos ao GPT junto com a skill `skillContentLabEdicao.zip` para
+orientar a criação do `edit_plan.json`.
+
 A interface chama a API Flask no mesmo endereço, portanto não há etapa de
 compilação para o frontend.
 
@@ -176,3 +259,7 @@ preferências visuais; peça um plano conforme
 `edit_plan.json` na pasta do projeto, valide no Content Lab e gere o preview
 antes do render final. A skill auxilia na autoria do plano; os arquivos de
 áudio, imagem e vídeo referenciados precisam existir no projeto.
+O ZIP também pode ser baixado pelo botão **Baixar skill (.zip)** na aba
+**Guia do projeto**; a mesma rota funciona no aplicativo empacotado para
+Windows. Instale a skill no ambiente ChatGPT/Cloud compatível seguindo as
+instruções do próprio pacote.

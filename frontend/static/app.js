@@ -6,8 +6,37 @@ let selectedCacheEntry = null;
 let currentSourceMode = "youtube";
 let currentSourceUrl = "";
 let currentCacheKey = "";
+let sourceRequestId = 0;
 
 const $ = (id) => document.getElementById(id);
+
+// Areas de trabalho isoladas: trocar de aba preserva o trabalho em andamento.
+const workspaces = ["videos", "transcription", "editor", "guide"];
+function showWorkspace(name) {
+  for (const workspace of workspaces) {
+    const active = workspace === name;
+    const tab = $(`tab-${workspace}`);
+    const panel = $(`panel-${workspace}`);
+    tab.classList.toggle("is-active", active);
+    tab.setAttribute("aria-selected", String(active));
+    tab.tabIndex = active ? 0 : -1;
+    panel.hidden = !active;
+    panel.classList.toggle("hidden", !active);
+  }
+  history.replaceState(null, "", `#${name}`);
+}
+document.querySelectorAll(".workspace-tab").forEach((tab) => {
+  tab.addEventListener("click", () => showWorkspace(tab.dataset.workspace));
+  tab.addEventListener("keydown", (event) => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const index = workspaces.indexOf(tab.dataset.workspace);
+    const next = event.key === "Home" ? 0 : event.key === "End" ? workspaces.length - 1 : (index + (event.key === "ArrowRight" ? 1 : -1) + workspaces.length) % workspaces.length;
+    showWorkspace(workspaces[next]);
+    $(`tab-${workspaces[next]}`).focus();
+  });
+});
+showWorkspace(workspaces.includes(location.hash.slice(1)) ? location.hash.slice(1) : "videos");
 
 function fmt(sec) {
   sec = Math.max(0, Math.round(sec));
@@ -41,6 +70,7 @@ function activeSourceUrl() {
 }
 
 function resetLoadedVideo() {
+  sourceRequestId += 1;
   videoLoaded = false;
   duration = 0;
   currentSourceUrl = "";
@@ -51,11 +81,24 @@ function resetLoadedVideo() {
   videoEl.pause();
   videoEl.removeAttribute("src");
   videoEl.load();
+  resetBatchDraft();
   updateDownloadBtnState();
+}
+
+function resetBatchDraft() {
+  $("batchText").value = "";
+  $("batchValidation").replaceChildren();
+  $("batchValidation").classList.add("hidden");
+  $("batchItems").replaceChildren();
+  $("batchItems").classList.add("hidden");
+  $("doneRow").classList.add("hidden");
+  $("downloadError").classList.add("hidden");
+  window._lastFolder = null;
 }
 
 // ---------- preview ----------
 async function loadPreview(url) {
+  const requestId = sourceRequestId;
   const videoEl = $("previewVideo");
   const errEl = $("previewError");
   errEl.classList.add("hidden");
@@ -69,10 +112,12 @@ async function loadPreview(url) {
       body: JSON.stringify({ url }),
     });
     const data = await res.json();
+    if (requestId !== sourceRequestId) return;
     if (!res.ok || data.error) throw new Error(data.error || "Prévia indisponível");
     videoEl.src = `/api/video-proxy/${data.preview_id}`;
     videoEl.load();
   } catch (err) {
+    if (requestId !== sourceRequestId) return;
     videoEl.classList.add("hidden");
     errEl.classList.remove("hidden");
   }
@@ -249,6 +294,7 @@ $("loadBtn").addEventListener("click", loadVideo);
 $("url").addEventListener("keydown", (e) => { if (e.key === "Enter") loadVideo(); });
 
 async function applyLoadedVideo(data, previewKind, previewValue) {
+  resetBatchDraft();
   duration = Number(data.duration || 0);
   $("videoTitle").textContent = data.title || "—";
   $("videoDuration").textContent = fmt(duration);
@@ -272,6 +318,7 @@ async function applyLoadedVideo(data, previewKind, previewValue) {
 
 async function loadVideo() {
   const url = $("url").value.trim();
+  const requestId = ++sourceRequestId;
   $("loadError").classList.add("hidden");
   if (!url) {
     $("loadError").textContent = "Cole um link do YouTube.";
@@ -289,6 +336,7 @@ async function loadVideo() {
       body: JSON.stringify({ url }),
     });
     const data = await res.json();
+    if (requestId !== sourceRequestId) return;
     if (!res.ok || data.error) throw new Error(data.error || "Erro desconhecido");
 
     currentSourceMode = "youtube";
@@ -296,6 +344,7 @@ async function loadVideo() {
     currentCacheKey = "";
     await applyLoadedVideo(data, "youtube", url);
   } catch (err) {
+    if (requestId !== sourceRequestId) return;
     $("loadError").textContent = err.message;
     $("loadError").classList.remove("hidden");
   } finally {
@@ -647,6 +696,8 @@ $("openFolderBtn").addEventListener("click", async () => {
 
 $("newDownloadBtn").addEventListener("click", () => {
   $("progressSection").classList.add("hidden");
+  resetBatchDraft();
+  $("url").focus();
 });
 
 updateModeUI();
@@ -692,6 +743,79 @@ async function requestShutdown(force = false) {
 
 $("shutdownBtn").addEventListener("click", () => {
   requestShutdown(false);
+});
+
+// ---------- transcrição de narração do projeto ----------
+let transcriptionPoll = null;
+function transcriptionError(message) {
+  $("transcriptionError").textContent = message || "";
+  $("transcriptionError").classList.toggle("hidden", !message);
+}
+$("transcriptionUseEditorProject").addEventListener("click", () => {
+  const root = editorProject?.projectRoot || $("editorProjectRoot").value.trim();
+  if (!root) return transcriptionError("Abra ou informe primeiro um projeto no editor.");
+  $("transcriptionProjectRoot").value = root;
+  transcriptionError("");
+});
+$("transcriptionStart").addEventListener("click", async () => {
+  const root = $("transcriptionProjectRoot").value.trim();
+  const file = $("transcriptionFile").files[0];
+  transcriptionError("");
+  if (!root || !file) return transcriptionError("Informe a pasta do projeto e selecione a narração.");
+  $("transcriptionStart").disabled = true;
+  $("transcriptionResult").classList.add("hidden");
+  $("transcriptionStatus").textContent = "Enviando narração...";
+  try {
+    const form = new FormData();
+    form.append("projectRoot", root);
+    form.append("file", file);
+    form.append("model", $("transcriptionModel").value);
+    form.append("detail", $("transcriptionDetail").value);
+    form.append("language", $("transcriptionLanguage").value);
+    const response = await fetch("/api/transcription/jobs", { method: "POST", body: form });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.errors?.map((item) => item.message).join("; ") || data.error || "Falha ao iniciar transcrição.");
+    if (transcriptionPoll) clearInterval(transcriptionPoll);
+    transcriptionPoll = setInterval(async () => {
+      try {
+        const statusResponse = await fetch(`/api/transcription/jobs/${data.jobId}`);
+        const job = await statusResponse.json();
+        if (!statusResponse.ok) throw new Error(job.error || "Transcrição não encontrada.");
+        $("transcriptionStatus").textContent = job.message;
+        if (job.status === "running") return;
+        clearInterval(transcriptionPoll);
+        transcriptionPoll = null;
+        $("transcriptionStart").disabled = false;
+        if (job.status === "error") throw new Error(job.error || "Falha na transcrição.");
+        $("transcriptionStats").textContent = `${job.result.segmentCount} trecho(s) · ${job.result.wordCount} palavra(s) · ${job.result.language || "idioma não identificado"}`;
+        $("transcriptionPreview").value = job.result.preview || "Nenhuma fala foi reconhecida. Confira o áudio e tente outro modelo.";
+        $("transcriptionResult").classList.remove("hidden");
+        if (editorProject?.projectRoot === job.projectRoot) {
+          try {
+            const plan = JSON.parse($("editorPlanText").value);
+            plan.audio.narration = job.narration;
+            plan.sources = { ...(plan.sources || {}), transcript: "transcript.json" };
+            $("editorPlanText").value = JSON.stringify(plan, null, 2);
+            $("editorPlanText").dispatchEvent(new Event("input"));
+            $("transcriptionPlanHint").textContent = "O plano aberto no editor foi atualizado com a narração e a transcrição. Revise e salve o JSON antes de renderizar.";
+          } catch (_) {
+            $("transcriptionPlanHint").textContent = "Abra o editor e defina audio.narration e sources.transcript no plano.";
+          }
+        } else {
+          $("transcriptionPlanHint").textContent = `No edit_plan.json deste projeto, use audio.narration = "${job.narration}" e sources.transcript = "transcript.json".`;
+        }
+      } catch (error) {
+        if (transcriptionPoll) clearInterval(transcriptionPoll);
+        transcriptionPoll = null;
+        $("transcriptionStart").disabled = false;
+        transcriptionError(error.message);
+      }
+    }, 1000);
+  } catch (error) {
+    $("transcriptionStart").disabled = false;
+    $("transcriptionStatus").textContent = "";
+    transcriptionError(error.message);
+  }
 });
 
 // ---------- projeto de edição automática ----------
@@ -751,6 +875,7 @@ function editorSetProgress(percent) {
 
 async function editorShowProject(data) {
   editorProject = data;
+  $("transcriptionProjectRoot").value = data.projectRoot;
   editorDirty = false;
   $("editorProjectName").textContent = data.name;
   $("editorPlanText").value = data.planText;

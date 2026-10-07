@@ -21,6 +21,7 @@ try:
     from .contentlab.project import project_plan_path, create_project, inspect_asset_folder, import_narration, inspect_project, load_project_document, save_project_plan, render_project
     from .contentlab.cancel import CancelRunner
     from .contentlab.errors import RenderCancelled
+    from .contentlab.transcription import transcribe_narration, MODELS as TRANSCRIPTION_MODELS, DETAILS as TRANSCRIPTION_DETAILS
 except ImportError:  # Suporte ao executável gerado pelo PyInstaller.
     import ffmpeg_helper
     from contentlab.errors import PlanValidationError
@@ -29,6 +30,7 @@ except ImportError:  # Suporte ao executável gerado pelo PyInstaller.
     from contentlab.project import project_plan_path, create_project, inspect_asset_folder, import_narration, inspect_project, load_project_document, save_project_plan, render_project
     from contentlab.cancel import CancelRunner
     from contentlab.errors import RenderCancelled
+    from contentlab.transcription import transcribe_narration, MODELS as TRANSCRIPTION_MODELS, DETAILS as TRANSCRIPTION_DETAILS
 
 
 def resource_path(relative):
@@ -44,6 +46,15 @@ app = Flask(
 )
 
 
+@app.route("/api/skill/download", methods=["GET"])
+def download_contentlab_skill():
+    """Serve only the bundled, public skill archive."""
+    skill_path = Path(resource_path("skillContentLabEdicao.zip"))
+    if not skill_path.is_file():
+        return jsonify({"error": "Skill não encontrada nesta instalação."}), 404
+    return send_file(skill_path, as_attachment=True, download_name="skillContentLabEdicao.zip", mimetype="application/zip", conditional=True)
+
+
 @app.after_request
 def no_cache(response):
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
@@ -54,6 +65,8 @@ JOBS = {}  # job_id -> dict(status, percent, message, error, filepath, folder)
 EDITOR_JOBS = {}
 EDITOR_JOBS_LOCK = threading.Lock()
 EDITOR_CANCEL_EVENTS = {}
+TRANSCRIPTION_JOBS = {}
+TRANSCRIPTION_JOBS_LOCK = threading.Lock()
 PREVIEWS = {}  # preview_id -> dict(url, headers)
 CACHE_LOCKS = {}  # cache_key -> threading.Lock()
 CACHE_LOCKS_GUARD = threading.Lock()
@@ -1233,6 +1246,52 @@ def editor_project_save():
     except PlanValidationError as exc:
         conflict = any(item["path"] == "revision" for item in exc.issues)
         return jsonify({"error": "Não foi possível salvar o plano.", "errors": exc.issues}), 409 if conflict else 422
+
+
+def _run_transcription_job(job_id, root, narration, model, detail, language):
+    job = TRANSCRIPTION_JOBS[job_id]
+    try:
+        result = transcribe_narration(root, narration, model, detail, language, progress=lambda message: job.update(message=message))
+        job.update(status="done", message="Transcrição concluída.", result=result)
+    except Exception as exc:
+        job.update(status="error", message="Falha na transcrição.", error=str(exc))
+
+
+@app.route("/api/transcription/jobs", methods=["POST"])
+def start_transcription_job():
+    upload = request.files.get("file")
+    model = request.form.get("model", "small")
+    detail = request.form.get("detail", "words")
+    language = request.form.get("language", "").strip().lower() or None
+    if upload is None:
+        return jsonify({"error": "Selecione uma narração."}), 400
+    if model not in TRANSCRIPTION_MODELS or detail not in TRANSCRIPTION_DETAILS:
+        return jsonify({"error": "Modelo ou detalhamento inválido."}), 400
+    if language and (not language.isalpha() or len(language) not in (2, 3)):
+        return jsonify({"error": "Idioma inválido."}), 400
+    try:
+        root = str(project_plan_path(request.form.get("projectRoot"))[0])
+        with EDITOR_JOBS_LOCK:
+            if any(job["status"] == "running" and job["projectRoot"] == root for job in EDITOR_JOBS.values()):
+                return jsonify({"error": "Aguarde o render antes de transcrever."}), 409
+        with TRANSCRIPTION_JOBS_LOCK:
+            if any(job["status"] == "running" and job["projectRoot"] == root for job in TRANSCRIPTION_JOBS.values()):
+                return jsonify({"error": "Já existe uma transcrição em andamento neste projeto."}), 409
+            imported = import_narration(root, upload)
+            job_id = uuid.uuid4().hex
+            TRANSCRIPTION_JOBS[job_id] = {"status": "running", "message": "Preparando narração...", "error": None, "projectRoot": root, "narration": imported["relative"]}
+        threading.Thread(target=_run_transcription_job, args=(job_id, root, imported["path"], model, detail, language), daemon=True).start()
+        return jsonify({"jobId": job_id, "narration": imported["relative"]}), 202
+    except PlanValidationError as exc:
+        return jsonify({"error": "Narração inválida.", "errors": exc.issues}), 422
+
+
+@app.route("/api/transcription/jobs/<job_id>", methods=["GET"])
+def transcription_job(job_id):
+    job = TRANSCRIPTION_JOBS.get(job_id)
+    if not job:
+        return jsonify({"error": "Transcrição não encontrada."}), 404
+    return jsonify(job)
 
 
 def _run_editor_job(job_id, root, mode, hardware_accel):

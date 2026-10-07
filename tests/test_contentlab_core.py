@@ -3,6 +3,7 @@ import io
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 from threading import Event, Timer
 
@@ -20,6 +21,7 @@ from backend.contentlab.cancel import CancelRunner
 from backend.contentlab.errors import RenderCancelled
 from backend.contentlab.audio import remap_transcript
 from backend.contentlab.encoding import select_h264_encoder
+from backend.contentlab.transcription import transcribe_narration
 
 
 def valid_plan():
@@ -410,7 +412,74 @@ class TextRendererTests(unittest.TestCase):
             self.assertEqual(count, 2)
             self.assertEqual(warnings, [])
             self.assertEqual(content.count("Dialogue:"), 2)
-            self.assertIn("\\1c&H00D4FF&", content)
+        self.assertIn("\\1c&H00D4FF&", content)
+
+
+class NarrationTranscriptionTests(unittest.TestCase):
+    def test_transcription_job_api_imports_audio_and_reports_result(self):
+        from backend.app import app, TRANSCRIPTION_JOBS
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            create_project(str(root), "example")
+            project = root / "example"
+            with app.test_client() as client, patch("backend.app.transcribe_narration", return_value={"transcript": "transcript.json", "segmentCount": 1, "wordCount": 2}) as transcribe:
+                response = client.post("/api/transcription/jobs", data={"projectRoot": str(project), "model": "small", "detail": "words", "language": "pt", "file": (io.BytesIO(b"audio"), "narration.wav")}, content_type="multipart/form-data")
+                self.assertEqual(response.status_code, 202)
+                job_id = response.get_json()["jobId"]
+                for _ in range(100):
+                    result = client.get(f"/api/transcription/jobs/{job_id}").get_json()
+                    if result["status"] != "running":
+                        break
+                    Event().wait(0.01)
+                self.assertEqual(result["status"], "done")
+                self.assertTrue(transcribe.call_args.args[1].startswith(str(project / "audio")))
+                self.assertEqual(result["result"]["wordCount"], 2)
+                TRANSCRIPTION_JOBS.pop(job_id, None)
+
+    def test_skill_download_returns_named_zip(self):
+        from backend.app import app
+        with app.test_client() as client:
+            response = client.get("/api/skill/download")
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data[:2], b"PK")
+            self.assertIn("skillContentLabEdicao.zip", response.headers["Content-Disposition"])
+            response.close()
+
+    def test_project_transcription_exports_editor_json_and_timed_text(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            create_project(str(root), "example")
+            project = root / "example"
+            narration = project / "audio" / "narration.wav"
+            narration.write_bytes(b"fake audio for mocked model")
+            calls = []
+
+            class FakeModel:
+                def transcribe(self, source, **options):
+                    calls.append((source, options))
+                    segment = SimpleNamespace(start=0.5, end=1.5, text="Olá mundo", words=[
+                        SimpleNamespace(word=" Olá", start=0.5, end=0.9),
+                        SimpleNamespace(word=" mundo", start=0.9, end=1.5),
+                    ])
+                    return iter([segment]), SimpleNamespace(language="pt", language_probability=0.99)
+
+            result = transcribe_narration(project, narration, "small", "words", "pt", model_factory=lambda *args, **kwargs: FakeModel())
+            data = json.loads((project / "transcript.json").read_text(encoding="utf-8"))
+            self.assertEqual(result["wordCount"], 2)
+            self.assertEqual(data["segments"][0]["words"][0]["start"], 0.5)
+            self.assertIn("[00:00:00.500 → 00:00:00.900] Olá", (project / "transcript.txt").read_text(encoding="utf-8"))
+            self.assertIn("00:00:00,500 --> 00:00:01,500", (project / "transcript.srt").read_text(encoding="utf-8"))
+            self.assertTrue(calls[0][1]["word_timestamps"])
+            self.assertEqual(calls[0][1]["language"], "pt")
+
+    def test_transcription_rejects_outside_project(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            create_project(str(root), "example")
+            outside = root / "outside.wav"
+            outside.touch()
+            with self.assertRaises(ValueError):
+                transcribe_narration(root / "example", outside, model_factory=lambda *args, **kwargs: None)
 
 
 class MotionTests(unittest.TestCase):

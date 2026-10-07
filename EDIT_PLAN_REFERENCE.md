@@ -11,6 +11,9 @@ os objetos tipados do schema, exceto `config`, que é um objeto livre.
 1. Crie ou abra uma pasta de projeto pela área **Editor automático**. A criação
    prepara `edit_plan.json`, `audio/` e `assets/`. Importe uma narração e liste
    os assets da pasta (a pasta indicada deve estar dentro do projeto).
+   A aba **Transcrição** aceita a narração do projeto e produz
+   `transcript.json` (tempos por palavra), `transcript.txt` (tempos por palavra
+   ou por trecho) e `transcript.srt`.
 2. Use `skillContentLabEdicao.zip` para orientar o GPT na criação do plano:
    forneça roteiro, narração ou transcrição, nomes dos assets e preferências de
    edição. A saída é o conteúdo de `edit_plan.json`, não um vídeo pronto.
