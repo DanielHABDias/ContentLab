@@ -4,6 +4,7 @@ from .errors import PlanValidationError
 from .models import ResolvedElement, ResolvedScene, ResolvedTimeline
 from .registry import DEFAULT_REGISTRY
 from .layout import cells_for_layout
+from .motions import SUPPORTED_ENTER, SUPPORTED_IDLE, SUPPORTED_EXIT
 
 
 def _region(cells, width, height):
@@ -46,6 +47,8 @@ def compile_timeline(plan, resolved_assets=None, registry=DEFAULT_REGISTRY):
             for phase, motion in element.get("animation", {}).items():
                 if motion not in registry.motions:
                     issues.append({"path": f"{prefix}.animation.{phase}", "message": f"Motion desconhecido: {motion}"})
+                elif phase in {"enter", "idle", "exit"} and motion not in {"enter": SUPPORTED_ENTER, "idle": SUPPORTED_IDLE, "exit": SUPPORTED_EXIT}[phase]:
+                    issues.append({"path": f"{prefix}.animation.{phase}", "message": f"Motion não disponível para {phase}: {motion}"})
 
             start = float(element.get("start", scene["start"]))
             end = float(element.get("end", scene["end"]))

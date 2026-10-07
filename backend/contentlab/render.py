@@ -9,6 +9,7 @@ from .errors import PlanValidationError, RenderError
 from .service import prepare_edit_plan
 from .text import build_scene_ass
 from .layout import box_geometry, create_card_assets
+from .motions import motion_filters, overlay_position
 
 
 def _creation_flags():
@@ -39,7 +40,7 @@ def _filter_path(path):
 
 def _scene_visual(scene, full_region):
     for element in scene.elements:
-        if element.type in {"video", "image"} and element.asset_path and element.region == full_region and not element.data.get("box"):
+        if element.type in {"video", "image"} and element.asset_path and element.region == full_region and not element.data.get("box") and not element.data.get("animation"):
             return element.asset_path, element.type, element.data.get("fit", "cover"), bool(element.data.get("loop"))
     if scene.background_path:
         suffix = scene.background_path.suffix.lower()
@@ -64,18 +65,29 @@ def _render_segment(ffmpeg, scene, output, project, duration, runner, warnings, 
         command = common + ["-f", "lavfi", "-i", f"color=c={color}:s={project.width}x{project.height}:r={project.fps}:d={duration}"]
         video_filter = "format=yuv420p"
 
-    layers = [element for element in scene.elements if element.type in {"video", "image"} and element.asset_path and (not visual or element.asset_path != visual[0] or element.region != full_region or element.data.get("box"))]
+    layers = [element for element in scene.elements if element.type in {"video", "image"} and element.asset_path and (not visual or element.asset_path != visual[0] or element.region != full_region or element.data.get("box") or element.data.get("animation"))]
     graph = [f"[0:v]{video_filter}[base0]"]
     current = "base0"
     input_index = 1
     for layer_index, element in enumerate(layers):
         box, content, radius = box_geometry(element)
         x, y, width, height = content
+        animation = element.data.get("animation") or {}
+        local_start = max(0.0, element.start - scene.start)
+        local_end = min(duration, element.end - scene.start)
+        position_x, position_y = overlay_position(x, y, height, animation, local_start)
+        enabled = f":enable='between(t,{local_start:.3f},{local_end:.3f})'" if local_start > 0 or local_end < duration else ""
         mask_path, backing_path = create_card_assets(element, work_dir or output.parent, f"{output.stem}-layer-{layer_index}")
         if backing_path:
             command += ["-loop", "1", "-i", str(backing_path)]
             next_label = f"backed{layer_index}"
-            graph.append(f"[{current}][{input_index}:v]overlay={element.region[0]}:{element.region[1]}:shortest=0:repeatlast=1[{next_label}]")
+            backing_x, backing_y = overlay_position(element.region[0], element.region[1], element.region[3], animation, local_start)
+            backing_filters = ["format=rgba"] + motion_filters(
+                {"enter": animation.get("enter", "cut"), "exit": animation.get("exit", "cut")},
+                element.region[2], element.region[3], project.fps, duration, local_start, local_end,
+            )
+            graph.append(f"[{input_index}:v]{','.join(backing_filters)}[backing_layer{layer_index}]")
+            graph.append(f"[{current}][backing_layer{layer_index}]overlay=x='{backing_x}':y='{backing_y}':eval=frame:shortest=0:repeatlast=1{enabled}[{next_label}]")
             current = next_label
             input_index += 1
 
@@ -91,22 +103,21 @@ def _render_segment(ffmpeg, scene, output, project, duration, runner, warnings, 
         else:
             scale = f"scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height}"
         raw_label = f"layer{layer_index}"
-        graph.append(f"[{input_index}:v]{scale},format=rgba[{raw_label}]")
+        filters = [scale, "format=rgba"]
+        filters.extend(motion_filters(animation, width, height, project.fps, duration, local_start, local_end))
+        graph.append(f"[{input_index}:v]{','.join(filters)}[{raw_label}]")
         input_index += 1
         if mask_path:
             command += ["-loop", "1", "-i", str(mask_path)]
             masked = f"masked{layer_index}"
-            if fit == "contain":
-                graph.append(f"[{raw_label}]split=2[colors{layer_index}][alpha_src{layer_index}]")
-                graph.append(f"[alpha_src{layer_index}]alphaextract[alpha{layer_index}]")
-                graph.append(f"[alpha{layer_index}][{input_index}:v]blend=all_mode=multiply[combined_alpha{layer_index}]")
-                graph.append(f"[colors{layer_index}][combined_alpha{layer_index}]alphamerge[{masked}]")
-            else:
-                graph.append(f"[{raw_label}][{input_index}:v]alphamerge[{masked}]")
+            graph.append(f"[{raw_label}]split=2[colors{layer_index}][alpha_src{layer_index}]")
+            graph.append(f"[alpha_src{layer_index}]alphaextract[alpha{layer_index}]")
+            graph.append(f"[alpha{layer_index}][{input_index}:v]blend=all_mode=multiply[combined_alpha{layer_index}]")
+            graph.append(f"[colors{layer_index}][combined_alpha{layer_index}]alphamerge[{masked}]")
             raw_label = masked
             input_index += 1
         next_label = f"composed{layer_index}"
-        graph.append(f"[{current}][{raw_label}]overlay={x}:{y}:shortest=0:repeatlast=1[{next_label}]")
+        graph.append(f"[{current}][{raw_label}]overlay=x='{position_x}':y='{position_y}':eval=frame:shortest=0:repeatlast=1{enabled}[{next_label}]")
         current = next_label
 
     ass_path = Path(work_dir or output.parent) / f"{output.stem}.ass"

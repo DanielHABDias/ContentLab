@@ -10,6 +10,7 @@ from backend.contentlab.render import render_edit_plan
 from backend.contentlab.text import build_scene_ass, transcript_words
 from backend.contentlab.timeline import compile_timeline
 from backend.contentlab.layout import box_geometry, create_card_assets
+from backend.contentlab.motions import motion_filters, overlay_position
 
 
 def valid_plan():
@@ -42,6 +43,12 @@ class ParserTests(unittest.TestCase):
         data["timeline"][0]["elements"][0]["cells"] = [1, 5]
         with self.assertRaises(PlanValidationError):
             parse_edit_plan(data)
+
+    def test_rejects_motion_in_wrong_phase(self):
+        data = valid_plan()
+        data["timeline"][0]["elements"][0]["animation"] = {"exit": "slow_zoom_in"}
+        with self.assertRaises(PlanValidationError):
+            compile_timeline(parse_edit_plan(data))
 
 
 class AssetResolverTests(unittest.TestCase):
@@ -153,6 +160,18 @@ class TextRendererTests(unittest.TestCase):
             self.assertEqual(warnings, [])
             self.assertEqual(content.count("Dialogue:"), 2)
             self.assertIn("\\1c&H00D4FF&", content)
+
+
+class MotionTests(unittest.TestCase):
+    def test_timed_enter_idle_exit_filters(self):
+        filters = motion_filters(
+            {"enter": "fade", "idle": "slow_zoom_out", "exit": "fade_out"},
+            640, 360, 24, 3, 0.5, 2.5,
+        )
+        self.assertTrue(any("zoompan" in value for value in filters))
+        self.assertTrue(any("fade=t=in:st=0.500" in value for value in filters))
+        self.assertTrue(any("fade=t=out:st=2.150" in value for value in filters))
+        self.assertEqual(overlay_position(20, 30, 100, {"enter": "slide_up", "idle": "float_soft"}, 0)[0], "20")
 
 
 if __name__ == "__main__":

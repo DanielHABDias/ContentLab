@@ -83,6 +83,12 @@ transcrição possui word
 timestamps eles são usados diretamente; caches antigos com timestamps por
 segmento recebem uma distribuição determinística das palavras.
 
+Para imagens e vídeos, `animation.enter` aceita `cut`, `fade` e `slide_up`;
+`animation.idle` aceita `none`, `float_soft`, `slow_zoom_in`, `slow_zoom_out`
+e `pan`; `animation.exit` aceita `cut` e `fade_out`. O movimento usa o intervalo
+`start`/`end` do elemento. Presets registrados em fases incompatíveis são
+rejeitados na validação.
+
 Transições diferentes de `cut`, `sourceCuts`, música e SFX aparecem como warnings no relatório até suas fases de render
 correspondentes serem implementadas.
 
