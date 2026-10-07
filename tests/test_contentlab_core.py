@@ -14,7 +14,7 @@ from backend.contentlab.timeline import compile_timeline
 from backend.contentlab.layout import box_geometry, create_card_assets
 from backend.contentlab.motions import motion_filters, overlay_position
 from backend.contentlab.transitions import discover_transitions
-from backend.contentlab.project import inspect_project, render_project
+from backend.contentlab.project import inspect_project, load_project_document, save_project_plan, render_project
 from backend.contentlab.audio import remap_transcript
 
 
@@ -85,6 +85,33 @@ class AssetResolverTests(unittest.TestCase):
 
 
 class RendererTests(unittest.TestCase):
+    def test_phase9_project_editor_validates_and_guards_external_changes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "audio").mkdir()
+            (root / "images").mkdir()
+            (root / "audio" / "narration.wav").touch()
+            (root / "images" / "a.png").touch()
+            path = root / "edit_plan.json"
+            path.write_text(json.dumps(valid_plan()), encoding="utf-8")
+            loaded = load_project_document(str(root))
+            self.assertTrue(loaded["validation"]["valid"])
+            self.assertIn("images/a.png", loaded["validation"]["resolvedAssets"]["project://images/a.png"])
+            updated = valid_plan()
+            updated["project"]["name"] = "editado"
+            saved = save_project_plan(str(root), json.dumps(updated), loaded["revision"])
+            self.assertEqual(saved["name"], "editado")
+            self.assertNotEqual(saved["revision"], loaded["revision"])
+            with self.assertRaises(PlanValidationError):
+                save_project_plan(str(root), json.dumps(valid_plan()), loaded["revision"])
+            with self.assertRaises(PlanValidationError):
+                save_project_plan(str(root), "{bad json", saved["revision"])
+            self.assertEqual(json.loads(path.read_text())["project"]["name"], "editado")
+            path.write_text("{bad json", encoding="utf-8")
+            repair = load_project_document(str(root))
+            self.assertFalse(repair["validation"]["valid"])
+            self.assertEqual(repair["planText"], "{bad json")
+
     def test_remaps_transcript_to_cleaned_narration(self):
         transcript = {"words": [
             {"word": "um", "start": 0.2, "end": 0.5},
@@ -145,9 +172,22 @@ class RendererTests(unittest.TestCase):
                 return {"status": "completed", "output": str(output), "mode": "preview"}
 
             client = app.test_client()
-            self.assertEqual(client.post("/api/editor/project", json={"projectRoot": str(root)}).status_code, 200)
+            loaded = client.post("/api/editor/project", json={"projectRoot": str(root)})
+            self.assertEqual(loaded.status_code, 200)
+            self.assertIn("planText", loaded.get_json())
+            self.assertIn(b'editorPlanText', client.get("/").data)
+            self.assertEqual(client.get("/api/editor/plugins").status_code, 200)
+            self.assertTrue(client.post("/api/editor/validate", json={"projectRoot": str(root), "plan": valid_plan()}).get_json()["valid"])
+            bad_save = client.post("/api/editor/project/save", json={"projectRoot": str(root), "planText": "{}", "revision": loaded.get_json()["revision"]})
+            self.assertEqual(bad_save.status_code, 422)
+            updated = valid_plan()
+            updated["project"]["name"] = "salvo pela API"
+            saved = client.post("/api/editor/project/save", json={"projectRoot": str(root), "planText": json.dumps(updated), "revision": loaded.get_json()["revision"]})
+            self.assertEqual(saved.status_code, 200)
+            conflict = client.post("/api/editor/project/save", json={"projectRoot": str(root), "planText": json.dumps(updated), "revision": loaded.get_json()["revision"]})
+            self.assertEqual(conflict.status_code, 409)
             with patch("backend.app.render_project", fake_render):
-                response = client.post("/api/editor/render", json={"projectRoot": str(root), "mode": "preview"})
+                response = client.post("/api/editor/render", json={"projectRoot": str(root), "mode": "preview", "revision": saved.get_json()["revision"]})
                 self.assertEqual(response.status_code, 202)
                 self.assertTrue(finished.wait(2))
             job_id = response.get_json()["jobId"]

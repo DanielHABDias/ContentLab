@@ -299,6 +299,8 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
                 ffmpeg, narration, cleaned_temp, plan.audio,
                 lambda command: _run(command, runner),
             )
+            if progress:
+                progress("narration", 0, len(timeline.scenes), "Narração preparada")
             segments = []
             segment_durations = []
             boundaries = []
@@ -346,8 +348,12 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
                 warnings.append({"scene": timeline.scenes[-1].id, "code": "transition_at_end", "requested": timeline.scenes[-1].transition_out, "used": "cut"})
 
             visual = _compose_visual(ffmpeg, segments, boundaries, segment_durations, timeline.duration, plan.project.fps, work, runner)
+            if progress:
+                progress("compose", len(render_scenes), len(render_scenes), "Vídeo composto")
 
             temp_output = work / output.name
+            if progress:
+                progress("audio", len(render_scenes), len(render_scenes), "Mixando áudio")
             applied_audio = _audio_mix(ffmpeg, visual, cleaned_temp, plan, timeline, validation["resolvedAssets"], temp_output, runner)
             os.replace(temp_output, output)
             cleaned_output = output_dir / "narration.cleaned.wav"

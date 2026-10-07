@@ -230,13 +230,33 @@
         <h3 id="editorProjectName"></h3>
         <p id="editorSummary" class="helper-text"></p>
         <ol id="editorScenes" class="editor-scenes"></ol>
+        <details class="editor-plan" open>
+          <summary>edit_plan.json</summary>
+          <textarea id="editorPlanText" rows="16" spellcheck="false" aria-label="Conteúdo JSON do plano"></textarea>
+          <div class="editor-actions">
+            <button id="editorValidate" class="btn btn-secondary" type="button" disabled>Validar JSON</button>
+            <button id="editorSave" class="btn btn-primary" type="button" disabled>Salvar plano</button>
+          </div>
+          <p id="editorDraftState" class="helper-text"></p>
+          <ul id="editorValidation" class="editor-list"></ul>
+        </details>
+        <details class="editor-inspection">
+          <summary>Assets do projeto</summary>
+          <ul id="editorAssets" class="editor-list"></ul>
+        </details>
+        <details class="editor-inspection">
+          <summary>Plugins disponíveis</summary>
+          <ul id="editorPlugins" class="editor-list"></ul>
+        </details>
         <div class="editor-actions">
-          <button id="editorPreview" class="btn btn-secondary" type="button">Gerar preview</button>
-          <button id="editorFinal" class="btn btn-primary" type="button">Render final</button>
+          <button id="editorPreview" class="btn btn-secondary" type="button" disabled>Gerar preview</button>
+          <button id="editorFinal" class="btn btn-primary" type="button" disabled>Render final</button>
         </div>
         <p id="editorStatus" class="helper-text" role="status" aria-live="polite"></p>
+        <div class="editor-progress" role="progressbar" aria-label="Progresso do render" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="editorProgressFill"></span></div>
         <video id="editorVideo" class="editor-video hidden" controls playsinline preload="metadata"></video>
         <p id="editorOutput" class="mono editor-output"></p>
+        <ul id="editorWarnings" class="editor-list"></ul>
         <details id="editorReportDetails" class="hidden">
           <summary>Relatório do render</summary>
           <pre id="editorReport"></pre>

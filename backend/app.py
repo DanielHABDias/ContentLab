@@ -18,13 +18,13 @@ try:
     from .contentlab.errors import PlanValidationError
     from .contentlab.registry import describe_registry
     from .contentlab.service import validate_edit_plan
-    from .contentlab.project import inspect_project, render_project
+    from .contentlab.project import project_plan_path, inspect_project, load_project_document, save_project_plan, render_project
 except ImportError:  # Suporte ao executável gerado pelo PyInstaller.
     import ffmpeg_helper
     from contentlab.errors import PlanValidationError
     from contentlab.registry import describe_registry
     from contentlab.service import validate_edit_plan
-    from contentlab.project import inspect_project, render_project
+    from contentlab.project import project_plan_path, inspect_project, load_project_document, save_project_plan, render_project
 
 
 def resource_path(relative):
@@ -1162,7 +1162,7 @@ def editor_plugins():
 
 @app.route("/api/editor/validate", methods=["POST"])
 def editor_validate():
-    data = request.get_json(force=True)
+    data = request.get_json(silent=True) or {}
     plan = data.get("plan")
     if not isinstance(plan, dict):
         return jsonify({"valid": False, "errors": [{"path": "plan", "message": "Envie o plano JSON no campo 'plan'."}]}), 400
@@ -1177,16 +1177,38 @@ def editor_validate():
 def editor_project():
     data = request.get_json(silent=True) or {}
     try:
-        return jsonify(inspect_project(data.get("projectRoot")))
+        return jsonify(load_project_document(data.get("projectRoot")))
     except PlanValidationError as exc:
         return jsonify({"error": "Projeto inválido.", "errors": exc.issues}), 422
+
+
+@app.route("/api/editor/project/save", methods=["POST"])
+def editor_project_save():
+    data = request.get_json(silent=True) or {}
+    try:
+        root = str(project_plan_path(data.get("projectRoot"))[0])
+        with EDITOR_JOBS_LOCK:
+            if any(job["status"] == "running" and job["projectRoot"] == root for job in EDITOR_JOBS.values()):
+                return jsonify({"error": "Aguarde o render em andamento antes de salvar."}), 409
+            result = save_project_plan(root, data.get("planText"), data.get("revision"))
+        return jsonify(result)
+    except PlanValidationError as exc:
+        conflict = any(item["path"] == "revision" for item in exc.issues)
+        return jsonify({"error": "Não foi possível salvar o plano.", "errors": exc.issues}), 409 if conflict else 422
 
 
 def _run_editor_job(job_id, root, mode):
     job = EDITOR_JOBS[job_id]
 
     def on_progress(stage, current, total, scene_id):
-        job.update(percent=min(90, round(current / max(total, 1) * 90)), message=f"Renderizando cena {current}/{total}: {scene_id}")
+        if stage == "scene":
+            job.update(percent=min(85, round(current / max(total, 1) * 85)), message=f"Renderizando cena {current}/{total}: {scene_id}")
+        elif stage == "narration":
+            job.update(percent=3, message="Narração preparada.")
+        elif stage == "compose":
+            job.update(percent=90, message="Vídeo composto.")
+        elif stage == "audio":
+            job.update(percent=95, message="Mixando áudio...")
 
     try:
         report = render_project(root, mode=mode, progress=on_progress)
@@ -1211,6 +1233,8 @@ def editor_render():
     with EDITOR_JOBS_LOCK:
         if any(job["status"] == "running" and job["projectRoot"] == root for job in EDITOR_JOBS.values()):
             return jsonify({"error": "Já existe um render em andamento para este projeto."}), 409
+        if data.get("revision") and data["revision"] != load_project_document(root)["revision"]:
+            return jsonify({"error": "O plano mudou no disco. Recarregue o projeto antes do render."}), 409
         job_id = uuid.uuid4().hex
         EDITOR_JOBS[job_id] = {"status": "running", "percent": 0, "message": "Preparando render...", "error": None, "projectRoot": root, "mode": mode, "filepath": None}
     threading.Thread(target=_run_editor_job, args=(job_id, root, mode), daemon=True).start()

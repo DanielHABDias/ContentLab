@@ -62,6 +62,7 @@ def prepare_edit_plan(source, project_root=None, builtin_root=None):
         "fps": plan.project.fps,
         "missingAssets": missing,
         "resolvedAssets": resolved,
+        "narration": str(narration),
     }
     return plan, timeline, narration, report
 

@@ -121,7 +121,11 @@ render. **Gerar preview** usa no máximo 960 px no maior lado e 15 FPS,
 salvando em `output/preview/preview.mp4`. **Render final** respeita a
 resolução e o FPS do plano e salva em `output/final/final.mp4`. Cada modo
 possui seu próprio `render_report.json`; a prévia pode ser reproduzida na
-página. Um projeto não executa dois renders simultâneos.
+página. Um projeto não executa dois renders simultâneos. O editor textual
+permite carregar, validar e salvar `edit_plan.json`; alterações não salvas
+bloqueiam o render. A página lista os assets resolvidos, plugins disponíveis,
+progresso e warnings. Se o arquivo mudar fora da página, o salvamento é
+recusado para evitar sobrescrever a edição externa — recarregue o projeto.
 
 A interface chama a API Flask no mesmo endereço, portanto não há etapa de
 compilação para o frontend.

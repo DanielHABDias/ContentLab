@@ -697,6 +697,8 @@ $("shutdownBtn").addEventListener("click", () => {
 // ---------- projeto de edição automática ----------
 let editorProject = null;
 let editorPoll = null;
+let editorDirty = false;
+let editorRendering = false;
 
 function editorError(message) {
   $("editorError").textContent = message || "";
@@ -704,8 +706,67 @@ function editorError(message) {
 }
 
 function editorBusy(busy) {
-  $("editorPreview").disabled = busy || !editorProject?.validation?.valid;
-  $("editorFinal").disabled = busy || !editorProject?.validation?.valid;
+  editorRendering = busy;
+  const canRender = !!editorProject?.validation?.valid && !editorDirty && !busy;
+  $("editorPreview").disabled = !canRender;
+  $("editorFinal").disabled = !canRender;
+  $("editorSave").disabled = !editorProject || !editorDirty || busy;
+  $("editorValidate").disabled = !editorProject || busy;
+  $("editorLoad").disabled = busy;
+  $("editorChooseFolder").disabled = busy;
+}
+
+function editorList(id, rows) {
+  const target = $(id);
+  target.replaceChildren();
+  for (const row of rows) {
+    const item = document.createElement("li");
+    item.textContent = row.text;
+    if (row.invalid) item.classList.add("editor-invalid");
+    target.appendChild(item);
+  }
+}
+
+function editorShowValidation(validation, draft = false) {
+  const problems = (validation.errors || []).map(item => ({ text: `${item.path}: ${item.message}`, invalid: true }));
+  for (const item of validation.missingAssets || []) problems.push({ text: `Ausente: ${item.asset} → ${item.path}`, invalid: true });
+  if (!problems.length) problems.push({ text: "Plano válido; todos os assets foram encontrados.", invalid: false });
+  editorList("editorValidation", problems);
+  $("editorDraftState").textContent = draft
+    ? "Validação do rascunho. Salve para habilitar o render."
+    : validation.valid ? "Plano salvo e pronto para renderizar." : "Plano salvo, mas requer correções antes do render.";
+}
+
+function editorSetProgress(percent) {
+  const value = Math.max(0, Math.min(100, Number(percent) || 0));
+  $("editorProgressFill").style.width = `${value}%`;
+  $("editorProgressFill").parentElement.setAttribute("aria-valuenow", String(value));
+}
+
+async function editorShowProject(data) {
+  editorProject = data;
+  editorDirty = false;
+  $("editorProjectName").textContent = data.name;
+  $("editorPlanText").value = data.planText;
+  const validation = data.validation;
+  $("editorSummary").textContent = validation.duration === undefined
+    ? "O JSON precisa de correções antes do render."
+    : `${data.scenes.length} cena(s) · ${validation.duration}s · ${validation.resolution.width}×${validation.resolution.height} · ${validation.fps} FPS`;
+  editorList("editorScenes", data.scenes.map(scene => ({ text: `${scene.id}: ${scene.start}s–${scene.end}s · ${scene.elements} elemento(s)` })));
+  editorShowValidation(validation);
+  const missing = new Set((validation.missingAssets || []).map(item => item.asset));
+  const assets = Object.entries(validation.resolvedAssets || {}).map(([uri, path]) => ({ text: `${uri} → ${path}${missing.has(uri) ? " (ausente)" : ""}`, invalid: missing.has(uri) }));
+  if (validation.narration) assets.unshift({ text: `Narração → ${validation.narration}${missing.has("audio.narration") ? " (ausente)" : ""}`, invalid: missing.has("audio.narration") });
+  editorList("editorAssets", assets.length ? assets : [{ text: "Nenhum asset referenciado." }]);
+  if (!validation.valid) editorError("Corrija os erros de validação antes do render.");
+  $("editorDetails").classList.remove("hidden");
+  editorBusy(false);
+  try {
+    const res = await fetch("/api/editor/plugins");
+    const plugins = await res.json();
+    if (!res.ok) throw new Error("Plugins indisponíveis.");
+    editorList("editorPlugins", Object.entries(plugins).map(([kind, names]) => ({ text: `${kind}: ${names.join(", ")}` })));
+  } catch (error) { editorList("editorPlugins", [{ text: error.message, invalid: true }]); }
 }
 
 $("editorChooseFolder").addEventListener("click", async () => {
@@ -718,6 +779,7 @@ $("editorChooseFolder").addEventListener("click", async () => {
 });
 
 $("editorLoad").addEventListener("click", async () => {
+  if (editorDirty && !window.confirm("Descartar alterações não salvas no JSON?")) return;
   editorError("");
   $("editorDetails").classList.add("hidden");
   editorProject = null;
@@ -728,32 +790,67 @@ $("editorLoad").addEventListener("click", async () => {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.errors?.map(item => item.message).join("; ") || data.error || "Projeto inválido.");
-    editorProject = data;
-    $("editorProjectName").textContent = data.name;
-    const validation = data.validation;
-    $("editorSummary").textContent = `${data.scenes.length} cena(s) · ${validation.duration}s · ${validation.resolution.width}×${validation.resolution.height} · ${validation.fps} FPS`;
-    $("editorScenes").replaceChildren();
-    for (const scene of data.scenes) {
-      const row = document.createElement("li");
-      row.textContent = `${scene.id}: ${scene.start}s–${scene.end}s · ${scene.elements} elemento(s)`;
-      $("editorScenes").appendChild(row);
-    }
-    if (!validation.valid) editorError(`Assets ausentes: ${validation.missingAssets.map(item => item.asset).join(", ")}`);
-    $("editorDetails").classList.remove("hidden");
+    await editorShowProject(data);
     $("editorStatus").textContent = "";
-    editorBusy(false);
+    editorSetProgress(0);
+    $("editorVideo").classList.add("hidden");
+    $("editorVideo").removeAttribute("src");
+    $("editorOutput").textContent = "";
+    editorList("editorWarnings", []);
+  } catch (error) { editorError(error.message); }
+});
+
+$("editorPlanText").addEventListener("input", () => {
+  editorDirty = true;
+  $("editorDraftState").textContent = "Alterações não salvas. Valide e salve antes do render.";
+  editorBusy(editorRendering);
+});
+
+$("editorValidate").addEventListener("click", async () => {
+  editorError("");
+  let plan;
+  try { plan = JSON.parse($("editorPlanText").value); }
+  catch (error) { editorShowValidation({ errors: [{ path: "JSON", message: error.message }] }, true); return; }
+  try {
+    const res = await fetch("/api/editor/validate", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ projectRoot: editorProject.projectRoot, plan }),
+    });
+    const validation = await res.json();
+    editorShowValidation(validation, true);
+    if (!res.ok && !validation.errors && !validation.missingAssets) throw new Error("Falha na validação.");
+  } catch (error) { editorError(error.message); }
+});
+
+$("editorSave").addEventListener("click", async () => {
+  editorError("");
+  try {
+    const res = await fetch("/api/editor/project/save", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ projectRoot: editorProject.projectRoot, planText: $("editorPlanText").value, revision: editorProject.revision }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.errors?.map(item => item.message).join("; ") || data.error || "Falha ao salvar.");
+    await editorShowProject(data);
+    $("editorStatus").textContent = "Plano salvo.";
   } catch (error) { editorError(error.message); }
 });
 
 async function startEditorRender(mode) {
-  if (!editorProject || !editorProject.validation.valid) return;
+  if (!editorProject || !editorProject.validation.valid || editorDirty) return;
   editorError("");
   editorBusy(true);
   $("editorStatus").textContent = "Iniciando render...";
+  editorSetProgress(0);
+  editorList("editorWarnings", []);
+  $("editorReportDetails").classList.add("hidden");
+  $("editorVideo").classList.add("hidden");
+  $("editorVideo").removeAttribute("src");
+  $("editorOutput").textContent = "";
   try {
     const res = await fetch("/api/editor/render", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ projectRoot: editorProject.projectRoot, mode }),
+      body: JSON.stringify({ projectRoot: editorProject.projectRoot, mode, revision: editorProject.revision }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Não foi possível iniciar o render.");
@@ -764,6 +861,7 @@ async function startEditorRender(mode) {
         const job = await statusRes.json();
         if (!statusRes.ok) throw new Error(job.error || "Render não encontrado.");
         $("editorStatus").textContent = `${job.message} ${job.percent || 0}%`;
+        editorSetProgress(job.percent);
         if (job.status === "running") return;
         clearInterval(editorPoll);
         editorPoll = null;
@@ -774,6 +872,8 @@ async function startEditorRender(mode) {
         $("editorOutput").textContent = `Arquivo: ${job.filepath}`;
         $("editorReport").textContent = JSON.stringify(job.report, null, 2);
         $("editorReportDetails").classList.remove("hidden");
+        const warnings = (job.report?.warnings || []).map(item => ({ text: `${item.code || "Aviso"}: ${item.message || item.scene || JSON.stringify(item)}`, invalid: true }));
+        editorList("editorWarnings", warnings);
       } catch (error) {
         if (editorPoll) clearInterval(editorPoll);
         editorPoll = null;
