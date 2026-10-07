@@ -1,8 +1,10 @@
 # Content Lab
 
-Aplicação local para baixar vídeos ou áudios do YouTube, criar cortes e gerar
-transcrições. Os vídeos completos ficam em cache para serem reutilizados em
-novos cortes.
+Aplicação local para baixar vídeos ou áudios do YouTube, criar cortes, gerar
+transcrições e produzir uma edição automática a partir de `edit_plan.json`,
+narração e assets. Os vídeos completos ficam em cache para serem reutilizados
+em novos cortes. O editor gera preview, render final e rough cut, mantendo
+relatórios de validação e renderização.
 
 ## Estrutura
 
@@ -15,6 +17,12 @@ iniciar.bat              inicialização no Windows
 debug.bat                inicialização com logs no Windows
 build.bat                geração do executável para Windows
 ContentLab.spec          configuração do PyInstaller
+schemas/                 contrato JSON do plano de edição
+examples/                exemplos de planos
+tests/                   testes unitários e aceite integrado
+MVP_ACCEPTANCE.md        checklist de aceite da fase 10
+skillContentLabEdicao.zip  skill para o GPT criar planos de edição JSON
+EDIT_PLAN_REFERENCE.md  funções e parâmetros do editor automático
 ```
 
 ## Linux
@@ -130,6 +138,25 @@ recusado para evitar sobrescrever a edição externa — recarregue o projeto.
 A interface chama a API Flask no mesmo endereço, portanto não há etapa de
 compilação para o frontend.
 
+Na fase 10, o painel também cria a estrutura inicial de um projeto, importa a
+narração, lista os assets, permite cancelar um render e oferece aceleração
+NVIDIA/NVENC opcional (com fallback automático para CPU). Preview e render
+final reutilizam o resultado quando plano, arquivos e código do renderer não
+mudaram. O relatório registra cache, encoder, tempo de render e duração dos
+streams; um arquivo com duração inconsistente não é publicado como resultado.
+
+Para executar o aceite técnico integrado de 60 segundos, com mídias sintéticas:
+
+```bash
+python -m unittest discover -s tests -q
+python -m tests.mvp_acceptance
+```
+
+O roteiro completo, incluindo as verificações manuais ainda necessárias no
+Windows e no CapCut, está em [MVP_ACCEPTANCE.md](MVP_ACCEPTANCE.md).
+O contrato completo do JSON, as funções implementadas e os parâmetros aceitos
+estão em [EDIT_PLAN_REFERENCE.md](EDIT_PLAN_REFERENCE.md).
+
 ## Dados e cache
 
 - O primeiro processamento guarda a fonte completa no cache.
@@ -138,3 +165,14 @@ compilação para o frontend.
 - Os modelos do `faster-whisper` são baixados na primeira transcrição.
 
 O servidor escuta apenas em `127.0.0.1`; ele não fica exposto à rede local.
+
+## Skill compartilhável de edição
+
+`skillContentLabEdicao.zip`, distribuída na raiz do projeto, é a skill que
+ajuda o GPT a criar um `edit_plan.json` para o editor automático. Entregue ao
+GPT o roteiro, a narração ou transcrição, a lista de assets disponíveis e as
+preferências visuais; peça um plano conforme
+[a referência do JSON](EDIT_PLAN_REFERENCE.md). Depois, salve o resultado como
+`edit_plan.json` na pasta do projeto, valide no Content Lab e gere o preview
+antes do render final. A skill auxilia na autoria do plano; os arquivos de
+áudio, imagem e vídeo referenciados precisam existir no projeto.

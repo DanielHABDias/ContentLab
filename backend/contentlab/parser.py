@@ -1,4 +1,5 @@
 import json
+import sys
 from pathlib import Path
 
 from jsonschema import Draft202012Validator
@@ -6,7 +7,7 @@ from jsonschema import Draft202012Validator
 from .errors import PlanValidationError
 from .models import EditPlan, ProjectSettings
 
-SCHEMA_PATH = Path(__file__).resolve().parents[2] / "schemas" / "contentlab.schema.v0.1.json"
+SCHEMA_PATH = (Path(sys._MEIPASS) if getattr(sys, "_MEIPASS", None) else Path(__file__).resolve().parents[2]) / "schemas" / "contentlab.schema.v0.1.json"
 FORMAT_DEFAULTS = {
     "youtube_long": (1920, 1080, 30.0),
     "youtube_short": (1080, 1920, 30.0),

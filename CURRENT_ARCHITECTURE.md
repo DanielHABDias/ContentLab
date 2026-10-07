@@ -50,6 +50,9 @@
 - Caminhos vindos do JSON nunca podem escapar das raízes permitidas.
 - Windows, espaços em caminhos e UTF-8 são requisitos permanentes.
 - A ausência de FFmpeg/assets deve falhar antes do render longo.
+- `skillContentLabEdicao.zip` é a skill compartilhável que ajuda o GPT a criar
+  `edit_plan.json`. Ela não é dependência do renderer nem substitui a
+  validação do contrato JSON.
 
 ## Plano incremental
 
@@ -62,3 +65,4 @@
 7. UI de projeto, preview e render final. **Implementado: painel web, jobs assíncronos, preview reduzido e export final separado.**
 8. Áudio do roadmap original. **Implementado: sourceCuts, narração limpa, remapeamento da transcrição, normalização, ducking, fades, limiter e relatório.** A numeração das fases 6–7 neste resumo local não coincidia com a do roadmap do Drive; a fase 8 segue o escopo de áudio daquele documento.
 9. Web UI do roadmap original. **Implementado: carregar e editar JSON, validação de rascunho, salvamento atômico com revisão, inventário de assets/plugins, preview/final, progresso e warnings.**
+10. Estabilização e aceite do MVP. **Implementado no código: cache de render por fingerprint, NVENC opcional com fallback, cancelamento, checagem FFprobe do resultado, fixture integrada de 60 segundos, criação/importação de projeto na UI e scripts Windows mais robustos.** A execução no Windows e a importação no CapCut dependem de validação manual nesse ambiente; veja [MVP_ACCEPTANCE.md](MVP_ACCEPTANCE.md).

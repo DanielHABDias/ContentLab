@@ -14,3 +14,7 @@ class UnsafeAssetPathError(ContentLabError):
 
 class RenderError(ContentLabError):
     """O backend de render não conseguiu produzir a saída."""
+
+
+class RenderCancelled(ContentLabError):
+    """O usuário cancelou o render em andamento."""

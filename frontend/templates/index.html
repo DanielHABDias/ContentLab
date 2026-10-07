@@ -225,11 +225,27 @@
         <button id="editorChooseFolder" class="btn btn-secondary" type="button">Escolher</button>
         <button id="editorLoad" class="btn btn-primary" type="button">Carregar</button>
       </div>
+      <div class="row editor-create-row">
+        <input id="editorNewName" type="text" placeholder="Nome de um novo projeto">
+        <button id="editorCreate" class="btn btn-secondary" type="button">Criar na pasta acima</button>
+      </div>
       <p id="editorError" class="error-text hidden" role="alert"></p>
       <div id="editorDetails" class="hidden">
         <h3 id="editorProjectName"></h3>
         <p id="editorSummary" class="helper-text"></p>
         <ol id="editorScenes" class="editor-scenes"></ol>
+        <div class="editor-inputs">
+          <button id="editorChooseNarration" class="btn btn-secondary btn-sm" type="button">Selecionar narração</button>
+          <input id="editorNarrationFile" class="hidden" type="file" accept="audio/*,.wav,.mp3,.m4a,.aac,.flac,.ogg,.opus">
+          <span class="helper-text">O arquivo será copiado para <code>audio/</code> do projeto.</span>
+        </div>
+        <label class="block-label" for="editorAssetFolder">Pasta de assets dentro do projeto</label>
+        <div class="row">
+          <input id="editorAssetFolder" type="text" placeholder="/caminho/projeto/assets">
+          <button id="editorChooseAssets" class="btn btn-secondary" type="button">Escolher</button>
+          <button id="editorInspectAssets" class="btn btn-secondary" type="button">Listar</button>
+        </div>
+        <ul id="editorAssetLibrary" class="editor-list"></ul>
         <details class="editor-plan" open>
           <summary>edit_plan.json</summary>
           <textarea id="editorPlanText" rows="16" spellcheck="false" aria-label="Conteúdo JSON do plano"></textarea>
@@ -252,6 +268,8 @@
           <button id="editorPreview" class="btn btn-secondary" type="button" disabled>Gerar preview</button>
           <button id="editorFinal" class="btn btn-primary" type="button" disabled>Render final</button>
         </div>
+        <label class="editor-gpu"><input id="editorGpu" type="checkbox"> Tentar aceleração NVIDIA (NVENC); usa CPU se indisponível</label>
+        <button id="editorCancel" class="btn btn-danger btn-sm hidden" type="button">Cancelar render</button>
         <p id="editorStatus" class="helper-text" role="status" aria-live="polite"></p>
         <div class="editor-progress" role="progressbar" aria-label="Progresso do render" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="editorProgressFill"></span></div>
         <video id="editorVideo" class="editor-video hidden" controls playsinline preload="metadata"></video>

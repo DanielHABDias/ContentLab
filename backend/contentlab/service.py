@@ -1,4 +1,5 @@
 from pathlib import Path
+import sys
 
 from .assets import AssetResolver
 from .errors import ContentLabError, PlanValidationError
@@ -25,7 +26,8 @@ def _asset_uris(plan):
 def prepare_edit_plan(source, project_root=None, builtin_root=None):
     plan = load_edit_plan(source) if isinstance(source, (str, Path)) else parse_edit_plan(source)
     project_root = Path(project_root or (plan.source_path.parent if plan.source_path else Path.cwd())).resolve()
-    builtin_root = Path(builtin_root or Path(__file__).resolve().parents[2] / "builtin-assets").resolve()
+    app_root = Path(sys._MEIPASS) if getattr(sys, "_MEIPASS", None) else Path(__file__).resolve().parents[2]
+    builtin_root = Path(builtin_root or app_root / "builtin-assets").resolve()
     resolver = AssetResolver(project_root, builtin_root)
     resolved = {}
     missing = []

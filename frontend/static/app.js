@@ -699,6 +699,7 @@ let editorProject = null;
 let editorPoll = null;
 let editorDirty = false;
 let editorRendering = false;
+let editorJobId = null;
 
 function editorError(message) {
   $("editorError").textContent = message || "";
@@ -714,6 +715,11 @@ function editorBusy(busy) {
   $("editorValidate").disabled = !editorProject || busy;
   $("editorLoad").disabled = busy;
   $("editorChooseFolder").disabled = busy;
+  $("editorCreate").disabled = busy;
+  $("editorChooseNarration").disabled = busy;
+  $("editorChooseAssets").disabled = busy;
+  $("editorInspectAssets").disabled = busy;
+  $("editorCancel").classList.toggle("hidden", !busy);
 }
 
 function editorList(id, rows) {
@@ -748,6 +754,11 @@ async function editorShowProject(data) {
   editorDirty = false;
   $("editorProjectName").textContent = data.name;
   $("editorPlanText").value = data.planText;
+  try {
+    const source = JSON.parse(data.planText).sources?.assets || "assets";
+    $("editorAssetFolder").value = `${data.projectRoot}/${source}`;
+  } catch (_) { $("editorAssetFolder").value = `${data.projectRoot}/assets`; }
+  editorList("editorAssetLibrary", []);
   const validation = data.validation;
   $("editorSummary").textContent = validation.duration === undefined
     ? "O JSON precisa de correções antes do render."
@@ -775,6 +786,71 @@ $("editorChooseFolder").addEventListener("click", async () => {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Não foi possível escolher a pasta.");
     if (data.folder) $("editorProjectRoot").value = data.folder;
+  } catch (error) { editorError(error.message); }
+});
+
+$("editorCreate").addEventListener("click", async () => {
+  editorError("");
+  try {
+    const res = await fetch("/api/editor/project/create", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ parentRoot: $("editorProjectRoot").value.trim(), name: $("editorNewName").value.trim() }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.errors?.map(item => item.message).join("; ") || data.error || "Falha ao criar projeto.");
+    $("editorProjectRoot").value = data.projectRoot;
+    await editorShowProject(data);
+    $("editorStatus").textContent = "Projeto criado. Selecione a narração e adicione cenas ao JSON.";
+  } catch (error) { editorError(error.message); }
+});
+
+$("editorChooseNarration").addEventListener("click", () => $("editorNarrationFile").click());
+$("editorNarrationFile").addEventListener("change", async () => {
+  const file = $("editorNarrationFile").files[0];
+  if (!file || !editorProject) return;
+  editorError("");
+  try {
+    const plan = JSON.parse($("editorPlanText").value);
+    const form = new FormData();
+    form.append("projectRoot", editorProject.projectRoot);
+    form.append("file", file);
+    const res = await fetch("/api/editor/project/narration", { method: "POST", body: form });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.errors?.map(item => item.message).join("; ") || data.error || "Falha ao importar narração.");
+    plan.audio.narration = data.relative;
+    $("editorPlanText").value = JSON.stringify(plan, null, 2);
+    $("editorPlanText").dispatchEvent(new Event("input"));
+    $("editorStatus").textContent = `Narração importada: ${data.relative}. Salve o plano.`;
+  } catch (error) { editorError(error.message); }
+  finally { $("editorNarrationFile").value = ""; }
+});
+
+$("editorChooseAssets").addEventListener("click", async () => {
+  try {
+    const res = await fetch("/api/choose-folder", { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Não foi possível escolher a pasta.");
+    if (data.folder) $("editorAssetFolder").value = data.folder;
+  } catch (error) { editorError(error.message); }
+});
+
+$("editorInspectAssets").addEventListener("click", async () => {
+  if (!editorProject) return;
+  editorError("");
+  try {
+    const res = await fetch("/api/editor/project/assets", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ projectRoot: editorProject.projectRoot, folder: $("editorAssetFolder").value.trim() }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.errors?.map(item => item.message).join("; ") || data.error || "Pasta inválida.");
+    editorList("editorAssetLibrary", data.assets.length ? data.assets.map(item => ({ text: item.uri })) : [{ text: "Pasta vazia." }]);
+    if (data.truncated) $("editorStatus").textContent = "Mostrando os primeiros 500 assets.";
+    const plan = JSON.parse($("editorPlanText").value);
+    plan.sources = plan.sources || {};
+    plan.sources.assets = data.relative;
+    $("editorPlanText").value = JSON.stringify(plan, null, 2);
+    $("editorPlanText").dispatchEvent(new Event("input"));
   } catch (error) { editorError(error.message); }
 });
 
@@ -850,10 +926,11 @@ async function startEditorRender(mode) {
   try {
     const res = await fetch("/api/editor/render", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ projectRoot: editorProject.projectRoot, mode, revision: editorProject.revision }),
+      body: JSON.stringify({ projectRoot: editorProject.projectRoot, mode, revision: editorProject.revision, hardwareAccel: $("editorGpu").checked }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Não foi possível iniciar o render.");
+    editorJobId = data.jobId;
     if (editorPoll) clearInterval(editorPoll);
     editorPoll = setInterval(async () => {
       try {
@@ -865,7 +942,12 @@ async function startEditorRender(mode) {
         if (job.status === "running") return;
         clearInterval(editorPoll);
         editorPoll = null;
+        editorJobId = null;
         editorBusy(false);
+        if (job.status === "cancelled") {
+          $("editorStatus").textContent = "Render cancelado.";
+          return;
+        }
         if (job.status === "error") throw new Error(job.error || "Render falhou.");
         $("editorVideo").src = `/api/editor/media/${data.jobId}`;
         $("editorVideo").classList.remove("hidden");
@@ -877,11 +959,13 @@ async function startEditorRender(mode) {
       } catch (error) {
         if (editorPoll) clearInterval(editorPoll);
         editorPoll = null;
+        editorJobId = null;
         editorBusy(false);
         editorError(error.message);
       }
     }, 1000);
   } catch (error) {
+    editorJobId = null;
     editorBusy(false);
     editorError(error.message);
   }
@@ -889,3 +973,14 @@ async function startEditorRender(mode) {
 
 $("editorPreview").addEventListener("click", () => startEditorRender("preview"));
 $("editorFinal").addEventListener("click", () => startEditorRender("final"));
+$("editorCancel").addEventListener("click", async () => {
+  if (!editorJobId) return;
+  $("editorCancel").disabled = true;
+  try {
+    const res = await fetch(`/api/editor/jobs/${editorJobId}/cancel`, { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Não foi possível cancelar.");
+    $("editorStatus").textContent = "Cancelando render...";
+  } catch (error) { editorError(error.message); }
+  finally { $("editorCancel").disabled = false; }
+});

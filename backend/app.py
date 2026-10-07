@@ -18,13 +18,17 @@ try:
     from .contentlab.errors import PlanValidationError
     from .contentlab.registry import describe_registry
     from .contentlab.service import validate_edit_plan
-    from .contentlab.project import project_plan_path, inspect_project, load_project_document, save_project_plan, render_project
+    from .contentlab.project import project_plan_path, create_project, inspect_asset_folder, import_narration, inspect_project, load_project_document, save_project_plan, render_project
+    from .contentlab.cancel import CancelRunner
+    from .contentlab.errors import RenderCancelled
 except ImportError:  # Suporte ao executável gerado pelo PyInstaller.
     import ffmpeg_helper
     from contentlab.errors import PlanValidationError
     from contentlab.registry import describe_registry
     from contentlab.service import validate_edit_plan
-    from contentlab.project import project_plan_path, inspect_project, load_project_document, save_project_plan, render_project
+    from contentlab.project import project_plan_path, create_project, inspect_asset_folder, import_narration, inspect_project, load_project_document, save_project_plan, render_project
+    from contentlab.cancel import CancelRunner
+    from contentlab.errors import RenderCancelled
 
 
 def resource_path(relative):
@@ -49,6 +53,7 @@ def no_cache(response):
 JOBS = {}  # job_id -> dict(status, percent, message, error, filepath, folder)
 EDITOR_JOBS = {}
 EDITOR_JOBS_LOCK = threading.Lock()
+EDITOR_CANCEL_EVENTS = {}
 PREVIEWS = {}  # preview_id -> dict(url, headers)
 CACHE_LOCKS = {}  # cache_key -> threading.Lock()
 CACHE_LOCKS_GUARD = threading.Lock()
@@ -1182,6 +1187,39 @@ def editor_project():
         return jsonify({"error": "Projeto inválido.", "errors": exc.issues}), 422
 
 
+@app.route("/api/editor/project/create", methods=["POST"])
+def editor_project_create():
+    data = request.get_json(silent=True) or {}
+    try:
+        return jsonify(create_project(data.get("parentRoot"), data.get("name"))), 201
+    except PlanValidationError as exc:
+        return jsonify({"error": "Não foi possível criar o projeto.", "errors": exc.issues}), 422
+
+
+@app.route("/api/editor/project/assets", methods=["POST"])
+def editor_project_assets():
+    data = request.get_json(silent=True) or {}
+    try:
+        return jsonify(inspect_asset_folder(data.get("projectRoot"), data.get("folder")))
+    except PlanValidationError as exc:
+        return jsonify({"error": "Pasta de assets inválida.", "errors": exc.issues}), 422
+
+
+@app.route("/api/editor/project/narration", methods=["POST"])
+def editor_project_narration():
+    upload = request.files.get("file")
+    if upload is None:
+        return jsonify({"error": "Selecione uma narração."}), 400
+    try:
+        root = str(project_plan_path(request.form.get("projectRoot"))[0])
+        with EDITOR_JOBS_LOCK:
+            if any(job["status"] == "running" and job["projectRoot"] == root for job in EDITOR_JOBS.values()):
+                return jsonify({"error": "Aguarde o render antes de importar a narração."}), 409
+            return jsonify(import_narration(root, upload)), 201
+    except PlanValidationError as exc:
+        return jsonify({"error": "Narração inválida.", "errors": exc.issues}), 422
+
+
 @app.route("/api/editor/project/save", methods=["POST"])
 def editor_project_save():
     data = request.get_json(silent=True) or {}
@@ -1197,10 +1235,13 @@ def editor_project_save():
         return jsonify({"error": "Não foi possível salvar o plano.", "errors": exc.issues}), 409 if conflict else 422
 
 
-def _run_editor_job(job_id, root, mode):
+def _run_editor_job(job_id, root, mode, hardware_accel):
     job = EDITOR_JOBS[job_id]
+    cancel_event = EDITOR_CANCEL_EVENTS[job_id]
 
     def on_progress(stage, current, total, scene_id):
+        if cancel_event.is_set():
+            raise RenderCancelled("Render cancelado pelo usuário.")
         if stage == "scene":
             job.update(percent=min(85, round(current / max(total, 1) * 85)), message=f"Renderizando cena {current}/{total}: {scene_id}")
         elif stage == "narration":
@@ -1211,16 +1252,28 @@ def _run_editor_job(job_id, root, mode):
             job.update(percent=95, message="Mixando áudio...")
 
     try:
-        report = render_project(root, mode=mode, progress=on_progress)
+        if cancel_event.is_set():
+            raise RenderCancelled("Render cancelado pelo usuário.")
+        report = render_project(root, mode=mode, progress=on_progress, hardware_accel=hardware_accel, runner=CancelRunner(cancel_event))
+        if cancel_event.is_set():
+            raise RenderCancelled("Render cancelado pelo usuário.")
         job.update(status="done", percent=100, message="Render concluído.", report=report, filepath=report["output"])
+    except RenderCancelled:
+        job.update(status="cancelled", message="Render cancelado.", error=None)
     except Exception as exc:
         job.update(status="error", message="Falha no render.", error=str(exc))
+    finally:
+        with EDITOR_JOBS_LOCK:
+            EDITOR_CANCEL_EVENTS.pop(job_id, None)
 
 
 @app.route("/api/editor/render", methods=["POST"])
 def editor_render():
     data = request.get_json(silent=True) or {}
     mode = data.get("mode")
+    hardware_accel = data.get("hardwareAccel", False)
+    if not isinstance(hardware_accel, bool):
+        return jsonify({"error": "hardwareAccel deve ser booleano."}), 400
     if mode not in {"preview", "final"}:
         return jsonify({"error": "Modo deve ser preview ou final."}), 400
     try:
@@ -1237,7 +1290,8 @@ def editor_render():
             return jsonify({"error": "O plano mudou no disco. Recarregue o projeto antes do render."}), 409
         job_id = uuid.uuid4().hex
         EDITOR_JOBS[job_id] = {"status": "running", "percent": 0, "message": "Preparando render...", "error": None, "projectRoot": root, "mode": mode, "filepath": None}
-    threading.Thread(target=_run_editor_job, args=(job_id, root, mode), daemon=True).start()
+        EDITOR_CANCEL_EVENTS[job_id] = threading.Event()
+    threading.Thread(target=_run_editor_job, args=(job_id, root, mode, hardware_accel), daemon=True).start()
     return jsonify({"jobId": job_id}), 202
 
 
@@ -1247,6 +1301,20 @@ def editor_job(job_id):
     if not job:
         return jsonify({"error": "Render não encontrado."}), 404
     return jsonify(job)
+
+
+@app.route("/api/editor/jobs/<job_id>/cancel", methods=["POST"])
+def editor_job_cancel(job_id):
+    with EDITOR_JOBS_LOCK:
+        job = EDITOR_JOBS.get(job_id)
+        event = EDITOR_CANCEL_EVENTS.get(job_id)
+        if not job:
+            return jsonify({"error": "Render não encontrado."}), 404
+        if job["status"] != "running" or not event:
+            return jsonify({"error": "Render não está em andamento."}), 409
+        event.set()
+        job["message"] = "Cancelando render..."
+    return jsonify({"ok": True})
 
 
 @app.route("/api/editor/media/<job_id>", methods=["GET"])

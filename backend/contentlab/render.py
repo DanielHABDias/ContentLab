@@ -5,13 +5,14 @@ import tempfile
 import time
 from pathlib import Path
 
-from .errors import PlanValidationError, RenderError
+from .errors import PlanValidationError, RenderError, RenderCancelled
 from .service import prepare_edit_plan
 from .text import build_scene_ass
 from .layout import box_geometry, create_card_assets
 from .motions import motion_filters, overlay_position
 from .transitions import discover_transitions
 from .audio import prepare_narration, remap_transcript
+from .encoding import select_h264_encoder
 
 
 def _creation_flags():
@@ -23,6 +24,29 @@ def _run(command, runner=subprocess.run):
     if result.returncode != 0:
         details = (result.stderr or result.stdout or "Erro desconhecido do FFmpeg.").strip().splitlines()
         raise RenderError("FFmpeg falhou: " + "\n".join(details[-12:]))
+
+
+def _verify_output(ffmpeg_dir, path, expected_duration, fps):
+    probe = Path(ffmpeg_dir) / ("ffprobe.exe" if os.name == "nt" else "ffprobe")
+    if not probe.is_file():
+        return None
+    result = subprocess.run(
+        [str(probe), "-v", "error", "-show_entries", "stream=codec_type,duration,codec_name:format=duration", "-of", "json", str(path)],
+        capture_output=True, text=True, timeout=30, creationflags=_creation_flags(),
+    )
+    if result.returncode:
+        raise RenderError("FFprobe não conseguiu verificar o vídeo gerado.")
+    try:
+        info = json.loads(result.stdout)
+        streams = {stream["codec_type"]: stream for stream in info["streams"]}
+        video_duration = float(streams["video"]["duration"])
+        audio_duration = float(streams["audio"]["duration"])
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise RenderError("O vídeo gerado não contém áudio e vídeo válidos.") from exc
+    tolerance = max(0.12, 2 / fps)
+    if abs(video_duration - expected_duration) > tolerance or abs(audio_duration - expected_duration) > tolerance:
+        raise RenderError(f"Duração incorreta: vídeo {video_duration:.2f}s, áudio {audio_duration:.2f}s; esperado {expected_duration:.2f}s.")
+    return {"videoDuration": round(video_duration, 3), "audioDuration": round(audio_duration, 3), "videoCodec": streams["video"].get("codec_name"), "audioCodec": streams["audio"].get("codec_name")}
 
 
 def _video_filter(fit, width, height, fps, duration):
@@ -51,7 +75,7 @@ def _scene_visual(scene, full_region):
     return None
 
 
-def _render_segment(ffmpeg, scene, output, project, duration, runner, warnings, transcript=None, work_dir=None, lead_in=0):
+def _render_segment(ffmpeg, scene, output, project, duration, runner, warnings, transcript=None, work_dir=None, video_encoding=None):
     full_region = (0, 0, project.width, project.height)
     visual = _scene_visual(scene, full_region)
     common = [ffmpeg, "-hide_banner", "-loglevel", "error", "-y"]
@@ -135,15 +159,12 @@ def _render_segment(ffmpeg, scene, output, project, duration, runner, warnings, 
         subtitle_filter = f"subtitles=filename='{_filter_path(ass_path)}':original_size={project.width}x{project.height}"
         graph.append(f"[{current}]{subtitle_filter}[out]")
         current = "out"
-    if lead_in:
-        graph.append(f"[{current}]tpad=start_mode=clone:start_duration={lead_in:.6f},setpts=PTS-STARTPTS[padded]")
-        current = "padded"
-    command += ["-t", str(duration + lead_in), "-filter_complex", ";".join(graph), "-map", f"[{current}]"]
+    command += ["-t", str(duration), "-filter_complex", ";".join(graph), "-map", f"[{current}]"]
 
     unsupported = [element.type for element in scene.elements if element.type not in {"video", "image", "overlay", "sfx", "text", "kinetic_text", "caption"}]
     if unsupported:
         warnings.append({"scene": scene.id, "code": "elements_not_rendered", "elements": unsupported})
-    command += ["-an", "-r", str(project.fps), "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-pix_fmt", "yuv420p", str(output)]
+    command += ["-an", "-r", str(project.fps), *(video_encoding or ["-c:v", "libx264", "-preset", "veryfast", "-crf", "18"]), "-pix_fmt", "yuv420p", str(output)]
     _run(command, runner)
 
 
@@ -152,7 +173,7 @@ def _concat_file_line(path):
     return f"file '{escaped}'\n"
 
 
-def _compose_visual(ffmpeg, segments, boundaries, durations, total, fps, work, runner):
+def _compose_visual(ffmpeg, segments, boundaries, durations, total, fps, work, runner, video_encoding=None):
     visual = work / "visual.mp4"
     if all(spec.ffmpeg_name is None for spec, _ in boundaries):
         concat_list = work / "segments.ffconcat"
@@ -164,18 +185,37 @@ def _compose_visual(ffmpeg, segments, boundaries, durations, total, fps, work, r
     for index, segment in enumerate(segments):
         command += ["-i", str(segment)]
         graph.append(f"[{index}:v]setpts=PTS-STARTPTS,format=yuv420p,fps={fps}[v{index}]")
-    current = "v0"
-    elapsed = durations[0]
-    for index, (spec, transition_duration) in enumerate(boundaries, 1):
-        target = f"joined{index}"
-        if spec.ffmpeg_name:
-            offset = elapsed - transition_duration
-            graph.append(f"[{current}][v{index}]xfade=transition={spec.ffmpeg_name}:duration={transition_duration:.6f}:offset={offset:.6f}[{target}]")
+    # Each transition is an independent short clip: outgoing tail -> frozen
+    # first frame of the next scene. A chain of xfade filters can truncate
+    # everything after the second transition on FFmpeg 6/7.
+    for index, duration in enumerate(durations):
+        incoming = boundaries[index - 1][1] if index else 0
+        outgoing = boundaries[index][1] if index < len(boundaries) else 0
+        labels = [f"rawbody{index}"]
+        if outgoing:
+            labels.append(f"rawtail{index}")
+        if incoming:
+            labels.append(f"rawfirst{index}")
+        if len(labels) > 1:
+            graph.append(f"[v{index}]split={len(labels)}" + "".join(f"[{label}]" for label in labels))
         else:
-            graph.append(f"[{current}][v{index}]concat=n=2:v=1:a=0[{target}]")
-        current = target
-        elapsed += durations[index]
-    command += ["-filter_complex", ";".join(graph), "-map", f"[{current}]", "-an", "-t", str(total), "-r", str(fps), "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-pix_fmt", "yuv420p", str(visual)]
+            graph.append(f"[v{index}]null[rawbody{index}]")
+        body_duration = duration - outgoing
+        graph.append(f"[rawbody{index}]trim=start=0:end={body_duration:.6f},setpts=PTS-STARTPTS,fps={fps}[body{index}]")
+        if outgoing:
+            graph.append(f"[rawtail{index}]trim=start={body_duration:.6f}:end={duration:.6f},setpts=PTS-STARTPTS,fps={fps}[tail{index}]")
+        if incoming:
+            graph.append(f"[rawfirst{index}]trim=start=0:end={1 / fps:.6f},setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration={incoming:.6f},trim=duration={incoming:.6f},fps={fps}[first{index}]")
+    pieces = []
+    for index in range(len(segments)):
+        pieces.append(f"[body{index}]")
+        if index < len(boundaries):
+            spec, transition_duration = boundaries[index]
+            if spec.ffmpeg_name:
+                graph.append(f"[tail{index}][first{index + 1}]xfade=transition={spec.ffmpeg_name}:duration={transition_duration:.6f}:offset=0[transition{index}]")
+                pieces.append(f"[transition{index}]")
+    graph.append("".join(pieces) + f"concat=n={len(pieces)}:v=1:a=0[out]")
+    command += ["-filter_complex", ";".join(graph), "-map", "[out]", "-an", "-t", str(total), "-r", str(fps), *(video_encoding or ["-c:v", "libx264", "-preset", "veryfast", "-crf", "18"]), "-pix_fmt", "yuv420p", str(visual)]
     _run(command, runner)
     return visual
 
@@ -264,7 +304,7 @@ def _load_transcript(plan, project_root, warnings):
         return None
 
 
-def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None, runner=subprocess.run, progress=None, mode="rough"):
+def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None, runner=subprocess.run, progress=None, mode="rough", hardware_accel=False):
     if mode not in {"rough", "preview", "final"}:
         raise ValueError("Modo de render inválido.")
     started = time.time()
@@ -287,6 +327,9 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
     output = output_dir / {"rough": "rough_cut.mp4", "preview": "preview.mp4", "final": "final.mp4"}[mode]
     report_path = output_dir / "render_report.json"
     warnings = []
+    video_encoding, video_encoder, encoder_warning = select_h264_encoder(ffmpeg, hardware_accel)
+    if encoder_warning:
+        warnings.append(encoder_warning)
     actual_project_root = Path(project_root or (plan.source_path.parent if plan.source_path else Path.cwd())).resolve()
     transcript = _load_transcript(plan, actual_project_root, warnings)
     transcript = remap_transcript(transcript, plan.audio.get("sourceCuts", []))
@@ -339,15 +382,15 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
                     progress("scene", index + 1, len(render_scenes), scene_for_render.id)
                 _render_segment(
                     ffmpeg, scene_for_render, segment, plan.project, duration, runner, warnings,
-                    transcript=transcript, work_dir=work, lead_in=lead_in,
+                    transcript=transcript, work_dir=work, video_encoding=video_encoding,
                 )
                 segments.append(segment)
-                segment_durations.append(duration + lead_in)
+                segment_durations.append(duration)
 
             if timeline.scenes[-1].transition_out != "cut":
                 warnings.append({"scene": timeline.scenes[-1].id, "code": "transition_at_end", "requested": timeline.scenes[-1].transition_out, "used": "cut"})
 
-            visual = _compose_visual(ffmpeg, segments, boundaries, segment_durations, timeline.duration, plan.project.fps, work, runner)
+            visual = _compose_visual(ffmpeg, segments, boundaries, segment_durations, timeline.duration, plan.project.fps, work, runner, video_encoding=video_encoding)
             if progress:
                 progress("compose", len(render_scenes), len(render_scenes), "Vídeo composto")
 
@@ -355,6 +398,7 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
             if progress:
                 progress("audio", len(render_scenes), len(render_scenes), "Mixando áudio")
             applied_audio = _audio_mix(ffmpeg, visual, cleaned_temp, plan, timeline, validation["resolvedAssets"], temp_output, runner)
+            output_probe = _verify_output(ffmpeg_dir, temp_output, timeline.duration, plan.project.fps)
             os.replace(temp_output, output)
             cleaned_output = output_dir / "narration.cleaned.wav"
             os.replace(cleaned_temp, cleaned_output)
@@ -362,9 +406,10 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
 
         report = {
             "status": "completed", "project": plan.project.name, "version": plan.version, "mode": mode,
-            "output": str(output), "duration": timeline.duration, "scenes": len(timeline.scenes),
+            "output": str(output), "outputBytes": output.stat().st_size, "duration": timeline.duration, "scenes": len(timeline.scenes), "videoEncoder": video_encoder,
             "warnings": warnings, "transitions": applied_transitions, "audioLayers": applied_audio,
             "narration": narration_report,
+            "outputProbe": output_probe,
             "ducking": {
                 "threshold": plan.audio.get("ducking", {}).get("threshold", 0.02),
                 "ratio": plan.audio.get("ducking", {}).get("ratio", 6),
@@ -374,10 +419,11 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
             },
             "limiter": {"enabled": True, "limit": 0.95},
             "elapsedSeconds": round(time.time() - started, 3),
+            "renderRealtimeFactor": round(timeline.duration / max(time.time() - started, 0.001), 2),
         }
         report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
         return report
     except Exception as exc:
-        report = {"status": "failed", "project": plan.project.name, "error": str(exc), "warnings": warnings, "elapsedSeconds": round(time.time() - started, 3)}
+        report = {"status": "cancelled" if isinstance(exc, RenderCancelled) else "failed", "project": plan.project.name, "error": str(exc), "warnings": warnings, "elapsedSeconds": round(time.time() - started, 3)}
         report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
         raise

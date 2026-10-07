@@ -19,6 +19,7 @@ def build_parser():
     render.add_argument("--project-root")
     render.add_argument("--output-dir")
     render.add_argument("--mode", choices=("rough", "final"), default="rough")
+    render.add_argument("--gpu", action="store_true", help="Tenta NVENC; usa libx264 se indisponível")
     commands.add_parser("plugins", help="Lista as capacidades registradas")
     return parser
 
@@ -29,7 +30,7 @@ def main(argv=None):
         if args.command == "plugins":
             result = describe_registry()
         elif args.command == "render":
-            result = render_edit_plan(args.plan, args.output_dir, args.project_root, mode=args.mode)
+            result = render_edit_plan(args.plan, args.output_dir, args.project_root, mode=args.mode, hardware_accel=args.gpu)
         else:
             result = validate_edit_plan(args.plan, args.project_root)
         print(json.dumps(result, ensure_ascii=False, indent=2))

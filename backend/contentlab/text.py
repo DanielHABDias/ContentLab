@@ -117,14 +117,15 @@ def build_scene_ass(scene, project, transcript, output):
             if not words:
                 warnings.append({"scene": scene.id, "code": "caption_no_words", "message": "Nenhuma palavra da transcrição no intervalo da legenda."})
                 continue
-            # Uma linha curta de contexto permanece na tela enquanto a palavra atual muda de cor.
+            # Keep karaoke groups narrow enough for preview and portrait formats.
+            group_size = max(2, min(5, project.width // 300))
             for index, word in enumerate(words):
                 word_start = max(start, word["start"])
                 word_end = min(end, word["end"])
                 if word_end <= word_start:
                     continue
-                group_start = (index // 5) * 5
-                group = words[group_start:group_start + 5]
+                group_start = (index // group_size) * group_size
+                group = words[group_start:group_start + group_size]
                 parts = []
                 for group_index, item in enumerate(group):
                     prefix = r"{\1c&H00D4FF&\fscx112\fscy112}" if group_start + group_index == index else r"{\1c&H00FFFFFF&\fscx100\fscy100}"
