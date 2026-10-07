@@ -9,6 +9,7 @@ from backend.contentlab.parser import parse_edit_plan
 from backend.contentlab.render import render_edit_plan
 from backend.contentlab.text import build_scene_ass, transcript_words
 from backend.contentlab.timeline import compile_timeline
+from backend.contentlab.layout import box_geometry, create_card_assets
 
 
 def valid_plan():
@@ -91,6 +92,24 @@ class RendererTests(unittest.TestCase):
             self.assertTrue((root / "output" / "render_report.json").is_file())
             self.assertEqual(len(commands), 3)
             self.assertTrue(all(isinstance(command, list) for command in commands))
+
+    def test_three_columns_assigns_visual_regions_and_card_assets(self):
+        data = valid_plan()
+        data["timeline"][0]["layout"] = "three_columns"
+        data["timeline"][0]["elements"] = [
+            {"type": "image", "asset": f"project://images/{index}.png", "box": {"padding": 12, "radius": 20, "shadow": "soft"}}
+            for index in range(3)
+        ]
+        scene = compile_timeline(parse_edit_plan(data)).scenes[0]
+        self.assertEqual([element.region[0] for element in scene.elements], [0, 640, 1280])
+        self.assertEqual([element.region[2] for element in scene.elements], [640, 640, 640])
+        _, content, radius = box_geometry(scene.elements[0])
+        self.assertEqual(content, (12, 12, 616, 1056))
+        self.assertEqual(radius, 20)
+        with tempfile.TemporaryDirectory() as directory:
+            mask, backing = create_card_assets(scene.elements[0], directory, "card")
+            self.assertTrue(mask.is_file())
+            self.assertTrue(backing.is_file())
 
 
 class TextRendererTests(unittest.TestCase):

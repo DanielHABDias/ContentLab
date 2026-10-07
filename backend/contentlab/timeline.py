@@ -3,6 +3,7 @@ from pathlib import Path
 from .errors import PlanValidationError
 from .models import ResolvedElement, ResolvedScene, ResolvedTimeline
 from .registry import DEFAULT_REGISTRY
+from .layout import cells_for_layout
 
 
 def _region(cells, width, height):
@@ -31,6 +32,7 @@ def compile_timeline(plan, resolved_assets=None, registry=DEFAULT_REGISTRY):
             issues.append({"path": f"timeline.{scene_index}.layout", "message": f"Layout desconhecido: {layout_name}"})
 
         elements = []
+        visual_index = 0
         for element_index, element in enumerate(scene.get("elements", [])):
             prefix = f"timeline.{scene_index}.elements.{element_index}"
             element_type = element["type"]
@@ -51,10 +53,15 @@ def compile_timeline(plan, resolved_assets=None, registry=DEFAULT_REGISTRY):
                 start = float(element.get("at", start))
                 end = start
             asset_uri = element.get("asset")
+            cells = element.get("cells")
+            if element_type in {"video", "image"}:
+                if not cells:
+                    cells = cells_for_layout(layout, visual_index)
+                visual_index += 1
             elements.append(ResolvedElement(
                 type=element_type, start=start, end=end,
                 z=int(element.get("z", element_index)),
-                region=_region(element.get("cells"), plan.project.width, plan.project.height),
+                region=_region(cells, plan.project.width, plan.project.height),
                 asset_uri=asset_uri,
                 asset_path=Path(resolved_assets[asset_uri]) if asset_uri in resolved_assets else None,
                 data=element,

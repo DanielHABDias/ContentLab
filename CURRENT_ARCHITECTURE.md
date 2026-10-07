@@ -57,6 +57,6 @@
 2. Render mínimo de imagem/vídeo com cortes secos. **Implementado via CLI.**
 3. Texto e kinetic text. **Implementado com ASS/libass e word timestamps.**
 4. Caption karaoke e preset Nox. **Implementado como caption ASS e vídeo em região sobre background.**
-5. Grid 3x3, boxes e motions.
+5. Grid 3x3, boxes e motions. **Grid, boxes e fit implementados; motions seguem na próxima fase.**
 6. Transições, chroma, música/SFX e relatórios.
 7. UI de projeto, preview e render final.

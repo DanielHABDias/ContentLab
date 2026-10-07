@@ -75,12 +75,15 @@ O renderer inicial gera `output/rough_cut.mp4` e `output/render_report.json`.
 Ele executa imagens, vídeos, fundos sólidos, cortes secos, narração, texto de
 impacto, `kinetic_text` palavra por palavra e captions karaoke. Um vídeo de
 apresentador pode ser colocado sobre um background usando `cells` do grid 3×3,
-inclusive com o layout `nox`. Quando a transcrição possui word
+inclusive com o layout `nox`. Os layouts `three_columns`, `character_vs` e
+`left_right` atribuem regiões automaticamente a imagens e vídeos sem `cells`.
+Cada elemento visual pode usar `box.padding`, `box.radius`, `box.shadow` e
+`box.background`; `fit` aceita `cover`, `contain` e `stretch`. Quando a
+transcrição possui word
 timestamps eles são usados diretamente; caches antigos com timestamps por
 segmento recebem uma distribuição determinística das palavras.
 
-Grid com múltiplos elementos, transições diferentes de `cut`, `sourceCuts`,
-música e SFX aparecem como warnings no relatório até suas fases de render
+Transições diferentes de `cut`, `sourceCuts`, música e SFX aparecem como warnings no relatório até suas fases de render
 correspondentes serem implementadas.
 
 A interface chama a API Flask no mesmo endereço, portanto não há etapa de

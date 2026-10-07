@@ -8,6 +8,7 @@ from pathlib import Path
 from .errors import PlanValidationError, RenderError
 from .service import prepare_edit_plan
 from .text import build_scene_ass
+from .layout import box_geometry, create_card_assets
 
 
 def _creation_flags():
@@ -38,7 +39,7 @@ def _filter_path(path):
 
 def _scene_visual(scene, full_region):
     for element in scene.elements:
-        if element.type in {"video", "image"} and element.asset_path and element.region == full_region:
+        if element.type in {"video", "image"} and element.asset_path and element.region == full_region and not element.data.get("box"):
             return element.asset_path, element.type, element.data.get("fit", "cover"), bool(element.data.get("loop"))
     if scene.background_path:
         suffix = scene.background_path.suffix.lower()
@@ -47,16 +48,9 @@ def _scene_visual(scene, full_region):
     return None
 
 
-def _presenter_overlay(scene, full_region):
-    if scene.background_path is None:
-        return None
-    candidates = [element for element in scene.elements if element.type == "video" and element.asset_path and element.region != full_region]
-    return candidates[0] if len(candidates) == 1 else None
-
-
 def _render_segment(ffmpeg, scene, output, project, duration, runner, warnings, transcript=None, work_dir=None):
-    visual = _scene_visual(scene, (0, 0, project.width, project.height))
-    presenter = _presenter_overlay(scene, (0, 0, project.width, project.height))
+    full_region = (0, 0, project.width, project.height)
+    visual = _scene_visual(scene, full_region)
     common = [ffmpeg, "-hide_banner", "-loglevel", "error", "-y"]
     if visual:
         path, kind, fit, loop = visual
@@ -70,37 +64,63 @@ def _render_segment(ffmpeg, scene, output, project, duration, runner, warnings, 
         command = common + ["-f", "lavfi", "-i", f"color=c={color}:s={project.width}x{project.height}:r={project.fps}:d={duration}"]
         video_filter = "format=yuv420p"
 
-    if presenter:
-        x, y, width, height = presenter.region
-        command += (["-stream_loop", "-1"] if presenter.data.get("loop") else []) + ["-i", str(presenter.asset_path)]
-        overlay_filter = (
-            f"[0:v]{video_filter}[bg];"
-            f"[1:v]scale={width}:{height}:force_original_aspect_ratio=decrease,"
-            f"format=yuva420p[actor];[bg][actor]overlay={x}+({width}-w)/2:{y}+({height}-h)/2:shortest=0:repeatlast=1[v]"
-        )
-        # Background e ator são renderizados juntos antes da legenda.
-        video_filter = None
+    layers = [element for element in scene.elements if element.type in {"video", "image"} and element.asset_path and (not visual or element.asset_path != visual[0] or element.region != full_region or element.data.get("box"))]
+    graph = [f"[0:v]{video_filter}[base0]"]
+    current = "base0"
+    input_index = 1
+    for layer_index, element in enumerate(layers):
+        box, content, radius = box_geometry(element)
+        x, y, width, height = content
+        mask_path, backing_path = create_card_assets(element, work_dir or output.parent, f"{output.stem}-layer-{layer_index}")
+        if backing_path:
+            command += ["-loop", "1", "-i", str(backing_path)]
+            next_label = f"backed{layer_index}"
+            graph.append(f"[{current}][{input_index}:v]overlay={element.region[0]}:{element.region[1]}:shortest=0:repeatlast=1[{next_label}]")
+            current = next_label
+            input_index += 1
+
+        if element.type == "image":
+            command += ["-loop", "1", "-framerate", str(project.fps), "-i", str(element.asset_path)]
+        else:
+            command += (["-stream_loop", "-1"] if element.data.get("loop") else []) + ["-i", str(element.asset_path)]
+        fit = element.data.get("fit", "cover")
+        if fit == "contain":
+            scale = f"format=rgba,scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2:color=black@0"
+        elif fit == "stretch":
+            scale = f"scale={width}:{height}"
+        else:
+            scale = f"scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height}"
+        raw_label = f"layer{layer_index}"
+        graph.append(f"[{input_index}:v]{scale},format=rgba[{raw_label}]")
+        input_index += 1
+        if mask_path:
+            command += ["-loop", "1", "-i", str(mask_path)]
+            masked = f"masked{layer_index}"
+            if fit == "contain":
+                graph.append(f"[{raw_label}]split=2[colors{layer_index}][alpha_src{layer_index}]")
+                graph.append(f"[alpha_src{layer_index}]alphaextract[alpha{layer_index}]")
+                graph.append(f"[alpha{layer_index}][{input_index}:v]blend=all_mode=multiply[combined_alpha{layer_index}]")
+                graph.append(f"[colors{layer_index}][combined_alpha{layer_index}]alphamerge[{masked}]")
+            else:
+                graph.append(f"[{raw_label}][{input_index}:v]alphamerge[{masked}]")
+            raw_label = masked
+            input_index += 1
+        next_label = f"composed{layer_index}"
+        graph.append(f"[{current}][{raw_label}]overlay={x}:{y}:shortest=0:repeatlast=1[{next_label}]")
+        current = next_label
 
     ass_path = Path(work_dir or output.parent) / f"{output.stem}.ass"
     text_event_count, text_warnings = build_scene_ass(scene, project, transcript, ass_path)
     warnings.extend(text_warnings)
     if text_event_count:
         subtitle_filter = f"subtitles=filename='{_filter_path(ass_path)}':original_size={project.width}x{project.height}"
-        if presenter:
-            overlay_filter += f";[v]{subtitle_filter}[out]"
-        else:
-            video_filter += f",{subtitle_filter}"
-    if presenter:
-        command += ["-t", str(duration), "-filter_complex", overlay_filter, "-map", "[out]" if text_event_count else "[v]"]
-    else:
-        command += ["-t", str(duration), "-vf", video_filter]
+        graph.append(f"[{current}]{subtitle_filter}[out]")
+        current = "out"
+    command += ["-t", str(duration), "-filter_complex", ";".join(graph), "-map", f"[{current}]"]
 
     unsupported = [element.type for element in scene.elements if element.type not in {"video", "image", "text", "kinetic_text", "caption"}]
     if unsupported:
         warnings.append({"scene": scene.id, "code": "elements_not_rendered", "elements": unsupported})
-    partial = [element.type for element in scene.elements if element.type in {"video", "image"} and element.region != (0, 0, project.width, project.height) and element is not presenter]
-    if partial:
-        warnings.append({"scene": scene.id, "code": "positioned_elements_not_rendered", "elements": partial})
     if scene.transition_out != "cut":
         warnings.append({"scene": scene.id, "code": "transition_fallback", "requested": scene.transition_out, "used": "cut"})
 
