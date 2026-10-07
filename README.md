@@ -27,9 +27,13 @@ EDIT_PLAN_REFERENCE.md  funções e parâmetros do editor automático
 
 ## Como organizar um projeto de edição
 
-Crie **uma pasta por vídeo**. A opção **Editor automático → Criar** prepara
-`edit_plan.json`, `audio/` e `assets/`; você acrescenta as mídias. A aba
-**Guia do projeto** mostra esta estrutura dentro do aplicativo:
+Crie **uma pasta por vídeo**. Você pode começar só com uma pasta vazia:
+na aba **Transcrição**, escolha visualmente essa pasta e a narração. O Content
+Lab criará `audio/` e salvará `transcript.json`, `transcript.txt` e
+`transcript.srt` nela. **O `edit_plan.json` só é necessário depois**, quando
+você abrir o Editor automático. Alternativamente, **Editor automático →
+Criar** prepara antecipadamente `edit_plan.json`, `audio/` e `assets/`.
+A aba **Guia do projeto** mostra a estrutura final recomendada:
 
 ```text
 meu-video/
@@ -91,7 +95,9 @@ alinhado aos tempos da voz.
 
 ## Linux
 
-Requisitos: Python 3.9 ou superior, suporte a `venv`, FFmpeg e FFprobe.
+Requisitos: Python 3.9 ou superior, suporte a `venv`, FFmpeg e FFprobe. Para o
+seletor visual de pastas, tenha Tkinter ou Zenity disponível em uma sessão
+gráfica; se não houver, os campos aceitam o caminho digitado.
 
 No Ubuntu/Debian:
 
@@ -199,24 +205,29 @@ bloqueiam o render. A página lista os assets resolvidos, plugins disponíveis,
 progresso e warnings. Se o arquivo mudar fora da página, o salvamento é
 recusado para evitar sobrescrever a edição externa — recarregue o projeto.
 
-A interface está organizada em três abas: **Vídeos e cortes**, **Transcrição**
-e **Editor automático**. Ao carregar outra fonte de vídeo, o rascunho de
+A interface está organizada em quatro abas: **Vídeos e cortes**,
+**Transcrição**, **Editor automático** e **Guia do projeto**. Ao carregar outra fonte de vídeo, o rascunho de
 cortes em lote, a validação e os resultados anteriores são limpos; a pasta de
 destino permanece selecionada. Trocar apenas de aba não descarta o trabalho
 em andamento.
 
-Na aba **Transcrição**, selecione a pasta de um projeto já criado e carregue a
-narração. Escolha a qualidade do reconhecimento (`tiny`, `base`, `small` ou
+Na aba **Transcrição**, clique em **Escolher pasta** para selecionar uma pasta
+existente — ela pode estar vazia e não precisa ter `edit_plan.json`. Depois,
+selecione o arquivo da narração no computador. Escolha a qualidade do
+reconhecimento (`tiny`, `base`, `small` ou
 `medium`), o idioma (português, inglês, espanhol ou detecção automática) e
 como mostrar os tempos no TXT (por palavra ou por trecho). O processamento
 local com faster-whisper sempre grava `transcript.json` com tempos por palavra,
-além de `transcript.txt` e `transcript.srt` na raiz do projeto. A primeira
+além de `transcript.txt` e `transcript.srt` na pasta escolhida. A primeira
 execução de cada modelo pode precisar baixá-lo e demorar; resultados devem
-ser revisados, especialmente nomes próprios. Se o mesmo projeto estiver
+ser revisados, especialmente nomes próprios. Use **Abrir pasta dos arquivos**
+para localizar as saídas e envie a transcrição à IA para criar o plano. Se um
+projeto da mesma pasta já estiver
 aberto no editor, os campos `audio.narration` e `sources.transcript` são
 preenchidos no rascunho do plano; salve o JSON antes do render. Esses arquivos
 podem ser fornecidos ao GPT junto com a skill `skillContentLabEdicao.zip` para
-orientar a criação do `edit_plan.json`.
+orientar a criação do `edit_plan.json`. Salve o plano gerado na mesma pasta;
+então abra essa pasta no Editor automático.
 
 A interface chama a API Flask no mesmo endereço, portanto não há etapa de
 compilação para o frontend.

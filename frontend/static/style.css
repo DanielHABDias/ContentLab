@@ -72,6 +72,9 @@ html, body{
 .transcription-card{ padding:24px; }
 .transcription-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px 24px; margin:24px 0; }
 .transcription-grid > div{ min-width:0; }
+.transcription-folder-row input{ min-width:230px; }
+.transcription-result-actions{ display:flex; align-items:flex-start; gap:14px; flex-wrap:wrap; margin-top:12px; }
+.transcription-result-actions p{ margin:0; flex:1; min-width:260px; }
 .transcription-grid select,.transcription-grid input[type=file]{ width:100%; max-width:100%; padding:10px 12px; min-height:43px; border:1px solid var(--border); border-radius:8px; background:var(--surface-2); color:var(--text); font:14px var(--font-ui); }
 .transcription-grid input[type=file]::file-selector-button{ border:0; border-radius:6px; background:#3e4d65; color:var(--text); padding:6px 10px; margin-right:10px; cursor:pointer; }
 .transcription-result-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:24px; border-top:1px solid var(--border); padding-top:18px; }

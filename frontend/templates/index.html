@@ -227,12 +227,13 @@
     </div>
 
     <div id="panel-transcription" class="workspace-panel hidden" role="tabpanel" aria-labelledby="tab-transcription" hidden>
-      <div class="workspace-intro"><span class="eyebrow">DA VOZ AO PLANO</span><h2>Transcrição da narração</h2><p>Carregue a voz do projeto para gerar uma transcrição local com tempos por trecho ou por palavra. O JSON completo fica pronto para orientar a criação do plano de edição com IA.</p></div>
+      <div class="workspace-intro"><span class="eyebrow">DA VOZ AO PLANO</span><h2>Transcrição da narração</h2><p>Comece pela sua voz: escolha uma pasta, selecione o áudio e gere a transcrição com tempos. Você só precisa criar <code>edit_plan.json</code> depois de preparar o plano com a IA.</p></div>
       <section class="block transcription-card">
-        <label class="block-label" for="transcriptionProjectRoot">Pasta do projeto</label>
-        <div class="row"><input id="transcriptionProjectRoot" type="text" placeholder="/caminho/para/meu-projeto" autocomplete="off"><button id="transcriptionUseEditorProject" class="btn btn-secondary" type="button">Usar projeto do editor</button></div>
+        <label class="block-label" for="transcriptionProjectRoot">Pasta onde salvar a transcrição</label>
+        <div class="row transcription-folder-row"><input id="transcriptionProjectRoot" type="text" placeholder="Escolha uma pasta existente" autocomplete="off"><button id="transcriptionChooseFolder" class="btn btn-secondary" type="button">Escolher pasta</button><button id="transcriptionUseEditorProject" class="btn btn-ghost" type="button">Usar pasta do editor</button></div>
+        <p class="helper-text">Pode ser uma pasta vazia. Não precisa conter <code>edit_plan.json</code>. O áudio será copiado para <code>audio/</code> e os arquivos de transcrição ficarão nesta pasta.</p>
         <div class="transcription-grid">
-          <div><label class="block-label" for="transcriptionFile">Arquivo da narração</label><input id="transcriptionFile" type="file" accept="audio/*,.wav,.mp3,.m4a,.aac,.flac,.ogg,.opus"><p class="helper-text">O áudio será copiado para <code>audio/</code> do projeto.</p></div>
+          <div><label class="block-label" for="transcriptionFile">Arquivo da narração</label><input id="transcriptionFile" type="file" accept="audio/*,.wav,.mp3,.m4a,.aac,.flac,.ogg,.opus"><p class="helper-text">Selecione o áudio melhorado no seu computador.</p></div>
           <div><label class="block-label" for="transcriptionModel">Qualidade do reconhecimento</label><select id="transcriptionModel"><option value="tiny">Muito rápido · tiny</option><option value="base">Rápido · base</option><option value="small" selected>Equilibrado · small</option><option value="medium">Mais preciso · medium</option></select><p class="helper-text">Modelos maiores podem demorar mais. O processamento é local.</p></div>
           <div><label class="block-label" for="transcriptionDetail">Tempos no texto</label><select id="transcriptionDetail"><option value="words" selected>Por palavra</option><option value="segments">Por trecho</option></select><p class="helper-text">O JSON sempre guarda tempos por palavra para o editor.</p></div>
           <div><label class="block-label" for="transcriptionLanguage">Idioma</label><select id="transcriptionLanguage"><option value="pt" selected>Português</option><option value="">Detectar automaticamente</option><option value="en">Inglês</option><option value="es">Espanhol</option></select></div>
@@ -240,7 +241,7 @@
         <button id="transcriptionStart" class="btn btn-primary" type="button">Transcrever narração</button>
         <p id="transcriptionError" class="error-text hidden" role="alert"></p>
         <p id="transcriptionStatus" class="helper-text" role="status" aria-live="polite"></p>
-        <div id="transcriptionResult" class="hidden"><div class="transcription-result-head"><strong>Transcrição pronta</strong><span id="transcriptionStats"></span></div><p class="helper-text">Arquivos salvos na pasta do projeto: <code>transcript.json</code>, <code>transcript.txt</code> e <code>transcript.srt</code>.</p><textarea id="transcriptionPreview" rows="12" readonly aria-label="Prévia da transcrição com tempos"></textarea><p id="transcriptionPlanHint" class="helper-text"></p></div>
+        <div id="transcriptionResult" class="hidden"><div class="transcription-result-head"><strong>Transcrição pronta</strong><span id="transcriptionStats"></span></div><p class="helper-text">Arquivos salvos na pasta escolhida: <code>transcript.json</code>, <code>transcript.txt</code> e <code>transcript.srt</code>.</p><textarea id="transcriptionPreview" rows="12" readonly aria-label="Prévia da transcrição com tempos"></textarea><div class="transcription-result-actions"><button id="transcriptionOpenFolder" class="btn btn-secondary btn-sm" type="button">Abrir pasta dos arquivos</button><p id="transcriptionPlanHint" class="helper-text"></p></div></div>
       </section>
     </div>
 
@@ -321,7 +322,7 @@
       </section>
       <section class="block guide-card">
         <h3>1. Organize uma pasta por vídeo</h3>
-        <p>Use <strong>Editor automático → Criar</strong> para gerar a base. Depois, distribua os arquivos assim:</p>
+        <p>Você pode começar com uma pasta vazia: transcreva a narração primeiro e crie <code>edit_plan.json</code> depois, com a IA. Se preferir preparar a base antecipadamente, use <strong>Editor automático → Criar</strong>. A estrutura final fica assim:</p>
         <pre class="guide-tree">meu-video/
 ├── edit_plan.json              plano de edição
 ├── audio/

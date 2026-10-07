@@ -416,12 +416,22 @@ class TextRendererTests(unittest.TestCase):
 
 
 class NarrationTranscriptionTests(unittest.TestCase):
+    def test_folder_picker_uses_zenity_when_tkinter_is_unavailable(self):
+        from backend.app import app
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.dict("sys.modules", {"tkinter": None}), patch("backend.app.shutil.which", return_value="/usr/bin/zenity"), patch("backend.app.subprocess.run", return_value=SimpleNamespace(returncode=0, stdout=directory + "\n")) as run:
+                with app.test_client() as client:
+                    response = client.post("/api/choose-folder")
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.get_json()["folder"], directory)
+                self.assertIn("--directory", run.call_args.args[0])
+
     def test_transcription_job_api_imports_audio_and_reports_result(self):
         from backend.app import app, TRANSCRIPTION_JOBS
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            create_project(str(root), "example")
-            project = root / "example"
+            project = Path(directory) / "transcription-first"
+            project.mkdir()
+            self.assertFalse((project / "edit_plan.json").exists())
             with app.test_client() as client, patch("backend.app.transcribe_narration", return_value={"transcript": "transcript.json", "segmentCount": 1, "wordCount": 2}) as transcribe:
                 response = client.post("/api/transcription/jobs", data={"projectRoot": str(project), "model": "small", "detail": "words", "language": "pt", "file": (io.BytesIO(b"audio"), "narration.wav")}, content_type="multipart/form-data")
                 self.assertEqual(response.status_code, 202)
@@ -435,6 +445,8 @@ class NarrationTranscriptionTests(unittest.TestCase):
                 self.assertTrue(transcribe.call_args.args[1].startswith(str(project / "audio")))
                 self.assertEqual(result["result"]["wordCount"], 2)
                 TRANSCRIPTION_JOBS.pop(job_id, None)
+                editor_response = client.post("/api/editor/project/narration", data={"projectRoot": str(project), "file": (io.BytesIO(b"audio"), "narration.wav")}, content_type="multipart/form-data")
+                self.assertEqual(editor_response.status_code, 422)
 
     def test_skill_download_returns_named_zip(self):
         from backend.app import app
@@ -445,11 +457,10 @@ class NarrationTranscriptionTests(unittest.TestCase):
             self.assertIn("skillContentLabEdicao.zip", response.headers["Content-Disposition"])
             response.close()
 
-    def test_project_transcription_exports_editor_json_and_timed_text(self):
+    def test_transcription_without_plan_exports_editor_json_and_timed_text(self):
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            create_project(str(root), "example")
-            project = root / "example"
+            project = Path(directory)
+            (project / "audio").mkdir()
             narration = project / "audio" / "narration.wav"
             narration.write_bytes(b"fake audio for mocked model")
             calls = []

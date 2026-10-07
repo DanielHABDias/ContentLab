@@ -18,19 +18,19 @@ try:
     from .contentlab.errors import PlanValidationError
     from .contentlab.registry import describe_registry
     from .contentlab.service import validate_edit_plan
-    from .contentlab.project import project_plan_path, create_project, inspect_asset_folder, import_narration, inspect_project, load_project_document, save_project_plan, render_project
+    from .contentlab.project import project_plan_path, create_project, inspect_asset_folder, import_narration, save_uploaded_narration, inspect_project, load_project_document, save_project_plan, render_project
     from .contentlab.cancel import CancelRunner
     from .contentlab.errors import RenderCancelled
-    from .contentlab.transcription import transcribe_narration, MODELS as TRANSCRIPTION_MODELS, DETAILS as TRANSCRIPTION_DETAILS
+    from .contentlab.transcription import transcription_folder, transcribe_narration, MODELS as TRANSCRIPTION_MODELS, DETAILS as TRANSCRIPTION_DETAILS
 except ImportError:  # Suporte ao executável gerado pelo PyInstaller.
     import ffmpeg_helper
     from contentlab.errors import PlanValidationError
     from contentlab.registry import describe_registry
     from contentlab.service import validate_edit_plan
-    from contentlab.project import project_plan_path, create_project, inspect_asset_folder, import_narration, inspect_project, load_project_document, save_project_plan, render_project
+    from contentlab.project import project_plan_path, create_project, inspect_asset_folder, import_narration, save_uploaded_narration, inspect_project, load_project_document, save_project_plan, render_project
     from contentlab.cancel import CancelRunner
     from contentlab.errors import RenderCancelled
-    from contentlab.transcription import transcribe_narration, MODELS as TRANSCRIPTION_MODELS, DETAILS as TRANSCRIPTION_DETAILS
+    from contentlab.transcription import transcription_folder, transcribe_narration, MODELS as TRANSCRIPTION_MODELS, DETAILS as TRANSCRIPTION_DETAILS
 
 
 def resource_path(relative):
@@ -710,13 +710,27 @@ def choose_folder():
         import tkinter as tk
         from tkinter import filedialog
         root = tk.Tk()
-        root.withdraw()
-        root.attributes("-topmost", True)
-        folder = filedialog.askdirectory(title="Escolher pasta de destino")
-        root.destroy()
+        try:
+            root.withdraw()
+            root.attributes("-topmost", True)
+            folder = filedialog.askdirectory(title="Escolher pasta de destino")
+        finally:
+            root.destroy()
         return jsonify({"folder": folder or None})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
+    except Exception:
+        # Linux frequentemente tem Zenity, mas não o módulo opcional tkinter.
+        chooser = shutil.which("zenity") if os.name != "nt" else None
+        if chooser:
+            try:
+                result = subprocess.run([chooser, "--file-selection", "--directory", "--title=Escolher pasta de destino"], capture_output=True, text=True, timeout=180)
+                if result.returncode == 0:
+                    folder = result.stdout.strip()
+                    return jsonify({"folder": folder if folder and Path(folder).is_dir() else None})
+                if result.returncode == 1:
+                    return jsonify({"folder": None})
+            except (OSError, subprocess.TimeoutExpired):
+                pass
+        return jsonify({"error": "Seletor gráfico indisponível. Digite o caminho da pasta no campo."}), 400
 
 
 @app.route("/api/open-folder", methods=["POST"])
@@ -1270,14 +1284,14 @@ def start_transcription_job():
     if language and (not language.isalpha() or len(language) not in (2, 3)):
         return jsonify({"error": "Idioma inválido."}), 400
     try:
-        root = str(project_plan_path(request.form.get("projectRoot"))[0])
+        root = str(transcription_folder(request.form.get("projectRoot")))
         with EDITOR_JOBS_LOCK:
             if any(job["status"] == "running" and job["projectRoot"] == root for job in EDITOR_JOBS.values()):
                 return jsonify({"error": "Aguarde o render antes de transcrever."}), 409
         with TRANSCRIPTION_JOBS_LOCK:
             if any(job["status"] == "running" and job["projectRoot"] == root for job in TRANSCRIPTION_JOBS.values()):
-                return jsonify({"error": "Já existe uma transcrição em andamento neste projeto."}), 409
-            imported = import_narration(root, upload)
+                return jsonify({"error": "Já existe uma transcrição em andamento nesta pasta."}), 409
+            imported = save_uploaded_narration(root, upload)
             job_id = uuid.uuid4().hex
             TRANSCRIPTION_JOBS[job_id] = {"status": "running", "message": "Preparando narração...", "error": None, "projectRoot": root, "narration": imported["relative"]}
         threading.Thread(target=_run_transcription_job, args=(job_id, root, imported["path"], model, detail, language), daemon=True).start()

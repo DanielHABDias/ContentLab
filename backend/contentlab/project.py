@@ -64,10 +64,20 @@ def inspect_asset_folder(directory, folder):
 
 def import_narration(directory, upload):
     root, _ = project_plan_path(directory)
+    return save_uploaded_narration(root, upload)
+
+
+def save_uploaded_narration(directory, upload):
+    """Save an uploaded voice in an existing folder, even before a plan exists."""
+    root = Path(directory).expanduser().resolve()
+    if not root.is_dir():
+        raise PlanValidationError([{"path": "folder", "message": "Selecione uma pasta existente para salvar a transcrição."}])
     original = Path(upload.filename or "").suffix.lower()
     if original not in {".wav", ".mp3", ".m4a", ".aac", ".flac", ".ogg", ".opus"}:
         raise PlanValidationError([{"path": "file", "message": "Selecione um arquivo de áudio WAV, MP3, M4A, AAC, FLAC, OGG ou Opus."}])
     audio_dir = root / "audio"
+    if audio_dir.exists() and (not audio_dir.is_dir() or audio_dir.resolve() != audio_dir):
+        raise PlanValidationError([{"path": "folder", "message": "A pasta audio/ precisa ser uma pasta comum dentro do destino."}])
     audio_dir.mkdir(exist_ok=True)
     temporary = None
     try:

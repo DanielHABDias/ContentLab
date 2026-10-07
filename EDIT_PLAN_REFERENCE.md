@@ -8,16 +8,16 @@ os objetos tipados do schema, exceto `config`, que é um objeto livre.
 
 ## Fluxo e funções disponíveis
 
-1. Crie ou abra uma pasta de projeto pela área **Editor automático**. A criação
-   prepara `edit_plan.json`, `audio/` e `assets/`. Importe uma narração e liste
-   os assets da pasta (a pasta indicada deve estar dentro do projeto).
-   A aba **Transcrição** aceita a narração do projeto e produz
-   `transcript.json` (tempos por palavra), `transcript.txt` (tempos por palavra
-   ou por trecho) e `transcript.srt`.
+1. Na aba **Transcrição**, escolha uma pasta existente (pode estar vazia) e o
+   arquivo da narração. Não é necessário ter `edit_plan.json` nesta etapa.
+   A aba copia o áudio para `audio/` e produz `transcript.json` (tempos por
+   palavra), `transcript.txt` (tempos por palavra ou por trecho) e
+   `transcript.srt` na pasta escolhida.
 2. Use `skillContentLabEdicao.zip` para orientar o GPT na criação do plano:
    forneça roteiro, narração ou transcrição, nomes dos assets e preferências de
    edição. A saída é o conteúdo de `edit_plan.json`, não um vídeo pronto.
-3. Cole ou abra o JSON na interface, valide, salve e gere o preview. O painel
+3. Salve o JSON gerado como `edit_plan.json` nessa pasta e abra-a na área
+   **Editor automático**. Acrescente os assets, liste-os, valide e gere o preview. O painel
    mostra cenas, assets, plugins, progresso, avisos e relatório; permite
    cancelar um render em andamento.
 4. Gere o render final. O CLI também oferece `validate`, `plugins` e `render`.

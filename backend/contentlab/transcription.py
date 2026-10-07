@@ -5,7 +5,17 @@ import os
 import tempfile
 from pathlib import Path
 
-from .project import project_plan_path
+from .errors import PlanValidationError
+
+
+def transcription_folder(directory):
+    """A transcription workspace only needs an existing directory, not edit_plan.json."""
+    if not isinstance(directory, str) or not directory.strip():
+        raise PlanValidationError([{"path": "folder", "message": "Escolha uma pasta para salvar a transcrição."}])
+    root = Path(directory).expanduser().resolve()
+    if not root.is_dir():
+        raise PlanValidationError([{"path": "folder", "message": "A pasta de destino não existe."}])
+    return root
 
 MODELS = frozenset({"tiny", "base", "small", "medium"})
 DETAILS = frozenset({"segments", "words"})
@@ -34,7 +44,7 @@ def _atomic_text(path, content):
 
 
 def transcribe_narration(project_root, narration, model_name="small", detail="words", language=None, model_factory=None, progress=None):
-    root, _ = project_plan_path(str(project_root))
+    root = transcription_folder(str(project_root))
     source = Path(narration).resolve()
     if root not in source.parents or not source.is_file():
         raise ValueError("A narração precisa ser um arquivo dentro do projeto.")

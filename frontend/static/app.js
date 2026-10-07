@@ -747,21 +747,44 @@ $("shutdownBtn").addEventListener("click", () => {
 
 // ---------- transcrição de narração do projeto ----------
 let transcriptionPoll = null;
+let lastTranscriptionFolder = null;
 function transcriptionError(message) {
   $("transcriptionError").textContent = message || "";
   $("transcriptionError").classList.toggle("hidden", !message);
 }
+$("transcriptionChooseFolder").addEventListener("click", async () => {
+  transcriptionError("");
+  try {
+    const response = await fetch("/api/choose-folder", { method: "POST" });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Não foi possível abrir o seletor de pastas.");
+    if (data.folder) $("transcriptionProjectRoot").value = data.folder;
+  } catch (_) {
+    transcriptionError("Não foi possível abrir o seletor visual. Você também pode digitar o caminho da pasta no campo ao lado.");
+  }
+});
 $("transcriptionUseEditorProject").addEventListener("click", () => {
   const root = editorProject?.projectRoot || $("editorProjectRoot").value.trim();
-  if (!root) return transcriptionError("Abra ou informe primeiro um projeto no editor.");
+  if (!root) return transcriptionError("Não há pasta informada no editor. Use Escolher pasta ou digite o caminho acima.");
   $("transcriptionProjectRoot").value = root;
   transcriptionError("");
+});
+$("transcriptionOpenFolder").addEventListener("click", async () => {
+  if (!lastTranscriptionFolder) return;
+  try {
+    const response = await fetch("/api/open-folder", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ folder: lastTranscriptionFolder }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Não foi possível abrir a pasta.");
+  } catch (error) { transcriptionError(error.message); }
 });
 $("transcriptionStart").addEventListener("click", async () => {
   const root = $("transcriptionProjectRoot").value.trim();
   const file = $("transcriptionFile").files[0];
   transcriptionError("");
-  if (!root || !file) return transcriptionError("Informe a pasta do projeto e selecione a narração.");
+  if (!root || !file) return transcriptionError("Escolha a pasta de destino e selecione a narração.");
   $("transcriptionStart").disabled = true;
   $("transcriptionResult").classList.add("hidden");
   $("transcriptionStatus").textContent = "Enviando narração...";
@@ -789,6 +812,7 @@ $("transcriptionStart").addEventListener("click", async () => {
         if (job.status === "error") throw new Error(job.error || "Falha na transcrição.");
         $("transcriptionStats").textContent = `${job.result.segmentCount} trecho(s) · ${job.result.wordCount} palavra(s) · ${job.result.language || "idioma não identificado"}`;
         $("transcriptionPreview").value = job.result.preview || "Nenhuma fala foi reconhecida. Confira o áudio e tente outro modelo.";
+        lastTranscriptionFolder = job.projectRoot;
         $("transcriptionResult").classList.remove("hidden");
         if (editorProject?.projectRoot === job.projectRoot) {
           try {
@@ -802,7 +826,7 @@ $("transcriptionStart").addEventListener("click", async () => {
             $("transcriptionPlanHint").textContent = "Abra o editor e defina audio.narration e sources.transcript no plano.";
           }
         } else {
-          $("transcriptionPlanHint").textContent = `No edit_plan.json deste projeto, use audio.narration = "${job.narration}" e sources.transcript = "transcript.json".`;
+          $("transcriptionPlanHint").textContent = `Agora revise a transcrição e envie transcript.txt ou transcript.json à IA junto com o roteiro e os assets. Depois, salve o plano gerado como edit_plan.json nesta pasta; nele, use audio.narration = "${job.narration}" e sources.transcript = "transcript.json".`;
         }
       } catch (error) {
         if (transcriptionPoll) clearInterval(transcriptionPoll);
