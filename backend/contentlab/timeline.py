@@ -44,11 +44,12 @@ def compile_timeline(plan, resolved_assets=None, registry=DEFAULT_REGISTRY):
                 issues.append({"path": f"{prefix}.style", "message": f"Estilo de legenda desconhecido: {style}"})
             if element_type == "overlay" and style and style not in registry.overlay_styles:
                 issues.append({"path": f"{prefix}.style", "message": f"Estilo de overlay desconhecido: {style}"})
-            for phase, motion in element.get("animation", {}).items():
-                if motion not in registry.motions:
-                    issues.append({"path": f"{prefix}.animation.{phase}", "message": f"Motion desconhecido: {motion}"})
-                elif phase in {"enter", "idle", "exit"} and motion not in {"enter": SUPPORTED_ENTER, "idle": SUPPORTED_IDLE, "exit": SUPPORTED_EXIT}[phase]:
-                    issues.append({"path": f"{prefix}.animation.{phase}", "message": f"Motion não disponível para {phase}: {motion}"})
+            if plan.version == "0.1":
+                for phase, motion in element.get("animation", {}).items():
+                    if motion not in registry.motions:
+                        issues.append({"path": f"{prefix}.animation.{phase}", "message": f"Motion desconhecido: {motion}"})
+                    elif phase in {"enter", "idle", "exit"} and motion not in {"enter": SUPPORTED_ENTER, "idle": SUPPORTED_IDLE, "exit": SUPPORTED_EXIT}[phase]:
+                        issues.append({"path": f"{prefix}.animation.{phase}", "message": f"Motion não disponível para {phase}: {motion}"})
 
             start = float(element.get("start", scene["start"]))
             end = float(element.get("end", scene["end"]))
@@ -67,7 +68,7 @@ def compile_timeline(plan, resolved_assets=None, registry=DEFAULT_REGISTRY):
                 region=_region(cells, plan.project.width, plan.project.height),
                 asset_uri=asset_uri,
                 asset_path=Path(resolved_assets[asset_uri]) if asset_uri in resolved_assets else None,
-                data=element,
+                data={**element, **({"_font_path": resolved_assets[element["fontAsset"]]} if element.get("fontAsset") in resolved_assets else {})},
             ))
         scenes.append(ResolvedScene(
             id=scene["id"], start=float(scene["start"]), end=float(scene["end"]),
@@ -78,6 +79,7 @@ def compile_timeline(plan, resolved_assets=None, registry=DEFAULT_REGISTRY):
                 if scene.get("background", {}).get("asset") in resolved_assets else None
             ),
             camera=scene.get("camera", {}),
+            transition_duration=scene.get("transitionDuration"),
         ))
     if issues:
         raise PlanValidationError(issues)

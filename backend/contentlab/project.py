@@ -16,7 +16,7 @@ from .service import prepare_edit_plan
 
 _SAVE_LOCK = threading.Lock()
 _MAX_PLAN_BYTES = 5 * 1024 * 1024
-_CACHE_VERSION = "render-v11-motion-1"
+_CACHE_VERSION = "render-v12-motion-grid"
 
 
 def project_plan_path(directory):

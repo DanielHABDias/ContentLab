@@ -20,6 +20,8 @@ def _asset_uris(plan):
         for element in scene.get("elements", []):
             if element.get("asset"):
                 uris.append(element["asset"])
+            if element.get("fontAsset"):
+                uris.append(element["fontAsset"])
     return list(dict.fromkeys(uris))
 
 
@@ -49,6 +51,14 @@ def prepare_edit_plan(source, project_root=None, builtin_root=None):
         issues.append({"path": "audio.narration", "message": "A narração está fora da raiz do projeto."})
     elif not narration.is_file():
         missing.append({"asset": "audio.narration", "path": str(narration)})
+    transcript_ref = plan.sources.get("transcript")
+    if transcript_ref:
+        transcript_path = Path(transcript_ref).expanduser()
+        transcript_path = (project_root / transcript_path).resolve() if not transcript_path.is_absolute() else transcript_path.resolve()
+        if transcript_path != project_root and project_root not in transcript_path.parents:
+            issues.append({"path": "sources.transcript", "message": "A transcrição está fora da raiz do projeto."})
+        elif plan.version == "0.2" and any(element.get("type") == "caption" for scene in plan.timeline for element in scene.get("elements", [])) and not transcript_path.is_file():
+            missing.append({"asset": "sources.transcript", "path": str(transcript_path)})
     if issues:
         raise PlanValidationError(issues)
 

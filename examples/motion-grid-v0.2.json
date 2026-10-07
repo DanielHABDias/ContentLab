@@ -1,0 +1,46 @@
+{
+  "version": "0.2",
+  "project": {
+    "name": "comparacao-em-um-plano",
+    "format": "youtube_long",
+    "profile": "generic"
+  },
+  "sources": {"assets": "assets"},
+  "audio": {"narration": "audio/narracao.wav"},
+  "timeline": [
+    {
+      "id": "comparacao",
+      "start": 0,
+      "end": 6,
+      "layout": "3x3",
+      "background": {"color": "#182238"},
+      "elements": [
+        {
+          "id": "personagem-esquerda",
+          "type": "image",
+          "asset": "project://assets/personagem-esquerda.png",
+          "cells": [1, 4, 7],
+          "fit": "contain",
+          "start": 0,
+          "end": 6,
+          "z": 10,
+          "transform": {"scale": 1.2},
+          "animation": {"enter": "slide_from_left", "idle": "float_soft", "exit": "cut"}
+        },
+        {
+          "id": "personagem-direita",
+          "type": "image",
+          "asset": "project://assets/personagem-direita.png",
+          "cells": [3, 6, 9],
+          "fit": "contain",
+          "start": 1,
+          "end": 6,
+          "z": 20,
+          "transform": {"scale": 1.2},
+          "animation": {"enter": "slide_from_right", "idle": "float_soft", "exit": "cut"}
+        }
+      ],
+      "transitionOut": "cut"
+    }
+  ]
+}

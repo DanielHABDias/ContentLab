@@ -1,42 +1,16 @@
-# Editor automático — funções e referência do JSON v0.1
+# Editor automático — funções e referência do JSON
 
-> Este documento descreve o JSON `0.1`. Para motion design, o primeiro contrato `0.2` já é aceito: veja [o plano de ação](MOTION_DESIGN_PLAN.md), [o schema `0.2`](schemas/contentlab.schema.v0.2.json) e [o exemplo](examples/motion-design-proposal.v0.2.json). O exemplo precisa de assets e narração reais para renderizar. `0.1` continua compatível.
+> Este documento detalha o JSON `0.1` e as regras compartilhadas. Para motion design `0.2`, use a [referência completa de motion design](MOTION_DESIGN_JSON.md), o [schema `0.2`](schemas/contentlab.schema.v0.2.json), o [exemplo de grid](examples/motion-grid-v0.2.json) e o [storyboard completo](examples/motion-storyboard-v0.2.json). Ambos os contratos são renderizáveis; a versão é escolhida no topo de cada arquivo.
 
-## Motion design v0.2 — primeiro conjunto executável
+## Escolha da versão
 
-Use `"version": "0.2"` com a mesma estrutura geral (`project`, `sources`,
-`audio`, `timeline`) do `0.1`. Cada cena `0.2` é uma composição contínua
-`fullscreen`; `background.color` cria cor sólida, ou `background.asset` aponta
-para PNG/JPG/WebP/BMP estático. O fundo cobre a composição durante toda a cena.
-Um asset interno usa `builtin://backgrounds/nome.png`; um asset do vídeo usa
-`project://assets/nome.png`. Música e SFX usam os mesmos esquemas de URI.
+- `0.1`: editor tradicional, contrato detalhado abaixo.
+- `0.2`: composição contínua com fundo, grid 3×3, camadas, câmera e keyframes;
+  use [MOTION_DESIGN_JSON.md](MOTION_DESIGN_JSON.md) para todos os parâmetros,
+  presets, unidades, limites e exemplos. O `0.2` também aceita vídeo, overlay,
+  texto cinético e caption com as diferenças descritas naquela referência.
 
-`scene.camera.keyframes` move o enquadramento da composição inteira. Cada
-elemento visual (`image` ou `text`) exige `id` único e pode usar `transform`
-inicial e `keyframes`. `sfx` continua disponível, sem transformação visual.
-
-| Propriedade | Semântica v0.2 |
-| --- | --- |
-| `t` | Segundo relativo ao início da cena; keyframes em ordem crescente, sem repetição e dentro da duração da cena. |
-| `x`, `y` | Posição normalizada de 0 a 1 na composição 2× maior que o quadro final; 0.5 é o centro. |
-| `scale` | Fator positivo até 8 para elementos; zoom da câmera de 1 a 4. O elemento é ajustado inicialmente para caber no quadro antes dessa escala. |
-| `rotation` | Graus de −360 a 360 para o elemento; positivo gira no sentido horário. |
-| `opacity` | 0 a 1; não aplicável à câmera. |
-| `easing` | `linear`, `ease_in`, `ease_out`, `ease_in_out`; o easing no keyframe de destino controla a chegada. |
-| Valor omitido | Herda o estado anterior; antes do primeiro keyframe, usa `transform` ou defaults (`x/y: 0.5`, `scale: 1`, `rotation: 0`, `opacity: 1`). |
-
-Em uma cena que começa em `start: 20`, um keyframe `t: 3` acontece aos 23 s
-da timeline final. `elements[].start/end` continuam em segundos absolutos da
-timeline, dentro da cena. Os tempos da narração seguem a regra do `0.1`:
-depois de `audio.sourceCuts`. A ordem visual é `z` crescente. O movimento da
-câmera é aplicado depois da composição das camadas; o áudio não se move.
-
-Limites atuais: `0.2` aceita imagens estáticas, texto e SFX; não aceita vídeo,
-overlay/chroma, `kinetic_text`, `caption`, grade, cards nem presets de
-`animation` dentro da cena. Esses recursos permanecem em `0.1` enquanto o
-motor de motion design é ampliado. A primeira implementação gera quadros por
-CPU e pode ser lenta em resoluções/durações altas. Use trechos curtos para
-prévia inicial.
+Não misture versões de cena dentro de um mesmo `edit_plan.json`.
 
 Este guia descreve o que a versão atual do Content Lab executa. A fonte formal
 do contrato é [`schemas/contentlab.schema.v0.1.json`](schemas/contentlab.schema.v0.1.json);

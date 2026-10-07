@@ -213,7 +213,10 @@ def _compose_visual(ffmpeg, segments, boundaries, durations, total, fps, work, r
         if index < len(boundaries):
             spec, transition_duration = boundaries[index]
             if spec.ffmpeg_name:
-                graph.append(f"[tail{index}][first{index + 1}]xfade=transition={spec.ffmpeg_name}:duration={transition_duration:.6f}:offset=0[transition{index}]")
+                transition_label = f"transitionraw{index}" if spec.name == "blur_left" else f"transition{index}"
+                graph.append(f"[tail{index}][first{index + 1}]xfade=transition={spec.ffmpeg_name}:duration={transition_duration:.6f}:offset=0[{transition_label}]")
+                if spec.name == "blur_left":
+                    graph.append(f"[{transition_label}]gblur=sigma=2[transition{index}]")
                 pieces.append(f"[transition{index}]")
     graph.append("".join(pieces) + f"concat=n={len(pieces)}:v=1:a=0[out]")
     command += ["-filter_complex", ";".join(graph), "-map", "[out]", "-an", "-t", str(total), "-r", str(fps), *(video_encoding or ["-c:v", "libx264", "-preset", "veryfast", "-crf", "18"]), "-pix_fmt", "yuv420p", str(visual)]
@@ -367,7 +370,8 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
                     if previous and not scene and previous.transition_out != "cut":
                         warnings.append({"scene": previous.id, "code": "transition_gap", "requested": previous.transition_out, "used": "cut"})
                     if spec.ffmpeg_name:
-                        lead_in = min(spec.duration, previous_duration / 2, duration / 2)
+                        requested_duration = previous.transition_duration if previous.transition_duration is not None else spec.duration
+                        lead_in = min(requested_duration, previous_duration / 2, duration / 2)
                         lead_in = round(lead_in * plan.project.fps) / plan.project.fps
                         if lead_in:
                             applied_transitions.append({"from": previous.id, "to": scene.id, "type": spec.name, "duration": lead_in})
@@ -383,7 +387,7 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
                     progress("scene", index + 1, len(render_scenes), scene_for_render.id)
                 if plan.version == "0.2" and scene is not None:
                     render_motion_scene(ffmpeg, scene_for_render, segment, plan.project, duration,
-                                        lambda command: _run(command, runner), work, video_encoding)
+                                        lambda command: _run(command, runner), work, video_encoding, transcript, getattr(runner, "event", None))
                 else:
                     _render_segment(
                         ffmpeg, scene_for_render, segment, plan.project, duration, runner, warnings,

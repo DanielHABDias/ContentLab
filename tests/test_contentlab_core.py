@@ -4,6 +4,7 @@ import tempfile
 import unittest
 import wave
 import shutil
+import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -24,7 +25,7 @@ from backend.contentlab.errors import RenderCancelled
 from backend.contentlab.audio import remap_transcript
 from backend.contentlab.encoding import select_h264_encoder
 from backend.contentlab.transcription import transcribe_narration
-from backend.contentlab.motion_renderer import interpolate
+from backend.contentlab.motion_renderer import interpolate, _visual_state
 from PIL import Image
 
 
@@ -42,6 +43,26 @@ def valid_plan():
 
 
 class ParserTests(unittest.TestCase):
+    def test_storyboard_motion_contract(self):
+        example = Path(__file__).resolve().parents[1] / "examples" / "motion-storyboard-v0.2.json"
+        plan = parse_edit_plan(json.loads(example.read_text(encoding="utf-8")))
+        self.assertEqual(len(plan.timeline), 2)
+        timeline = compile_timeline(plan)
+        self.assertEqual(timeline.scenes[0].transition_duration, 3)
+        self.assertTrue(timeline.scenes[0].background["loop"])
+        central = next(item for item in timeline.scenes[1].elements if item.data.get("id") == "figura-central")
+        self.assertGreater(_visual_state(central, timeline.scenes[1], 0, 1920, 1080)["y"], 0.75)
+        self.assertGreater(_visual_state(central, timeline.scenes[1], 7.95, 1920, 1080)["y"], 0.75)
+
+    def test_rejects_invalid_shake_and_reveal(self):
+        data = valid_plan()
+        data["version"] = "0.2"
+        data["timeline"][0]["elements"][0]["id"] = "figure"
+        data["timeline"][0]["elements"][0]["reveal"] = {"charactersPerSecond": 8}
+        data["timeline"][0]["camera"] = {"shake": [{"start": 2, "end": 4}]}
+        with self.assertRaises(PlanValidationError):
+            parse_edit_plan(data)
+
     def test_motion_v02_validates_keyframe_order_and_keeps_v01(self):
         data = valid_plan()
         self.assertEqual(parse_edit_plan(data).version, "0.1")
@@ -61,6 +82,18 @@ class ParserTests(unittest.TestCase):
         state = interpolate({"x": 0.2, "opacity": 0}, [{"t": 2, "x": 0.8, "opacity": 1, "easing": "linear"}], 1)
         self.assertAlmostEqual(state["x"], 0.5)
         self.assertAlmostEqual(state["opacity"], 0.5)
+
+    def test_motion_grid_slide_and_oversize(self):
+        plan = json.loads((Path(__file__).resolve().parents[1] / "examples" / "motion-grid-v0.2.json").read_text())
+        timeline = compile_timeline(parse_edit_plan(plan))
+        scene = timeline.scenes[0]
+        left, right = scene.elements
+        self.assertEqual(left.region, (0, 0, 640, 1080))
+        self.assertEqual(right.region, (1280, 0, 640, 1080))
+        self.assertEqual(_visual_state(left, scene, 0, 1920, 1080)["scale"], 1.2)
+        self.assertLess(_visual_state(left, scene, 0, 1920, 1080)["x"], 0.25)
+        self.assertAlmostEqual(_visual_state(left, scene, 0.6, 1920, 1080)["x"], 1 / 3)
+        self.assertGreater(_visual_state(right, scene, 1, 1920, 1080)["x"], 0.75)
     def test_rejects_overlapping_narration_cuts(self):
         data = valid_plan()
         data["audio"]["sourceCuts"] = [{"start": 0, "end": 2}, {"start": 1, "end": 3}]
@@ -114,6 +147,99 @@ class AssetResolverTests(unittest.TestCase):
 
 
 class RendererTests(unittest.TestCase):
+    @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"), "FFmpeg indisponível")
+    def test_motion_ten_second_continuous_composition(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "assets").mkdir()
+            (root / "audio").mkdir()
+            Image.new("RGBA", (80, 120), (240, 45, 45, 255)).save(root / "assets" / "left.png")
+            Image.new("RGBA", (80, 120), (45, 80, 240, 255)).save(root / "assets" / "right.png")
+            with wave.open(str(root / "audio" / "voice.wav"), "wb") as output:
+                output.setnchannels(1)
+                output.setsampwidth(2)
+                output.setframerate(16000)
+                output.writeframes(b"\x00\x00" * (16000 * 10))
+            plan = {"version": "0.2", "project": {"name": "continuity", "format": "custom", "profile": "generic", "resolution": {"width": 320, "height": 180}, "fps": 10},
+                    "audio": {"narration": "audio/voice.wav"},
+                    "timeline": [{"id": "one-shot", "start": 0, "end": 10, "layout": "3x3", "background": {"color": "#182238"},
+                                  "camera": {"keyframes": [{"t": 0, "x": 0.5, "scale": 1}, {"t": 10, "x": 0.55, "scale": 1.1, "easing": "ease_in_out"}]},
+                                  "elements": [{"id": "left", "type": "image", "asset": "project://assets/left.png", "cells": [1, 4, 7], "transform": {"scale": 1.2}, "animation": {"enter": "slide_from_left"}},
+                                               {"id": "right", "type": "image", "asset": "project://assets/right.png", "cells": [3, 6, 9], "start": 1, "transform": {"scale": 1.2}, "animation": {"enter": "slide_from_right"}},
+                                               {"id": "label", "type": "text", "text": "COMPARAÇÃO", "cells": [7, 8, 9], "start": 4, "end": 8, "animation": {"enter": "fade"}}]}]}
+            path = root / "edit_plan.json"
+            path.write_text(json.dumps(plan), encoding="utf-8")
+            ffmpeg_dir = Path(shutil.which("ffmpeg")).parent
+            report = render_edit_plan(path, output_dir=root / "output", ffmpeg_dir=ffmpeg_dir)
+            self.assertEqual(report["scenes"], 1)
+            self.assertAlmostEqual(report["outputProbe"]["videoDuration"], 10, delta=0.11)
+            self.assertTrue(Path(report["output"]).is_file())
+
+    @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"), "FFmpeg indisponível")
+    def test_motion_v02_video_background_grid_and_caption(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "assets").mkdir()
+            (root / "audio").mkdir()
+            ffmpeg = shutil.which("ffmpeg")
+            subprocess.run([ffmpeg, "-y", "-f", "lavfi", "-i", "color=c=blue:s=160x90:r=5:d=1", "-c:v", "libx264", "-pix_fmt", "yuv420p", str(root / "assets" / "background.mp4")], check=True, capture_output=True)
+            Image.new("RGBA", (80, 80), (255, 30, 30, 255)).save(root / "assets" / "left.png")
+            Image.new("RGBA", (80, 80), (30, 255, 30, 255)).save(root / "assets" / "right.png")
+            with wave.open(str(root / "audio" / "voice.wav"), "wb") as output:
+                output.setnchannels(1)
+                output.setsampwidth(2)
+                output.setframerate(16000)
+                output.writeframes(b"\x00\x00" * 16000)
+            (root / "transcript.json").write_text(json.dumps({"words": [{"word": "Olá", "start": 0, "end": 0.5}, {"word": "mundo", "start": 0.5, "end": 1}]}), encoding="utf-8")
+            plan = {"version": "0.2", "project": {"name": "grid-video", "format": "custom", "profile": "generic", "resolution": {"width": 320, "height": 180}, "fps": 5},
+                    "sources": {"transcript": "transcript.json"}, "audio": {"narration": "audio/voice.wav"},
+                    "timeline": [{"id": "s", "start": 0, "end": 1, "layout": "3x3", "background": {"asset": "project://assets/background.mp4"},
+                                  "elements": [{"id": "clip", "type": "video", "asset": "project://assets/background.mp4", "cells": [2, 5, 8], "start": 0.2, "end": 0.8, "z": 1},
+                                               {"id": "left", "type": "image", "asset": "project://assets/left.png", "cells": [1, 4, 7], "transform": {"scale": 1.2}, "animation": {"enter": "slide_from_left"}},
+                                               {"id": "right", "type": "image", "asset": "project://assets/right.png", "cells": [3, 6, 9], "start": 0.4, "animation": {"enter": "slide_from_right"}},
+                                               {"id": "caption", "type": "caption", "style": "anton_karaoke"}]}]}
+            path = root / "edit_plan.json"
+            path.write_text(json.dumps(plan), encoding="utf-8")
+            report = render_edit_plan(path, output_dir=root / "output", ffmpeg_dir=Path(ffmpeg).parent)
+            self.assertEqual(report["status"], "completed")
+            sample = root / "sample.png"
+            subprocess.run([ffmpeg, "-y", "-ss", "0.6", "-i", report["output"], "-frames:v", "1", str(sample)], check=True, capture_output=True)
+            with Image.open(sample) as frame:
+                red = frame.convert("RGB").getpixel((110, 50))
+            self.assertGreater(red[0], red[1] + 70, "scale 1.2 deve ultrapassar a coluna esquerda")
+
+    @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"), "FFmpeg indisponível")
+    def test_motion_storyboard_render_with_loop_transition_and_sfx(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "assets").mkdir()
+            (root / "audio").mkdir()
+            ffmpeg = shutil.which("ffmpeg")
+            subprocess.run([ffmpeg, "-y", "-f", "lavfi", "-i", "color=c=navy:s=160x90:r=5:d=1", "-c:v", "libx264", "-pix_fmt", "yuv420p", str(root / "assets" / "paper.mp4")], check=True, capture_output=True)
+            Image.new("RGBA", (60, 70), (250, 80, 80, 255)).save(root / "assets" / "figure.png")
+            for name, seconds in (("voice.wav", 8), ("whoosh.wav", 1)):
+                with wave.open(str(root / "audio" / name), "wb") as output:
+                    output.setnchannels(1)
+                    output.setsampwidth(2)
+                    output.setframerate(16000)
+                    output.writeframes(b"\x00\x00" * (16000 * seconds))
+            plan = {"version": "0.2", "project": {"name": "storyboard", "format": "custom", "profile": "generic", "resolution": {"width": 320, "height": 180}, "fps": 5},
+                    "audio": {"narration": "audio/voice.wav"}, "timeline": [
+                        {"id": "typed", "start": 0, "end": 4, "layout": "3x3", "background": {"asset": "project://assets/paper.mp4", "loop": True}, "transitionOut": "blur_left", "transitionDuration": 1.5,
+                         "camera": {"keyframes": [{"t": 0, "x": 0.333, "scale": 2.5}, {"t": 2, "x": 0.667, "scale": 2.5}, {"t": 3, "x": 0.5, "scale": 1}]},
+                         "elements": [{"id": "typed", "type": "text", "text": "PERGUNTA", "style": "anton_white", "cells": [1, 2], "reveal": {"charactersPerSecond": 6}},
+                                      {"type": "sfx", "asset": "project://audio/whoosh.wav", "at": 2.5, "config": {"duration": 1}}]},
+                        {"id": "figures", "start": 4, "end": 8, "background": {"color": "#224422"}, "camera": {"shake": [{"start": 2, "end": 3, "amplitude": 0.003}]},
+                         "elements": [{"id": "figure", "type": "image", "asset": "project://assets/figure.png", "cells": [5, 8], "animation": {"enter": "slide_up", "idle": "float_soft", "exit": "slide_to_bottom", "exitDuration": 0.6}}]}
+                    ]}
+            path = root / "edit_plan.json"
+            path.write_text(json.dumps(plan), encoding="utf-8")
+            report = render_edit_plan(path, output_dir=root / "output", ffmpeg_dir=Path(ffmpeg).parent)
+            self.assertEqual(report["status"], "completed")
+            self.assertAlmostEqual(report["transitions"][0]["duration"], 1.5, delta=0.11)
+            self.assertEqual(report["audioLayers"][0]["type"], "sfx")
+            self.assertAlmostEqual(report["outputProbe"]["videoDuration"], 8, delta=0.2)
+
     @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"), "FFmpeg indisponível")
     def test_motion_v02_renders_continuous_scene(self):
         with tempfile.TemporaryDirectory() as directory:

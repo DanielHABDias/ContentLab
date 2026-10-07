@@ -10,6 +10,7 @@ STYLE_DEFINITIONS = {
     "versus_big": {"font": "Arial", "size": 108, "primary": "#FF334F", "outline": "#FFFFFF", "outline_width": 5, "bold": True},
     "word_pop": {"font": "Arial", "size": 96, "primary": "#FFFFFF", "outline": "#000000", "outline_width": 7, "bold": True},
     "anton_karaoke": {"font": "Arial", "size": 62, "primary": "#FFFFFF", "outline": "#000000", "outline_width": 5, "bold": True},
+    "anton_white": {"font": "Anton", "size": 86, "primary": "#FFFFFF", "outline": "#FFFFFF", "outline_width": 0, "bold": True},
 }
 
 

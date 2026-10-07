@@ -1,0 +1,45 @@
+{
+  "version": "0.2",
+  "project": {"name": "storyboard-generico", "format": "youtube_long", "profile": "generic", "resolution": {"width": 1920, "height": 1080}, "fps": 30},
+  "audio": {"narration": "audio/narracao.wav"},
+  "timeline": [
+    {
+      "id": "pergunta", "start": 0, "end": 8, "layout": "3x3",
+      "background": {"asset": "project://assets/fundos/papel.mp4", "fit": "cover", "loop": true},
+      "transitionOut": "blur_left", "transitionDuration": 3,
+      "camera": {"keyframes": [
+        {"t": 0, "x": 0.333, "y": 0.333, "scale": 2.6},
+        {"t": 1.6, "x": 0.5, "y": 0.333, "scale": 2.6, "easing": "ease_in_out"},
+        {"t": 3.2, "x": 0.667, "y": 0.333, "scale": 2.6, "easing": "ease_in_out"},
+        {"t": 5.5, "x": 0.5, "y": 0.667, "scale": 2.6, "easing": "ease_in_out"},
+        {"t": 6.8, "x": 0.5, "y": 0.5, "scale": 1, "easing": "ease_in_out"}
+      ]},
+      "elements": [
+        {"id": "linha-1", "type": "text", "text": "O QUE", "style": "anton_white", "fontAsset": "project://assets/fontes/Anton-Regular.ttf", "cells": [1], "start": 0, "end": 8, "reveal": {"charactersPerSecond": 7}},
+        {"id": "linha-2", "type": "text", "text": "ACONTECEU", "style": "anton_white", "fontAsset": "project://assets/fontes/Anton-Regular.ttf", "cells": [2, 3], "start": 1.4, "end": 8, "reveal": {"charactersPerSecond": 8}},
+        {"id": "linha-3", "type": "text", "text": "NESTE PAÍS?", "style": "anton_white", "fontAsset": "project://assets/fontes/Anton-Regular.ttf", "cells": [4, 5, 6], "start": 3.3, "end": 8, "reveal": {"charactersPerSecond": 8}},
+        {"type": "sfx", "asset": "builtin://sfx/digitacao.wav", "at": 0, "config": {"duration": 5, "preset": "subtle"}},
+        {"type": "sfx", "asset": "builtin://sfx/whoosh.wav", "at": 5, "config": {"duration": 3, "preset": "normal"}}
+      ]
+    },
+    {
+      "id": "personagens", "start": 8, "end": 16, "layout": "3x3",
+      "background": {"asset": "project://assets/fundos/outro-fundo.png"},
+      "camera": {
+        "keyframes": [
+          {"t": 0, "x": 0.5, "y": 0.5, "scale": 1},
+          {"t": 2, "x": 0.333, "y": 0.5, "scale": 2.8, "easing": "ease_in_out"},
+          {"t": 4.5, "x": 0.667, "y": 0.5, "scale": 2.8, "easing": "ease_in_out"},
+          {"t": 6.5, "x": 0.5, "y": 0.5, "scale": 1, "easing": "ease_in_out"}
+        ],
+        "shake": [{"start": 4.5, "end": 5.5, "amplitude": 0.003, "frequency": 2.5}]
+      },
+      "elements": [
+        {"id": "figura-central", "type": "image", "asset": "project://assets/figuras/central.png", "cells": [5, 8], "start": 8, "end": 16, "animation": {"enter": "slide_up", "idle": "float_soft", "exit": "slide_to_bottom", "exitDuration": 0.6}},
+        {"id": "icone-esquerdo", "type": "image", "asset": "project://assets/icones/esquerdo.png", "cells": [4], "start": 9.2, "end": 16, "animation": {"enter": "pop_in", "idle": "float_soft", "exit": "slide_to_bottom", "exitDuration": 0.6}},
+        {"id": "icone-direito", "type": "image", "asset": "project://assets/icones/direito.png", "cells": [6], "start": 11, "end": 16, "animation": {"enter": "pop_in", "idle": "float_soft", "exit": "slide_to_bottom", "exitDuration": 0.6}},
+        {"type": "sfx", "asset": "builtin://sfx/whoosh.wav", "at": 15.4, "config": {"duration": 0.6}}
+      ]
+    }
+  ]
+}

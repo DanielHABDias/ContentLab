@@ -251,17 +251,22 @@ Windows e no CapCut, está em [MVP_ACCEPTANCE.md](MVP_ACCEPTANCE.md).
 O contrato completo do JSON, as funções implementadas e os parâmetros aceitos
 estão em [EDIT_PLAN_REFERENCE.md](EDIT_PLAN_REFERENCE.md).
 
-## Motion design (primeira versão)
+## Motion design
 
-O JSON `0.2` aceita cenas contínuas com fundo estático persistente, PNGs
-transparentes e texto em camadas, keyframes de posição, escala, rotação e
-opacidade, e câmera virtual com posição e zoom. O
-[plano de ação](MOTION_DESIGN_PLAN.md) registra o que foi entregue e o que
-ainda falta. O [exemplo `0.2`](examples/motion-design-proposal.v0.2.json)
-é executável quando seus arquivos de narração e mídia existem na pasta do
-projeto. O JSON `0.1` continua aceito. Por enquanto, cenas `0.2` **não**
-aceitam vídeos como camadas/fundo nem kinetic text/captions; use `0.1` para
-esses recursos.
+O JSON `0.2` aceita cenas contínuas com fundo de cor, imagem ou vídeo,
+elementos em camadas, câmera virtual, keyframes e grid 3×3. Imagens podem
+ultrapassar suas células: `scale: 1.2` as torna 20% maiores. Há também
+entrada deslizante por preset. O [exemplo de dois personagens no mesmo
+fundo](examples/motion-grid-v0.2.json) demonstra o caso; a
+[sequência completa de motion design](examples/motion-storyboard-v0.2.json)
+mostra fundo de vídeo em loop, texto letra a letra, câmera que acompanha a
+escrita, transição com slide e blur, pop, balanço leve e SFX sincronizados. Os
+arquivos citados nesse exemplo são referências a serem fornecidas, não mídia
+inclusa. A fonte Anton exata também deve ser fornecida via `fontAsset`.
+A
+[referência completa](MOTION_DESIGN_JSON.md) explica todos os parâmetros
+para pessoas e IAs. O [plano de ação](MOTION_DESIGN_PLAN.md) registra as
+decisões e verificações. O JSON `0.1` continua aceito.
 
 ### Assets internos e assets do vídeo
 

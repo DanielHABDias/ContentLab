@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 from jsonschema import Draft202012Validator
+from PIL import ImageColor
 
 from .errors import PlanValidationError
 from .models import EditPlan, ProjectSettings
@@ -33,14 +34,20 @@ def _semantic_issues(data):
         if end <= start:
             issues.append({"path": prefix, "message": "A cena deve terminar depois de começar."})
         if start < previous_end:
-            issues.append({"path": f"{prefix}.start", "message": "Cenas não podem se sobrepor na v0.1."})
+            issues.append({"path": f"{prefix}.start", "message": "Cenas não podem se sobrepor."})
         previous_end = max(previous_end, end)
         if data.get("version") == "0.2":
             duration = end - start
-            if scene.get("layout", "fullscreen") != "fullscreen":
-                issues.append({"path": f"{prefix}.layout", "message": "Motion design v0.2 usa composição fullscreen; layout em grade ainda não é suportado."})
-            if scene.get("background", {}).get("fit", "cover") != "cover" or scene.get("background", {}).get("loop"):
-                issues.append({"path": f"{prefix}.background", "message": "O fundo v0.2 aceita apenas imagem estática em cover ou cor sólida."})
+            color = scene.get("background", {}).get("color")
+            if color:
+                try:
+                    ImageColor.getrgb(color)
+                except ValueError:
+                    issues.append({"path": f"{prefix}.background.color", "message": "Cor de fundo inválida."})
+            layout = scene.get("layout", "fullscreen")
+            layout_name = layout if isinstance(layout, str) else layout.get("preset") or layout.get("grid")
+            if layout_name not in {"fullscreen", "3x3", "custom_grid"}:
+                issues.append({"path": f"{prefix}.layout", "message": "Motion design v0.2 aceita fullscreen, 3x3 ou custom_grid."})
             for keyframe_path, frames in [(f"{prefix}.camera.keyframes", scene.get("camera", {}).get("keyframes", []))] + [
                 (f"{prefix}.elements.{j}.keyframes", element.get("keyframes", []))
                 for j, element in enumerate(scene.get("elements", []))
@@ -51,27 +58,45 @@ def _semantic_issues(data):
                     if t <= previous_t or t > duration:
                         issues.append({"path": keyframe_path, "message": "Keyframes devem ter tempos únicos, crescentes e dentro da cena."})
                     previous_t = t
+            for j, shake in enumerate(scene.get("camera", {}).get("shake", [])):
+                if shake["end"] <= shake["start"] or shake["end"] > duration:
+                    issues.append({"path": f"{prefix}.camera.shake.{j}", "message": "Balanço deve ter intervalo positivo dentro da cena."})
+            if scene.get("transitionDuration") is not None and scene["transitionDuration"] > duration / 2:
+                issues.append({"path": f"{prefix}.transitionDuration", "message": "Transição não pode exceder metade da cena de saída."})
+            if scene.get("transitionDuration") is not None and index + 1 < len(data["timeline"]):
+                following = data["timeline"][index + 1]
+                if scene["transitionDuration"] > (following["end"] - following["start"]) / 2:
+                    issues.append({"path": f"{prefix}.transitionDuration", "message": "Transição não pode exceder metade da cena de entrada."})
             element_ids = [element.get("id") for element in scene.get("elements", []) if element.get("type") != "sfx"]
             if any(not item for item in element_ids) or len(element_ids) != len(set(element_ids)):
                 issues.append({"path": f"{prefix}.elements", "message": "Elementos visuais precisam de IDs únicos."})
             for j, element in enumerate(scene.get("elements", [])):
-                unsupported = set(element) & {"cells", "fit", "box", "loop", "sync", "emphasis", "range"}
-                if unsupported:
-                    issues.append({"path": f"{prefix}.elements.{j}", "message": f"Campos ainda não suportados em v0.2: {', '.join(sorted(unsupported))}."})
                 if element.get("start", start) < start or element.get("end", end) > end:
                     issues.append({"path": f"{prefix}.elements.{j}", "message": "Elemento deve ficar dentro da cena."})
-                if element["type"] in {"image", "text"} and element.get("animation"):
-                    issues.append({"path": f"{prefix}.elements.{j}.animation", "message": "Use transform/keyframes no motion design v0.2."})
+                allowed_motions = {
+                    "enter": {"cut", "none", "fade", "pop_in", "slide_from_left", "slide_from_right", "slide_up", "slide_down"},
+                    "idle": {"none", "float_soft", "pulse_soft", "slow_zoom_in", "slow_zoom_out", "pan"},
+                    "exit": {"cut", "none", "fade", "fade_out", "slide_to_left", "slide_to_right", "slide_to_bottom"},
+                }
+                for phase, preset in element.get("animation", {}).items():
+                    if phase in {"enterDuration", "exitDuration"}:
+                        continue
+                    if preset not in allowed_motions[phase]:
+                        issues.append({"path": f"{prefix}.elements.{j}.animation.{phase}", "message": f"Preset v0.2 desconhecido: {preset}"})
                 if element["type"] == "sfx" and (element.get("transform") or element.get("keyframes")):
                     issues.append({"path": f"{prefix}.elements.{j}", "message": "SFX não aceita transformações visuais."})
-                if element["type"] == "image" and not element.get("asset"):
-                    issues.append({"path": f"{prefix}.elements.{j}.asset", "message": "Imagem requer asset."})
+                if element["type"] in {"image", "video", "overlay"} and not element.get("asset"):
+                    issues.append({"path": f"{prefix}.elements.{j}.asset", "message": "Camada visual requer asset."})
                 if element["type"] == "image" and element.get("asset") and not element["asset"].lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".bmp")):
                     issues.append({"path": f"{prefix}.elements.{j}.asset", "message": "Imagem v0.2 requer PNG, JPG, WebP ou BMP."})
-                if element["type"] == "text" and not element.get("text"):
+                if element["type"] in {"text", "kinetic_text"} and not element.get("text"):
                     issues.append({"path": f"{prefix}.elements.{j}.text", "message": "Texto não pode estar vazio."})
-            if scene.get("background", {}).get("asset") and not scene["background"]["asset"].lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".bmp")):
-                issues.append({"path": f"{prefix}.background.asset", "message": "O fundo v0.2 deve ser uma imagem estática."})
+                if element.get("reveal") and element["type"] != "text":
+                    issues.append({"path": f"{prefix}.elements.{j}.reveal", "message": "Revelação letra a letra requer elemento text."})
+                if element["type"] == "caption" and not data.get("sources", {}).get("transcript"):
+                    issues.append({"path": f"{prefix}.elements.{j}", "message": "Caption requer sources.transcript."})
+                if isinstance(element.get("box"), dict) and element["box"].get("border"):
+                    issues.append({"path": f"{prefix}.elements.{j}.box.border", "message": "Borda do card ainda não é desenhada em v0.2."})
         for element_index, element in enumerate(scene.get("elements", [])):
             epath = f"{prefix}.elements.{element_index}"
             if "start" in element and "end" in element and element["end"] <= element["start"]:

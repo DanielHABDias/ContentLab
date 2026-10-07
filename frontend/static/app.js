@@ -1031,6 +1031,45 @@ $("editorPlanText").addEventListener("input", () => {
   editorBusy(editorRendering);
 });
 
+$("motionAddScene").addEventListener("click", () => {
+  editorError("");
+  try {
+    if (!editorProject) throw new Error("Carregue um projeto antes de criar a cena.");
+    const plan = JSON.parse($("editorPlanText").value);
+    if (!Array.isArray(plan.timeline)) throw new Error("O JSON precisa ter uma timeline.");
+    if (plan.version === "0.1" && plan.timeline.length) {
+      throw new Error("Este projeto já tem cenas 0.1. Crie outro projeto para usar cenas motion 0.2 sem alterar as cenas existentes.");
+    }
+    if (!["0.1", "0.2"].includes(plan.version)) throw new Error("Versão do JSON não suportada.");
+    const leftAsset = $("motionLeftAsset").value.trim();
+    const rightAsset = $("motionRightAsset").value.trim();
+    const backgroundValue = $("motionBackground").value.trim();
+    const duration = Number($("motionDuration").value);
+    const delay = Number($("motionDelay").value);
+    const scale = Number($("motionScale").value) / 100;
+    if (!leftAsset || !rightAsset || !backgroundValue) throw new Error("Informe o fundo e os dois assets.");
+    if (!(duration > 0) || !(delay >= 0 && delay < duration) || !(scale > 0 && scale <= 8)) {
+      throw new Error("Confira duração, atraso e tamanho (até 800%).");
+    }
+    const start = plan.timeline.length ? Math.max(...plan.timeline.map(scene => Number(scene.end))) : 0;
+    const end = Number((start + duration).toFixed(3));
+    let idNumber = plan.timeline.length + 1;
+    while (plan.timeline.some(scene => scene.id === `motion-${idNumber}`)) idNumber += 1;
+    const background = backgroundValue.startsWith("#") ? { color: backgroundValue } : { asset: backgroundValue, fit: "cover" };
+    plan.version = "0.2";
+    plan.timeline.push({
+      id: `motion-${idNumber}`, start, end, layout: "3x3", background,
+      elements: [
+        { id: `motion-${idNumber}-left`, type: "image", asset: leftAsset, cells: [1, 4, 7], fit: "contain", start, end, z: 10, transform: { scale }, animation: { enter: "slide_from_left", idle: "none", exit: "cut" } },
+        { id: `motion-${idNumber}-right`, type: "image", asset: rightAsset, cells: [3, 6, 9], fit: "contain", start: Number((start + delay).toFixed(3)), end, z: 20, transform: { scale }, animation: { enter: "slide_from_right", idle: "none", exit: "cut" } },
+      ], transitionOut: "cut",
+    });
+    $("editorPlanText").value = JSON.stringify(plan, null, 2);
+    $("editorPlanText").dispatchEvent(new Event("input"));
+    $("editorStatus").textContent = "Cena motion adicionada ao rascunho. Valide e salve o JSON antes do preview.";
+  } catch (error) { editorError(error.message); }
+});
+
 $("editorValidate").addEventListener("click", async () => {
   editorError("");
   let plan;

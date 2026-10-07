@@ -277,6 +277,19 @@
           <button id="editorInspectAssets" class="btn btn-secondary" type="button">Listar</button>
         </div>
         <ul id="editorAssetLibrary" class="editor-list"></ul>
+        <details class="editor-plan">
+          <summary>Criar cena motion com grid 3×3</summary>
+          <p class="helper-text">Gera no JSON uma cena contínua com dois assets, entrada deslizante e escala acima da célula. Use URIs como <code>project://assets/personagem.png</code>. O segundo aparece depois do atraso informado.</p>
+          <div class="motion-form">
+            <label>Fundo (cor #RRGGBB ou URI) <input id="motionBackground" type="text" value="#182238"></label>
+            <label>Imagem da esquerda <input id="motionLeftAsset" type="text" placeholder="project://assets/esquerda.png"></label>
+            <label>Imagem da direita <input id="motionRightAsset" type="text" placeholder="project://assets/direita.png"></label>
+            <label>Duração (segundos) <input id="motionDuration" type="number" min="1" step="0.1" value="6"></label>
+            <label>Atraso do segundo (segundos) <input id="motionDelay" type="number" min="0" step="0.1" value="1"></label>
+            <label>Tamanho em relação ao grid (%) <input id="motionScale" type="number" min="10" max="800" step="1" value="120"></label>
+            <button id="motionAddScene" class="btn btn-secondary" type="button">Adicionar cena ao JSON</button>
+          </div>
+        </details>
         <details class="editor-plan" open>
           <summary>edit_plan.json</summary>
           <textarea id="editorPlanText" rows="16" spellcheck="false" aria-label="Conteúdo JSON do plano"></textarea>
@@ -322,8 +335,8 @@
       </section>
       <section class="block guide-card">
         <h3>Motion design: cenas contínuas</h3>
-        <p>O <code>JSON 0.2</code> já permite um fundo estático que permanece enquanto PNGs e textos aparecem, se movem e são revelados pela câmera virtual. Use keyframes de posição, escala, rotação e opacidade. O <code>JSON 0.1</code> continua funcionando para a edição tradicional.</p>
-        <p>Esta é a primeira versão: vídeos dentro da cena, legenda cinética e ajuste visual dos keyframes ainda não fazem parte do <code>0.2</code>. Veja <code>MOTION_DESIGN_PLAN.md</code> e <code>examples/motion-design-proposal.v0.2.json</code> no repositório. Para fundos sólidos use <code>background.color</code>; para arquivos próprios use <code>project://</code>, e para mídia interna use <code>builtin://</code> após adicionar os arquivos à biblioteca.</p>
+        <p>O <code>JSON 0.2</code> permite manter o mesmo fundo (cor, imagem ou vídeo), animar PNGs, vídeos e textos em camadas e mover uma câmera virtual. O grid 3×3 define a posição-base: <code>[1,4,7]</code> é a coluna esquerda e <code>[3,6,9]</code> a direita. <code>scale: 1.2</code> aumenta 20% além das células. O <code>JSON 0.1</code> continua funcionando.</p>
+        <p>No editor, use <strong>Criar cena motion com grid 3×3</strong> para montar o caso comum sem escrever keyframes. Para controle preciso, consulte <code>MOTION_DESIGN_JSON.md</code> e <code>examples/motion-storyboard-v0.2.json</code> no repositório. O storyboard inclui fundo em loop, texto letra a letra, câmera, transição com blur e SFX. Fundos sólidos usam <code>background.color</code>; arquivos próprios usam <code>project://</code> e mídia interna usa <code>builtin://</code> depois de instalada.</p>
       </section>
       <section class="block guide-card">
         <h3>1. Organize uma pasta por vídeo</h3>
