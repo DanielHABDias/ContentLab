@@ -73,7 +73,9 @@ projeto exemplo ainda não tiverem sido adicionados.
 
 O renderer inicial gera `output/rough_cut.mp4` e `output/render_report.json`.
 Ele executa imagens, vídeos, fundos sólidos, cortes secos, narração, texto de
-impacto e `kinetic_text` palavra por palavra. Quando a transcrição possui word
+impacto, `kinetic_text` palavra por palavra e captions karaoke. Um vídeo de
+apresentador pode ser colocado sobre um background usando `cells` do grid 3×3,
+inclusive com o layout `nox`. Quando a transcrição possui word
 timestamps eles são usados diretamente; caches antigos com timestamps por
 segmento recebem uma distribuição determinística das palavras.
 

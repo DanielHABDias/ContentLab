@@ -9,6 +9,7 @@ STYLE_DEFINITIONS = {
     "paper_word": {"font": "Arial", "size": 80, "primary": "#111111", "outline": "#F5E8CE", "outline_width": 10, "bold": True},
     "versus_big": {"font": "Arial", "size": 108, "primary": "#FF334F", "outline": "#FFFFFF", "outline_width": 5, "bold": True},
     "word_pop": {"font": "Arial", "size": 96, "primary": "#FFFFFF", "outline": "#000000", "outline_width": 7, "bold": True},
+    "anton_karaoke": {"font": "Arial", "size": 62, "primary": "#FFFFFF", "outline": "#000000", "outline_width": 5, "bold": True},
 }
 
 
@@ -91,9 +92,9 @@ def build_scene_ass(scene, project, transcript, output):
     available_words = transcript_words(transcript)
     used_styles = set()
     for element in scene.elements:
-        if element.type not in {"text", "kinetic_text"}:
+        if element.type not in {"text", "kinetic_text", "caption"}:
             continue
-        style_name = element.data.get("style") or ("word_pop" if element.type == "kinetic_text" else "impact")
+        style_name = element.data.get("style") or ("anton_karaoke" if element.type == "caption" else "word_pop" if element.type == "kinetic_text" else "impact")
         used_styles.add(style_name)
         center_x = element.region[0] + element.region[2] // 2
         center_y = element.region[1] + element.region[3] // 2
@@ -104,6 +105,33 @@ def build_scene_ass(scene, project, transcript, output):
         if element.type == "text":
             tags = rf"{{\an5\pos({center_x},{center_y})\fad(90,90)}}"
             events.append((start - scene.start, end - scene.start, style_name, tags + _escape_text(element.data.get("text", ""))))
+            continue
+
+        if element.type == "caption":
+            caption_range = element.data.get("range") or {}
+            start = max(start, float(caption_range.get("start", start)))
+            end = min(end, float(caption_range.get("end", end)))
+            if not transcript:
+                raise ValueError(f"Cena {scene.id}: caption requer sources.transcript com timestamps.")
+            words = [word for word in available_words if word["end"] > start and word["start"] < end]
+            if not words:
+                warnings.append({"scene": scene.id, "code": "caption_no_words", "message": "Nenhuma palavra da transcrição no intervalo da legenda."})
+                continue
+            # Uma linha curta de contexto permanece na tela enquanto a palavra atual muda de cor.
+            for index, word in enumerate(words):
+                word_start = max(start, word["start"])
+                word_end = min(end, word["end"])
+                if word_end <= word_start:
+                    continue
+                group_start = (index // 5) * 5
+                group = words[group_start:group_start + 5]
+                parts = []
+                for group_index, item in enumerate(group):
+                    prefix = r"{\1c&H00D4FF&\fscx112\fscy112}" if group_start + group_index == index else r"{\1c&H00FFFFFF&\fscx100\fscy100}"
+                    parts.append(prefix + _escape_text(item["word"]))
+                caption_y = element.region[1] + int(element.region[3] * 0.78)
+                tags = rf"{{\an5\pos({center_x},{caption_y})}}"
+                events.append((word_start - scene.start, word_end - scene.start, style_name, tags + " ".join(parts)))
             continue
 
         words = _phrase_words(element.data.get("text"), start, end, available_words)

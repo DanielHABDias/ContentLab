@@ -47,8 +47,16 @@ def _scene_visual(scene, full_region):
     return None
 
 
+def _presenter_overlay(scene, full_region):
+    if scene.background_path is None:
+        return None
+    candidates = [element for element in scene.elements if element.type == "video" and element.asset_path and element.region != full_region]
+    return candidates[0] if len(candidates) == 1 else None
+
+
 def _render_segment(ffmpeg, scene, output, project, duration, runner, warnings, transcript=None, work_dir=None):
     visual = _scene_visual(scene, (0, 0, project.width, project.height))
+    presenter = _presenter_overlay(scene, (0, 0, project.width, project.height))
     common = [ffmpeg, "-hide_banner", "-loglevel", "error", "-y"]
     if visual:
         path, kind, fit, loop = visual
@@ -62,17 +70,35 @@ def _render_segment(ffmpeg, scene, output, project, duration, runner, warnings, 
         command = common + ["-f", "lavfi", "-i", f"color=c={color}:s={project.width}x{project.height}:r={project.fps}:d={duration}"]
         video_filter = "format=yuv420p"
 
+    if presenter:
+        x, y, width, height = presenter.region
+        command += (["-stream_loop", "-1"] if presenter.data.get("loop") else []) + ["-i", str(presenter.asset_path)]
+        overlay_filter = (
+            f"[0:v]{video_filter}[bg];"
+            f"[1:v]scale={width}:{height}:force_original_aspect_ratio=decrease,"
+            f"format=yuva420p[actor];[bg][actor]overlay={x}+({width}-w)/2:{y}+({height}-h)/2:shortest=0:repeatlast=1[v]"
+        )
+        # Background e ator são renderizados juntos antes da legenda.
+        video_filter = None
+
     ass_path = Path(work_dir or output.parent) / f"{output.stem}.ass"
     text_event_count, text_warnings = build_scene_ass(scene, project, transcript, ass_path)
     warnings.extend(text_warnings)
     if text_event_count:
-        video_filter += f",subtitles=filename='{_filter_path(ass_path)}':original_size={project.width}x{project.height}"
-    command += ["-t", str(duration), "-vf", video_filter]
+        subtitle_filter = f"subtitles=filename='{_filter_path(ass_path)}':original_size={project.width}x{project.height}"
+        if presenter:
+            overlay_filter += f";[v]{subtitle_filter}[out]"
+        else:
+            video_filter += f",{subtitle_filter}"
+    if presenter:
+        command += ["-t", str(duration), "-filter_complex", overlay_filter, "-map", "[out]" if text_event_count else "[v]"]
+    else:
+        command += ["-t", str(duration), "-vf", video_filter]
 
-    unsupported = [element.type for element in scene.elements if element.type not in {"video", "image", "text", "kinetic_text"}]
+    unsupported = [element.type for element in scene.elements if element.type not in {"video", "image", "text", "kinetic_text", "caption"}]
     if unsupported:
         warnings.append({"scene": scene.id, "code": "elements_not_rendered", "elements": unsupported})
-    partial = [element.type for element in scene.elements if element.type in {"video", "image"} and element.region != (0, 0, project.width, project.height)]
+    partial = [element.type for element in scene.elements if element.type in {"video", "image"} and element.region != (0, 0, project.width, project.height) and element is not presenter]
     if partial:
         warnings.append({"scene": scene.id, "code": "positioned_elements_not_rendered", "elements": partial})
     if scene.transition_out != "cut":

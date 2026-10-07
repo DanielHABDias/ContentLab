@@ -116,6 +116,25 @@ class TextRendererTests(unittest.TestCase):
             self.assertIn("movimento", content)
             self.assertTrue(any(item["code"] == "kinetic_text_timing_fallback" for item in warnings))
 
+    def test_caption_highlights_current_word_from_transcript(self):
+        data = valid_plan()
+        data["timeline"][0]["elements"] = [
+            {"type": "caption", "style": "anton_karaoke", "sync": "transcript", "range": {"start": 1, "end": 3}, "cells": [7, 8, 9]}
+        ]
+        timeline = compile_timeline(parse_edit_plan(data))
+        transcript = {"segments": [{"start": 1, "end": 3, "text": "duas palavras", "words": [
+            {"word": "duas", "start": 1, "end": 2},
+            {"word": "palavras", "start": 2, "end": 3},
+        ]}]}
+        with tempfile.TemporaryDirectory() as directory:
+            ass_path = Path(directory) / "caption.ass"
+            count, warnings = build_scene_ass(timeline.scenes[0], timeline.project, transcript, ass_path)
+            content = ass_path.read_text(encoding="utf-8-sig")
+            self.assertEqual(count, 2)
+            self.assertEqual(warnings, [])
+            self.assertEqual(content.count("Dialogue:"), 2)
+            self.assertIn("\\1c&H00D4FF&", content)
+
 
 if __name__ == "__main__":
     unittest.main()
