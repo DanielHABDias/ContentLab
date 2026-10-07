@@ -1,9 +1,14 @@
 # -*- mode: python ; coding: utf-8 -*-
-from PyInstaller.utils.hooks import collect_all
+from PyInstaller.utils.hooks import collect_all, collect_submodules
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath('backend'))
 
 datas = [('frontend/templates', 'frontend/templates'), ('frontend/static', 'frontend/static')]
 binaries = []
 hiddenimports = []
+hiddenimports += collect_submodules('contentlab.transition_plugins')
 tmp_ret = collect_all('yt_dlp')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 

@@ -48,6 +48,24 @@ def _semantic_issues(data):
     for index, cut in enumerate(data.get("audio", {}).get("sourceCuts", [])):
         if cut["end"] <= cut["start"]:
             issues.append({"path": f"audio.sourceCuts.{index}", "message": "O corte deve terminar depois de começar."})
+    for index, music in enumerate(data.get("audio", {}).get("music", [])):
+        if music["end"] <= music["start"]:
+            issues.append({"path": f"audio.music.{index}", "message": "A música deve terminar depois de começar."})
+        if music.get("fadeIn", 0) + music.get("fadeOut", 0) > music["end"] - music["start"]:
+            issues.append({"path": f"audio.music.{index}", "message": "Fades excedem a duração da música."})
+    for scene_index, scene in enumerate(data.get("timeline", [])):
+        for element_index, element in enumerate(scene.get("elements", [])):
+            if element["type"] in {"sfx", "overlay"} and not element.get("asset"):
+                issues.append({"path": f"timeline.{scene_index}.elements.{element_index}.asset", "message": "Asset obrigatório para SFX/overlay."})
+            if element["type"] == "overlay":
+                config = element.get("config", {})
+                for key in ("similarity", "blend"):
+                    if key in config and (not isinstance(config[key], (int, float)) or not 0 <= config[key] <= 1):
+                        issues.append({"path": f"timeline.{scene_index}.elements.{element_index}.config.{key}", "message": "Valor deve ficar entre 0 e 1."})
+            if element["type"] == "sfx" and "duration" in element.get("config", {}):
+                value = element["config"]["duration"]
+                if not isinstance(value, (int, float)) or value <= 0:
+                    issues.append({"path": f"timeline.{scene_index}.elements.{element_index}.config.duration", "message": "Duração do SFX deve ser positiva."})
     return issues
 
 

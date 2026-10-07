@@ -10,6 +10,7 @@ from .service import prepare_edit_plan
 from .text import build_scene_ass
 from .layout import box_geometry, create_card_assets
 from .motions import motion_filters, overlay_position
+from .transitions import discover_transitions
 
 
 def _creation_flags():
@@ -49,7 +50,7 @@ def _scene_visual(scene, full_region):
     return None
 
 
-def _render_segment(ffmpeg, scene, output, project, duration, runner, warnings, transcript=None, work_dir=None):
+def _render_segment(ffmpeg, scene, output, project, duration, runner, warnings, transcript=None, work_dir=None, lead_in=0):
     full_region = (0, 0, project.width, project.height)
     visual = _scene_visual(scene, full_region)
     common = [ffmpeg, "-hide_banner", "-loglevel", "error", "-y"]
@@ -65,7 +66,7 @@ def _render_segment(ffmpeg, scene, output, project, duration, runner, warnings, 
         command = common + ["-f", "lavfi", "-i", f"color=c={color}:s={project.width}x{project.height}:r={project.fps}:d={duration}"]
         video_filter = "format=yuv420p"
 
-    layers = [element for element in scene.elements if element.type in {"video", "image"} and element.asset_path and (not visual or element.asset_path != visual[0] or element.region != full_region or element.data.get("box") or element.data.get("animation"))]
+    layers = [element for element in scene.elements if element.type in {"video", "image", "overlay"} and element.asset_path and (element.type == "overlay" or not visual or element.asset_path != visual[0] or element.region != full_region or element.data.get("box") or element.data.get("animation"))]
     graph = [f"[0:v]{video_filter}[base0]"]
     current = "base0"
     input_index = 1
@@ -91,7 +92,7 @@ def _render_segment(ffmpeg, scene, output, project, duration, runner, warnings, 
             current = next_label
             input_index += 1
 
-        if element.type == "image":
+        if element.type == "image" or (element.type == "overlay" and element.asset_path.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"}):
             command += ["-loop", "1", "-framerate", str(project.fps), "-i", str(element.asset_path)]
         else:
             command += (["-stream_loop", "-1"] if element.data.get("loop") else []) + ["-i", str(element.asset_path)]
@@ -104,6 +105,12 @@ def _render_segment(ffmpeg, scene, output, project, duration, runner, warnings, 
             scale = f"scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height}"
         raw_label = f"layer{layer_index}"
         filters = [scale, "format=rgba"]
+        if element.type == "overlay":
+            config = element.data.get("config", {})
+            chroma_color = str(config.get("keyColor", "0x00FF00")).replace("#", "0x")
+            similarity = float(config.get("similarity", 0.18))
+            blend = float(config.get("blend", 0.08))
+            filters.append(f"chromakey={chroma_color}:{similarity:.3f}:{blend:.3f}")
         filters.extend(motion_filters(animation, width, height, project.fps, duration, local_start, local_end))
         graph.append(f"[{input_index}:v]{','.join(filters)}[{raw_label}]")
         input_index += 1
@@ -127,21 +134,91 @@ def _render_segment(ffmpeg, scene, output, project, duration, runner, warnings, 
         subtitle_filter = f"subtitles=filename='{_filter_path(ass_path)}':original_size={project.width}x{project.height}"
         graph.append(f"[{current}]{subtitle_filter}[out]")
         current = "out"
-    command += ["-t", str(duration), "-filter_complex", ";".join(graph), "-map", f"[{current}]"]
+    if lead_in:
+        graph.append(f"[{current}]tpad=start_mode=clone:start_duration={lead_in:.6f},setpts=PTS-STARTPTS[padded]")
+        current = "padded"
+    command += ["-t", str(duration + lead_in), "-filter_complex", ";".join(graph), "-map", f"[{current}]"]
 
-    unsupported = [element.type for element in scene.elements if element.type not in {"video", "image", "text", "kinetic_text", "caption"}]
+    unsupported = [element.type for element in scene.elements if element.type not in {"video", "image", "overlay", "sfx", "text", "kinetic_text", "caption"}]
     if unsupported:
         warnings.append({"scene": scene.id, "code": "elements_not_rendered", "elements": unsupported})
-    if scene.transition_out != "cut":
-        warnings.append({"scene": scene.id, "code": "transition_fallback", "requested": scene.transition_out, "used": "cut"})
-
-    command += ["-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-pix_fmt", "yuv420p", str(output)]
+    command += ["-an", "-r", str(project.fps), "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-pix_fmt", "yuv420p", str(output)]
     _run(command, runner)
 
 
 def _concat_file_line(path):
     escaped = str(Path(path).resolve()).replace("\\", "/").replace("'", "'\\''")
     return f"file '{escaped}'\n"
+
+
+def _compose_visual(ffmpeg, segments, boundaries, durations, total, fps, work, runner):
+    visual = work / "visual.mp4"
+    if all(spec.ffmpeg_name is None for spec, _ in boundaries):
+        concat_list = work / "segments.ffconcat"
+        concat_list.write_text("ffconcat version 1.0\n" + "".join(_concat_file_line(path) for path in segments), encoding="utf-8")
+        _run([ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(concat_list), "-c", "copy", str(visual)], runner)
+        return visual
+    command = [ffmpeg, "-hide_banner", "-loglevel", "error", "-y"]
+    graph = []
+    for index, segment in enumerate(segments):
+        command += ["-i", str(segment)]
+        graph.append(f"[{index}:v]setpts=PTS-STARTPTS,format=yuv420p,fps={fps}[v{index}]")
+    current = "v0"
+    elapsed = durations[0]
+    for index, (spec, transition_duration) in enumerate(boundaries, 1):
+        target = f"joined{index}"
+        if spec.ffmpeg_name:
+            offset = elapsed - transition_duration
+            graph.append(f"[{current}][v{index}]xfade=transition={spec.ffmpeg_name}:duration={transition_duration:.6f}:offset={offset:.6f}[{target}]")
+        else:
+            graph.append(f"[{current}][v{index}]concat=n=2:v=1:a=0[{target}]")
+        current = target
+        elapsed += durations[index]
+    command += ["-filter_complex", ";".join(graph), "-map", f"[{current}]", "-an", "-t", str(total), "-r", str(fps), "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-pix_fmt", "yuv420p", str(visual)]
+    _run(command, runner)
+    return visual
+
+
+def _audio_mix(ffmpeg, visual, narration, plan, timeline, resolved_assets, output, runner):
+    duration = timeline.duration
+    sources = []
+    for item in plan.audio.get("music", []):
+        sources.append((item, resolved_assets[item["asset"]], "music", float(item["start"]), float(item["end"])))
+    for scene in timeline.scenes:
+        for element in scene.elements:
+            if element.type == "sfx":
+                sources.append((element.data, str(element.asset_path), "sfx", element.start, min(duration, element.start + float(element.data.get("config", {}).get("duration", 10)))))
+    command = [ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-i", str(visual), "-i", str(narration)]
+    graph = [f"[1:a]apad,atrim=0:{duration},asetpts=PTS-STARTPTS[narration]"]
+    labels = ["[narration]"]
+    applied = []
+    for item, path, kind, start, end in sources:
+        if end <= start or start >= duration:
+            continue
+        command += (["-stream_loop", "-1"] if kind == "music" else []) + ["-i", str(path)]
+        input_index = 2 + len(applied)
+        length = min(end, duration) - start
+        trim_db = float(item.get("trimDb", item.get("config", {}).get("trimDb", -18 if kind == "music" else -6)))
+        filters = [f"atrim=0:{length:.6f}", "asetpts=PTS-STARTPTS", f"volume={trim_db}dB"]
+        fade_in = min(float(item.get("fadeIn", 0)), length)
+        fade_out = min(float(item.get("fadeOut", 0)), length)
+        if fade_in:
+            filters.append(f"afade=t=in:st=0:d={fade_in:.6f}")
+        if fade_out:
+            filters.append(f"afade=t=out:st={length - fade_out:.6f}:d={fade_out:.6f}")
+        filters.append(f"adelay={round(start * 1000)}:all=1")
+        label = f"audio{input_index}"
+        graph.append(f"[{input_index}:a]{','.join(filters)}[{label}]")
+        labels.append(f"[{label}]")
+        applied.append({"type": kind, "asset": item["asset"], "start": start, "end": min(end, duration), "trimDb": trim_db})
+    if len(labels) > 1:
+        graph.append("".join(labels) + f"amix=inputs={len(labels)}:duration=longest:normalize=0,atrim=0:{duration}[mix]")
+        audio_map = "[mix]"
+    else:
+        audio_map = "[narration]"
+    command += ["-filter_complex", ";".join(graph), "-map", "0:v:0", "-map", audio_map, "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-t", str(duration), str(output)]
+    _run(command, runner)
+    return applied
 
 
 def _load_transcript(plan, project_root, warnings):
@@ -192,6 +269,10 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
         with tempfile.TemporaryDirectory(prefix="contentlab-render-", dir=output_dir) as work:
             work = Path(work)
             segments = []
+            segment_durations = []
+            boundaries = []
+            transition_specs = discover_transitions()
+            applied_transitions = []
             cursor = 0.0
             render_scenes = []
             for scene in timeline.scenes:
@@ -202,6 +283,21 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
 
             for index, (scene, duration) in enumerate(render_scenes):
                 segment = work / f"segment-{index:04d}.mp4"
+                lead_in = 0.0
+                if index:
+                    previous, previous_duration = render_scenes[index - 1]
+                    spec = transition_specs[previous.transition_out] if previous and scene else transition_specs["cut"]
+                    if previous and not scene and previous.transition_out != "cut":
+                        warnings.append({"scene": previous.id, "code": "transition_gap", "requested": previous.transition_out, "used": "cut"})
+                    if spec.ffmpeg_name:
+                        lead_in = min(spec.duration, previous_duration / 2, duration / 2)
+                        lead_in = round(lead_in * plan.project.fps) / plan.project.fps
+                        if lead_in:
+                            applied_transitions.append({"from": previous.id, "to": scene.id, "type": spec.name, "duration": lead_in})
+                        else:
+                            warnings.append({"scene": previous.id, "code": "transition_too_short", "requested": spec.name, "used": "cut"})
+                            spec = transition_specs["cut"]
+                    boundaries.append((spec, lead_in))
                 scene_for_render = scene
                 if scene_for_render is None:
                     from .models import ResolvedScene
@@ -210,24 +306,25 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
                     progress("scene", index + 1, len(render_scenes), scene_for_render.id)
                 _render_segment(
                     ffmpeg, scene_for_render, segment, plan.project, duration, runner, warnings,
-                    transcript=transcript, work_dir=work,
+                    transcript=transcript, work_dir=work, lead_in=lead_in,
                 )
                 segments.append(segment)
+                segment_durations.append(duration + lead_in)
 
-            concat_list = work / "segments.ffconcat"
-            concat_list.write_text("ffconcat version 1.0\n" + "".join(_concat_file_line(path) for path in segments), encoding="utf-8")
-            visual = work / "visual.mp4"
-            _run([ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(concat_list), "-c", "copy", str(visual)], runner)
+            if timeline.scenes[-1].transition_out != "cut":
+                warnings.append({"scene": timeline.scenes[-1].id, "code": "transition_at_end", "requested": timeline.scenes[-1].transition_out, "used": "cut"})
+
+            visual = _compose_visual(ffmpeg, segments, boundaries, segment_durations, timeline.duration, plan.project.fps, work, runner)
 
             temp_output = work / "rough_cut.mp4"
-            audio_filter = f"[1:a]apad,atrim=0:{timeline.duration}[a]"
-            _run([ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-i", str(visual), "-i", str(narration), "-filter_complex", audio_filter, "-map", "0:v:0", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-t", str(timeline.duration), str(temp_output)], runner)
+            applied_audio = _audio_mix(ffmpeg, visual, narration, plan, timeline, validation["resolvedAssets"], temp_output, runner)
             os.replace(temp_output, output)
 
         report = {
             "status": "completed", "project": plan.project.name, "version": plan.version,
             "output": str(output), "duration": timeline.duration, "scenes": len(timeline.scenes),
-            "warnings": warnings, "elapsedSeconds": round(time.time() - started, 3),
+            "warnings": warnings, "transitions": applied_transitions, "audioLayers": applied_audio,
+            "elapsedSeconds": round(time.time() - started, 3),
         }
         report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
         return report

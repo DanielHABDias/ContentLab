@@ -11,6 +11,7 @@ from backend.contentlab.text import build_scene_ass, transcript_words
 from backend.contentlab.timeline import compile_timeline
 from backend.contentlab.layout import box_geometry, create_card_assets
 from backend.contentlab.motions import motion_filters, overlay_position
+from backend.contentlab.transitions import discover_transitions
 
 
 def valid_plan():
@@ -27,6 +28,13 @@ def valid_plan():
 
 
 class ParserTests(unittest.TestCase):
+    def test_phase6_plugin_registry_and_audio_validation(self):
+        self.assertEqual(set(discover_transitions()), {"cut", "fade", "blur_left"})
+        data = valid_plan()
+        data["audio"]["music"] = [{"asset": "project://music.wav", "start": 2, "end": 1}]
+        with self.assertRaises(PlanValidationError):
+            parse_edit_plan(data)
+
     def test_defaults_and_grid_compilation(self):
         timeline = compile_timeline(parse_edit_plan(valid_plan()))
         self.assertEqual((timeline.project.width, timeline.project.height), (1920, 1080))
@@ -67,6 +75,40 @@ class AssetResolverTests(unittest.TestCase):
 
 
 class RendererTests(unittest.TestCase):
+    def test_phase6_routes_transitions_and_audio_to_ffmpeg(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "audio").mkdir()
+            (root / "bin").mkdir()
+            for name in ("narration.wav", "music.wav", "effect.wav"):
+                (root / "audio" / name).touch()
+            (root / "bin" / "ffmpeg").touch()
+            data = valid_plan()
+            data["project"]["resolution"] = {"width": 64, "height": 64}
+            data["timeline"][0]["elements"] = []
+            data["timeline"][0]["transitionOut"] = "fade"
+            data["timeline"].append({"id": "s2", "start": 3, "end": 5, "elements": [
+                {"type": "sfx", "asset": "project://audio/effect.wav", "at": 3.5}
+            ]})
+            data["audio"]["music"] = [{"asset": "project://audio/music.wav", "start": 0, "end": 5, "trimDb": -20, "fadeIn": 0.3}]
+            commands = []
+
+            class Result:
+                returncode = 0
+                stderr = ""
+                stdout = ""
+
+            def fake_runner(command, **kwargs):
+                commands.append(command)
+                Path(command[-1]).touch()
+                return Result()
+
+            report = render_edit_plan(data, output_dir=root / "output", project_root=root, ffmpeg_dir=root / "bin", runner=fake_runner)
+            self.assertEqual(report["transitions"][0]["type"], "fade")
+            self.assertEqual([layer["type"] for layer in report["audioLayers"]], ["music", "sfx"])
+            self.assertTrue(any("xfade=transition=fade" in str(part) for command in commands for part in command))
+            self.assertTrue(any("amix=inputs=3" in str(part) for command in commands for part in command))
+
     def test_builds_rough_cut_and_report_with_argument_lists(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -58,5 +58,5 @@
 3. Texto e kinetic text. **Implementado com ASS/libass e word timestamps.**
 4. Caption karaoke e preset Nox. **Implementado como caption ASS e vídeo em região sobre background.**
 5. Grid 3x3, boxes e motions. **Implementado com presets de entrada, idle e saída.**
-6. Transições, chroma, música/SFX e relatórios.
+6. Transições, chroma, música/SFX e relatórios. **Implementado: plugins cut/fade/blur_left, chroma key, mixagem e relatório de camadas.**
 7. UI de projeto, preview e render final.

@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import FrozenSet
+from .transitions import discover_transitions
 
 
 @dataclass(frozen=True)
@@ -14,7 +15,7 @@ class Registry:
 
 DEFAULT_REGISTRY = Registry(
     layouts=frozenset({"fullscreen", "left_right", "three_columns", "character_vs", "nox", "custom_grid", "3x3"}),
-    transitions=frozenset({"cut", "fade", "blur_left", "blur_right", "blur_up", "zoom_blur"}),
+    transitions=frozenset(discover_transitions()),
     motions=frozenset({"cut", "none", "fade", "fade_out", "slide_up", "pop_in", "float_soft", "slow_zoom_in", "slow_zoom_out", "pan", "pulse_soft"}),
     text_styles=frozenset({"impact", "impact_yellow", "word_pop", "paper_word", "versus_big"}),
     caption_styles=frozenset({"anton_karaoke"}),

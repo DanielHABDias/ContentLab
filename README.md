@@ -71,7 +71,7 @@ O primeiro comando também verifica a existência da narração e dos assets. Um
 plano estruturalmente correto pode retornar código 2 enquanto os arquivos do
 projeto exemplo ainda não tiverem sido adicionados.
 
-O renderer inicial gera `output/rough_cut.mp4` e `output/render_report.json`.
+O renderer gera `output/rough_cut.mp4` e `output/render_report.json`.
 Ele executa imagens, vídeos, fundos sólidos, cortes secos, narração, texto de
 impacto, `kinetic_text` palavra por palavra e captions karaoke. Um vídeo de
 apresentador pode ser colocado sobre um background usando `cells` do grid 3×3,
@@ -88,6 +88,16 @@ Para imagens e vídeos, `animation.enter` aceita `cut`, `fade` e `slide_up`;
 e `pan`; `animation.exit` aceita `cut` e `fade_out`. O movimento usa o intervalo
 `start`/`end` do elemento. Presets registrados em fases incompatíveis são
 rejeitados na validação.
+
+Na fase 6, `transitionOut` aceita `cut`, `fade` e `blur_left` (blur horizontal).
+As transições são descobertas em `backend/contentlab/transition_plugins/` e
+aplicadas apenas entre cenas contíguas. Os demais nomes antigos ainda não têm
+implementação e agora são rejeitados pela validação, em vez de virar um corte
+silencioso. `audio.music` suporta `trimDb`, `fadeIn` e `fadeOut`; elementos
+`sfx` usam `at` e podem limitar a duração via `config.duration`. Elementos
+`overlay` aplicam chroma key verde, configurável por `config.keyColor`,
+`config.similarity` e `config.blend`. O relatório lista as transições e
+camadas de áudio aplicadas, além de avisos.
 
 Transições diferentes de `cut`, `sourceCuts`, música e SFX aparecem como warnings no relatório até suas fases de render
 correspondentes serem implementadas.
