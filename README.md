@@ -59,6 +59,17 @@ Com o ambiente virtual ativo, inicie somente o servidor:
 python -m backend.app
 ```
 
+Valide um plano de edição ou liste as capacidades registradas:
+
+```bash
+python -m backend.contentlab.cli validate examples/minimal-edit-plan.json
+python -m backend.contentlab.cli plugins
+```
+
+O primeiro comando também verifica a existência da narração e dos assets. Um
+plano estruturalmente correto pode retornar código 2 enquanto os arquivos do
+projeto exemplo ainda não tiverem sido adicionados.
+
 A interface chama a API Flask no mesmo endereço, portanto não há etapa de
 compilação para o frontend.
 

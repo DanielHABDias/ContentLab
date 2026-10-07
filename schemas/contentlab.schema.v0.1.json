@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contentlab.local/schema/v0.1",
+  "title": "Content Lab Edit Plan v0.1",
+  "type": "object",
+  "required": ["version", "project", "audio", "timeline"],
+  "properties": {
+    "version": {"const": "0.1"},
+    "project": {
+      "type": "object",
+      "required": ["name", "format", "profile"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "format": {"enum": ["youtube_long", "youtube_short", "custom"]},
+        "profile": {"type": "string", "minLength": 1},
+        "resolution": {"type": "object", "required": ["width", "height"], "properties": {"width": {"type": "integer", "minimum": 1}, "height": {"type": "integer", "minimum": 1}}, "additionalProperties": false},
+        "fps": {"type": "number", "exclusiveMinimum": 0},
+        "seed": {"type": "integer"}
+      },
+      "additionalProperties": false
+    },
+    "sources": {"type": "object", "properties": {"assets": {"type": "string"}, "transcript": {"type": "string"}, "assetCatalog": {"type": "string"}}, "additionalProperties": false},
+    "audio": {
+      "type": "object",
+      "required": ["narration"],
+      "properties": {
+        "narration": {"type": "string", "minLength": 1},
+        "sourceCuts": {"type": "array", "items": {"$ref": "#/$defs/timeRange"}},
+        "voice": {"type": "object", "properties": {"preset": {"type": "string"}, "trimDb": {"type": "number"}}, "additionalProperties": false},
+        "music": {
+          "type": "array",
+          "items": {
+            "type": "object", "required": ["asset", "start", "end"],
+            "properties": {"asset": {"type": "string"}, "start": {"type": "number", "minimum": 0}, "end": {"type": "number", "exclusiveMinimum": 0}, "preset": {"type": "string"}, "trimDb": {"type": "number"}, "fadeIn": {"type": "number", "minimum": 0}, "fadeOut": {"type": "number", "minimum": 0}},
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "timeline": {"type": "array", "items": {"$ref": "#/$defs/scene"}}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "timeRange": {"type": "object", "required": ["start", "end"], "properties": {"start": {"type": "number", "minimum": 0}, "end": {"type": "number", "exclusiveMinimum": 0}}, "additionalProperties": false},
+    "box": {"oneOf": [{"type": "string"}, {"type": "object", "properties": {"preset": {"type": "string"}, "padding": {"type": "number", "minimum": 0}, "radius": {"type": "number", "minimum": 0}, "shadow": {"type": "string"}, "background": {"type": "string"}, "border": {"type": "string"}}, "additionalProperties": false}]},
+    "animation": {"type": "object", "properties": {"enter": {"type": "string"}, "idle": {"type": "string"}, "exit": {"type": "string"}}, "additionalProperties": false},
+    "element": {
+      "type": "object", "required": ["type"],
+      "properties": {
+        "type": {"enum": ["video", "image", "text", "kinetic_text", "caption", "overlay", "sfx"]},
+        "asset": {"type": "string"}, "text": {"type": "string"}, "style": {"type": "string"},
+        "start": {"type": "number", "minimum": 0}, "end": {"type": "number", "exclusiveMinimum": 0}, "at": {"type": "number", "minimum": 0},
+        "cells": {"type": "array", "items": {"type": "integer", "minimum": 1, "maximum": 9}, "minItems": 1, "uniqueItems": true},
+        "fit": {"enum": ["cover", "contain", "stretch", "smart_cover"]},
+        "box": {"$ref": "#/$defs/box"}, "animation": {"$ref": "#/$defs/animation"}, "z": {"type": "integer"}, "loop": {"type": "boolean"}, "sync": {"type": "string"},
+        "emphasis": {"type": "array", "items": {"type": "string"}}, "range": {"$ref": "#/$defs/timeRange"}, "config": {"type": "object"}
+      },
+      "additionalProperties": false
+    },
+    "background": {"type": "object", "properties": {"color": {"type": "string"}, "asset": {"type": "string"}, "fit": {"enum": ["cover", "contain", "stretch"]}, "loop": {"type": "boolean"}}, "additionalProperties": false},
+    "layout": {"oneOf": [{"type": "string"}, {"type": "object", "properties": {"grid": {"const": "3x3"}, "preset": {"type": "string"}}, "additionalProperties": false}]},
+    "scene": {
+      "type": "object", "required": ["id", "start", "end", "elements"],
+      "properties": {"id": {"type": "string", "minLength": 1}, "start": {"type": "number", "minimum": 0}, "end": {"type": "number", "exclusiveMinimum": 0}, "background": {"$ref": "#/$defs/background"}, "layout": {"$ref": "#/$defs/layout"}, "elements": {"type": "array", "items": {"$ref": "#/$defs/element"}}, "transitionOut": {"type": "string"}},
+      "additionalProperties": false
+    }
+  }
+}

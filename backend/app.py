@@ -15,8 +15,14 @@ import requests
 
 try:
     from . import ffmpeg_helper
+    from .contentlab.errors import PlanValidationError
+    from .contentlab.registry import describe_registry
+    from .contentlab.service import validate_edit_plan
 except ImportError:  # Suporte ao executável gerado pelo PyInstaller.
     import ffmpeg_helper
+    from contentlab.errors import PlanValidationError
+    from contentlab.registry import describe_registry
+    from contentlab.service import validate_edit_plan
 
 
 def resource_path(relative):
@@ -1138,6 +1144,24 @@ def start_batch_download():
         daemon=True,
     ).start()
     return jsonify({"job_id": job_id, "count": len(clips)})
+
+
+@app.route("/api/editor/plugins", methods=["GET"])
+def editor_plugins():
+    return jsonify(describe_registry())
+
+
+@app.route("/api/editor/validate", methods=["POST"])
+def editor_validate():
+    data = request.get_json(force=True)
+    plan = data.get("plan")
+    if not isinstance(plan, dict):
+        return jsonify({"valid": False, "errors": [{"path": "plan", "message": "Envie o plano JSON no campo 'plan'."}]}), 400
+    try:
+        report = validate_edit_plan(plan, project_root=data.get("projectRoot"))
+        return jsonify(report), 200 if report["valid"] else 422
+    except PlanValidationError as exc:
+        return jsonify({"valid": False, "errors": exc.issues}), 422
 
 
 def _shutdown_process(delay=0.6):

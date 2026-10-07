@@ -1,0 +1,16 @@
+{
+  "version": "0.1",
+  "project": {"name": "primeiro-rough-cut", "format": "youtube_long", "profile": "generic"},
+  "sources": {"assets": "./assets"},
+  "audio": {"narration": "./audio/narration.wav"},
+  "timeline": [
+    {
+      "id": "intro", "start": 0, "end": 5, "layout": "fullscreen",
+      "elements": [
+        {"type": "image", "asset": "project://assets/intro.jpg", "fit": "cover", "animation": {"idle": "slow_zoom_in"}},
+        {"type": "text", "text": "CONTENT LAB", "style": "impact", "start": 1, "end": 4}
+      ],
+      "transitionOut": "cut"
+    }
+  ]
+}
