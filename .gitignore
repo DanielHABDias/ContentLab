@@ -31,6 +31,7 @@ MANIFEST
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
+!ContentLab.spec
 
 # Installer logs
 pip-log.txt
@@ -208,3 +209,7 @@ __marimo__/
 
 # Configs
 config.json
+
+# Content Lab local
+.venv/
+.DS_Store

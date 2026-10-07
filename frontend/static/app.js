@@ -1,0 +1,695 @@
+let duration = 0;
+let currentFolder = "";
+let videoLoaded = false;
+let cacheVideos = [];
+let selectedCacheEntry = null;
+let currentSourceMode = "youtube";
+let currentSourceUrl = "";
+let currentCacheKey = "";
+
+const $ = (id) => document.getElementById(id);
+
+function fmt(sec) {
+  sec = Math.max(0, Math.round(sec));
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  return [h, m, s].map((v) => String(v).padStart(2, "0")).join(":");
+}
+
+function parseTime(str) {
+  const parts = str.split(":").map((p) => parseInt(p, 10) || 0);
+  let s = 0;
+  for (const p of parts) s = s * 60 + p;
+  return s;
+}
+
+function formatBytes(bytes) {
+  const value = Number(bytes || 0);
+  if (!Number.isFinite(value) || value <= 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let n = value;
+  let i = 0;
+  while (n >= 1024 && i < units.length - 1) { n /= 1024; i += 1; }
+  const digits = i >= 3 ? 1 : i === 2 ? 0 : 1;
+  return `${n.toFixed(digits)} ${units[i]}`;
+}
+
+function activeSourceUrl() {
+  if (currentSourceMode === "cache") return currentSourceUrl || "";
+  return $("url").value.trim();
+}
+
+function resetLoadedVideo() {
+  videoLoaded = false;
+  duration = 0;
+  currentSourceUrl = "";
+  currentCacheKey = "";
+  $("videoSection").classList.add("hidden");
+  $("progressSection").classList.add("hidden");
+  const videoEl = $("previewVideo");
+  videoEl.pause();
+  videoEl.removeAttribute("src");
+  videoEl.load();
+  updateDownloadBtnState();
+}
+
+// ---------- preview ----------
+async function loadPreview(url) {
+  const videoEl = $("previewVideo");
+  const errEl = $("previewError");
+  errEl.classList.add("hidden");
+  videoEl.classList.remove("hidden");
+  videoEl.removeAttribute("src");
+
+  try {
+    const res = await fetch("/api/preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "Prévia indisponível");
+    videoEl.src = `/api/video-proxy/${data.preview_id}`;
+    videoEl.load();
+  } catch (err) {
+    videoEl.classList.add("hidden");
+    errEl.classList.remove("hidden");
+  }
+}
+
+function loadCachedPreview(cacheKey) {
+  const videoEl = $("previewVideo");
+  $("previewError").classList.add("hidden");
+  videoEl.classList.remove("hidden");
+  videoEl.src = `/api/cache-preview/${encodeURIComponent(cacheKey)}`;
+  videoEl.load();
+}
+
+$("previewVideo").addEventListener("loadedmetadata", () => {
+  const mediaDuration = Number($("previewVideo").duration || 0);
+  if ((!duration || duration <= 0) && Number.isFinite(mediaDuration) && mediaDuration > 0) {
+    duration = mediaDuration;
+    $("videoDuration").textContent = fmt(duration);
+    setupSlider();
+  }
+});
+
+// ---------- slider ----------
+function updateSliderVisual() {
+  const s = parseFloat($("startRange").value);
+  const e = parseFloat($("endRange").value);
+  const max = duration || 1;
+  $("sliderRange").style.left = (s / max) * 100 + "%";
+  $("sliderRange").style.width = Math.max(0, ((e - s) / max) * 100) + "%";
+  $("startTime").value = fmt(s);
+  $("endTime").value = fmt(e);
+  $("clipLength").textContent = fmt(Math.max(0, e - s));
+}
+
+function setupSlider() {
+  $("startRange").min = 0;
+  $("startRange").max = duration;
+  $("endRange").min = 0;
+  $("endRange").max = duration;
+  $("startRange").value = 0;
+  $("endRange").value = duration;
+  updateSliderVisual();
+}
+
+$("startRange").addEventListener("input", () => {
+  const s = parseFloat($("startRange").value);
+  const e = parseFloat($("endRange").value);
+  if (s > e - 1) $("startRange").value = Math.max(0, e - 1);
+  updateSliderVisual();
+});
+
+$("endRange").addEventListener("input", () => {
+  const s = parseFloat($("startRange").value);
+  const e = parseFloat($("endRange").value);
+  if (e < s + 1) $("endRange").value = Math.min(duration, s + 1);
+  updateSliderVisual();
+});
+
+$("startTime").addEventListener("change", () => {
+  let v = parseTime($("startTime").value);
+  v = Math.min(Math.max(0, v), parseFloat($("endRange").value) - 1);
+  $("startRange").value = v;
+  updateSliderVisual();
+});
+
+$("endTime").addEventListener("change", () => {
+  let v = parseTime($("endTime").value);
+  v = Math.max(Math.min(duration, v), parseFloat($("startRange").value) + 1);
+  $("endRange").value = v;
+  updateSliderVisual();
+});
+
+$("setStartBtn").addEventListener("click", () => {
+  const videoEl = $("previewVideo");
+  if (!videoEl.duration) return;
+  const t = videoEl.currentTime;
+  $("startRange").value = Math.min(t, parseFloat($("endRange").value) - 1);
+  updateSliderVisual();
+});
+
+$("setEndBtn").addEventListener("click", () => {
+  const videoEl = $("previewVideo");
+  if (!videoEl.duration) return;
+  const t = videoEl.currentTime;
+  $("endRange").value = Math.max(t, parseFloat($("startRange").value) + 1);
+  updateSliderVisual();
+});
+
+$("fullToggle").addEventListener("change", (e) => {
+  $("trimControls").classList.toggle("disabled", e.target.checked);
+});
+
+// ---------- modo rápido (sem prévia) ----------
+const fastToggle = $("fastToggle");
+fastToggle.checked = localStorage.getItem("contentlab_fast") === "1";
+
+function applyFastModeUI() {
+  const fast = fastToggle.checked;
+  const videoEl = $("previewVideo");
+  videoEl.classList.toggle("hidden", fast);
+  $("fastNote").classList.toggle("hidden", !fast);
+  $("setStartBtn").classList.toggle("hidden", fast);
+  $("setEndBtn").classList.toggle("hidden", fast);
+  if (fast) {
+    // corta o buffer da prévia na hora: para de gastar banda imediatamente
+    videoEl.pause();
+    videoEl.removeAttribute("src");
+    videoEl.load();
+    $("previewError").classList.add("hidden");
+  }
+}
+
+fastToggle.addEventListener("change", () => {
+  localStorage.setItem("contentlab_fast", fastToggle.checked ? "1" : "0");
+  applyFastModeUI();
+  // se desligou o modo rápido com um vídeo já carregado, busca a prévia agora
+  if (!fastToggle.checked && videoLoaded) {
+    if (currentSourceMode === "cache" && currentCacheKey) loadCachedPreview(currentCacheKey);
+    else if (activeSourceUrl()) loadPreview(activeSourceUrl());
+  }
+});
+
+applyFastModeUI();
+
+// ---------- modo único / múltiplos ----------
+const multiToggle = $("multiToggle");
+
+function selectedMode() {
+  return document.querySelector('input[name="mode"]:checked').value;
+}
+
+function updateModeUI() {
+  const multiple = multiToggle.checked;
+  const mode = selectedMode();
+
+  $("singleModeBlock").classList.toggle("hidden", multiple);
+  $("batchBlock").classList.toggle("hidden", !multiple);
+  $("downloadBtn").classList.toggle("hidden", multiple);
+  $("batchDownloadBtn").classList.toggle("hidden", !multiple);
+  $("transcriptOptions").classList.toggle("hidden", mode !== "transcript");
+
+  if (mode === "transcript") {
+    $("downloadBtn").textContent = "Gerar transcrição";
+    $("batchDownloadBtn").textContent = "Gerar transcrições em lote";
+  } else if (mode === "audio") {
+    $("downloadBtn").textContent = "Baixar áudio";
+    $("batchDownloadBtn").textContent = "Processar áudios em lote";
+  } else {
+    $("downloadBtn").textContent = "Baixar vídeo";
+    $("batchDownloadBtn").textContent = "Processar vídeos em lote";
+  }
+  updateDownloadBtnState();
+}
+
+multiToggle.addEventListener("change", updateModeUI);
+document.querySelectorAll('input[name="mode"]').forEach((el) => el.addEventListener("change", updateModeUI));
+
+// ---------- fonte: YouTube ou cache ----------
+const sourceModeInputs = document.querySelectorAll('input[name="sourceMode"]');
+
+function updateSourceModeUI() {
+  const selected = document.querySelector('input[name="sourceMode"]:checked');
+  currentSourceMode = selected ? selected.value : "youtube";
+  $("youtubeSourceBlock").classList.toggle("hidden", currentSourceMode !== "youtube");
+  $("cacheSourceBlock").classList.toggle("hidden", currentSourceMode !== "cache");
+  $("loadError").classList.add("hidden");
+  resetLoadedVideo();
+  if (currentSourceMode === "cache") refreshCacheList();
+}
+
+sourceModeInputs.forEach((el) => el.addEventListener("change", updateSourceModeUI));
+
+$("loadBtn").addEventListener("click", loadVideo);
+$("url").addEventListener("keydown", (e) => { if (e.key === "Enter") loadVideo(); });
+
+async function applyLoadedVideo(data, previewKind, previewValue) {
+  duration = Number(data.duration || 0);
+  $("videoTitle").textContent = data.title || "—";
+  $("videoDuration").textContent = fmt(duration);
+  $("thumb").src = data.thumbnail || "";
+  $("thumb").classList.toggle("hidden", !data.thumbnail);
+  $("fileName").value = data.title || "";
+  $("videoSection").classList.remove("hidden");
+  $("progressSection").classList.add("hidden");
+
+  setupSlider();
+  videoLoaded = true;
+  if (fastToggle.checked) {
+    applyFastModeUI();
+  } else if (previewKind === "cache") {
+    loadCachedPreview(previewValue);
+  } else {
+    loadPreview(previewValue);
+  }
+  updateModeUI();
+}
+
+async function loadVideo() {
+  const url = $("url").value.trim();
+  $("loadError").classList.add("hidden");
+  if (!url) {
+    $("loadError").textContent = "Cole um link do YouTube.";
+    $("loadError").classList.remove("hidden");
+    return;
+  }
+
+  $("loadBtn").disabled = true;
+  $("loadBtn").textContent = "Carregando...";
+
+  try {
+    const res = await fetch("/api/info", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "Erro desconhecido");
+
+    currentSourceMode = "youtube";
+    currentSourceUrl = url;
+    currentCacheKey = "";
+    await applyLoadedVideo(data, "youtube", url);
+  } catch (err) {
+    $("loadError").textContent = err.message;
+    $("loadError").classList.remove("hidden");
+  } finally {
+    $("loadBtn").disabled = false;
+    $("loadBtn").textContent = "Carregar";
+  }
+}
+
+function updateCacheSelectionUI() {
+  const key = $("cacheSelect").value;
+  selectedCacheEntry = cacheVideos.find((item) => item.key === key) || null;
+  $("loadCacheBtn").disabled = !selectedCacheEntry;
+  $("openCacheBtn").disabled = !selectedCacheEntry;
+  $("deleteCacheBtn").disabled = !selectedCacheEntry;
+  if (!selectedCacheEntry) {
+    $("cacheDetails").textContent = cacheVideos.length ? "Selecione um vídeo já baixado." : "Nenhum vídeo disponível no cache.";
+    return;
+  }
+  const durationText = selectedCacheEntry.duration ? fmt(selectedCacheEntry.duration) : "duração desconhecida";
+  $("cacheDetails").textContent = `${durationText} • ${formatBytes(selectedCacheEntry.size_bytes)}${selectedCacheEntry.legacy ? " • cache antigo" : ""}`;
+}
+
+async function refreshCacheList(preserveKey = "") {
+  const select = $("cacheSelect");
+  select.disabled = true;
+  select.innerHTML = '<option value="">Carregando cache...</option>';
+  $("loadCacheBtn").disabled = true;
+  $("openCacheBtn").disabled = true;
+  $("deleteCacheBtn").disabled = true;
+  try {
+    const res = await fetch("/api/cache");
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "Não consegui listar o cache.");
+    cacheVideos = data.videos || [];
+    select.innerHTML = "";
+    if (!cacheVideos.length) {
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "Nenhum vídeo em cache";
+      select.appendChild(option);
+    } else {
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = "Selecione um vídeo...";
+      select.appendChild(placeholder);
+      for (const item of cacheVideos) {
+        const option = document.createElement("option");
+        option.value = item.key;
+        option.textContent = `${item.title} — ${formatBytes(item.size_bytes)}`;
+        select.appendChild(option);
+      }
+      if (preserveKey && cacheVideos.some((item) => item.key === preserveKey)) select.value = preserveKey;
+    }
+    select.disabled = !cacheVideos.length;
+    updateCacheSelectionUI();
+  } catch (err) {
+    cacheVideos = [];
+    select.innerHTML = '<option value="">Erro ao carregar cache</option>';
+    $("cacheDetails").textContent = err.message;
+  }
+}
+
+$("cacheSelect").addEventListener("change", updateCacheSelectionUI);
+$("refreshCacheBtn").addEventListener("click", () => refreshCacheList($("cacheSelect").value));
+
+$("loadCacheBtn").addEventListener("click", async () => {
+  updateCacheSelectionUI();
+  if (!selectedCacheEntry) return;
+  if (!selectedCacheEntry.url) {
+    $("loadError").textContent = "Este cache antigo não possui a URL original salva. Abra a pasta do cache ou carregue o link uma vez para recriar os metadados.";
+    $("loadError").classList.remove("hidden");
+    return;
+  }
+  currentSourceMode = "cache";
+  currentSourceUrl = selectedCacheEntry.url;
+  currentCacheKey = selectedCacheEntry.key;
+  $("loadError").classList.add("hidden");
+  await applyLoadedVideo(selectedCacheEntry, "cache", selectedCacheEntry.key);
+});
+
+$("openCacheBtn").addEventListener("click", async () => {
+  updateCacheSelectionUI();
+  if (!selectedCacheEntry) return;
+  const res = await fetch("/api/cache/open", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ key: selectedCacheEntry.key }),
+  });
+  const data = await res.json();
+  if (!res.ok || data.error) alert(data.error || "Não consegui abrir a pasta do cache.");
+});
+
+let pendingDeleteCache = null;
+function openDeleteCacheModal(entry) {
+  pendingDeleteCache = entry;
+  $("deleteCacheMessage").textContent = `Tem certeza que deseja apagar “${entry.title}”? Serão liberados aproximadamente ${formatBytes(entry.size_bytes)}. O vídeo completo e as transcrições em cache serão removidos.`;
+  $("deleteCacheModal").classList.remove("hidden");
+}
+function closeDeleteCacheModal() {
+  pendingDeleteCache = null;
+  $("deleteCacheModal").classList.add("hidden");
+}
+
+$("deleteCacheBtn").addEventListener("click", () => {
+  updateCacheSelectionUI();
+  if (selectedCacheEntry) openDeleteCacheModal(selectedCacheEntry);
+});
+$("cancelDeleteCacheBtn").addEventListener("click", closeDeleteCacheModal);
+$("deleteCacheModal").addEventListener("click", (e) => { if (e.target === $("deleteCacheModal")) closeDeleteCacheModal(); });
+$("confirmDeleteCacheBtn").addEventListener("click", async () => {
+  if (!pendingDeleteCache) return;
+  const entry = pendingDeleteCache;
+  const btn = $("confirmDeleteCacheBtn");
+  btn.disabled = true;
+  btn.textContent = "Apagando...";
+  try {
+    const res = await fetch("/api/cache/delete", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: entry.key }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "Não consegui apagar o cache.");
+    if (currentCacheKey === entry.key) resetLoadedVideo();
+    closeDeleteCacheModal();
+    await refreshCacheList();
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Apagar definitivamente";
+  }
+});
+
+updateSourceModeUI();
+
+// ---------- folder ----------
+currentFolder = $("folderPath").value.trim();
+$("folderPath").addEventListener("input", () => {
+  currentFolder = $("folderPath").value.trim();
+  updateDownloadBtnState();
+});
+
+$("chooseFolderBtn").addEventListener("click", async () => {
+  try {
+    const res = await fetch("/api/choose-folder", { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Seletor indisponível");
+    if (data.folder) {
+      currentFolder = data.folder;
+      $("folderPath").value = data.folder;
+    }
+  } catch (err) {
+    alert("Não foi possível abrir o seletor. Digite o caminho da pasta no campo ao lado.");
+  }
+  updateDownloadBtnState();
+});
+
+function updateDownloadBtnState() {
+  const ready = videoLoaded && currentFolder;
+  $("downloadBtn").disabled = !ready;
+  $("batchDownloadBtn").disabled = !(ready && $("batchText").value.trim());
+}
+
+
+// ---------- cortes em lote ----------
+$("batchText").addEventListener("input", () => {
+  $("batchValidation").classList.add("hidden");
+  updateDownloadBtnState();
+});
+
+function renderBatchValidation(errors) {
+  const box = $("batchValidation");
+  box.innerHTML = "";
+  if (!errors || !errors.length) {
+    box.classList.add("hidden");
+    return;
+  }
+  const title = document.createElement("strong");
+  title.textContent = "Corrija o lote antes de continuar:";
+  box.appendChild(title);
+  const ul = document.createElement("ul");
+  for (const err of errors) {
+    const li = document.createElement("li");
+    li.textContent = err;
+    ul.appendChild(li);
+  }
+  box.appendChild(ul);
+  box.classList.remove("hidden");
+}
+
+$("batchDownloadBtn").addEventListener("click", startBatchDownload);
+
+async function startBatchDownload() {
+  const mode = selectedMode();
+  const payload = {
+    url: activeSourceUrl(),
+    mode,
+    transcript_model: $("transcriptModel").value,
+    folder: currentFolder,
+    batch_text: $("batchText").value,
+  };
+
+  renderBatchValidation([]);
+  $("batchDownloadBtn").disabled = true;
+  $("progressSection").classList.remove("hidden");
+  $("doneRow").classList.add("hidden");
+  $("downloadError").classList.add("hidden");
+  $("batchItems").classList.add("hidden");
+  $("batchItems").innerHTML = "";
+  $("progressFill").classList.remove("indet");
+  $("progressFill").style.width = "0%";
+  $("progressPct").textContent = "0%";
+  $("progressMsg").textContent = "Validando lote...";
+
+  try {
+    const res = await fetch("/api/batch-download", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      if (data.validation_errors) renderBatchValidation(data.validation_errors);
+      throw new Error(data.error || "Erro ao iniciar lote");
+    }
+    pollProgress(data.job_id, true);
+  } catch (err) {
+    showDownloadError(err.message);
+    updateDownloadBtnState();
+  }
+}
+
+function renderBatchItems(items) {
+  const box = $("batchItems");
+  if (!items || !items.length) {
+    box.classList.add("hidden");
+    return;
+  }
+  box.innerHTML = "";
+  for (const item of items) {
+    const row = document.createElement("div");
+    row.className = `batch-item ${item.status || "waiting"}`;
+    const status = item.status === "done" ? "✓" : item.status === "error" ? "!" : item.status === "running" ? "…" : "•";
+    const label = document.createElement("span");
+    label.className = "batch-status";
+    label.textContent = status;
+    const text = document.createElement("span");
+    text.className = "batch-item-text";
+    text.textContent = item.error ? `${item.title} — ${item.error}` : item.title;
+    row.append(label, text);
+    box.appendChild(row);
+  }
+  box.classList.remove("hidden");
+}
+
+
+// ---------- download ----------
+$("downloadBtn").addEventListener("click", startDownload);
+
+async function startDownload() {
+  const full = $("fullToggle").checked;
+  const mode = selectedMode();
+
+  const payload = {
+    url: activeSourceUrl(),
+    mode,
+    transcript_model: $("transcriptModel").value,
+    full,
+    folder: currentFolder,
+    filename: $("fileName").value.trim(),
+    start: full ? null : parseFloat($("startRange").value),
+    end: full ? null : parseFloat($("endRange").value),
+  };
+
+  $("downloadBtn").disabled = true;
+  $("progressSection").classList.remove("hidden");
+  $("doneRow").classList.add("hidden");
+  $("downloadError").classList.add("hidden");
+  $("progressFill").classList.remove("indet");
+  $("progressFill").style.width = "0%";
+  $("progressPct").textContent = "0%";
+  $("progressMsg").textContent = "Iniciando...";
+
+  try {
+    const res = await fetch("/api/download", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "Erro ao iniciar download");
+
+    pollProgress(data.job_id);
+  } catch (err) {
+    showDownloadError(err.message);
+  }
+}
+
+function pollProgress(jobId, isBatch = false) {
+  const interval = setInterval(async () => {
+    const res = await fetch(`/api/progress/${jobId}`);
+    const job = await res.json();
+
+    if (job.error && job.status !== "error") {
+      clearInterval(interval);
+      showDownloadError(job.error);
+      return;
+    }
+
+    if (job.indeterminate) {
+      $("progressFill").classList.add("indet");
+      $("progressFill").style.width = "100%";
+      $("progressPct").textContent = "—";
+    } else {
+      $("progressFill").classList.remove("indet");
+      $("progressFill").style.width = (job.percent || 0) + "%";
+      $("progressPct").textContent = (job.percent || 0) + "%";
+    }
+    $("progressMsg").textContent = job.message || "";
+    if (isBatch) renderBatchItems(job.items || []);
+
+    if (job.status === "done" || job.status === "done_with_errors") {
+      clearInterval(interval);
+      $("progressMsg").textContent = job.status === "done_with_errors" ? "Lote concluído com erros" : "Concluído";
+      $("doneFile").textContent = isBatch ? `${(job.filepaths || []).length} arquivo(s) gerado(s)` : (job.filepath || "");
+      $("doneRow").classList.remove("hidden");
+      updateDownloadBtnState();
+      window._lastFolder = job.folder;
+    } else if (job.status === "error") {
+      clearInterval(interval);
+      showDownloadError(job.error || "Erro desconhecido");
+    }
+  }, 800);
+}
+
+function showDownloadError(msg) {
+  $("downloadError").textContent = msg;
+  $("downloadError").classList.remove("hidden");
+  updateDownloadBtnState();
+}
+
+$("openFolderBtn").addEventListener("click", async () => {
+  if (!window._lastFolder) return;
+  await fetch("/api/open-folder", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ folder: window._lastFolder }),
+  });
+});
+
+$("newDownloadBtn").addEventListener("click", () => {
+  $("progressSection").classList.add("hidden");
+});
+
+updateModeUI();
+
+// ---------- encerrar aplicativo ----------
+async function requestShutdown(force = false) {
+  const btn = $("shutdownBtn");
+  btn.disabled = true;
+  btn.textContent = "Encerrando...";
+
+  try {
+    const res = await fetch("/api/shutdown", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ force }),
+    });
+    const data = await res.json();
+
+    if (res.status === 409 && data.requires_force) {
+      btn.disabled = false;
+      btn.textContent = "Encerrar";
+      const ok = window.confirm(
+        `Há ${data.active_jobs || 1} download/corte em andamento. Encerrar agora pode interromper o arquivo. Deseja encerrar mesmo assim?`
+      );
+      if (ok) return requestShutdown(true);
+      return;
+    }
+
+    if (!res.ok || data.error) throw new Error(data.error || "Não foi possível encerrar.");
+
+    $("shutdownScreen").classList.remove("hidden");
+    // window.close() pode ser bloqueado pelo navegador; o processo do DengsClip
+    // já será finalizado pelo servidor. A mensagem permanece caso a aba fique aberta.
+    setTimeout(() => {
+      try { window.close(); } catch (_) {}
+    }, 250);
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = "Encerrar";
+    alert(err.message || "Não foi possível encerrar o Content Lab.");
+  }
+}
+
+$("shutdownBtn").addEventListener("click", () => {
+  requestShutdown(false);
+});

@@ -1,83 +1,72 @@
-# 🎬 ContentLab
+# Content Lab
 
-**Descrição:**  
-ContentLab é uma plataforma para **criação automatizada de roteiros para vídeos**, geração de títulos, prompts para thumbnails, tags e futuramente gravação e aprimoramento de áudio. O usuário pode gerenciar seus roteiros e histórico de criação de forma rápida, prática e organizada.
+Aplicação local para baixar vídeos ou áudios do YouTube, criar cortes e gerar
+transcrições. Os vídeos completos ficam em cache para serem reutilizados em
+novos cortes.
 
----
+## Estrutura
 
-## 🔧 Tecnologias
+```text
+backend/                 servidor Flask e processamento de mídia
+frontend/templates/      página HTML
+frontend/static/         JavaScript, estilos e imagens
+run.sh                   inicialização no Linux
+iniciar.bat              inicialização no Windows
+debug.bat                inicialização com logs no Windows
+build.bat                geração do executável para Windows
+ContentLab.spec          configuração do PyInstaller
+```
 
-**Frontend:**  
-- [Next.js](https://nextjs.org/)  
-- [Material UI](https://mui.com/)  
+## Linux
 
-**Backend:**  
-- [FastAPI](https://fastapi.tiangolo.com/)  
-- [LangGraph](https://www.langgraph.com/) para orquestração de LLMs  
-- RAG (Retrieval-Augmented Generation) para fornecer contexto aos roteiros  
+Requisitos: Python 3.9 ou superior, suporte a `venv`, FFmpeg e FFprobe.
 
-**Banco de Dados:**  
-- [Supabase](https://supabase.com/) (PostgreSQL) para armazenamento de dados do usuário, roteiros, histórico e configurações do canal  
-- Suporte a vetores via extensão `pgvector` para armazenar embeddings de texto, permitindo buscas semânticas e RAG  
+No Ubuntu/Debian:
 
----
+```bash
+sudo apt install python3 python3-venv ffmpeg
+./run.sh
+```
 
-## 🏗 Arquitetura
+No Fedora, instale `python3` e `ffmpeg` com `dnf`. No Arch Linux, use os
+pacotes `python` e `ffmpeg`. O script cria `.venv`, instala as dependências,
+abre o navegador quando há uma sessão gráfica e inicia o servidor em
+<http://127.0.0.1:5000>.
 
-- **Frontend:** Next.js + Material UI  
-  - Tela de cadastro e configuração do canal do usuário  
-  - Dashboard com histórico dos roteiros criados  
-- **Backend:** FastAPI + LangGraph  
-  - API REST organizada em camadas:
-    1. **Controllers/Routes** – endpoints REST  
-    2. **Services** – lógica de criação de roteiros, títulos, prompts, tags  
-    3. **Repository/DB Layer** – comunicação com Supabase  
-- **RAG:** Utilizado para fornecer contexto dos roteiros existentes ao LLM, usando embeddings armazenados no Supabase  
+Se o seletor gráfico de pastas não estiver disponível, digite diretamente no
+campo da interface um caminho absoluto, como `/home/usuario/Vídeos`.
 
----
+No Linux, o cache fica em `${XDG_CACHE_HOME:-~/.cache}/contentlab/cache/videos`.
 
-## ⚙️ Funcionalidades
+## Windows
 
-1. Cadastro e configuração do canal do usuário  
-2. Geração automática de:
-   - Roteiro para vídeos longos ou curtos  
-   - Título e descrição do vídeo  
-   - Prompt para thumbnail  
-   - Tags relevantes  
-3. Dashboard com **histórico de roteiros criados**  
-4. Futuramente:
-   - Gravação de áudio via TTS  
-   - Aprimoramento do áudio gerado  
-   - Download de roteiros e áudio aprimorado  
+Execute `iniciar.bat`. Na primeira execução, o script cria `.venv` e instala
+as dependências. O aplicativo abre no navegador e permanece disponível no
+ícone da bandeja.
 
----
+O FFmpeg é localizado no `PATH`, WinGet, Chocolatey ou Scoop. Se ele não for
+encontrado, o próprio aplicativo baixa a versão compatível para
+`%LOCALAPPDATA%\ContentLab\ffmpeg\bin`.
 
-## 🗄 Banco de Dados (Supabase)
+Para criar o executável independente, execute `build.bat`. O resultado fica
+em `dist\ContentLab.exe`.
 
-- **Tabelas principais:**
-  - `users` – dados do usuário  
-  - `channels` – informações do canal do usuário  
-  - `scripts` – roteiros gerados, títulos, prompts, tags  
-  - `history` – histórico de criação de roteiros  
+## Desenvolvimento
 
-- **Vetores:**
-  - Supabase suporta a extensão `pgvector`  
-  - Permite armazenar embeddings de texto ou prompts  
-  - Facilita buscas semânticas e contextualização de novos roteiros  
+Com o ambiente virtual ativo, inicie somente o servidor:
 
----
+```bash
+python -m backend.app
+```
 
-## 🚀 Próximos passos
+A interface chama a API Flask no mesmo endereço, portanto não há etapa de
+compilação para o frontend.
 
-- Implementar frontend com Next.js + Material UI  
-- Criar endpoints da API REST no FastAPI  
-- Integrar LangGraph para gerar roteiros e prompts  
-- Implementar RAG utilizando embeddings armazenados no Supabase  
-- Criar dashboard com histórico e buscas inteligentes  
+## Dados e cache
 
----
+- O primeiro processamento guarda a fonte completa no cache.
+- Cortes, áudio e transcrições posteriores reutilizam essa fonte.
+- Apagar um item pelo gerenciador de cache não remove arquivos já exportados.
+- Os modelos do `faster-whisper` são baixados na primeira transcrição.
 
-## 📝 Observações
-
-- O projeto foi pensado para ser escalável, permitindo a adição de funcionalidades futuras sem impactar a arquitetura existente.  
-- O uso de vetores e RAG permite que o sistema lembre e melhore roteiros anteriores, tornando o processo de criação cada vez mais inteligente.
+O servidor escuta apenas em `127.0.0.1`; ele não fica exposto à rede local.

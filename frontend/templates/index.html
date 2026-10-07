@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Content Lab — clipes para criação de conteúdo</title>
+
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark"><span class="brand-logo"></span></span>
+      <div>
+        <h1>Content Lab</h1>
+        <p class="tagline">recorte, organize e prepare seus conteúdos</p>
+      </div>
+    </div>
+    <button id="shutdownBtn" class="btn btn-danger btn-sm" type="button" title="Encerrar o Content Lab">Encerrar</button>
+  </header>
+
+  <main class="panel">
+
+    <!-- STEP 1: fonte -->
+    <section class="block">
+      <span class="block-label">Fonte do vídeo</span>
+      <div class="source-tabs" role="radiogroup" aria-label="Fonte do vídeo">
+        <label class="source-tab">
+          <input type="radio" name="sourceMode" value="youtube" checked>
+          <span>Link do YouTube</span>
+        </label>
+        <label class="source-tab">
+          <input type="radio" name="sourceMode" value="cache">
+          <span>Vídeo em cache</span>
+        </label>
+      </div>
+
+      <div id="youtubeSourceBlock">
+        <label class="block-label source-sub-label" for="url">Link do YouTube</label>
+        <div class="row">
+          <input id="url" type="text" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off">
+          <button id="loadBtn" class="btn btn-primary">Carregar</button>
+        </div>
+      </div>
+
+      <div id="cacheSourceBlock" class="hidden">
+        <label class="block-label source-sub-label" for="cacheSelect">Vídeos disponíveis no cache</label>
+        <div class="row">
+          <select id="cacheSelect" class="cache-select">
+            <option value="">Carregando cache...</option>
+          </select>
+          <button id="loadCacheBtn" class="btn btn-primary" disabled>Carregar</button>
+        </div>
+        <div class="cache-toolbar">
+          <span id="cacheDetails" class="helper-text cache-details">Selecione um vídeo já baixado.</span>
+          <div class="cache-actions">
+            <button id="refreshCacheBtn" class="btn btn-ghost btn-sm" type="button">Atualizar lista</button>
+            <button id="openCacheBtn" class="btn btn-secondary btn-sm" type="button" disabled>Abrir pasta</button>
+            <button id="deleteCacheBtn" class="btn btn-danger btn-sm" type="button" disabled>Apagar do cache</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="trim-toggle-row fast-row">
+        <label class="switch">
+          <input type="checkbox" id="fastToggle">
+          <span class="switch-track"></span>
+          <span class="switch-label">⚡ Modo rápido — carregar sem prévia (marcar o corte só pelos tempos)</span>
+        </label>
+      </div>
+      <p id="loadError" class="error-text hidden"></p>
+    </section>
+
+    <!-- STEP 2: preview + seleção -->
+    <section id="videoSection" class="block hidden">
+      <div class="video-meta">
+        <img id="thumb" alt="" class="thumb">
+        <div class="meta-text">
+          <h2 id="videoTitle">—</h2>
+          <span id="videoDuration" class="mono">00:00</span>
+        </div>
+      </div>
+
+      <div class="player-wrap">
+        <video id="previewVideo" controls playsinline preload="metadata"></video>
+        <p id="fastNote" class="preview-error hidden">⚡ Modo rápido ligado — sem prévia. Marca o trecho pelo slider ou digitando os tempos de Início/Fim abaixo.</p>
+        <p id="previewError" class="preview-error hidden">Prévia indisponível para este vídeo — mas o download deve funcionar normalmente. Marque o trecho digitando os tempos abaixo.</p>
+      </div>
+
+      <div class="mode-switch-block">
+        <label class="switch">
+          <input type="checkbox" id="multiToggle">
+          <span class="switch-track"></span>
+          <span class="switch-label">Habilitar múltiplos</span>
+        </label>
+        <p class="helper-text">Desligado: processa um único trecho. Ligado: usa várias linhas no formato CSV com ponto e vírgula.</p>
+      </div>
+
+      <div id="singleModeBlock">
+      <div class="trim-block">
+        <div class="trim-toggle-row">
+          <label class="switch">
+            <input type="checkbox" id="fullToggle">
+            <span class="switch-track"></span>
+            <span class="switch-label">Processar conteúdo inteiro (ignorar corte)</span>
+          </label>
+        </div>
+
+        <div id="trimControls" class="trim-controls">
+          <div class="slider-wrap">
+            <div class="slider-track"></div>
+            <div id="sliderRange" class="slider-range"></div>
+            <input type="range" id="startRange" class="range range-start" min="0" max="0" step="1" value="0">
+            <input type="range" id="endRange" class="range range-end" min="0" max="0" step="1" value="0">
+          </div>
+
+          <div class="time-controls">
+            <div class="time-field">
+              <label>Início</label>
+              <input type="text" id="startTime" class="mono" value="00:00:00">
+              <button class="btn btn-ghost btn-sm" id="setStartBtn">usar tempo atual</button>
+            </div>
+            <div class="time-field">
+              <label>Fim</label>
+              <input type="text" id="endTime" class="mono" value="00:00:00">
+              <button class="btn btn-ghost btn-sm" id="setEndBtn">usar tempo atual</button>
+            </div>
+            <div class="time-field clip-length">
+              <label>Duração do corte</label>
+              <span id="clipLength" class="mono">00:00:00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="format-block">
+        <div class="format-options">
+          <label class="radio-card">
+            <input type="radio" name="mode" value="video" checked>
+            <span class="radio-title">Vídeo (mp4)</span>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="mode" value="audio">
+            <span class="radio-title">Só áudio (mp3)</span>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="mode" value="transcript">
+            <span class="radio-title">Texto/legenda (.srt + .txt)</span>
+          </label>
+        </div>
+        <div id="transcriptOptions" class="transcript-options hidden">
+          <label class="block-label" for="transcriptModel">Precisão da transcrição</label>
+          <select id="transcriptModel">
+            <option value="tiny">Muito rápido (tiny)</option>
+            <option value="base">Rápido (base)</option>
+            <option value="small" selected>Equilibrado (small)</option>
+            <option value="medium">Mais preciso (medium)</option>
+          </select>
+          <p class="helper-text">Na primeira transcrição o modelo e o texto são gerados localmente e ficam em cache. Pedidos futuros reutilizam esse cache.</p>
+        </div>
+      </div>
+
+      <div class="folder-block">
+        <label class="block-label" for="fileName">Nome base do arquivo — modo único</label>
+        <input id="fileName" type="text" placeholder="Nome do arquivo (sem extensão)">
+      </div>
+      </div>
+
+      <div id="batchBlock" class="batch-block hidden">
+        <div class="batch-heading">
+          <div>
+            <span class="block-label">Cortes em lote</span>
+            <p class="helper-text">Uma linha por corte. Use obrigatoriamente <strong>ponto e vírgula (;)</strong>.</p>
+          </div>
+        </div>
+        <code class="format-example">tempo inicial;tempo final;título</code>
+        <textarea id="batchText" rows="7" spellcheck="false" placeholder="00:15:22;00:15:35;005_reencontro Harry e Peter
+00:42:10;00:42:28;006_confronto Miles e Peter
+01:03:05;01:03:17;007_Harry debilitado"></textarea>
+        <p class="helper-text">Tempos aceitos: MM:SS ou HH:MM:SS. O título pode conter espaços. Se qualquer linha estiver fora do padrão, nenhum corte será iniciado.</p>
+        <div id="batchValidation" class="validation-box hidden"></div>
+      </div>
+
+      <div class="folder-block">
+        <label class="block-label">Pasta de destino</label>
+        <div class="row">
+          <input id="folderPath" type="text" value="{{ default_dir }}" placeholder="Digite ou escolha a pasta de destino">
+          <button id="chooseFolderBtn" class="btn btn-secondary">Escolher pasta</button>
+        </div>
+      </div>
+
+      <button id="downloadBtn" class="btn btn-primary btn-lg" disabled>Processar trecho</button>
+      <button id="batchDownloadBtn" class="btn btn-gradient btn-lg hidden" disabled>Processar cortes em lote</button>
+    </section>
+
+    <!-- STEP 3: progresso -->
+    <section id="progressSection" class="block hidden">
+      <div class="progress-wrap">
+        <div class="progress-track">
+          <div id="progressFill" class="progress-fill"></div>
+        </div>
+        <div class="progress-row">
+          <span id="progressMsg">Iniciando...</span>
+          <span id="progressPct" class="mono">0%</span>
+        </div>
+      </div>
+      <p id="downloadError" class="error-text hidden"></p>
+      <div id="batchItems" class="batch-items hidden"></div>
+      <div id="doneRow" class="done-row hidden">
+        <span id="doneFile" class="mono done-file"></span>
+        <button id="openFolderBtn" class="btn btn-secondary btn-sm">Abrir pasta</button>
+        <button id="newDownloadBtn" class="btn btn-ghost btn-sm">Baixar outro trecho</button>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div id="shutdownScreen" class="shutdown-screen hidden" role="status" aria-live="polite">
+  <div class="shutdown-card">
+    <strong>Content Lab encerrado.</strong>
+    <span>Você já pode fechar esta aba.</span>
+  </div>
+</div>
+
+<div id="deleteCacheModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="deleteCacheTitle">
+  <div class="modal-card">
+    <h3 id="deleteCacheTitle">Apagar vídeo do cache?</h3>
+    <p id="deleteCacheMessage">Esta ação remove o vídeo completo e os arquivos de transcrição armazenados no cache.</p>
+    <p class="modal-warning">Os clipes que você já exportou para outras pastas não serão apagados.</p>
+    <div class="modal-actions">
+      <button id="cancelDeleteCacheBtn" class="btn btn-secondary" type="button">Cancelar</button>
+      <button id="confirmDeleteCacheBtn" class="btn btn-danger" type="button">Apagar definitivamente</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

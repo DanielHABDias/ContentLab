@@ -2,22 +2,16 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "FastAPI: Uvicorn (contentlab)",
+            "name": "Content Lab: Flask",
             "type": "debugpy",
             "request": "launch",
-            "module": "uvicorn",
-            "args": [
-                "app.main:app",
-                "--reload",
-                "--host", "127.0.0.1",
-                "--port", "8000"
-            ],
+            "module": "backend.app",
             "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}/backend",
+            "cwd": "${workspaceFolder}",
             "env": {
-                "PYTHONPATH": "${workspaceFolder}/backend"
-            },
-            "python": "C:\\Users\\Pichau\\anaconda3\\envs\\contentlab\\python.exe"
+                "PYTHONPATH": "${workspaceFolder}",
+                "FLASK_DEBUG": "1"
+            }
         }
     ]
 }
