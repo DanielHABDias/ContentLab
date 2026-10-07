@@ -251,6 +251,17 @@ Windows e no CapCut, está em [MVP_ACCEPTANCE.md](MVP_ACCEPTANCE.md).
 O contrato completo do JSON, as funções implementadas e os parâmetros aceitos
 estão em [EDIT_PLAN_REFERENCE.md](EDIT_PLAN_REFERENCE.md).
 
+## Motion design (planejado)
+
+Queremos cenas contínuas com o mesmo fundo, personagens em PNG, palavras e
+objetos entrando ao longo da narração, e uma câmera virtual que revele outras
+partes da composição sem cortar o plano. O [plano de ação](MOTION_DESIGN_PLAN.md)
+define etapas, semântica proposta e critérios de aceite. O
+[exemplo `0.2`](examples/motion-design-proposal.v0.2.json) demonstra essa
+direção, mas **ainda não é aceito pelo editor**: a versão executável do JSON
+continua sendo `0.1`. As skills distinguem planejamento de motion design da
+geração de um plano renderizável.
+
 ## Dados e cache
 
 - O primeiro processamento guarda a fonte completa no cache.

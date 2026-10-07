@@ -1,0 +1,67 @@
+{
+  "version": "0.2",
+  "project": {"name": "diazverso-personagens", "format": "youtube_long", "profile": "diazverso"},
+  "sources": {"assets": "assets", "transcript": "transcript.json"},
+  "audio": {"narration": "audio/narracao.wav"},
+  "timeline": [
+    {
+      "id": "personagens-no-mesmo-fundo",
+      "start": 0,
+      "end": 12,
+      "background": {"asset": "project://assets/fundo.jpg", "fit": "cover"},
+      "camera": {
+        "keyframes": [
+          {"t": 0, "x": 0.5, "y": 0.5, "scale": 1, "easing": "linear"},
+          {"t": 5, "x": 0.5, "y": 0.5, "scale": 1, "easing": "ease_in_out"},
+          {"t": 8, "x": 0.7, "y": 0.5, "scale": 1.2, "easing": "ease_in_out"},
+          {"t": 12, "x": 0.7, "y": 0.5, "scale": 1.2, "easing": "linear"}
+        ]
+      },
+      "elements": [
+        {
+          "id": "personagem-a",
+          "type": "image",
+          "asset": "project://assets/personagem-a.png",
+          "start": 0,
+          "end": 8,
+          "z": 10,
+          "transform": {"x": 0.3, "y": 0.55, "scale": 1, "rotation": 0, "opacity": 0},
+          "keyframes": [
+            {"t": 0, "opacity": 0},
+            {"t": 0.6, "opacity": 1, "easing": "ease_out"},
+            {"t": 7.5, "opacity": 1},
+            {"t": 8, "opacity": 0, "easing": "ease_in"}
+          ]
+        },
+        {
+          "id": "homem-de-ferro",
+          "type": "image",
+          "asset": "project://assets/homem-de-ferro.png",
+          "start": 5,
+          "end": 12,
+          "z": 20,
+          "transform": {"x": 0.76, "y": 0.55, "scale": 1, "rotation": 0, "opacity": 0},
+          "keyframes": [
+            {"t": 5, "opacity": 0, "scale": 0.9},
+            {"t": 5.6, "opacity": 1, "scale": 1, "easing": "ease_out"}
+          ]
+        },
+        {
+          "id": "nome-personagem",
+          "type": "text",
+          "text": "HOMEM DE FERRO",
+          "style": "impact",
+          "start": 8,
+          "end": 11.5,
+          "z": 30,
+          "transform": {"x": 0.68, "y": 0.82, "scale": 1, "rotation": 0, "opacity": 0},
+          "keyframes": [
+            {"t": 8, "opacity": 0, "y": 0.88},
+            {"t": 8.4, "opacity": 1, "y": 0.82, "easing": "ease_out"}
+          ]
+        }
+      ],
+      "transitionOut": "cut"
+    }
+  ]
+}

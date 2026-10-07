@@ -1,5 +1,7 @@
 # Editor automático — funções e referência do JSON v0.1
 
+> Motion design com fundo persistente, PNGs e câmera virtual está **planejado**, não implementado. Veja [o plano de ação](MOTION_DESIGN_PLAN.md) e [o exemplo proposto de JSON `0.2`](examples/motion-design-proposal.v0.2.json). O arquivo `0.2` ilustra a direção do contrato; **não passa pela validação nem renderiza na versão atual**. Para vídeos executáveis, continue usando `version: "0.1"` e os exemplos existentes.
+
 Este guia descreve o que a versão atual do Content Lab executa. A fonte formal
 do contrato é [`schemas/contentlab.schema.v0.1.json`](schemas/contentlab.schema.v0.1.json);
 o parser, o compilador de timeline e o renderer também aplicam validações e
