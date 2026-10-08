@@ -1,0 +1,48 @@
+{
+  "version": "0.2",
+  "project": {
+    "name": "word-stack-demo",
+    "format": "youtube_long",
+    "profile": "generic"
+  },
+  "sources": {
+    "transcript": "transcript.json"
+  },
+  "audio": {
+    "narration": "audio/narration.wav"
+  },
+  "timeline": [
+    {
+      "id": "stack",
+      "start": 0,
+      "end": 5,
+      "layout": "fullscreen",
+      "background": {
+        "color": "#111111"
+      },
+      "elements": [
+        {
+          "id": "palavras",
+          "type": "kinetic_text",
+          "style": "word_stack_vertical",
+          "text": "PRIMEIRA SEGUNDA TERCEIRA QUARTA QUINTA",
+          "sync": "transcript",
+          "start": 0,
+          "end": 5,
+          "fontScale": 1,
+          "textStyle": {
+            "fontFamily": "Anton",
+            "uppercase": true,
+            "color": "#FFFFFF"
+          },
+          "config": {
+            "inactiveOpacity": 0.32,
+            "transitionDuration": 0.18,
+            "slotGap": 0.24
+          }
+        }
+      ],
+      "transitionOut": "cut"
+    }
+  ]
+}

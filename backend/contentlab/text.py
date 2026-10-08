@@ -14,6 +14,7 @@ STYLE_DEFINITIONS = {
     "anton_white": {"font": "Anton", "size": 86, "primary": "#FFFFFF", "outline": "#FFFFFF", "outline_width": 0, "bold": True},  # Legacy alias.
     "bangers": {"font": "Bangers", "size": 86, "primary": "#FFFFFF", "outline": "#000000", "outline_width": 4, "bold": False},
     "bangers_highlight_block": {"font": "Bangers", "size": 64, "primary": "#FFFFFF", "outline": "#000000", "outline_width": 4, "bold": False},
+    "word_stack_vertical": {"font": "Anton", "size": 92, "primary": "#FFFFFF", "outline": "#FFFFFF", "outline_width": 0, "bold": True},
 }
 
 
@@ -79,6 +80,27 @@ def _phrase_words(text, start, end, available):
             return candidates[index:index + len(tokens)]
     step = max(0.04, (end - start) / len(tokens))
     return [{"word": token, "start": start + index * step, "end": min(end, start + (index + 1) * step)} for index, token in enumerate(tokens)]
+
+
+def word_stack_state(words, absolute, transition_duration=0.18):
+    """Return previous/active/next words and smooth vertical handoff progress."""
+    if not words:
+        return None
+    active_index = next((index for index, word in enumerate(words) if word["start"] <= absolute < word["end"]), None)
+    if active_index is None:
+        started = [index for index, word in enumerate(words) if word["start"] <= absolute]
+        active_index = started[-1] if started else 0
+    active = words[active_index]
+    duration = max(0.05, min(float(transition_duration or 0.18), max(0.05, (active["end"] - active["start"]) * 0.45)))
+    progress = 1.0 if active_index == 0 else max(0.0, min(1.0, (absolute - active["start"]) / duration))
+    progress = 1 - (1 - progress) ** 2
+    return {
+        "previous": words[active_index - 1] if active_index > 0 else None,
+        "active": active,
+        "next": words[active_index + 1] if active_index + 1 < len(words) else None,
+        "activeIndex": active_index,
+        "progress": progress,
+    }
 
 
 def caption_chunk(words, absolute, start, end, max_words=7):

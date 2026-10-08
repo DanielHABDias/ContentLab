@@ -105,6 +105,18 @@ def _semantic_issues(data):
                     issues.append({"path": f"{prefix}.elements.{j}.reveal", "message": "Revelação letra a letra requer elemento text."})
                 if element["type"] == "caption" and not data.get("sources", {}).get("transcript"):
                     issues.append({"path": f"{prefix}.elements.{j}", "message": "Caption requer sources.transcript."})
+                if element.get("style") == "word_stack_vertical":
+                    if element["type"] != "kinetic_text":
+                        issues.append({"path": f"{prefix}.elements.{j}.style", "message": "word_stack_vertical requer type kinetic_text."})
+                    config = element.get("config", {})
+                    limits = {
+                        "inactiveOpacity": (0, 1),
+                        "transitionDuration": (0.05, 1),
+                        "slotGap": (0.10, 0.45),
+                    }
+                    for key, (minimum, maximum) in limits.items():
+                        if key in config and (not isinstance(config[key], (int, float)) or not minimum <= config[key] <= maximum):
+                            issues.append({"path": f"{prefix}.elements.{j}.config.{key}", "message": f"{key} deve ficar entre {minimum} e {maximum}."})
                 if element["type"] == "filter":
                     if element.get("style") not in {"dim", "crt_tv"}:
                         issues.append({"path": f"{prefix}.elements.{j}.style", "message": "Filtro v0.2 requer style dim ou crt_tv."})
@@ -135,6 +147,8 @@ def _semantic_issues(data):
             epath = f"{prefix}.elements.{element_index}"
             if data.get("version") != "0.2" and element.get("type") == "caption" and element.get("style") == "bangers_highlight_block":
                 issues.append({"path": f"{epath}.style", "message": "bangers_highlight_block está disponível apenas no edit_plan 0.2."})
+            if data.get("version") != "0.2" and element.get("style") == "word_stack_vertical":
+                issues.append({"path": f"{epath}.style", "message": "word_stack_vertical está disponível apenas no edit_plan 0.2."})
             if "start" in element and "end" in element and element["end"] <= element["start"]:
                 issues.append({"path": epath, "message": "O elemento deve terminar depois de começar."})
             cells = element.get("cells")

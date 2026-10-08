@@ -130,7 +130,7 @@ se necessário para preencher seu intervalo. O mix aplica limiter.
 | `layout` | `fullscreen` (padrão), `left_right`, `three_columns`, `character_vs`, `nox`, `custom_grid`, `3x3`; ou objeto `{ "grid": "3x3", "preset": "nome" }`. O `preset`, quando presente, prevalece e deve ser um layout registrado. |
 | `background.color` | Cor FFmpeg, por exemplo `"#10131B"`; padrão preto. |
 | `background.asset` | URI de imagem/vídeo para fundo; `background.fit` aceita `cover`, `contain`, `stretch`; `background.loop` é booleano. Fundo em vídeo aceita `muted`, `preset`, `trimDb`, `fadeIn` e `fadeOut` com a mesma semântica de mídia; áudio só entra com `muted: false`. |
-| `transitionOut` | `cut` (padrão), `fade`, `slide_left`, `blur_left`; aplicada para a cena seguinte contígua. `slide_left` faz o deslizamento horizontal puro da cena inteira; `blur_left` usa o mesmo deslocamento com blur adicional. |
+| `transitionOut` | `cut` (padrão), `fade`, `slide_left`, `blur_left`, `blur_right`, `blur_up`; aplicada para a cena seguinte contígua. `slide_left` é o deslizamento horizontal puro. As variantes `blur_*` combinam deslocamento da cena inteira com blur. |
 
 `three_columns` distribui os três primeiros elementos visuais em colunas;
 `left_right` e `character_vs`, nos lados; `nox`, na coluna central. `fullscreen`,
@@ -176,14 +176,14 @@ Campos comuns possíveis:
 | `video` | Exibe vídeo do asset, como base ou camada, com `fit`, `cells`, `loop`, `box` e `animation`. O áudio embutido entra no mix somente com `muted: false`; ganho e fades usam `preset`/`trimDb`/`fadeIn`/`fadeOut`. |
 | `image` | Exibe imagem fixa com as mesmas opções visuais. |
 | `text` | Texto fixo no centro da região; estilo padrão `impact`. |
-| `kinetic_text` | Uma palavra por vez; estilo padrão `word_pop`; usa transcrição se houver correspondência ou distribuição uniforme. |
-| `caption` | Legenda karaoke gerada das palavras de `sources.transcript`; estilo padrão e único `anton_karaoke`. Requer transcrição e palavras no intervalo para exibir algo. |
+| `kinetic_text` | Por padrão exibe uma palavra por vez. No `0.2`, `style: "word_stack_vertical"` mantém anterior/ativa/próxima em uma pilha vertical e anima a troca usando os timestamps das palavras. |
+| `caption` | Legenda gerada das palavras de `sources.transcript`. `anton_karaoke` mantém o comportamento simples; `bangers_highlight_block` mantém um chunk inteiro e destaca a palavra ativa. |
 | `overlay` | Camada visual com chroma key; estilos aceitos `green_screen`, `green_screen_default`, `green_screen_soft` (a cor e sensibilidade efetivas vêm de `config`). Vídeos de overlay também podem preservar o áudio embutido com `muted: false`. |
 | `filter` | Camada procedural do `0.2`, sem asset obrigatório. `style: "dim"` cria escurecimento preto translúcido; `style: "crt_tv"` cria scanlines, vinheta e oscilação/flicker leves. Posicione por `z`: o que estiver abaixo recebe visualmente o efeito e camadas acima permanecem limpas. |
 | `sfx` | Áudio disparado por `at`, sem camada visual; duração padrão de até 10 segundos, limitada pelo fim da timeline. |
 
 Estilos de texto aceitos: `impact`, `impact_yellow`, `word_pop`, `paper_word`,
-`versus_big`, `anton` e `bangers`. Anton e Bangers estão embutidas no
+`versus_big`, `anton`, `bangers` e `word_stack_vertical`. Anton e Bangers estão embutidas no
 aplicativo. Em `0.2`, `textStyle` permite substituir a aparência do preset:
 `fontFamily` é `Anton` ou `Bangers`; `uppercase` é booleano; `color` e
 `outlineColor` usam `#RRGGBB`; `outlineWidth` vai de 0 a 40 px;
@@ -210,6 +210,37 @@ contorno preto e timestamps por palavra. O `config` aceita
 `highlightRadius`, `highlightPaddingX` e `highlightPaddingY`.
 Sem configuração, usa azul, vermelho e preto e até 7 palavras por chunk.
 O estilo `anton_karaoke` existente continua disponível e não foi alterado.
+
+### `kinetic_text` com `word_stack_vertical`
+
+O estilo genérico `word_stack_vertical` é exclusivo do `0.2`. Ele usa até
+três posições visuais ao mesmo tempo: palavra anterior abaixo, palavra ativa
+no centro e próxima palavra acima. A palavra central usa opacidade total; as
+laterais ficam atenuadas. Na troca, as palavras deslizam verticalmente em
+sincronia com os timestamps de `phraseWords`/transcrição.
+
+Defaults: Anton, caixa alta, `inactiveOpacity: 0.32`,
+`transitionDuration: 0.18` s e `slotGap: 0.24` da altura da região.
+`textStyle` continua podendo trocar fonte, cor, contorno e sombra.
+
+Exemplo:
+
+```json
+{
+  "id": "lista",
+  "type": "kinetic_text",
+  "style": "word_stack_vertical",
+  "text": "PRIMEIRA SEGUNDA TERCEIRA QUARTA",
+  "sync": "transcript",
+  "fontScale": 1,
+  "textStyle": {"fontFamily": "Anton", "uppercase": true, "color": "#FFFFFF"},
+  "config": {
+    "inactiveOpacity": 0.32,
+    "transitionDuration": 0.18,
+    "slotGap": 0.24
+  }
+}
+```
 
 ### `filter` do motion design `0.2`
 

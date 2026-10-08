@@ -14,7 +14,7 @@ from backend.contentlab.assets import AssetResolver
 from backend.contentlab.errors import PlanValidationError, UnsafeAssetPathError
 from backend.contentlab.parser import parse_edit_plan
 from backend.contentlab.render import render_edit_plan
-from backend.contentlab.text import build_scene_ass, caption_chunk, transcript_words
+from backend.contentlab.text import build_scene_ass, caption_chunk, transcript_words, word_stack_state
 from backend.contentlab.timeline import compile_timeline
 from backend.contentlab.layout import box_geometry, create_card_assets
 from backend.contentlab.motions import motion_filters, overlay_position
@@ -109,6 +109,50 @@ class ParserTests(unittest.TestCase):
         with self.assertRaises(PlanValidationError):
             parse_edit_plan(bad)
 
+    def test_vertical_word_stack_contract_and_state(self):
+        self.assertIn("word_stack_vertical", describe_registry()["text_styles"])
+        look = appearance({"style": "word_stack_vertical"})
+        self.assertEqual((look["fontFamily"], look["uppercase"]), ("Anton", True))
+
+        data = valid_plan()
+        data["version"] = "0.2"
+        data["sources"] = {"transcript": "transcript.json"}
+        data["timeline"][0]["layout"] = "fullscreen"
+        data["timeline"][0]["elements"] = [{
+            "id": "stack", "type": "kinetic_text", "style": "word_stack_vertical",
+            "text": "ALFA BETA GAMA DELTA",
+            "sync": "transcript",
+            "textStyle": {"fontFamily": "Anton", "uppercase": True, "color": "#FFFFFF"},
+            "config": {"inactiveOpacity": 0.30, "transitionDuration": 0.18, "slotGap": 0.24},
+        }]
+        self.assertEqual(parse_edit_plan(data).version, "0.2")
+
+        words = [
+            {"word": "ALFA", "start": 0.0, "end": 0.5},
+            {"word": "BETA", "start": 0.5, "end": 1.0},
+            {"word": "GAMA", "start": 1.0, "end": 1.5},
+            {"word": "DELTA", "start": 1.5, "end": 2.0},
+        ]
+        settled = word_stack_state(words, 0.45, 0.18)
+        self.assertEqual(settled["active"]["word"], "ALFA")
+        self.assertEqual(settled["next"]["word"], "BETA")
+        self.assertEqual(settled["progress"], 1.0)
+
+        moving = word_stack_state(words, 0.56, 0.18)
+        self.assertEqual((moving["previous"]["word"], moving["active"]["word"], moving["next"]["word"]), ("ALFA", "BETA", "GAMA"))
+        self.assertGreater(moving["progress"], 0)
+        self.assertLess(moving["progress"], 1)
+
+        legacy = valid_plan()
+        legacy["timeline"][0]["elements"] = [{"type": "kinetic_text", "style": "word_stack_vertical", "text": "A B C"}]
+        with self.assertRaises(PlanValidationError):
+            parse_edit_plan(legacy)
+
+        bad = json.loads(json.dumps(data))
+        bad["timeline"][0]["elements"][0]["config"]["inactiveOpacity"] = 1.4
+        with self.assertRaises(PlanValidationError):
+            parse_edit_plan(bad)
+
     def test_filter_layers_and_wiggle_soft_are_available_in_v02(self):
         registry = describe_registry()
         self.assertEqual(set(registry["filter_styles"]), {"dim", "crt_tv"})
@@ -185,7 +229,7 @@ class ParserTests(unittest.TestCase):
             parse_edit_plan(data)
 
     def test_phase6_plugin_registry_and_audio_validation(self):
-        self.assertEqual(set(discover_transitions()), {"cut", "fade", "blur_left", "slide_left"})
+        self.assertEqual(set(discover_transitions()), {"cut", "fade", "blur_left", "blur_right", "blur_up", "slide_left"})
         data = valid_plan()
         data["audio"]["music"] = [{"asset": "project://music.wav", "start": 2, "end": 1}]
         with self.assertRaises(PlanValidationError):

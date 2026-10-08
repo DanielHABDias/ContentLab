@@ -51,6 +51,26 @@ const captionChunk = (item: Element, absolute: number, words: Word[]) => {
   }
   return null;
 };
+const wordStackState = (item: Element, absolute: number, words: Word[]) => {
+  const candidates: Word[] = item.data.phraseWords ?? words.filter((word) => word.end > item.start && word.start < item.end);
+  if (!candidates.length) return null;
+  let activeIndex = candidates.findIndex((word) => word.start <= absolute && absolute < word.end);
+  if (activeIndex < 0) {
+    const started = candidates.map((word, index) => ({word, index})).filter(({word}) => word.start <= absolute);
+    activeIndex = started.length ? started[started.length - 1].index : 0;
+  }
+  const active = candidates[activeIndex];
+  const configured = Number(item.data.config?.transitionDuration ?? 0.18);
+  const duration = Math.max(0.05, Math.min(configured, Math.max(0.05, (active.end - active.start) * 0.45)));
+  const raw = activeIndex === 0 ? 1 : clamp((absolute - active.start) / duration);
+  const progress = ease(raw, 'ease_out');
+  return {
+    previous: activeIndex > 0 ? candidates[activeIndex - 1] : null,
+    active,
+    next: activeIndex + 1 < candidates.length ? candidates[activeIndex + 1] : null,
+    progress,
+  };
+};
 const styles: Record<string, {color: string; stroke: string; strokeWidth: number}> = {
   impact: {color: '#fff', stroke: '#000', strokeWidth: 6},
   impact_yellow: {color: '#ffd400', stroke: '#000', strokeWidth: 6},
@@ -62,6 +82,7 @@ const styles: Record<string, {color: string; stroke: string; strokeWidth: number
   anton_white: {color: '#fff', stroke: '#fff', strokeWidth: 0}, // Legacy alias.
   bangers: {color: '#fff', stroke: '#000', strokeWidth: 4},
   bangers_highlight_block: {color: '#fff', stroke: '#000', strokeWidth: 4},
+  word_stack_vertical: {color: '#fff', stroke: '#fff', strokeWidth: 0},
 };
 const visibleText = (item: Element, absolute: number, words: Word[]) => {
   if (item.type === 'text') {
@@ -170,6 +191,43 @@ const Layer = ({item, props, time, absolute, camera}: {item: Element; props: Sce
   if (item.src) {
     const isVideo = item.type === 'video' || (item.type === 'overlay' && /\.(mp4|mov|mkv|webm)$/i.test(item.src));
     return <div style={common}><Media src={item.src} isVideo={isVideo} loop={item.data.loop} style={{width: '100%', height: '100%', objectFit: fit(item.data.fit)}}/></div>;
+  }
+  if (item.type === 'kinetic_text' && item.data.style === 'word_stack_vertical') {
+    const stack = wordStackState(item, absolute, props.words);
+    if (!stack) return null;
+    const look = styles.word_stack_vertical;
+    const appearance = item.data.textStyle ?? {};
+    const uppercase = appearance.uppercase ?? true;
+    const config = item.data.config ?? {};
+    const inactiveOpacity = Number(config.inactiveOpacity ?? 0.32);
+    const gap = rh * Number(config.slotGap ?? 0.24);
+    const scaleFactor = Number(item.data.fontScale ?? 1);
+    const wordsToMeasure = [stack.previous, stack.active, stack.next].filter(Boolean).map((word) => String(word!.word));
+    const longest = wordsToMeasure.reduce((best, value) => value.length > best.length ? value : best, '');
+    const baseSize = Math.min(rh * 0.22, rw * 0.14) * scaleFactor;
+    const fontSize = Math.max(18, Math.min(baseSize, rw * 0.86 / Math.max(1, Array.from(longest).length * 0.52)));
+    const shadow = appearance.shadow;
+    const p = stack.progress;
+    const slots = [
+      stack.previous ? {word: stack.previous, y: rh / 2 + gap * p, opacity: 1 - (1 - inactiveOpacity) * p} : null,
+      {word: stack.active, y: rh / 2 - gap + gap * p, opacity: inactiveOpacity + (1 - inactiveOpacity) * p},
+      stack.next ? {word: stack.next, y: rh / 2 - gap * 2 + gap * p, opacity: inactiveOpacity * p} : null,
+    ].filter(Boolean) as Array<{word: Word; y: number; opacity: number}>;
+    return <div style={{...common, position: 'absolute'}}>
+      {slots.map((slot, index) => {
+        const label = uppercase ? String(slot.word.word).toLocaleUpperCase('pt-BR') : String(slot.word.word);
+        return <div key={index + '-' + label} style={{
+          position: 'absolute', left: '50%', top: slot.y, translate: '-50% -50%',
+          width: '92%', textAlign: 'center', whiteSpace: 'nowrap',
+          fontFamily: item.fontSrc ? item.fontFamily + ', Arial, sans-serif' : 'Arial, sans-serif',
+          fontWeight: item.fontSrc ? 400 : 900, fontSize,
+          color: appearance.color ?? look.color,
+          WebkitTextStroke: (appearance.outlineWidth ?? look.strokeWidth) + 'px ' + (appearance.outlineColor ?? look.stroke),
+          paintOrder: 'stroke fill', opacity: slot.opacity,
+          textShadow: shadow ? (shadow.offsetX ?? 3) + 'px ' + (shadow.offsetY ?? 4) + 'px ' + (shadow.blur ?? 8) + 'px ' + (shadow.color ?? '#00000099') : undefined,
+        }}>{label}</div>;
+      })}
+    </div>;
   }
   if (item.type === 'caption' && item.data.style === 'bangers_highlight_block') {
     const caption = captionChunk(item, absolute, props.words);

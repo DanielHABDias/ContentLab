@@ -171,7 +171,7 @@ e `pan`; `animation.exit` aceita `cut` e `fade_out`. O movimento usa o intervalo
 `start`/`end` do elemento. Presets registrados em fases incompatíveis são
 rejeitados na validação.
 
-Na fase 6, `transitionOut` aceita `cut`, `fade` e `blur_left` (blur horizontal).
+Nas transições atuais, `transitionOut` aceita `cut`, `fade`, `slide_left`, `blur_left`, `blur_right` e `blur_up`.
 As transições são descobertas em `backend/contentlab/transition_plugins/` e
 aplicadas apenas entre cenas contíguas. Os demais nomes antigos ainda não têm
 implementação e agora são rejeitados pela validação, em vez de virar um corte
@@ -290,6 +290,16 @@ filtro. PNGs estáticos também podem usar `animation.idle: "wiggle_soft"`.
 
 Assets de textura continuam podendo ser usados como `video` com
 `transform.opacity` reduzido quando o efeito desejado já existe em arquivo.
+
+## Pilha vertical de palavras
+
+No `edit_plan 0.2`, `kinetic_text` aceita
+`style: "word_stack_vertical"`. O preset mantém a palavra ativa no centro,
+a anterior abaixo e a próxima acima; as palavras inativas ficam com opacidade
+reduzida e a pilha desliza suavemente a cada novo timestamp. O padrão usa
+Anton em caixa alta, mas `textStyle` pode substituir fonte/cor. Ajustes de
+`inactiveOpacity`, `transitionDuration` e `slotGap` ficam em `config`.
+Veja `examples/word-stack-v0.2.json`.
 
 ## Caption com palavra ativa
 

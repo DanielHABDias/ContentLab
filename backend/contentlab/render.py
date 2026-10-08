@@ -217,9 +217,10 @@ def _compose_visual(ffmpeg, segments, boundaries, durations, total, fps, work, r
         if index < len(boundaries):
             spec, transition_duration = boundaries[index]
             if spec.ffmpeg_name:
-                transition_label = f"transitionraw{index}" if spec.name == "blur_left" else f"transition{index}"
+                uses_blur = spec.name.startswith("blur_")
+                transition_label = f"transitionraw{index}" if uses_blur else f"transition{index}"
                 graph.append(f"[tail{index}][first{index + 1}]xfade=transition={spec.ffmpeg_name}:duration={transition_duration:.6f}:offset=0[{transition_label}]")
-                if spec.name == "blur_left":
+                if uses_blur:
                     graph.append(f"[{transition_label}]gblur=sigma=2[transition{index}]")
                 pieces.append(f"[transition{index}]")
     graph.append("".join(pieces) + f"concat=n={len(pieces)}:v=1:a=0[out]")

@@ -175,9 +175,9 @@ lista de `{start, end, amplitude, frequency}` com tempos **relativos à cena**.
 `amplitude` é fração do mundo virtual (0–0,03; padrão 0,003) e `frequency`
 é Hz (padrão 2,5). O balanço é leve e tem entrada/saída suavizada.
 
-`transitionOut` conserva os plugins `cut`, `fade`, `slide_left` e `blur_left` entre cenas.
+`transitionOut` conserva os plugins `cut`, `fade`, `slide_left`, `blur_left`, `blur_right` e `blur_up` entre cenas.
 `slide_left` desliza a cena anterior para a esquerda e traz a nova pela direita sem blur.
-`blur_left` desliza a cena anterior para a esquerda e traz a nova pela
+`blur_left`, `blur_right` e `blur_up` fazem o slide da composição inteira na direção indicada e aplicam blur durante a passagem. `blur_left` desliza a cena anterior para a esquerda e traz a nova pela
 direita com blur durante o deslocamento. `transitionDuration` na cena de
 saída define segundos positivos; sem ele vale o padrão do plugin (0,4 s).
 O intervalo não pode superar metade de nenhuma das duas cenas. A transição
@@ -209,6 +209,25 @@ fundo em loop, texto letra a letra, zoom e deslocamento de câmera, transição
 de 3 s, pop, flutuação, balanço de câmera, saída inferior e SFX. É um modelo
 de estrutura: troque os URIs pelos arquivos reais antes de validar/renderizar;
 nenhum efeito sonoro, fonte ou mídia desse exemplo foi distribuído ainda.
+
+## Pilha vertical de palavras
+
+`style: "word_stack_vertical"` é um preset genérico de `kinetic_text` do
+`0.2`. Ele mantém no máximo três palavras visíveis: anterior, ativa e próxima.
+A ativa ocupa o centro em opacidade total; anterior e próxima ficam atenuadas.
+Quando a palavra seguinte começa, a pilha se desloca suavemente: a ativa desce,
+a próxima assume o centro e uma nova palavra entra por cima.
+
+O timing vem de `phraseWords`, normalmente resolvido a partir de
+`sources.transcript`. O objeto `config` aceita:
+
+- `inactiveOpacity`: 0–1; padrão 0,32;
+- `transitionDuration`: 0,05–1 s; padrão 0,18;
+- `slotGap`: 0,10–0,45 da altura da região; padrão 0,24.
+
+A aparência continua em `textStyle`. O preset usa Anton/caixa alta por
+padrão, mas pode ser reaproveitado por outro projeto com Bangers ou outra cor
+suportada pelo contrato.
 
 ## Caption com destaque por palavra
 

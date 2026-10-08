@@ -5,7 +5,7 @@ from pathlib import Path
 
 from PIL import Image, ImageChops, ImageColor, ImageDraw, ImageFilter, ImageFont
 
-from .text import STYLE_DEFINITIONS, _phrase_words, caption_chunk, transcript_words
+from .text import STYLE_DEFINITIONS, _phrase_words, caption_chunk, transcript_words, word_stack_state
 from .typography import appearance, bundled_font_path
 from .errors import RenderCancelled
 
@@ -125,6 +125,33 @@ def _element_image(element, width, height, text_override=None):
     draw = ImageDraw.Draw(image)
     draw.text((padding - bounds[0], padding - bounds[1]), text, font=font, fill=look["color"] or style["primary"], stroke_width=stroke, stroke_fill=look["outlineColor"] or style["outline"])
     return image
+
+
+def _word_stack_image(element, words, absolute, width, height):
+    state = word_stack_state(words, absolute, element.data.get("config", {}).get("transitionDuration", 0.18))
+    if not state:
+        return None
+    look = appearance(element.data)
+    config = element.data.get("config", {})
+    inactive_opacity = float(config.get("inactiveOpacity", 0.32))
+    gap = element.region[3] * float(config.get("slotGap", 0.24))
+    progress = state["progress"]
+    slots = [
+        (state["previous"], element.region[3] / 2 + gap * progress, 1 - (1 - inactive_opacity) * progress),
+        (state["active"], element.region[3] / 2 - gap + gap * progress, inactive_opacity + (1 - inactive_opacity) * progress),
+        (state["next"], element.region[3] / 2 - gap * 2 + gap * progress, inactive_opacity * progress),
+    ]
+    canvas = Image.new("RGBA", element.region[2:])
+    for word, center_y, opacity in slots:
+        if not word or opacity <= 0:
+            continue
+        image = _element_image(element, width, height, word["word"])
+        if opacity < 1:
+            image.putalpha(image.getchannel("A").point(lambda alpha: round(alpha * opacity)))
+        x = round((canvas.width - image.width) / 2)
+        y = round(center_y - image.height / 2)
+        canvas.alpha_composite(image, (x, y))
+    return canvas
 
 
 def _highlight_caption_image(element, words, absolute):
@@ -418,10 +445,15 @@ def render_motion_scene(ffmpeg, scene, output, project, duration, run, work_dir,
                 size = element.region[2:] if element.data.get("cells") else (round(width * 0.8), round(height * 0.8))
                 image = _fit(image, size, element.data.get("fit", "contain"))
             elif element.type == "kinetic_text":
-                active = next((word for word in phrases[element.data["id"]] if word["start"] <= absolute_t < word["end"]), None)
-                if not active:
-                    continue
-                image = _element_image(element, width, height, active["word"])
+                if element.data.get("style") == "word_stack_vertical":
+                    image = _word_stack_image(element, phrases[element.data["id"]], absolute_t, width, height)
+                    if image is None:
+                        continue
+                else:
+                    active = next((word for word in phrases[element.data["id"]] if word["start"] <= absolute_t < word["end"]), None)
+                    if not active:
+                        continue
+                    image = _element_image(element, width, height, active["word"])
             elif element.type == "text" and element.data.get("reveal"):
                 reveal = element.data["reveal"]
                 elapsed = absolute_t - element.start - reveal.get("delay", 0)
