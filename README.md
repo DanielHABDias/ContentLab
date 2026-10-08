@@ -22,6 +22,8 @@ schemas/                 contrato JSON do plano de edição
 examples/                exemplos de planos
 tests/                   testes unitários e aceite integrado
 MVP_ACCEPTANCE.md        checklist de aceite da fase 10
+VISUAL_TESTING.md        harness visual + Iris para Codex/Claude Code/agentes MCP
+AGENTS.md                instruções de validação para coding agents
 skillContentLabEdicao.zip  skill para o GPT criar planos de edição JSON
 EDIT_PLAN_REFERENCE.md  funções e parâmetros do editor automático
 ```
@@ -152,6 +154,47 @@ python -m backend.contentlab.cli render caminho/para/edit_plan.json --mode final
 O primeiro comando também verifica a existência da narração e dos assets. Um
 plano estruturalmente correto pode retornar código 2 enquanto os arquivos do
 projeto exemplo ainda não tiverem sido adicionados.
+
+### Testes visuais com Iris e coding agents
+
+Alterações de renderer/UI não devem ser consideradas visualmente corretas apenas
+porque o código compila ou os unit tests passam. O projeto possui um harness
+determinístico que renderiza fixtures sintéticas com o próprio Content Lab:
+
+```bash
+python -m unittest discover -s tests -q
+python -m tests.visual_acceptance
+python -m backend.app
+```
+
+Depois abra:
+
+```text
+http://127.0.0.1:5000/visual-tests
+```
+
+A página permite escolher checkpoints como `word-stack`, `crt-dim-png`,
+`caption-highlight`, `blur-left`, `blur-right` e `blur-up`. Ela pausa
+o preview no tempo previsto e marca `data-visual-ready=true` quando o frame
+está pronto para captura.
+
+Para agentes MCP, o projeto recomenda [Iris](https://github.com/brijr/iris)
+como câmera visual. No Codex CLI:
+
+```bash
+codex mcp add iris -- iris mcp
+```
+
+Se o Chrome-family browser não for encontrado automaticamente, passe o caminho,
+por exemplo `iris mcp --chrome /usr/bin/brave-browser`. Outros clientes MCP,
+incluindo Claude Code, podem apontar um servidor stdio para o comando
+`iris mcp`.
+
+O fluxo esperado é **alterar → unit tests → gerar fixtures → abrir checkpoint
+→ capturar com Iris → inspecionar pixels → corrigir**. Iris não substitui
+FFprobe, render reports nem avaliação de áudio/movimento ao longo do tempo.
+Veja [VISUAL_TESTING.md](VISUAL_TESTING.md) para instalação, casos disponíveis
+e prompts recomendados para agentes.
 
 O renderer gera `output/rough_cut.mp4` e `output/render_report.json`.
 Ele executa imagens, vídeos, fundos sólidos, cortes secos, narração, texto de

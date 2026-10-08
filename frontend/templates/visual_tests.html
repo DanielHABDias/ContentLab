@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Content Lab — Visual Tests</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    .visual-test-page{max-width:1180px;margin:0 auto;padding:24px}
+    .visual-test-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:18px}
+    .visual-test-head h1{margin:0 0 6px;font-size:28px}
+    .visual-test-head p{margin:0;color:var(--text-dim);max-width:760px;line-height:1.5}
+    .visual-test-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(260px,1fr);gap:18px}
+    .visual-test-stage,.visual-test-list{border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:14px}
+    .visual-test-frame{position:relative;aspect-ratio:16/9;background:#000;border-radius:9px;overflow:hidden}
+    .visual-test-frame video{width:100%;height:100%;display:block;object-fit:contain;background:#000}
+    .visual-test-status{display:flex;gap:8px;align-items:center;margin-top:10px;color:var(--text-dim);font:12px var(--font-mono)}
+    .visual-test-status strong{color:var(--ok)}
+    .visual-test-cases{display:grid;gap:7px;max-height:650px;overflow:auto}
+    .visual-test-case{display:block;padding:10px;border:1px solid var(--border);border-radius:8px;text-decoration:none;color:var(--text);background:var(--surface-2)}
+    .visual-test-case:hover,.visual-test-case.is-active{border-color:var(--accent);background:#302b4d}
+    .visual-test-case small{display:block;color:var(--text-dim);margin-top:4px;line-height:1.35}
+    .visual-test-empty{padding:28px;border:1px dashed var(--border);border-radius:10px;color:var(--text-dim);line-height:1.6}
+    #visual-frame[data-ready="true"]{outline:2px solid var(--ok);outline-offset:3px}
+    @media(max-width:800px){.visual-test-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body data-visual-ready="false">
+  <main class="visual-test-page">
+    <div class="visual-test-head">
+      <div>
+        <h1>Content Lab — Visual Tests</h1>
+        <p>Harness de desenvolvimento para validar pixels produzidos pelo renderer real. Use <code>?case=ID</code> ou <code>?case=ID&amp;time=SEGUNDOS</code>; quando o vídeo terminar o seek, <code>body[data-visual-ready]</code> e <code>#visual-frame[data-ready]</code> passam para <code>true</code>.</p>
+      </div>
+      <a class="btn btn-secondary" href="/">Voltar ao Content Lab</a>
+    </div>
+
+    {% if generated %}
+    <div class="visual-test-grid">
+      <section class="visual-test-stage">
+        <div id="visual-frame" class="visual-test-frame" data-ready="false">
+          <video id="visual-test-video" muted playsinline preload="auto" src="/visual-tests/media"></video>
+        </div>
+        <div class="visual-test-status">
+          <span id="visual-test-status">Carregando fixture…</span>
+        </div>
+        <div id="visual-test-expectation" class="helper-text" style="margin-top:10px"></div>
+      </section>
+      <aside class="visual-test-list">
+        <div class="eyebrow">CHECKPOINTS</div>
+        <div id="visual-test-cases" class="visual-test-cases" style="margin-top:10px"></div>
+      </aside>
+    </div>
+    <script id="visual-test-manifest" type="application/json">{{ manifest|tojson }}</script>
+    <script src="{{ url_for('static', filename='visual_tests.js') }}"></script>
+    {% else %}
+    <div class="visual-test-empty">
+      Nenhuma fixture visual foi gerada em <code>{{ visual_root }}</code>.<br>
+      Rode <code>python -m tests.visual_acceptance</code>, inicie o Content Lab e recarregue esta página.
+    </div>
+    {% endif %}
+  </main>
+</body>
+</html>

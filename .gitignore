@@ -215,3 +215,6 @@ config.json
 .DS_Store
 backend/remotion/node_modules/
 .runtime/
+
+# Generated visual-regression fixtures
+.visual-tests/

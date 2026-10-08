@@ -759,6 +759,13 @@ except ImportError:  # PyInstaller pode importar app como módulo de topo.
 register_editor_routes(app, EDITOR_JOBS, EDITOR_JOBS_LOCK, EDITOR_CANCEL_EVENTS,
                        TRANSCRIPTION_JOBS, TRANSCRIPTION_JOBS_LOCK, sys.modules[__name__])
 
+try:
+    from .visual_test_routes import register_visual_test_routes
+except ImportError:
+    from visual_test_routes import register_visual_test_routes
+
+register_visual_test_routes(app, sys.modules[__name__])
+
 
 def _shutdown_process(delay=0.6):
     """Encerra o processo inteiro depois de dar tempo da resposta HTTP chegar ao navegador.
