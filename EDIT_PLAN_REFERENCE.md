@@ -130,7 +130,7 @@ se necessário para preencher seu intervalo. O mix aplica limiter.
 | `layout` | `fullscreen` (padrão), `left_right`, `three_columns`, `character_vs`, `nox`, `custom_grid`, `3x3`; ou objeto `{ "grid": "3x3", "preset": "nome" }`. O `preset`, quando presente, prevalece e deve ser um layout registrado. |
 | `background.color` | Cor FFmpeg, por exemplo `"#10131B"`; padrão preto. |
 | `background.asset` | URI de imagem/vídeo para fundo; `background.fit` aceita `cover`, `contain`, `stretch`; `background.loop` é booleano. Fundo em vídeo aceita `muted`, `preset`, `trimDb`, `fadeIn` e `fadeOut` com a mesma semântica de mídia; áudio só entra com `muted: false`. |
-| `transitionOut` | `cut` (padrão), `fade`, `blur_left`; aplicada para a cena seguinte contígua. |
+| `transitionOut` | `cut` (padrão), `fade`, `slide_left`, `blur_left`; aplicada para a cena seguinte contígua. `slide_left` faz o deslizamento horizontal puro da cena inteira; `blur_left` usa o mesmo deslocamento com blur adicional. |
 
 `three_columns` distribui os três primeiros elementos visuais em colunas;
 `left_right` e `character_vs`, nos lados; `nox`, na coluna central. `fullscreen`,

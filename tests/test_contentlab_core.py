@@ -185,7 +185,7 @@ class ParserTests(unittest.TestCase):
             parse_edit_plan(data)
 
     def test_phase6_plugin_registry_and_audio_validation(self):
-        self.assertEqual(set(discover_transitions()), {"cut", "fade", "blur_left"})
+        self.assertEqual(set(discover_transitions()), {"cut", "fade", "blur_left", "slide_left"})
         data = valid_plan()
         data["audio"]["music"] = [{"asset": "project://music.wav", "start": 2, "end": 1}]
         with self.assertRaises(PlanValidationError):

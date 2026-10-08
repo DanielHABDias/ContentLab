@@ -175,8 +175,9 @@ lista de `{start, end, amplitude, frequency}` com tempos **relativos à cena**.
 `amplitude` é fração do mundo virtual (0–0,03; padrão 0,003) e `frequency`
 é Hz (padrão 2,5). O balanço é leve e tem entrada/saída suavizada.
 
-`transitionOut` conserva os plugins `cut`, `fade` e `blur_left` entre cenas.
-`blur_left` agora desliza a cena anterior para a esquerda e traz a nova pela
+`transitionOut` conserva os plugins `cut`, `fade`, `slide_left` e `blur_left` entre cenas.
+`slide_left` desliza a cena anterior para a esquerda e traz a nova pela direita sem blur.
+`blur_left` desliza a cena anterior para a esquerda e traz a nova pela
 direita com blur durante o deslocamento. `transitionDuration` na cena de
 saída define segundos positivos; sem ele vale o padrão do plugin (0,4 s).
 O intervalo não pode superar metade de nenhuma das duas cenas. A transição
