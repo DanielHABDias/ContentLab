@@ -249,6 +249,32 @@ Exemplo:
 }
 ```
 
+## Filtros em camadas e PNG em destaque
+
+O `0.2` aceita `type: "filter"` como camada procedural. Use `z` para
+controlar o escopo visual: cena-base abaixo, filtro no meio e PNG/capa acima.
+
+```json
+[
+  {"id":"dim","type":"filter","style":"dim","z":20,"config":{"opacity":0.45}},
+  {"id":"capa","type":"image","asset":"project://assets/capa.png","z":30,
+   "animation":{"enter":"slide_down","idle":"wiggle_soft","exit":"slide_to_bottom"}}
+]
+```
+
+Presets:
+
+- `dim`: preto translúcido, configurado por `config.opacity`.
+- `crt_tv`: scanlines, vinheta e movimento/flicker discretos de TV antiga.
+  Configurações: `opacity`, `scanlineOpacity`, `vignette`, `flicker` e
+  `jitter`.
+- `wiggle_soft` é um idle de elemento e não um filtro: faz microdeslocamento
+  e micro-rotação para manter PNGs estáticos respirando.
+
+Para texturas de asset, como partículas luminosas ou filme antigo, prefira um
+`video` em tela cheia com `transform.opacity` baixo e `z` abaixo do
+primeiro plano. Isso preserva a textura original sem criar um preset específico.
+
 ## Erros comuns
 
 - Referenciar `builtin://` antes de instalar o arquivo na biblioteca.

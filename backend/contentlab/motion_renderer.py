@@ -262,6 +262,10 @@ def _visual_state(element, scene, t, width, height):
     idle = animation.get("idle", "none")
     if idle == "float_soft":
         state["y"] += 0.005 * math.sin(elapsed * 2)
+    elif idle == "wiggle_soft":
+        state["x"] += 0.0025 * math.sin(elapsed * 2.4)
+        state["y"] += 0.0018 * math.sin(elapsed * 3.1 + 0.7)
+        state["rotation"] += 0.35 * math.sin(elapsed * 2.1)
     elif idle == "pulse_soft":
         state["scale"] *= 1 + 0.025 * math.sin(elapsed * 3)
     elif idle == "slow_zoom_in":
@@ -283,6 +287,44 @@ def _chroma(image, config):
     mask = difference.point(lambda value: 0 if value > threshold else 255)
     image.putalpha(ImageChops.multiply(channels[3], mask))
     return image
+
+
+def _filter_image(element, elapsed):
+    width, height = element.region[2:]
+    config = element.data.get("config", {})
+    style = element.data.get("style")
+    opacity = float(config.get("opacity", 0.45 if style == "dim" else 1.0))
+    opacity = max(0.0, min(1.0, opacity))
+    if style == "dim":
+        return Image.new("RGBA", (width, height), (0, 0, 0, round(255 * opacity)))
+
+    if style == "crt_tv":
+        scanline_opacity = max(0.0, min(1.0, float(config.get("scanlineOpacity", 0.18))))
+        vignette_strength = max(0.0, min(1.0, float(config.get("vignette", 0.42))))
+        flicker = max(0.0, min(0.5, float(config.get("flicker", 0.035))))
+        jitter = max(0.0, min(20.0, float(config.get("jitter", 1.5))))
+        layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+
+        gradient = Image.radial_gradient("L").resize((width, height), Image.Resampling.BICUBIC)
+        vignette_alpha = gradient.point(lambda value: round(value * vignette_strength))
+        vignette = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        vignette.putalpha(vignette_alpha)
+        layer.alpha_composite(vignette)
+
+        lines = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(lines)
+        shift = round(math.sin(elapsed * 11.5) * jitter)
+        alpha = round(255 * scanline_opacity)
+        for y in range(shift % 4, height, 4):
+            draw.line((0, y, width, y), fill=(0, 0, 0, alpha), width=1)
+        layer.alpha_composite(lines)
+
+        flicker_gain = max(0.0, min(1.5, 1 + math.sin(elapsed * 19.0) * flicker))
+        if opacity * flicker_gain < 1:
+            layer.putalpha(layer.getchannel("A").point(lambda value: round(value * opacity * flicker_gain)))
+        return layer
+
+    return Image.new("RGBA", (width, height), (0, 0, 0, 0))
 
 
 def _card(image, box):
@@ -366,7 +408,9 @@ def render_motion_scene(ffmpeg, scene, output, project, duration, run, work_dir,
             state = _visual_state(element, scene, t, width, height)
             if state["opacity"] <= 0:
                 continue
-            if element.data["id"] in media:
+            if element.type == "filter":
+                image = _filter_image(element, absolute_t - element.start)
+            elif element.data["id"] in media:
                 paths = media[element.data["id"]]
                 frame_index = min(max(0, round((absolute_t - element.start) * project.fps)), len(paths) - 1)
                 with Image.open(paths[frame_index]) as source:

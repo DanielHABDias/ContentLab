@@ -78,7 +78,7 @@ def _semantic_issues(data):
                     issues.append({"path": f"{prefix}.elements.{j}", "message": "Elemento deve ficar dentro da cena."})
                 allowed_motions = {
                     "enter": {"cut", "none", "fade", "pop_in", "slide_from_left", "slide_from_right", "slide_up", "slide_down"},
-                    "idle": {"none", "float_soft", "pulse_soft", "slow_zoom_in", "slow_zoom_out", "pan"},
+                    "idle": {"none", "float_soft", "wiggle_soft", "pulse_soft", "slow_zoom_in", "slow_zoom_out", "pan"},
                     "exit": {"cut", "none", "fade", "fade_out", "slide_to_left", "slide_to_right", "slide_to_bottom"},
                 }
                 for phase, preset in element.get("animation", {}).items():
@@ -105,6 +105,17 @@ def _semantic_issues(data):
                     issues.append({"path": f"{prefix}.elements.{j}.reveal", "message": "Revelação letra a letra requer elemento text."})
                 if element["type"] == "caption" and not data.get("sources", {}).get("transcript"):
                     issues.append({"path": f"{prefix}.elements.{j}", "message": "Caption requer sources.transcript."})
+                if element["type"] == "filter":
+                    if element.get("style") not in {"dim", "crt_tv"}:
+                        issues.append({"path": f"{prefix}.elements.{j}.style", "message": "Filtro v0.2 requer style dim ou crt_tv."})
+                    config = element.get("config", {})
+                    limits = {
+                        "opacity": (0, 1), "scanlineOpacity": (0, 1), "vignette": (0, 1),
+                        "flicker": (0, 0.5), "jitter": (0, 20),
+                    }
+                    for key, (minimum, maximum) in limits.items():
+                        if key in config and (not isinstance(config[key], (int, float)) or not minimum <= config[key] <= maximum):
+                            issues.append({"path": f"{prefix}.elements.{j}.config.{key}", "message": f"{key} deve ficar entre {minimum} e {maximum}."})
                 if element["type"] == "caption" and element.get("style") == "bangers_highlight_block":
                     config = element.get("config", {})
                     colors = config.get("highlightColors")

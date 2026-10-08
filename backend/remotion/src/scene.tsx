@@ -119,14 +119,19 @@ const Layer = ({item, props, time, absolute, camera}: {item: Element; props: Sce
     if (motion.exit === 'fade' || motion.exit === 'fade_out') state.opacity *= 1 - p;
   }
   if (motion.idle === 'float_soft') state.y += 0.005 * Math.sin(elapsed * 2);
+  if (motion.idle === 'wiggle_soft') {
+    state.x += 0.0025 * Math.sin(elapsed * 2.4);
+    state.y += 0.0018 * Math.sin(elapsed * 3.1 + 0.7);
+    state.rotation += 0.35 * Math.sin(elapsed * 2.1);
+  }
   if (motion.idle === 'pulse_soft') state.scale *= 1 + 0.025 * Math.sin(elapsed * 3);
   if (motion.idle === 'slow_zoom_in') state.scale *= 1 + 0.06 * elapsed / Math.max(total, 0.01);
   if (motion.idle === 'slow_zoom_out') state.scale *= 1.06 - 0.06 * elapsed / Math.max(total, 0.01);
   if (motion.idle === 'pan') state.x += 0.015 * elapsed / Math.max(total, 0.01);
   const box = item.data.box && typeof item.data.box === 'object' ? item.data.box : {};
   const card = box.preset === 'floating_card' || box.background;
-  const elementWidth = item.data.cells ? rw : width * 0.8;
-  const elementHeight = item.data.cells ? rh : height * 0.8;
+  const elementWidth = item.type === 'filter' ? width : item.data.cells ? rw : width * 0.8;
+  const elementHeight = item.type === 'filter' ? height : item.data.cells ? rh : height * 0.8;
   const x = (state.x - camera.x) * width * 2 * camera.scale + width / 2;
   const y = (state.y - camera.y) * height * 2 * camera.scale + height / 2;
   const common: React.CSSProperties = {
@@ -138,6 +143,30 @@ const Layer = ({item, props, time, absolute, camera}: {item: Element; props: Sce
     padding: card ? (box.padding ?? 20) : undefined,
     boxShadow: card && box.shadow !== 'none' ? '5px 8px 16px #0007' : undefined,
   };
+  if (item.type === 'filter') {
+    const config = item.data.config ?? {};
+    const style = item.data.style;
+    const opacity = Number(config.opacity ?? (style === 'dim' ? 0.45 : 1));
+    if (style === 'dim') {
+      return <div style={{...common, backgroundColor: '#000000', opacity: state.opacity * opacity}}/>;
+    }
+    if (style === 'crt_tv') {
+      const scanlineOpacity = Number(config.scanlineOpacity ?? 0.18);
+      const vignette = Number(config.vignette ?? 0.42);
+      const flicker = Number(config.flicker ?? 0.035);
+      const jitter = Number(config.jitter ?? 1.5);
+      const phase = Math.sin(elapsed * 19.0) * flicker;
+      const shift = Math.sin(elapsed * 11.5) * jitter;
+      return <div style={{
+        ...common,
+        opacity: state.opacity * opacity * (1 + phase),
+        backgroundImage: `radial-gradient(circle at center, rgba(0,0,0,0) 48%, rgba(0,0,0,${vignette}) 100%), repeating-linear-gradient(to bottom, rgba(0,0,0,${scanlineOpacity}) 0px, rgba(0,0,0,${scanlineOpacity}) 1px, rgba(255,255,255,0.02) 2px, rgba(0,0,0,0) 4px)`,
+        backgroundPosition: `center, 0 ${shift}px`,
+        backgroundSize: '100% 100%, 100% 4px',
+      }}/>;
+    }
+    return null;
+  }
   if (item.src) {
     const isVideo = item.type === 'video' || (item.type === 'overlay' && /\.(mp4|mov|mkv|webm)$/i.test(item.src));
     return <div style={common}><Media src={item.src} isVideo={isVideo} loop={item.data.loop} style={{width: '100%', height: '100%', objectFit: fit(item.data.fit)}}/></div>;

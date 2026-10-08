@@ -44,6 +44,8 @@ def compile_timeline(plan, resolved_assets=None, registry=DEFAULT_REGISTRY):
                 issues.append({"path": f"{prefix}.style", "message": f"Estilo de legenda desconhecido: {style}"})
             if element_type == "overlay" and style and style not in registry.overlay_styles:
                 issues.append({"path": f"{prefix}.style", "message": f"Estilo de overlay desconhecido: {style}"})
+            if element_type == "filter" and style and style not in registry.filter_styles:
+                issues.append({"path": f"{prefix}.style", "message": f"Filtro desconhecido: {style}"})
             if plan.version == "0.1":
                 for phase, motion in element.get("animation", {}).items():
                     if motion not in registry.motions:

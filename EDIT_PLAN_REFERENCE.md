@@ -141,8 +141,9 @@ contínuo. Mais elementos do que regiões automáticas retornam à tela inteira.
 
 ## Elementos de `timeline[].elements[]`
 
-Tipos aceitos: `video`, `image`, `text`, `kinetic_text`, `caption`, `overlay`
-e `sfx`. Todos exigem `type`. Campos comuns possíveis:
+Tipos aceitos: `video`, `image`, `text`, `kinetic_text`, `caption`, `overlay`,
+`filter` e `sfx`. Todos exigem `type`. `filter` é exclusivo do `0.2`.
+Campos comuns possíveis:
 
 | Campo | Valores / efeito |
 | --- | --- |
@@ -178,6 +179,7 @@ e `sfx`. Todos exigem `type`. Campos comuns possíveis:
 | `kinetic_text` | Uma palavra por vez; estilo padrão `word_pop`; usa transcrição se houver correspondência ou distribuição uniforme. |
 | `caption` | Legenda karaoke gerada das palavras de `sources.transcript`; estilo padrão e único `anton_karaoke`. Requer transcrição e palavras no intervalo para exibir algo. |
 | `overlay` | Camada visual com chroma key; estilos aceitos `green_screen`, `green_screen_default`, `green_screen_soft` (a cor e sensibilidade efetivas vêm de `config`). Vídeos de overlay também podem preservar o áudio embutido com `muted: false`. |
+| `filter` | Camada procedural do `0.2`, sem asset obrigatório. `style: "dim"` cria escurecimento preto translúcido; `style: "crt_tv"` cria scanlines, vinheta e oscilação/flicker leves. Posicione por `z`: o que estiver abaixo recebe visualmente o efeito e camadas acima permanecem limpas. |
 | `sfx` | Áudio disparado por `at`, sem camada visual; duração padrão de até 10 segundos, limitada pelo fim da timeline. |
 
 Estilos de texto aceitos: `impact`, `impact_yellow`, `word_pop`, `paper_word`,
@@ -208,6 +210,19 @@ contorno preto e timestamps por palavra. O `config` aceita
 `highlightRadius`, `highlightPaddingX` e `highlightPaddingY`.
 Sem configuração, usa azul, vermelho e preto e até 7 palavras por chunk.
 O estilo `anton_karaoke` existente continua disponível e não foi alterado.
+
+### `filter` do motion design `0.2`
+
+Filtros são elementos visuais sem asset e obedecem a ordem de `z`. Isso permite
+colocar o efeito sobre a cena-base e abaixo de um PNG/capa em destaque.
+
+- `style: "dim"`: escurecimento preto translúcido; `config.opacity` vai de 0 a 1 e o padrão é 0,45.
+- `style: "crt_tv"`: scanlines de TV antiga + vinheta + flicker/jitter sutis. Defaults: `opacity: 1`, `scanlineOpacity: 0.18`, `vignette: 0.42`, `flicker: 0.035`, `jitter: 1.5`.
+- `wiggle_soft`: idle de elemento `0.2` com microdeslocamento e rotação suave, útil para PNGs estáticos sem transformar o elemento em shake agressivo.
+
+Texturas em vídeo já existentes, como partículas ou filme antigo, não precisam
+do tipo `filter`: use um elemento `video` full-screen com `z` entre a
+cena-base e o primeiro plano e `transform.opacity` baixo.
 
 ### Cards e animações
 

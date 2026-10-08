@@ -109,6 +109,35 @@ class ParserTests(unittest.TestCase):
         with self.assertRaises(PlanValidationError):
             parse_edit_plan(bad)
 
+    def test_filter_layers_and_wiggle_soft_are_available_in_v02(self):
+        registry = describe_registry()
+        self.assertEqual(set(registry["filter_styles"]), {"dim", "crt_tv"})
+        self.assertIn("wiggle_soft", registry["motion_v0.2_idle"])
+
+        data = valid_plan()
+        data["version"] = "0.2"
+        data["timeline"][0]["layout"] = "fullscreen"
+        data["timeline"][0]["elements"] = [
+            {"id": "fx", "type": "filter", "style": "dim", "z": 5, "config": {"opacity": 0.4}},
+            {"id": "cover", "type": "image", "asset": "project://images/a.png", "z": 10,
+             "animation": {"enter": "slide_down", "idle": "wiggle_soft", "exit": "slide_to_bottom"}},
+        ]
+        plan = parse_edit_plan(data)
+        timeline = compile_timeline(plan)
+        self.assertEqual([item.type for item in timeline.scenes[0].elements], ["filter", "image"])
+        cover = timeline.scenes[0].elements[1]
+        self.assertNotEqual(_visual_state(cover, timeline.scenes[0], 0.6, 1920, 1080)["rotation"], 0)
+
+        bad = json.loads(json.dumps(data))
+        bad["timeline"][0]["elements"][0]["config"]["opacity"] = 1.5
+        with self.assertRaises(PlanValidationError):
+            parse_edit_plan(bad)
+
+        legacy = valid_plan()
+        legacy["timeline"][0]["elements"] = [{"type": "filter", "style": "dim"}]
+        with self.assertRaises(PlanValidationError):
+            parse_edit_plan(legacy)
+
     def test_rejects_invalid_shake_and_reveal(self):
         data = valid_plan()
         data["version"] = "0.2"

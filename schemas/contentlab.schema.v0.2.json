@@ -55,7 +55,7 @@
     "element": {
       "type": "object", "required": ["type"],
       "properties": {
-        "type": {"enum": ["video", "image", "text", "kinetic_text", "caption", "overlay", "sfx"]},
+        "type": {"enum": ["video", "image", "text", "kinetic_text", "caption", "overlay", "filter", "sfx"]},
         "asset": {"type": "string"}, "text": {"type": "string"}, "style": {"type": "string"}, "fontAsset": {"type": "string"}, "fontScale": {"type": "number", "exclusiveMinimum": 0, "maximum": 3}, "reveal": {"$ref": "#/$defs/reveal"}, "textStyle": {"$ref": "#/$defs/textStyle"},
         "start": {"type": "number", "minimum": 0}, "end": {"type": "number", "exclusiveMinimum": 0}, "at": {"type": "number", "minimum": 0},
         "cells": {"type": "array", "items": {"type": "integer", "minimum": 1, "maximum": 9}, "minItems": 1, "uniqueItems": true},

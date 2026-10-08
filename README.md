@@ -280,6 +280,17 @@ Windows e no CapCut, está em [MVP_ACCEPTANCE.md](MVP_ACCEPTANCE.md).
 O contrato completo do JSON, as funções implementadas e os parâmetros aceitos
 estão em [EDIT_PLAN_REFERENCE.md](EDIT_PLAN_REFERENCE.md).
 
+## Filtros de camada no motion design
+
+O `edit_plan 0.2` possui o elemento genérico `filter`. `style: "dim"`
+escurece as camadas que estiverem visualmente abaixo dele; `style: "crt_tv"`
+adiciona scanlines, vinheta e flicker/jitter discretos. Como toda camada, o
+efeito é controlado por `z`, permitindo manter um PNG ou título acima do
+filtro. PNGs estáticos também podem usar `animation.idle: "wiggle_soft"`.
+
+Assets de textura continuam podendo ser usados como `video` com
+`transform.opacity` reduzido quando o efeito desejado já existe em arquivo.
+
 ## Caption com palavra ativa
 
 No `edit_plan 0.2`, o estilo genérico `bangers_highlight_block` mostra um
