@@ -8,6 +8,14 @@ o parser também verifica ordem/intervalo dos tempos, IDs e células do grid.
 O `0.1` continua aceito para projetos antigos. Uma timeline inteira usa uma
 versão só: **não misture cenas `0.1` e `0.2` no mesmo arquivo**.
 
+O mesmo JSON é usado pelo motor Remotion em TypeScript. O Python valida o
+contrato, resolve cada `project://` e `builtin://`, prepara a narração e
+entrega ao Remotion as cenas visuais com caminhos locais já verificados.
+Transições e mixagem de voz, música e SFX continuam no processamento Python
+e FFmpeg. O Remotion renderiza os elementos por quadro; o JSON informa o
+que aparece, quando aparece, onde fica e como se move. Cenas com `overlay`
+usam o renderizador Python atual para preservar o chroma key.
+
 ## Fluxo mínimo
 
 1. Tenha uma pasta de vídeo com `audio/narracao.wav`, os assets e

@@ -2,7 +2,7 @@
 
 Este checklist separa a implementação da comprovação em ambiente real. O teste
 integrado usa mídias **sintéticas** e não substitui a inspeção com a voz, o
-apresentador e os assets finais do canal Dias Verso.
+apresentador e os assets finais de cada projeto.
 
 ## Resultado técnico no Linux
 
@@ -31,7 +31,7 @@ ao fim do teste. `render_report.json` registra `cacheHit`, `videoEncoder`,
 | Carregar `edit_plan.json` | **Verificado na UI Linux.** Quatro cenas foram exibidas. |
 | Validar o plano | **Verificado na UI Linux e em testes.** Todos os assets sintéticos foram resolvidos. |
 | Gerar e reproduzir preview | **Render e arquivo verificados por teste integrado; reprodução visual no navegador deve ser conferida manualmente.** |
-| Preview com 2+ clipes, texto de impacto, frase cinética, Nox com karaoke, grid 3×3 com 3 imagens, card com padding/radius/shadow, overlay/chroma, música e SFX | **Verificado com fixture sintética e quadros-chave.** São dois clipes base, um apresentador substituto, três imagens, CTA com chroma, narração, música e SFX. A identidade visual e o apresentador reais ainda precisam de inspeção. |
+| Preview com 2+ clipes, texto de impacto, frase cinética, apresentador com karaoke, grid 3×3 com 3 imagens, card com padding/radius/shadow, overlay/chroma, música e SFX | **Verificado com fixture sintética e quadros-chave.** São dois clipes base, um apresentador substituto, três imagens, CTA com chroma, narração, música e SFX. A identidade visual e o apresentador reais ainda precisam de inspeção. |
 | Render final | **Verificado por teste integrado.** Vídeo e áudio têm 60 segundos; H.264/AAC. |
 | `rough_cut.mp4` e relatório | **Verificado por teste integrado.** Ambos são produzidos. |
 | Abrir o MP4 no CapCut | **Pendente de execução no CapCut.** O arquivo é H.264/AAC, mas compatibilidade de importação não foi atestada nesta máquina. |

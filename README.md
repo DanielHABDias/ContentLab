@@ -10,6 +10,7 @@ relatórios de validação e renderização.
 
 ```text
 backend/                 servidor Flask e processamento de mídia
+backend/remotion/        motor de cenas 0.2 em React e TypeScript
 frontend/templates/      página HTML
 frontend/static/         JavaScript, estilos e imagens
 run.sh                   inicialização no Linux
@@ -107,7 +108,8 @@ sudo apt install python3 python3-venv ffmpeg
 ```
 
 No Fedora, instale `python3` e `ffmpeg` com `dnf`. No Arch Linux, use os
-pacotes `python` e `ffmpeg`. O script cria `.venv`, instala as dependências,
+pacotes `python` e `ffmpeg`. O script cria `.venv`, instala as dependências
+Python e Remotion e prepara uma cópia local do Node quando necessária,
 abre o navegador quando há uma sessão gráfica e inicia o servidor em
 <http://127.0.0.1:5000>.
 
@@ -119,7 +121,8 @@ No Linux, o cache fica em `${XDG_CACHE_HOME:-~/.cache}/contentlab/cache/videos`.
 ## Windows
 
 Execute `iniciar.bat`. Na primeira execução, o script cria `.venv` e instala
-as dependências. O aplicativo abre no navegador e permanece disponível no
+as dependências Python e Remotion. O Node também é preparado localmente se
+não estiver instalado. O aplicativo abre no navegador e permanece disponível no
 ícone da bandeja.
 
 O FFmpeg é localizado no `PATH`, WinGet, Chocolatey ou Scoop. Se ele não for
@@ -267,6 +270,14 @@ A [referência completa](MOTION_DESIGN_JSON.md) explica todos os parâmetros
 para pessoas e IAs. O [plano de ação](MOTION_DESIGN_PLAN.md) registra as
 decisões e verificações. O JSON `0.1` continua aceito.
 
+As cenas visuais `0.2` são desenhadas pelo Remotion em TypeScript. O Python
+continua validando o mesmo `edit_plan.json`, resolvendo os assets, preparando
+a narração, aplicando transições e mixando o áudio. A ponte envia ao Remotion
+uma cena já validada, com tempos, posições, animações e referências locais
+aos arquivos. Novos vídeos usam o mesmo motor com outro JSON. Para comparar
+com o renderizador anterior, defina `CONTENTLAB_MOTION_ENGINE=python` antes
+de iniciar o aplicativo. A versão `0.1` segue no fluxo FFmpeg existente.
+
 ### Assets internos e assets do vídeo
 
 A biblioteca do aplicativo fica em `builtin-assets/backgrounds/`,
@@ -302,3 +313,11 @@ O ZIP também pode ser baixado pelo botão **Baixar skill (.zip)** na aba
 **Guia do projeto**; a mesma rota funciona no aplicativo empacotado para
 Windows. Instale a skill no ambiente ChatGPT/Cloud compatível seguindo as
 instruções do próprio pacote.
+# Catálogo para IA
+
+Na aba **Guia do projeto**, baixe o catálogo Markdown com todos os assets padrão
+instalados, seus URIs exatos, o contrato JSON e o grid do motion design. Ele é
+gerado a cada download a partir de `builtin-assets/`, portanto novos arquivos
+em `backgrounds/`, `music/`, `sfx/` ou `transitions/` entram automaticamente.
+Vídeos de fundo verde em `transitions/` são camadas `overlay` com chroma key,
+não presets de `transitionOut`.

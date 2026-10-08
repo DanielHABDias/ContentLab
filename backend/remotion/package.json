@@ -1,0 +1,19 @@
+{
+  "name": "contentlab-remotion",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "render": "remotion render src/index.ts Scene"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.530",
+    "@remotion/media": "4.0.530",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "remotion": "4.0.530"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.0",
+    "typescript": "^5.9.0"
+  }
+}

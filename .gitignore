@@ -213,3 +213,5 @@ config.json
 # Content Lab local
 .venv/
 .DS_Store
+backend/remotion/node_modules/
+.runtime/

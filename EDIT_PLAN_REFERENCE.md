@@ -9,6 +9,8 @@
   use [MOTION_DESIGN_JSON.md](MOTION_DESIGN_JSON.md) para todos os parâmetros,
   presets, unidades, limites e exemplos. O `0.2` também aceita vídeo, overlay,
   texto cinético e caption com as diferenças descritas naquela referência.
+  As cenas visuais são renderizadas em TypeScript pelo Remotion; cenas com
+  chroma key seguem no renderizador Python. O contrato JSON é o mesmo.
 
 Não misture versões de cena dentro de um mesmo `edit_plan.json`.
 

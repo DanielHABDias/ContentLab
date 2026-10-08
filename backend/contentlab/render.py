@@ -14,6 +14,7 @@ from .transitions import discover_transitions
 from .audio import prepare_narration, remap_transcript
 from .encoding import select_h264_encoder
 from .motion_renderer import render_motion_scene
+from .remotion_bridge import render_remotion_scene
 
 
 def _creation_flags():
@@ -353,6 +354,7 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
             boundaries = []
             transition_specs = discover_transitions()
             applied_transitions = []
+            scene_renderers = []
             cursor = 0.0
             render_scenes = []
             for scene in timeline.scenes:
@@ -386,9 +388,19 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
                 if progress:
                     progress("scene", index + 1, len(render_scenes), scene_for_render.id)
                 if plan.version == "0.2" and scene is not None:
-                    render_motion_scene(ffmpeg, scene_for_render, segment, plan.project, duration,
-                                        lambda command: _run(command, runner), work, video_encoding, transcript, getattr(runner, "event", None))
+                    if os.environ.get("CONTENTLAB_MOTION_ENGINE", "remotion") == "python" or any(element.type == "overlay" for element in scene.elements):
+                        scene_renderers.append({"scene": scene.id, "renderer": "python"})
+                        render_motion_scene(ffmpeg, scene_for_render, segment, plan.project, duration,
+                                            lambda command: _run(command, runner), work, video_encoding, transcript, getattr(runner, "event", None))
+                    else:
+                        scene_renderers.append({"scene": scene.id, "renderer": "remotion"})
+                        render_remotion_scene(scene_for_render, segment, plan.project, duration,
+                                              work, runner=runner, transcript=transcript,
+                                              cancel_event=getattr(runner, "event", None),
+                                              hardware_accel=hardware_accel)
                 else:
+                    if scene is not None:
+                        scene_renderers.append({"scene": scene.id, "renderer": "ffmpeg"})
                     _render_segment(
                         ffmpeg, scene_for_render, segment, plan.project, duration, runner, warnings,
                         transcript=transcript, work_dir=work, video_encoding=video_encoding,
@@ -417,6 +429,7 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
             "status": "completed", "project": plan.project.name, "version": plan.version, "mode": mode,
             "output": str(output), "outputBytes": output.stat().st_size, "duration": timeline.duration, "scenes": len(timeline.scenes), "videoEncoder": video_encoder,
             "warnings": warnings, "transitions": applied_transitions, "audioLayers": applied_audio,
+            "sceneRenderers": scene_renderers,
             "narration": narration_report,
             "outputProbe": output_probe,
             "ducking": {

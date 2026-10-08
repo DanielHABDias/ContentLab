@@ -15,6 +15,7 @@ class CancelRunner:
         process = subprocess.Popen(
             command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             text=kwargs.get("text", True), creationflags=kwargs.get("creationflags", 0),
+            cwd=kwargs.get("cwd"),
         )
         while True:
             try:

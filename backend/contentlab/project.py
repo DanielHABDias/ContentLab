@@ -16,7 +16,7 @@ from .service import prepare_edit_plan
 
 _SAVE_LOCK = threading.Lock()
 _MAX_PLAN_BYTES = 5 * 1024 * 1024
-_CACHE_VERSION = "render-v12-motion-grid"
+_CACHE_VERSION = "render-v13-remotion"
 
 
 def project_plan_path(directory):
@@ -192,6 +192,7 @@ def _render_fingerprint(path, root, mode, hardware_accel=False):
     digest = hashlib.sha256(_CACHE_VERSION.encode())
     digest.update(mode.encode())
     digest.update(str(bool(hardware_accel)).encode())
+    digest.update(os.environ.get("CONTENTLAB_MOTION_ENGINE", "remotion").encode())
     digest.update(_read_plan_bytes(path))
     dependencies = [Path(narration)] + [Path(value) for value in validation["resolvedAssets"].values()]
     if plan.sources.get("transcript"):
@@ -199,6 +200,11 @@ def _render_fingerprint(path, root, mode, hardware_accel=False):
         dependencies.append(transcript if transcript.is_absolute() else root / transcript)
     code_root = Path(__file__).resolve().parent
     dependencies += list(code_root.glob("*.py")) + list((code_root / "transition_plugins").glob("*.py"))
+    if plan.version == "0.2" and os.environ.get("CONTENTLAB_MOTION_ENGINE", "remotion") != "python":
+        remotion_source = code_root.parent / "remotion"
+        dependencies += list((remotion_source / "src").glob("*.ts"))
+        dependencies += list((remotion_source / "src").glob("*.tsx"))
+        dependencies.append(remotion_source / "package-lock.json")
     for dependency in sorted({item.resolve() for item in dependencies}):
         if not dependency.is_file():
             return None

@@ -12,6 +12,13 @@ os nomes reais dos arquivos, inclusive maiúsculas e extensão. Subpastas em
   coleções em subpastas. O editor lista automaticamente os arquivos instalados.
 - `music/`: faixas usadas por `audio.music[].asset`.
 - `sfx/`: efeitos usados por elementos `sfx`.
+- `transitions/`: vídeos de transição com fundo verde; use como elemento
+  `overlay` no JSON com `style: "green_screen"` e `config.keyColor`,
+  `config.similarity` e `config.blend`. Não são presets de `transitionOut`.
+
+Na aba **Guia do projeto**, o botão **Baixar catálogo para IA** gera um Markdown
+com a lista atual dos arquivos instalados e as referências do JSON. O catálogo
+é reconstruído a cada download: adições feitas amanhã aparecem sem editar código.
 
 Fundos de cor sólida não precisam de arquivo: use `background.color`, por
 exemplo `"#16233F"`. Texturas de papel ou outros fundos fornecidos pela pessoa

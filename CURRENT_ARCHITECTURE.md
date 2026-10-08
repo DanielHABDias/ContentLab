@@ -59,7 +59,7 @@
 1. Parser, schema, resolver, registry, compiler e CLI. **Implementado.**
 2. Render mínimo de imagem/vídeo com cortes secos. **Implementado via CLI.**
 3. Texto e kinetic text. **Implementado com ASS/libass e word timestamps.**
-4. Caption karaoke e preset Nox. **Implementado como caption ASS e vídeo em região sobre background.**
+4. Caption karaoke e preset de apresentador central. **Implementado como caption ASS e vídeo em região sobre background.**
 5. Grid 3x3, boxes e motions. **Implementado com presets de entrada, idle e saída.**
 6. Transições, chroma, música/SFX e relatórios. **Implementado: plugins cut/fade/blur_left, chroma key, mixagem e relatório de camadas.**
 7. UI de projeto, preview e render final. **Implementado: painel web, jobs assíncronos, preview reduzido e export final separado.**

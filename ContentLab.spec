@@ -5,7 +5,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath('backend'))
 
-datas = [('frontend/templates', 'frontend/templates'), ('frontend/static', 'frontend/static'), ('schemas', 'schemas'), ('builtin-assets', 'builtin-assets'), ('skillContentLabEdicao.zip', '.')]
+datas = [('frontend/templates', 'frontend/templates'), ('frontend/static', 'frontend/static'), ('schemas', 'schemas'), ('builtin-assets', 'builtin-assets'), ('skillContentLabEdicao.zip', '.'), ('README.md', '.'), ('EDIT_PLAN_REFERENCE.md', '.'), ('MOTION_DESIGN_JSON.md', '.'), ('backend/remotion/src', 'backend/remotion/src'), ('backend/remotion/package.json', 'backend/remotion'), ('backend/remotion/package-lock.json', 'backend/remotion')]
 binaries = []
 hiddenimports = []
 hiddenimports += collect_submodules('contentlab.transition_plugins')

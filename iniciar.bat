@@ -13,6 +13,10 @@ echo Verificando dependencias...
 ".venv\Scripts\python.exe" -m pip install -r backend\requirements-desktop.txt --quiet --disable-pip-version-check
 if errorlevel 1 goto failed
 
+echo Preparando Remotion...
+".venv\Scripts\python.exe" -m backend.prepare_runtime
+if errorlevel 1 goto failed
+
 start "" ".venv\Scripts\pythonw.exe" -m backend.tray_app
 if errorlevel 1 goto failed
 exit /b 0

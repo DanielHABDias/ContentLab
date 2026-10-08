@@ -10,6 +10,8 @@ if not exist ".venv\Scripts\python.exe" (
 
 ".venv\Scripts\python.exe" -m pip install -r backend\requirements.txt --quiet --disable-pip-version-check
 if errorlevel 1 goto failed
+".venv\Scripts\python.exe" -m backend.prepare_runtime
+if errorlevel 1 goto failed
 
 echo.
 echo Modo debug - deixe esta janela aberta para ver os logs.

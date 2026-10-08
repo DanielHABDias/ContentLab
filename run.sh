@@ -22,6 +22,7 @@ if [[ ! -x .venv/bin/python ]]; then
 fi
 
 .venv/bin/python -m pip install --disable-pip-version-check -r backend/requirements.txt
+.venv/bin/python -m backend.prepare_runtime
 
 echo "Content Lab disponível em http://127.0.0.1:5000"
 if command -v xdg-open >/dev/null 2>&1 && [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then

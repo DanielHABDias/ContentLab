@@ -135,7 +135,7 @@ class AssetResolverTests(unittest.TestCase):
     def test_builtin_backgrounds_and_hex_color_are_distinct_sources(self):
         root = Path(__file__).resolve().parents[1]
         resolver = AssetResolver(root, root / "builtin-assets")
-        uri = "builtin://backgrounds/diasverso/background_amarelo.png"
+        uri = "builtin://backgrounds/background_amarelo.png"
         self.assertTrue(resolver.resolve(uri).is_file())
         data = valid_plan()
         data["version"] = "0.2"
@@ -417,10 +417,10 @@ class RendererTests(unittest.TestCase):
             self.assertEqual(client.get("/api/editor/plugins").status_code, 200)
             backgrounds = client.get("/api/editor/backgrounds")
             self.assertEqual(backgrounds.status_code, 200)
-            collection = [item for item in backgrounds.get_json()["backgrounds"] if item["uri"].startswith("builtin://backgrounds/diasverso/")]
+            collection = [item for item in backgrounds.get_json()["backgrounds"] if item["uri"].startswith("builtin://backgrounds/background_")]
             self.assertEqual(len(collection), 48)
             self.assertTrue(all(item["name"].startswith("background_") for item in collection))
-            self.assertIn("builtin://backgrounds/diasverso/background_amarelo.png", {item["uri"] for item in collection})
+            self.assertIn("builtin://backgrounds/background_amarelo.png", {item["uri"] for item in collection})
             assets_response = client.post("/api/editor/project/assets", json={"projectRoot": str(root), "folder": str(root / "images")})
             self.assertEqual(assets_response.status_code, 200)
             upload_response = client.post("/api/editor/project/narration", data={"projectRoot": str(root), "file": (io.BytesIO(b"audio"), "voice.wav")}, content_type="multipart/form-data")
