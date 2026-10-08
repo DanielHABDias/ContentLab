@@ -5,7 +5,7 @@ from pathlib import Path
 
 from PIL import Image, ImageChops, ImageColor, ImageDraw, ImageFilter, ImageFont
 
-from .text import STYLE_DEFINITIONS, _phrase_words, transcript_words
+from .text import STYLE_DEFINITIONS, _phrase_words, caption_chunk, transcript_words
 from .typography import appearance, bundled_font_path
 from .errors import RenderCancelled
 
@@ -125,6 +125,102 @@ def _element_image(element, width, height, text_override=None):
     draw = ImageDraw.Draw(image)
     draw.text((padding - bounds[0], padding - bounds[1]), text, font=font, fill=look["color"] or style["primary"], stroke_width=stroke, stroke_fill=look["outlineColor"] or style["outline"])
     return image
+
+
+def _highlight_caption_image(element, words, absolute):
+    caption_range = element.data.get("range") or {}
+    start = float(caption_range.get("start", element.start))
+    end = float(caption_range.get("end", element.end))
+    config = element.data.get("config", {})
+    chunk, active_local, active_global = caption_chunk(words, absolute, start, end, config.get("maxWords", 7))
+    if not chunk or active_local is None:
+        return None
+
+    look = appearance(element.data)
+    style = STYLE_DEFINITIONS["bangers_highlight_block"]
+    uppercase = look["uppercase"]
+    labels = [str(word["word"]).upper() if uppercase else str(word["word"]) for word in chunk]
+    limit_width, limit_height = element.region[2:]
+    size = max(16, round(min(limit_height * 0.42, limit_width * 0.075) * float(element.data.get("fontScale", 0.5))))
+    colors = config.get("highlightColors") or ["#2563EB", "#E53935", "#111111"]
+    radius = float(config.get("highlightRadius", 14))
+    pad_x = float(config.get("highlightPaddingX", 10))
+    pad_y = float(config.get("highlightPaddingY", 5))
+    gap = max(4, round(size * 0.12))
+    line_gap = max(4, round(size * 0.16))
+    usable_width = limit_width * 0.90
+    usable_height = limit_height * 0.82
+
+    def measure(font_size):
+        font = _font(font_size, element.data.get("_font_path"), look["fontFamily"])
+        stroke = round(look["outlineWidth"]) if look["outlineWidth"] is not None else max(1, round(font_size * 0.055))
+        metrics = []
+        probe = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+        for label in labels:
+            bounds = probe.textbbox((0, 0), label, font=font, stroke_width=stroke)
+            metrics.append((bounds, max(1, bounds[2] - bounds[0]) + 2 * pad_x, max(1, bounds[3] - bounds[1]) + 2 * pad_y))
+        lines, current, current_width = [], [], 0
+        for index, metric in enumerate(metrics):
+            word_width = metric[1]
+            proposed = word_width if not current else current_width + gap + word_width
+            if current and proposed > usable_width:
+                lines.append(current)
+                current, current_width = [index], word_width
+            else:
+                current.append(index)
+                current_width = proposed
+        if current:
+            lines.append(current)
+        line_heights = [max(metrics[index][2] for index in line) for line in lines]
+        total_height = sum(line_heights) + line_gap * max(0, len(lines) - 1)
+        max_width = max((sum(metrics[index][1] for index in line) + gap * max(0, len(line) - 1) for line in lines), default=0)
+        return font, stroke, metrics, lines, line_heights, max_width, total_height
+
+    font, stroke, metrics, lines, line_heights, max_width, total_height = measure(size)
+    while size > 16 and (max_width > usable_width or total_height > usable_height):
+        size = max(16, round(size * 0.9))
+        font, stroke, metrics, lines, line_heights, max_width, total_height = measure(size)
+
+    image = Image.new("RGBA", (limit_width, limit_height))
+    shadow = look["shadow"] or {"color": "#000000", "blur": 8, "offsetX": 3, "offsetY": 4}
+    shadow_layer = Image.new("RGBA", image.size)
+    shadow_draw = ImageDraw.Draw(shadow_layer)
+    draw = ImageDraw.Draw(image)
+    y = (limit_height - total_height) / 2
+    active_color = colors[int(active_global or 0) % len(colors)]
+
+    for line, line_height in zip(lines, line_heights):
+        line_width = sum(metrics[index][1] for index in line) + gap * max(0, len(line) - 1)
+        x = (limit_width - line_width) / 2
+        for index in line:
+            bounds, word_width, word_height = metrics[index]
+            top = y + (line_height - word_height) / 2
+            if index == active_local:
+                draw.rounded_rectangle(
+                    (x, top, x + word_width, top + word_height),
+                    radius=max(0, min(radius, word_height / 2)),
+                    fill=active_color,
+                )
+            text_x = x + pad_x - bounds[0]
+            text_y = top + pad_y - bounds[1]
+            shadow_color = ImageColor.getrgb(shadow.get("color", "#000000")) + (153,)
+            shadow_draw.text(
+                (text_x + float(shadow.get("offsetX", 3)), text_y + float(shadow.get("offsetY", 4))),
+                labels[index], font=font, fill=shadow_color, stroke_width=stroke, stroke_fill=shadow_color,
+            )
+            draw.text(
+                (text_x, text_y), labels[index], font=font,
+                fill=look["color"] or style["primary"], stroke_width=stroke,
+                stroke_fill=look["outlineColor"] or style["outline"],
+            )
+            x += word_width + gap
+        y += line_height + line_gap
+
+    blur = float(shadow.get("blur", 8))
+    if blur > 0:
+        shadow_layer = shadow_layer.filter(ImageFilter.GaussianBlur(blur))
+    shadow_layer.alpha_composite(image)
+    return shadow_layer
 
 
 def _visual_state(element, scene, t, width, height):
@@ -293,14 +389,19 @@ def render_motion_scene(ffmpeg, scene, output, project, duration, run, work_dir,
                     continue
                 image = _element_image(element, width, height, text[:count])
             elif element.type == "caption":
-                caption_range = element.data.get("range") or {}
-                if not caption_range.get("start", element.start) <= absolute_t < caption_range.get("end", element.end):
-                    continue
-                active_index = next((i for i, word in enumerate(words) if word["start"] <= absolute_t < word["end"]), None)
-                if active_index is None:
-                    continue
-                group_start = (active_index // 4) * 4
-                image = _element_image(element, width, height, " ".join(word["word"] for word in words[group_start:group_start + 4]))
+                if element.data.get("style") == "bangers_highlight_block":
+                    image = _highlight_caption_image(element, words, absolute_t)
+                    if image is None:
+                        continue
+                else:
+                    caption_range = element.data.get("range") or {}
+                    if not caption_range.get("start", element.start) <= absolute_t < caption_range.get("end", element.end):
+                        continue
+                    active_index = next((i for i, word in enumerate(words) if word["start"] <= absolute_t < word["end"]), None)
+                    if active_index is None:
+                        continue
+                    group_start = (active_index // 4) * 4
+                    image = _element_image(element, width, height, " ".join(word["word"] for word in words[group_start:group_start + 4]))
             else:
                 image = images[element.data["id"]]
             if element.type == "overlay":

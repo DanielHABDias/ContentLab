@@ -198,6 +198,17 @@ Para Bangers com sombra e contorno: `"style":"bangers"` e
 Estilos de overlay são nomes registrados, mas
 nesta versão não alteram os parâmetros de chroma por si só.
 
+### Caption `bangers_highlight_block`
+
+No `0.2`, `caption` também aceita `style: "bangers_highlight_block"`.
+Esse estilo mantém a frase/chunk inteira visível e destaca somente a palavra
+ativa com um retângulo de cantos arredondados. Usa Bangers, texto branco,
+contorno preto e timestamps por palavra. O `config` aceita
+`highlightColors` (1–8 cores `#RRGGBB`), `maxWords` (2–12),
+`highlightRadius`, `highlightPaddingX` e `highlightPaddingY`.
+Sem configuração, usa azul, vermelho e preto e até 7 palavras por chunk.
+O estilo `anton_karaoke` existente continua disponível e não foi alterado.
+
 ### Cards e animações
 
 `box` aceita a string `"floating_card"` ou objeto com `preset` (somente

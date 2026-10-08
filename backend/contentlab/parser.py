@@ -105,10 +105,25 @@ def _semantic_issues(data):
                     issues.append({"path": f"{prefix}.elements.{j}.reveal", "message": "Revelação letra a letra requer elemento text."})
                 if element["type"] == "caption" and not data.get("sources", {}).get("transcript"):
                     issues.append({"path": f"{prefix}.elements.{j}", "message": "Caption requer sources.transcript."})
+                if element["type"] == "caption" and element.get("style") == "bangers_highlight_block":
+                    config = element.get("config", {})
+                    colors = config.get("highlightColors")
+                    if colors is not None and (
+                        not isinstance(colors, list) or not colors or len(colors) > 8
+                        or any(not isinstance(value, str) or not re.fullmatch(r"#[0-9A-Fa-f]{6}", value) for value in colors)
+                    ):
+                        issues.append({"path": f"{prefix}.elements.{j}.config.highlightColors", "message": "highlightColors deve conter de 1 a 8 cores #RRGGBB."})
+                    if "maxWords" in config and (not isinstance(config["maxWords"], int) or not 2 <= config["maxWords"] <= 12):
+                        issues.append({"path": f"{prefix}.elements.{j}.config.maxWords", "message": "maxWords deve ser inteiro entre 2 e 12."})
+                    for key, maximum in (("highlightRadius", 100), ("highlightPaddingX", 100), ("highlightPaddingY", 100)):
+                        if key in config and (not isinstance(config[key], (int, float)) or not 0 <= config[key] <= maximum):
+                            issues.append({"path": f"{prefix}.elements.{j}.config.{key}", "message": f"{key} deve ficar entre 0 e {maximum}."})
                 if isinstance(element.get("box"), dict) and element["box"].get("border"):
                     issues.append({"path": f"{prefix}.elements.{j}.box.border", "message": "Borda do card ainda não é desenhada em v0.2."})
         for element_index, element in enumerate(scene.get("elements", [])):
             epath = f"{prefix}.elements.{element_index}"
+            if data.get("version") != "0.2" and element.get("type") == "caption" and element.get("style") == "bangers_highlight_block":
+                issues.append({"path": f"{epath}.style", "message": "bangers_highlight_block está disponível apenas no edit_plan 0.2."})
             if "start" in element and "end" in element and element["end"] <= element["start"]:
                 issues.append({"path": epath, "message": "O elemento deve terminar depois de começar."})
             cells = element.get("cells")

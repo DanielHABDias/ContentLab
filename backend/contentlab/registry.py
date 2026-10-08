@@ -18,7 +18,7 @@ DEFAULT_REGISTRY = Registry(
     transitions=frozenset(discover_transitions()),
     motions=frozenset({"cut", "none", "fade", "fade_out", "slide_up", "pop_in", "float_soft", "slow_zoom_in", "slow_zoom_out", "pan", "pulse_soft"}),
     text_styles=frozenset({"impact", "impact_yellow", "word_pop", "paper_word", "versus_big", "anton", "bangers"}),
-    caption_styles=frozenset({"anton_karaoke"}),
+    caption_styles=frozenset({"anton_karaoke", "bangers_highlight_block"}),
     overlay_styles=frozenset({"green_screen", "green_screen_default", "green_screen_soft"}),
 )
 

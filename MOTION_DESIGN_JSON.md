@@ -209,6 +209,46 @@ de 3 s, pop, flutuação, balanço de câmera, saída inferior e SFX. É um mode
 de estrutura: troque os URIs pelos arquivos reais antes de validar/renderizar;
 nenhum efeito sonoro, fonte ou mídia desse exemplo foi distribuído ainda.
 
+## Caption com destaque por palavra
+
+O estilo `bangers_highlight_block` é exclusivo do `edit_plan 0.2` e mantém
+um chunk/frase inteiro visível em Bangers branca enquanto um bloco de fundo
+com cantos arredondados acompanha a palavra ativa pelos timestamps de
+`sources.transcript`. O caption normal existente continua separado.
+
+Defaults: azul `#2563EB`, vermelho `#E53935` e preto `#111111`, no máximo
+7 palavras por chunk e quebra antecipada por pontuação. Pequenos intervalos
+entre palavras mantêm o destaque na última palavra iniciada para evitar
+piscadas. Em `config`, podem ser ajustados `highlightColors`,
+`maxWords` (2–12), `highlightRadius`, `highlightPaddingX` e
+`highlightPaddingY`.
+
+Exemplo:
+
+```json
+{
+  "id": "caption-highlight",
+  "type": "caption",
+  "style": "bangers_highlight_block",
+  "cells": [7, 8, 9],
+  "range": {"start": 12.0, "end": 17.5},
+  "fontScale": 0.5,
+  "textStyle": {
+    "fontFamily": "Bangers",
+    "uppercase": true,
+    "color": "#FFFFFF",
+    "outlineColor": "#000000",
+    "outlineWidth": 4,
+    "shadow": {"color": "#000000", "blur": 8, "offsetX": 3, "offsetY": 4}
+  },
+  "config": {
+    "highlightColors": ["#2563EB", "#E53935", "#111111"],
+    "maxWords": 7,
+    "highlightRadius": 14
+  }
+}
+```
+
 ## Erros comuns
 
 - Referenciar `builtin://` antes de instalar o arquivo na biblioteca.

@@ -27,6 +27,30 @@ const stateAt = (initial: Record<string, number>, frames: Keyframe[] = [], time:
   return state;
 };
 const fit = (name?: string): React.CSSProperties['objectFit'] => name === 'stretch' ? 'fill' : name === 'contain' ? 'contain' : 'cover';
+const captionChunk = (item: Element, absolute: number, words: Word[]) => {
+  const range = item.data.range ?? {};
+  const start = Number(range.start ?? item.start), end = Number(range.end ?? item.end);
+  if (absolute < start || absolute >= end) return null;
+  const candidates = words.filter((word) => word.end > start && word.start < end);
+  if (!candidates.length) return null;
+  let active = candidates.findIndex((word) => word.start <= absolute && absolute < word.end);
+  if (active < 0) {
+    const started = candidates.map((word, index) => ({word, index})).filter(({word}) => word.start <= absolute);
+    if (!started.length) return null;
+    active = started[started.length - 1].index;
+  }
+  const maxWords = Math.max(2, Math.min(12, Math.round(Number(item.data.config?.maxWords ?? 7))));
+  let chunkStart = 0;
+  for (let index = 0; index < candidates.length; index++) {
+    const terminal = /[,.!?;:][\"'”’)]*$/.test(String(candidates[index].word).trim());
+    if (index - chunkStart + 1 >= maxWords || terminal || index === candidates.length - 1) {
+      const chunkEnd = index + 1;
+      if (chunkStart <= active && active < chunkEnd) return {words: candidates.slice(chunkStart, chunkEnd), active: active - chunkStart, globalActive: active};
+      chunkStart = chunkEnd;
+    }
+  }
+  return null;
+};
 const styles: Record<string, {color: string; stroke: string; strokeWidth: number}> = {
   impact: {color: '#fff', stroke: '#000', strokeWidth: 6},
   impact_yellow: {color: '#ffd400', stroke: '#000', strokeWidth: 6},
@@ -37,6 +61,7 @@ const styles: Record<string, {color: string; stroke: string; strokeWidth: number
   anton: {color: '#fff', stroke: '#fff', strokeWidth: 0},
   anton_white: {color: '#fff', stroke: '#fff', strokeWidth: 0}, // Legacy alias.
   bangers: {color: '#fff', stroke: '#000', strokeWidth: 4},
+  bangers_highlight_block: {color: '#fff', stroke: '#000', strokeWidth: 4},
 };
 const visibleText = (item: Element, absolute: number, words: Word[]) => {
   if (item.type === 'text') {
@@ -116,6 +141,39 @@ const Layer = ({item, props, time, absolute, camera}: {item: Element; props: Sce
   if (item.src) {
     const isVideo = item.type === 'video' || (item.type === 'overlay' && /\.(mp4|mov|mkv|webm)$/i.test(item.src));
     return <div style={common}><Media src={item.src} isVideo={isVideo} loop={item.data.loop} style={{width: '100%', height: '100%', objectFit: fit(item.data.fit)}}/></div>;
+  }
+  if (item.type === 'caption' && item.data.style === 'bangers_highlight_block') {
+    const caption = captionChunk(item, absolute, props.words);
+    if (!caption) return null;
+    const look = styles.bangers_highlight_block;
+    const appearance = item.data.textStyle ?? {};
+    const shadow = appearance.shadow ?? {color: '#000000', blur: 8, offsetX: 3, offsetY: 4};
+    const uppercase = appearance.uppercase ?? true;
+    const labels = caption.words.map((word) => uppercase ? String(word.word).toLocaleUpperCase('pt-BR') : String(word.word));
+    const fullText = labels.join(' ');
+    const scaleFactor = Number(item.data.fontScale ?? 0.5);
+    const baseSize = Math.min(rh * 0.42, rw * 0.075) * scaleFactor;
+    const fontSize = Math.max(16, Math.min(baseSize, rw * 0.86 / Math.max(1, Array.from(fullText).length * 0.43)));
+    const configuredColors = Array.isArray(item.data.config?.highlightColors) ? item.data.config.highlightColors.filter((color: unknown) => typeof color === 'string') : [];
+    const colors = configuredColors.length ? configuredColors : ['#2563EB', '#E53935', '#111111'];
+    const activeColor = colors[caption.globalActive % colors.length];
+    const padX = Number(item.data.config?.highlightPaddingX ?? Math.max(7, fontSize * 0.13));
+    const padY = Number(item.data.config?.highlightPaddingY ?? Math.max(3, fontSize * 0.07));
+    const radius = Number(item.data.config?.highlightRadius ?? Math.max(8, fontSize * 0.18));
+    return <div style={{...common, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5%', boxSizing: 'border-box'}}>
+      <div style={{display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: Math.max(4, fontSize * 0.12), lineHeight: 1.14, maxWidth: '100%'}}>
+        {labels.map((label, index) => <span key={index + '-' + label} style={{
+          display: 'inline-block', boxSizing: 'border-box', whiteSpace: 'nowrap',
+          padding: padY + 'px ' + padX + 'px', borderRadius: radius,
+          backgroundColor: index === caption.active ? activeColor : 'transparent',
+          fontFamily: item.fontSrc ? item.fontFamily + ', Arial, sans-serif' : 'Arial, sans-serif',
+          fontWeight: item.fontSrc ? 400 : 900, fontSize, color: appearance.color ?? look.color,
+          WebkitTextStroke: (appearance.outlineWidth ?? look.strokeWidth) + 'px ' + (appearance.outlineColor ?? look.stroke),
+          paintOrder: 'stroke fill',
+          textShadow: (shadow.offsetX ?? 3) + 'px ' + (shadow.offsetY ?? 4) + 'px ' + (shadow.blur ?? 8) + 'px ' + (shadow.color ?? '#00000099'),
+        }}>{label}</span>)}
+      </div>
+    </div>;
   }
   const value = visibleText(item, absolute, props.words);
   if (!value) return null;

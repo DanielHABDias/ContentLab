@@ -13,6 +13,7 @@ STYLE_DEFINITIONS = {
     "anton": {"font": "Anton", "size": 86, "primary": "#FFFFFF", "outline": "#FFFFFF", "outline_width": 0, "bold": True},
     "anton_white": {"font": "Anton", "size": 86, "primary": "#FFFFFF", "outline": "#FFFFFF", "outline_width": 0, "bold": True},  # Legacy alias.
     "bangers": {"font": "Bangers", "size": 86, "primary": "#FFFFFF", "outline": "#000000", "outline_width": 4, "bold": False},
+    "bangers_highlight_block": {"font": "Bangers", "size": 64, "primary": "#FFFFFF", "outline": "#000000", "outline_width": 4, "bold": False},
 }
 
 
@@ -78,6 +79,29 @@ def _phrase_words(text, start, end, available):
             return candidates[index:index + len(tokens)]
     step = max(0.04, (end - start) / len(tokens))
     return [{"word": token, "start": start + index * step, "end": min(end, start + (index + 1) * step)} for index, token in enumerate(tokens)]
+
+
+def caption_chunk(words, absolute, start, end, max_words=7):
+    """Return the active phrase-like caption chunk for a timestamp."""
+    candidates = [word for word in words if word["end"] > start and word["start"] < end]
+    if not candidates:
+        return [], None, None
+    active_index = next((index for index, word in enumerate(candidates) if word["start"] <= absolute < word["end"]), None)
+    if active_index is None:
+        started = [index for index, word in enumerate(candidates) if word["start"] <= absolute]
+        if not started:
+            return [], None, None
+        active_index = started[-1]
+    max_words = max(2, min(12, int(max_words or 7)))
+    chunk_start = 0
+    for index, word in enumerate(candidates):
+        terminal = bool(re.search(r"""[,.!?;:]["'”’)]*$""", str(word["word"]).strip()))
+        if index - chunk_start + 1 >= max_words or terminal or index == len(candidates) - 1:
+            chunk_end = index + 1
+            if chunk_start <= active_index < chunk_end:
+                return candidates[chunk_start:chunk_end], active_index - chunk_start, active_index
+            chunk_start = chunk_end
+    return [], None, None
 
 
 def _style_line(name, style):

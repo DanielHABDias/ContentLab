@@ -14,7 +14,7 @@ from backend.contentlab.assets import AssetResolver
 from backend.contentlab.errors import PlanValidationError, UnsafeAssetPathError
 from backend.contentlab.parser import parse_edit_plan
 from backend.contentlab.render import render_edit_plan
-from backend.contentlab.text import build_scene_ass, transcript_words
+from backend.contentlab.text import build_scene_ass, caption_chunk, transcript_words
 from backend.contentlab.timeline import compile_timeline
 from backend.contentlab.layout import box_geometry, create_card_assets
 from backend.contentlab.motions import motion_filters, overlay_position
@@ -67,6 +67,47 @@ class ParserTests(unittest.TestCase):
         central = next(item for item in timeline.scenes[1].elements if item.data.get("id") == "figura-central")
         self.assertGreater(_visual_state(central, timeline.scenes[1], 0, 1920, 1080)["y"], 0.75)
         self.assertGreater(_visual_state(central, timeline.scenes[1], 7.95, 1920, 1080)["y"], 0.75)
+
+    def test_bangers_highlight_caption_contract_and_chunking(self):
+        self.assertIn("bangers_highlight_block", describe_registry()["caption_styles"])
+        look = appearance({"style": "bangers_highlight_block"})
+        self.assertEqual((look["fontFamily"], look["uppercase"]), ("Bangers", True))
+
+        data = valid_plan()
+        data["version"] = "0.2"
+        data["sources"] = {"transcript": "transcript.json"}
+        data["timeline"][0]["layout"] = "fullscreen"
+        data["timeline"][0]["elements"] = [{
+            "id": "caption", "type": "caption", "style": "bangers_highlight_block",
+            "cells": [7, 8, 9], "config": {
+                "highlightColors": ["#2563EB", "#E53935", "#111111"],
+                "maxWords": 7, "highlightRadius": 14,
+            },
+        }]
+        self.assertEqual(parse_edit_plan(data).version, "0.2")
+
+        words = [
+            {"word": "EU", "start": 0.0, "end": 0.4},
+            {"word": "ACHO", "start": 0.4, "end": 0.8},
+            {"word": "QUE,", "start": 0.8, "end": 1.1},
+            {"word": "SIM", "start": 1.1, "end": 1.5},
+        ]
+        chunk, active_local, active_global = caption_chunk(words, 0.65, 0, 2, 7)
+        self.assertEqual([word["word"] for word in chunk], ["EU", "ACHO", "QUE,"])
+        self.assertEqual((active_local, active_global), (1, 1))
+        _, gap_active, _ = caption_chunk(words, 1.05, 0, 2, 7)
+        self.assertEqual(gap_active, 2)
+
+        legacy = valid_plan()
+        legacy["sources"] = {"transcript": "transcript.json"}
+        legacy["timeline"][0]["elements"] = [{"type": "caption", "style": "bangers_highlight_block"}]
+        with self.assertRaises(PlanValidationError):
+            parse_edit_plan(legacy)
+
+        bad = json.loads(json.dumps(data))
+        bad["timeline"][0]["elements"][0]["config"]["highlightColors"] = ["blue"]
+        with self.assertRaises(PlanValidationError):
+            parse_edit_plan(bad)
 
     def test_rejects_invalid_shake_and_reveal(self):
         data = valid_plan()

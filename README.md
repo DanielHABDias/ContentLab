@@ -280,6 +280,14 @@ Windows e no CapCut, está em [MVP_ACCEPTANCE.md](MVP_ACCEPTANCE.md).
 O contrato completo do JSON, as funções implementadas e os parâmetros aceitos
 estão em [EDIT_PLAN_REFERENCE.md](EDIT_PLAN_REFERENCE.md).
 
+## Caption com palavra ativa
+
+No `edit_plan 0.2`, o estilo genérico `bangers_highlight_block` mostra um
+chunk inteiro em Bangers branca e aplica um bloco colorido arredondado somente
+atrás da palavra ativa, seguindo os timestamps da transcrição. O preset usa
+azul/vermelho/preto por padrão e pode ser configurado no `config` do
+elemento. A legenda normal existente continua disponível separadamente.
+
 ## Motion design
 
 O JSON `0.2` aceita cenas contínuas com fundo de cor, imagem ou vídeo,
