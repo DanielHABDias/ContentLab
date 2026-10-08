@@ -2,6 +2,10 @@
 
 import threading
 import uuid
+import json
+import math
+import os
+import tempfile
 from pathlib import Path
 
 from flask import jsonify, request, send_file
@@ -13,6 +17,7 @@ try:
         inspect_project, load_project_document, project_plan_path, render_project,
         save_project_plan, save_uploaded_narration)
     from .contentlab.registry import describe_registry
+    from .contentlab.catalog import installed_assets
     from .contentlab.service import validate_edit_plan
     from .contentlab.transcription import (transcription_folder, transcribe_narration,
         MODELS as TRANSCRIPTION_MODELS, DETAILS as TRANSCRIPTION_DETAILS)
@@ -23,6 +28,7 @@ except ImportError:
         inspect_project, load_project_document, project_plan_path, render_project,
         save_project_plan, save_uploaded_narration)
     from contentlab.registry import describe_registry
+    from contentlab.catalog import installed_assets
     from contentlab.service import validate_edit_plan
     from contentlab.transcription import (transcription_folder, transcribe_narration,
         MODELS as TRANSCRIPTION_MODELS, DETAILS as TRANSCRIPTION_DETAILS)
@@ -30,6 +36,68 @@ except ImportError:
 
 def register_editor_routes(app, EDITOR_JOBS, EDITOR_JOBS_LOCK, EDITOR_CANCEL_EVENTS,
                            TRANSCRIPTION_JOBS, TRANSCRIPTION_JOBS_LOCK, app_module):
+    @app.route("/api/editor/visual-context", methods=["POST"])
+    def editor_visual_context():
+        data = request.get_json(silent=True) or {}
+        try:
+            root, _ = project_plan_path(data.get("projectRoot"))
+            schemas = {version: json.loads(Path(app_module.resource_path(f"schemas/contentlab.schema.v{version}.json")).read_text(encoding="utf-8"))
+                       for version in ("0.1", "0.2")}
+            builtin = installed_assets(app_module.resource_path("builtin-assets"))
+            project_assets = []
+            for path in sorted(root.rglob("*")):
+                if len(project_assets) >= 1000:
+                    break
+                if path.is_file() and root in path.resolve().parents and path.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".mp4", ".mov", ".mkv", ".webm", ".mp3", ".wav", ".flac", ".ogg", ".m4a", ".aac", ".ttf", ".otf"}:
+                    project_assets.append("project://" + path.relative_to(root).as_posix())
+            transcript_path = root / "transcript.json"
+            transcript = None
+            if transcript_path.is_file() and transcript_path.stat().st_size <= 5 * 1024 * 1024:
+                try:
+                    document = json.loads(transcript_path.read_text(encoding="utf-8-sig"))
+                    if isinstance(document, dict) and isinstance(document.get("segments"), list):
+                        transcript = [{"start": item.get("start"), "end": item.get("end"), "text": item.get("text", "")}
+                                      for item in document["segments"][:2000] if isinstance(item, dict)]
+                except (ValueError, UnicodeError):
+                    pass
+            return jsonify({"schemas": schemas, "builtin": builtin, "projectAssets": project_assets, "transcript": transcript,
+                            "plugins": describe_registry()})
+        except PlanValidationError as exc:
+            return jsonify({"error": "Projeto inválido.", "errors": exc.issues}), 422
+
+    @app.route("/api/editor/project/transcript", methods=["POST"])
+    def editor_import_transcript():
+        upload = request.files.get("file")
+        if upload is None:
+            return jsonify({"error": "Selecione transcript.json."}), 400
+        try:
+            root, _ = project_plan_path(request.form.get("projectRoot"))
+            content = upload.stream.read(5 * 1024 * 1024 + 1)
+            if len(content) > 5 * 1024 * 1024:
+                return jsonify({"error": "A transcrição excede 5 MB."}), 422
+            data = json.loads(content.decode("utf-8-sig"))
+            if not isinstance(data, dict) or not isinstance(data.get("segments"), list):
+                return jsonify({"error": "A transcrição JSON precisa conter uma lista de segmentos."}), 422
+            for item in data["segments"]:
+                if not isinstance(item, dict) or not isinstance(item.get("start"), (int, float)) or not isinstance(item.get("end"), (int, float)) or not isinstance(item.get("text"), str) or not math.isfinite(item["start"]) or not math.isfinite(item["end"]) or item["start"] < 0 or item["end"] < item["start"]:
+                    return jsonify({"error": "Segmentos da transcrição inválidos."}), 422
+            temporary = None
+            try:
+                with tempfile.NamedTemporaryFile(mode="wb", prefix=".transcript-", dir=root, delete=False) as handle:
+                    temporary = Path(handle.name)
+                    handle.write(content)
+                    handle.flush()
+                    os.fsync(handle.fileno())
+                os.replace(temporary, root / "transcript.json")
+            finally:
+                if temporary and temporary.exists():
+                    temporary.unlink()
+            return jsonify({"transcript": "transcript.json", "segments": len(data["segments"])}), 201
+        except (ValueError, UnicodeError):
+            return jsonify({"error": "Arquivo JSON de transcrição inválido."}), 422
+        except PlanValidationError as exc:
+            return jsonify({"error": "Projeto inválido.", "errors": exc.issues}), 422
+
     @app.route("/api/editor/plugins", methods=["GET"])
     def editor_plugins():
         return jsonify(describe_registry())

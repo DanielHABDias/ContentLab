@@ -118,6 +118,38 @@ html, body{
 .motion-form label{ display:grid; gap:5px; color:var(--text-dim); font-size:12px; }
 .motion-form input{ width:100%; }
 .motion-form select{ width:100%; }
+.visual-builder{ margin:18px 0; padding:20px; border:1px solid #6356a0; border-radius:14px; background:linear-gradient(145deg,#1d2436,#171e2b); }
+.visual-builder-head,.visual-scenes-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.visual-builder-head h3{ margin:4px 0; font-size:20px; }
+.visual-builder-head p{ margin:0; }
+.visual-layout{ display:grid; grid-template-columns:minmax(0,2fr) minmax(235px,1fr); gap:18px; margin-top:14px; }
+.visual-main,.visual-transcript{ min-width:0; }
+.visual-transcript{ max-height:680px; overflow:auto; padding:14px; border:1px solid var(--border); border-radius:10px; background:#111927; }
+.visual-transcript h4,.visual-scenes-head h4{ margin:0 0 10px; }
+.visual-transcript-row{ padding:10px 0; border-top:1px solid var(--border); }
+.visual-transcript-row small{ color:#aa99ff; }
+.visual-transcript-row p{ margin:5px 0; line-height:1.5; }
+.visual-transcript-actions{ display:flex; gap:4px; flex-wrap:wrap; }
+.visual-scenes-head{ margin:16px 0 10px; }
+.visual-scene-list{ display:flex; gap:8px; overflow-x:auto; padding-bottom:8px; }
+.visual-scene{ flex:none; max-width:290px; padding:10px 12px; border:1px solid var(--border); border-radius:9px; background:var(--surface-2); color:var(--text); cursor:pointer; text-align:left; }
+.visual-scene.selected{ border-color:var(--accent); background:#302b4d; }
+.visual-global,.visual-nested{ margin:8px 0; padding:10px; border:1px solid var(--border); border-radius:9px; background:#151d2b; }
+.visual-nested summary,.visual-global summary{ cursor:pointer; font-weight:650; }
+.visual-fields{ display:grid; gap:8px; margin-top:10px; }
+.visual-property{ position:relative; }
+.visual-field{ display:grid; gap:5px; margin:8px 0; color:var(--text-dim); font-size:13px; }
+.visual-field input,.visual-field select,.visual-field textarea,.visual-add input,.visual-add select{ min-width:0; width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:7px; background:var(--surface-2); color:var(--text); font:13px var(--font-ui); }
+.visual-field input[type=checkbox]{ width:auto; justify-self:start; }
+.visual-field textarea{ min-height:75px; resize:vertical; }
+.visual-add{ display:flex; gap:7px; flex-wrap:wrap; margin:10px 0; }
+.visual-add input,.visual-add select{ width:auto; flex:1; min-width:130px; }
+.visual-array-item{ margin:10px 0; padding:10px; border-left:2px solid var(--accent); background:#1b2638; border-radius:5px; }
+.visual-remove{ border:0; background:transparent; color:#ff9da9; cursor:pointer; padding:5px; }
+.visual-grid{ display:grid; grid-template-columns:repeat(3,44px); gap:4px; margin:8px 0; }
+.visual-cell{ height:40px; border:1px solid var(--border); border-radius:5px; color:var(--text); background:#273247; cursor:pointer; }
+.visual-cell.selected{ background:#765cd3; border-color:#a28aff; }
+@media(max-width:780px){ .visual-layout{ grid-template-columns:1fr; } .visual-transcript{ max-height:300px; } }
 .motion-form label.hidden{ display:none; }
 .motion-form .motion-loop{ display:flex; align-items:center; gap:8px; }
 .motion-form .motion-loop input{ width:auto; }

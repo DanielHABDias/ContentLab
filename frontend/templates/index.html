@@ -277,6 +277,19 @@
           <button id="editorInspectAssets" class="btn btn-secondary" type="button">Listar</button>
         </div>
         <ul id="editorAssetLibrary" class="editor-list"></ul>
+        <section class="visual-builder" aria-labelledby="visualBuilderHeading">
+          <div class="visual-builder-head"><div><span class="eyebrow">EDIÇÃO SEM ESCREVER JSON</span><h3 id="visualBuilderHeading">Montagem visual do plano</h3><p class="helper-text">Adicione cenas e camadas; os campos abaixo geram o mesmo edit_plan.json usado pela IA. Intervalos sem cena ficam pretos, com a narração mantida.</p></div><button id="visualRefresh" class="btn btn-ghost btn-sm" type="button">Atualizar assets e transcrição</button></div>
+          <p id="visualMessage" class="helper-text" role="status"></p>
+          <div class="visual-layout">
+            <div class="visual-main">
+              <details class="visual-global"><summary>Configurações do projeto, narração e música</summary><div id="visualGlobalFields"></div></details>
+              <div class="visual-scenes-head"><h4>Cenas</h4><button id="visualAddScene" class="btn btn-primary btn-sm" type="button">+ Nova cena</button></div>
+              <div id="visualSceneList" class="visual-scene-list"></div>
+              <div id="visualSceneFields"></div>
+            </div>
+            <aside class="visual-transcript" aria-label="Transcrição de referência"><h4>Transcrição</h4><p class="helper-text">Use os tempos das frases para marcar início e fim da cena selecionada. Se já estiver na pasta como transcript.json, ela aparece automaticamente.</p><button id="visualImportTranscript" class="btn btn-secondary btn-sm" type="button">Carregar transcript.json</button><input id="visualTranscriptFile" class="hidden" type="file" accept=".json,application/json"><div id="visualTranscriptRows"></div></aside>
+          </div>
+        </section>
         <details class="editor-plan">
           <summary>Criar cena motion com grid 3×3</summary>
           <p class="helper-text">Gera no JSON uma cena contínua com dois assets, entrada deslizante e escala acima da célula. Use URIs como <code>project://assets/personagem.png</code>. O segundo aparece depois do atraso informado. Para sugerir seus arquivos de fundo, escolha a pasta de assets e clique em <strong>Listar</strong>.</p>
@@ -300,8 +313,8 @@
             <button id="motionAddScene" class="btn btn-secondary" type="button">Adicionar cena ao JSON</button>
           </div>
         </details>
-        <details class="editor-plan" open>
-          <summary>edit_plan.json</summary>
+        <details class="editor-plan">
+          <summary>edit_plan.json — edição direta e conferência</summary>
           <textarea id="editorPlanText" rows="16" spellcheck="false" aria-label="Conteúdo JSON do plano"></textarea>
           <div class="editor-actions">
             <button id="editorValidate" class="btn btn-secondary" type="button" disabled>Validar JSON</button>
@@ -421,5 +434,6 @@
 </div>
 
 <script src="/static/app.js"></script>
+<script src="/static/visual_editor.js"></script>
 </body>
 </html>

@@ -927,6 +927,7 @@ async function editorShowProject(data) {
     if (!res.ok) throw new Error("Plugins indisponíveis.");
     editorList("editorPlugins", Object.entries(plugins).map(([kind, names]) => ({ text: `${kind}: ${names.join(", ")}` })));
   } catch (error) { editorList("editorPlugins", [{ text: error.message, invalid: true }]); }
+  if (window.visualEditor) await window.visualEditor.load(data);
 }
 
 $("editorChooseFolder").addEventListener("click", async () => {
@@ -1036,6 +1037,7 @@ $("editorPlanText").addEventListener("input", () => {
   editorDirty = true;
   $("editorDraftState").textContent = "Alterações não salvas. Valide e salve antes do render.";
   editorBusy(editorRendering);
+  window.visualEditor?.syncFromJson();
 });
 
 let builtinBackgroundsLoaded = false;

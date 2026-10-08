@@ -235,6 +235,28 @@ então abra essa pasta no Editor automático.
 A interface chama a API Flask no mesmo endereço, portanto não há etapa de
 compilação para o frontend.
 
+### Montagem visual do edit_plan.json
+
+Na aba **Editor automático**, escolha uma pasta e crie um projeto (ou abra um
+existente). O bloco **Montagem visual do plano** edita o mesmo
+`edit_plan.json` que a IA pode gerar: **+ Nova cena** cria a próxima cena;
+selecione-a para ajustar início, fim, fundo, layout, câmera, transição e
+camadas. Em cada objeto, **+ Campo** mostra as opções disponíveis no contrato
+JSON; em listas, **+ Camada** ou **+ Item** acrescenta elementos, música,
+keyframes e outros itens. Os campos de asset sugerem os arquivos do projeto
+e os arquivos padrão instalados. O campo `z` define a ordem visual das
+camadas. Use **Validar JSON** e **Salvar plano** antes do preview.
+
+O painel lateral carrega `transcript.json` da pasta do projeto ou permite
+importá-lo. Os botões **Usar início** e **Usar fim** copiam o tempo de uma
+frase para a cena selecionada. Também é possível deixar intervalos entre
+cenas; o render os preenche com tela preta enquanto a narração continua.
+Planos 0.1 existentes podem ser ajustados e ampliados visualmente sem mudar a
+versão; projetos novos passam ao contrato 0.2 quando a primeira cena é
+adicionada. A edição textual continua
+disponível e os campos que já existem no JSON são preservados ao alterar
+outros campos pela interface.
+
 Na fase 10, o painel também cria a estrutura inicial de um projeto, importa a
 narração, lista os assets, permite cancelar um render e oferece aceleração
 NVIDIA/NVENC opcional (com fallback automático para CPU). Preview e render
