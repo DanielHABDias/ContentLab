@@ -232,26 +232,33 @@ def _audio_mix(ffmpeg, visual, narration, plan, timeline, resolved_assets, outpu
     duration = timeline.duration
     sources = []
     for item in plan.audio.get("music", []):
-        sources.append((item, resolved_assets[item["asset"]], "music", float(item["start"]), float(item["end"])))
+        sources.append((item, resolved_assets[item["asset"]], "music", float(item["start"]), float(item["end"]), True))
     for scene in timeline.scenes:
+        background = scene.background
+        if scene.background_path and background.get("asset") and background.get("muted", True) is False:
+            sources.append((background, str(scene.background_path), "background", scene.start, scene.end, bool(background.get("loop"))))
         for element in scene.elements:
             if element.type == "sfx":
-                sources.append((element.data, str(element.asset_path), "sfx", element.start, min(duration, element.start + float(element.data.get("config", {}).get("duration", 10)))))
+                sources.append((element.data, str(element.asset_path), "sfx", element.start, min(duration, element.start + float(element.data.get("config", {}).get("duration", 10))), False))
+            elif element.type in {"video", "overlay"} and element.asset_path and element.data.get("muted", True) is False:
+                sources.append((element.data, str(element.asset_path), element.type, element.start, element.end, bool(element.data.get("loop"))))
     command = [ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-i", str(visual), "-i", str(narration)]
     voice_trim = float(plan.audio.get("voice", {}).get("trimDb", 0))
     graph = [f"[1:a]apad,atrim=0:{duration},asetpts=PTS-STARTPTS,volume={voice_trim:g}dB[voice]"]
     music_labels = []
-    sfx_labels = []
+    effect_labels = []
     applied = []
     input_index = 2
-    for item, path, kind, start, end in sources:
+    media_presets = {"subtle": -12, "normal": -6, "strong": 0}
+    music_presets = {"subtle": -22, "normal": -18, "present": -12, "music_only": -6}
+    for item, path, kind, start, end, loop_source in sources:
         if end <= start or start >= duration:
             continue
-        command += (["-stream_loop", "-1"] if kind == "music" else []) + ["-i", str(path)]
+        command += (["-stream_loop", "-1"] if kind == "music" or loop_source else []) + ["-i", str(path)]
         length = min(end, duration) - start
         preset = item.get("preset", item.get("config", {}).get("preset", "normal"))
-        presets = {"music": {"subtle": -22, "normal": -18, "present": -12, "music_only": -6}, "sfx": {"subtle": -12, "normal": -6, "strong": 0}}
-        trim_db = float(item.get("trimDb", item.get("config", {}).get("trimDb", presets[kind].get(preset, presets[kind]["normal"]))))
+        preset_values = music_presets if kind == "music" else media_presets
+        trim_db = float(item.get("trimDb", item.get("config", {}).get("trimDb", preset_values.get(preset, preset_values["normal"]))))
         filters = [f"atrim=0:{length:.6f}", "asetpts=PTS-STARTPTS", "loudnorm=I=-16:TP=-1.5:LRA=11", "aresample=48000", "aformat=sample_rates=48000:channel_layouts=stereo", f"volume={trim_db:g}dB"]
         fade_in = min(float(item.get("fadeIn", item.get("config", {}).get("fadeIn", 0))), length)
         fade_out = min(float(item.get("fadeOut", item.get("config", {}).get("fadeOut", 0))), length)
@@ -263,8 +270,8 @@ def _audio_mix(ffmpeg, visual, narration, plan, timeline, resolved_assets, outpu
         filters += ["apad", f"atrim=0:{duration}"]
         label = f"audio{input_index}"
         graph.append(f"[{input_index}:a]{','.join(filters)}[{label}]")
-        (music_labels if kind == "music" else sfx_labels).append(f"[{label}]")
-        applied.append({"type": kind, "asset": item["asset"], "start": start, "end": min(end, duration), "trimDb": trim_db, "preset": preset, "normalized": True, "fadeIn": fade_in, "fadeOut": fade_out})
+        (music_labels if kind == "music" else effect_labels).append(f"[{label}]")
+        applied.append({"type": kind, "asset": item["asset"], "start": start, "end": min(end, duration), "trimDb": trim_db, "preset": preset, "normalized": True, "fadeIn": fade_in, "fadeOut": fade_out, "loop": bool(loop_source)})
         input_index += 1
     mix_labels = []
     ducking = plan.audio.get("ducking", {})
@@ -286,7 +293,7 @@ def _audio_mix(ffmpeg, visual, narration, plan, timeline, resolved_assets, outpu
             mix_labels = ["[voice]", "[musicbed]"]
     else:
         mix_labels = ["[voice]"]
-    mix_labels += sfx_labels
+    mix_labels += effect_labels
     graph.append("".join(mix_labels) + f"amix=inputs={len(mix_labels)}:duration=longest:normalize=0,alimiter=limit=0.95,atrim=0:{duration}[mix]")
     audio_map = "[mix]"
     command += ["-filter_complex", ";".join(graph), "-map", "0:v:0", "-map", audio_map, "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-t", str(duration), str(output)]

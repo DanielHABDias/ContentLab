@@ -60,13 +60,13 @@
         "start": {"type": "number", "minimum": 0}, "end": {"type": "number", "exclusiveMinimum": 0}, "at": {"type": "number", "minimum": 0},
         "cells": {"type": "array", "items": {"type": "integer", "minimum": 1, "maximum": 9}, "minItems": 1, "uniqueItems": true},
         "fit": {"enum": ["cover", "contain", "stretch", "smart_cover"]},
-        "box": {"$ref": "#/$defs/box"}, "animation": {"$ref": "#/$defs/animation"}, "z": {"type": "integer"}, "loop": {"type": "boolean"}, "sync": {"type": "string"},
+        "box": {"$ref": "#/$defs/box"}, "animation": {"$ref": "#/$defs/animation"}, "z": {"type": "integer"}, "loop": {"type": "boolean"}, "muted": {"type": "boolean"}, "preset": {"enum": ["subtle", "normal", "strong"]}, "trimDb": {"type": "number"}, "fadeIn": {"type": "number", "minimum": 0}, "fadeOut": {"type": "number", "minimum": 0}, "sync": {"type": "string"},
         "emphasis": {"type": "array", "items": {"type": "string"}}, "range": {"$ref": "#/$defs/timeRange"}, "config": {"type": "object"},
         "id": {"type": "string", "minLength": 1}, "transform": {"$ref": "#/$defs/transform"}, "keyframes": {"type": "array", "items": {"$ref": "#/$defs/keyframe"}}
       },
       "additionalProperties": false
     },
-    "background": {"type": "object", "properties": {"color": {"type": "string"}, "asset": {"type": "string"}, "fit": {"enum": ["cover", "contain", "stretch"]}, "loop": {"type": "boolean"}}, "additionalProperties": false},
+    "background": {"type": "object", "properties": {"color": {"type": "string"}, "asset": {"type": "string"}, "fit": {"enum": ["cover", "contain", "stretch"]}, "loop": {"type": "boolean"}, "muted": {"type": "boolean"}, "preset": {"enum": ["subtle", "normal", "strong"]}, "trimDb": {"type": "number"}, "fadeIn": {"type": "number", "minimum": 0}, "fadeOut": {"type": "number", "minimum": 0}}, "additionalProperties": false},
     "layout": {"oneOf": [{"type": "string"}, {"type": "object", "properties": {"grid": {"const": "3x3"}, "preset": {"type": "string"}}, "additionalProperties": false}]},
     "scene": {
       "type": "object", "required": ["id", "start", "end", "elements"],

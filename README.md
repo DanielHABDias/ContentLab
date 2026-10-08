@@ -178,8 +178,12 @@ implementação e agora são rejeitados pela validação, em vez de virar um cor
 silencioso. `audio.music` suporta `trimDb`, `fadeIn` e `fadeOut`; elementos
 `sfx` usam `at` e podem limitar a duração via `config.duration`. Elementos
 `overlay` aplicam chroma key verde, configurável por `config.keyColor`,
-`config.similarity` e `config.blend`. O relatório lista as transições e
-camadas de áudio aplicadas, além de avisos.
+`config.similarity` e `config.blend`. Vídeos, overlays e backgrounds em vídeo
+podem preservar o áudio original com `muted: false`; `muted: true` silencia.
+Por compatibilidade, omitir `muted` mantém a mídia silenciosa. `preset`,
+`trimDb`, `fadeIn` e `fadeOut` controlam essa faixa, e `loop: true` repete
+também o áudio. O relatório lista as transições e camadas de áudio aplicadas,
+além de avisos.
 
 Na fase 8, `audio.sourceCuts` representa as regiões **mantidas** do áudio
 original, em segundos, ordenadas e sem sobreposição. O renderer as une em

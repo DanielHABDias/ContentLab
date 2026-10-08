@@ -45,16 +45,21 @@ e a câmera se desloca sobre ele. Para mudar de fundo, inicie outra cena.
 O nome do arquivo, a extensão e as maiúsculas/minúsculas precisam corresponder
 ao disco (especialmente no Linux). Use `/` nos URIs também no Windows.
 `sources.assets` é apenas informativo: não completa automaticamente os URIs.
-`z` crescente desenha a camada por cima. O áudio de elementos `video` não
-entra no mix; use `audio.music`, `sfx` e `audio.narration` para áudio.
+`z` crescente desenha a camada por cima. Vídeos, overlays e backgrounds em
+vídeo podem usar o próprio áudio: defina `muted: false`. Por compatibilidade,
+quando `muted` é omitido a mídia continua silenciosa. `preset` (`subtle`,
+`normal`, `strong`), `trimDb`, `fadeIn` e `fadeOut` controlam o ganho e os
+fades dessa faixa. `muted: true` silencia explicitamente. O visual continua
+sendo renderizado sem áudio pelo compositor; a faixa original é adicionada
+uma única vez no mix final Python/FFmpeg.
 
 Tipos de `elements[]`:
 
 | Tipo | Campos principais | Comportamento |
 | --- | --- | --- |
 | `image` | `id`, `asset`, `cells`, `fit`, tempos, movimento | PNG/JPG/WebP/BMP. PNG preserva transparência. |
-| `video` | `id`, `asset`, `loop`, `cells`, `fit`, tempos, movimento | Frames visuais da fonte; sem áudio da fonte. Se acabar, mantém o último frame; `loop` repete. |
-| `overlay` | Como vídeo/imagem, `config` | Camada com chroma key. `config.keyColor` (padrão verde) e `similarity` controlam a remoção aproximada. |
+| `video` | `id`, `asset`, `loop`, `cells`, `fit`, tempos, movimento, áudio | Frames visuais da fonte. `muted: false` inclui o áudio original; `loop` repete vídeo e áudio. Se o visual acabar sem loop, mantém o último frame. |
+| `overlay` | Como vídeo/imagem, `config`, áudio | Camada com chroma key. `config.keyColor` (padrão verde) e `similarity` controlam a remoção aproximada. Em overlay de vídeo, `muted: false` preserva o áudio original. |
 | `text` | `id`, `text`, `style`, tempos, movimento | Texto fixo ou letra a letra com `reveal`; estilos registrados (`impact`, `impact_yellow`, `paper_word`, `versus_big`, `word_pop`, `anton`, `bangers`). |
 | `kinetic_text` | `id`, `text`, `sync`, `emphasis`, tempos | Uma palavra por vez. Procura a frase na transcrição; sem correspondência distribui as palavras no intervalo. |
 | `caption` | `id`, `style`, `range`, tempos | Mostra grupos de até quatro palavras da transcrição; nesta versão ainda não colore a palavra ativa como o karaoke do `0.1`. |
@@ -212,7 +217,8 @@ nenhum efeito sonoro, fonte ou mídia desse exemplo foi distribuído ainda.
 - Usar `scale: 1.2` como 120 pixels: é multiplicador, não tamanho em pixels.
 - Criar duas cenas quando a intenção é manter o mesmo plano e fundo.
 - Esquecer `id` único de cada elemento visual ou usar células não retangulares.
-- Esperar áudio do `video` ou karaoke colorido no `caption` do `0.2`.
+- Esquecer que áudio de `video`/`overlay`/background é opt-in por compatibilidade: use `muted: false`; `muted: true` silencia explicitamente.
+- Esperar karaoke colorido no `caption` do `0.2`.
 
 O renderizador de motion design compõe frames por CPU; cenas longas em alta
 resolução podem ser lentas e ocupar espaço temporário durante o render.

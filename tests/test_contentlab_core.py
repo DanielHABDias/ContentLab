@@ -121,6 +121,30 @@ class ParserTests(unittest.TestCase):
         with self.assertRaises(PlanValidationError):
             parse_edit_plan(data)
 
+    def test_media_audio_controls_are_explicit_and_scoped(self):
+        for version in ("0.1", "0.2"):
+            data = valid_plan()
+            data["version"] = version
+            data["timeline"][0]["layout"] = "fullscreen"
+            video = {"type": "video", "asset": "project://clip.mp4", "muted": False, "preset": "strong", "trimDb": -3, "fadeIn": 0.2, "fadeOut": 0.2}
+            if version == "0.2":
+                video["id"] = "clip"
+            data["timeline"][0]["elements"] = [video]
+            data["timeline"][0]["background"] = {"asset": "project://background.mp4", "muted": False, "preset": "subtle", "loop": True}
+            parsed = parse_edit_plan(data)
+            self.assertFalse(parsed.timeline[0]["elements"][0]["muted"])
+            self.assertFalse(parsed.timeline[0]["background"]["muted"])
+
+        bad = valid_plan()
+        bad["timeline"][0]["elements"] = [{"type": "image", "asset": "project://images/a.png", "muted": False}]
+        with self.assertRaises(PlanValidationError):
+            parse_edit_plan(bad)
+
+        bad_background = valid_plan()
+        bad_background["timeline"][0]["background"] = {"asset": "project://images/a.png", "muted": False}
+        with self.assertRaises(PlanValidationError):
+            parse_edit_plan(bad_background)
+
     def test_defaults_and_grid_compilation(self):
         timeline = compile_timeline(parse_edit_plan(valid_plan()))
         self.assertEqual((timeline.project.width, timeline.project.height), (1920, 1080))
@@ -528,6 +552,47 @@ class RendererTests(unittest.TestCase):
             self.assertTrue(any("sidechaincompress" in str(part) for command in commands for part in command))
             self.assertTrue(any("loudnorm" in str(part) for command in commands for part in command))
             self.assertTrue(any("alimiter" in str(part) for command in commands for part in command))
+
+    def test_media_audio_layers_can_be_enabled_or_muted(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "audio").mkdir()
+            (root / "assets").mkdir()
+            (root / "bin").mkdir()
+            (root / "audio" / "narration.wav").touch()
+            for name in ("background.mp4", "clip.mp4", "overlay.mp4", "muted.mp4"):
+                (root / "assets" / name).touch()
+            (root / "bin" / "ffmpeg").touch()
+            data = valid_plan()
+            data["project"]["resolution"] = {"width": 64, "height": 64}
+            data["timeline"][0]["layout"] = "fullscreen"
+            data["timeline"][0]["background"] = {
+                "asset": "project://assets/background.mp4", "loop": True,
+                "muted": False, "preset": "subtle",
+            }
+            data["timeline"][0]["elements"] = [
+                {"type": "video", "asset": "project://assets/clip.mp4", "muted": False, "trimDb": -3},
+                {"type": "overlay", "asset": "project://assets/overlay.mp4", "muted": False, "preset": "strong"},
+                {"type": "video", "asset": "project://assets/muted.mp4", "muted": True},
+            ]
+            commands = []
+
+            class Result:
+                returncode = 0
+                stderr = ""
+                stdout = ""
+
+            def fake_runner(command, **kwargs):
+                commands.append(command)
+                Path(command[-1]).touch()
+                return Result()
+
+            report = render_edit_plan(data, output_dir=root / "output", project_root=root, ffmpeg_dir=root / "bin", runner=fake_runner)
+            self.assertEqual([layer["type"] for layer in report["audioLayers"]], ["background", "video", "overlay"])
+            self.assertEqual([layer["trimDb"] for layer in report["audioLayers"]], [-12.0, -3.0, 0.0])
+            self.assertNotIn("project://assets/muted.mp4", [layer["asset"] for layer in report["audioLayers"]])
+            self.assertTrue(report["audioLayers"][0]["loop"])
+            self.assertTrue(any("amix=inputs=4" in str(part) for command in commands for part in command))
 
     def test_builds_rough_cut_and_report_with_argument_lists(self):
         with tempfile.TemporaryDirectory() as directory:

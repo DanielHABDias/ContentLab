@@ -15,6 +15,8 @@ FORMAT_DEFAULTS = {
     "youtube_short": (1080, 1920, 30.0),
     "custom": (1920, 1080, 30.0),
 }
+MEDIA_AUDIO_FIELDS = ("muted", "preset", "trimDb", "fadeIn", "fadeOut")
+IMAGE_SUFFIXES = (".png", ".jpg", ".jpeg", ".webp", ".bmp")
 
 
 def _path(parts):
@@ -129,7 +131,26 @@ def _semantic_issues(data):
         if music.get("fadeIn", 0) + music.get("fadeOut", 0) > music["end"] - music["start"]:
             issues.append({"path": f"audio.music.{index}", "message": "Fades excedem a duração da música."})
     for scene_index, scene in enumerate(data.get("timeline", [])):
+        scene_path = f"timeline.{scene_index}"
+        background = scene.get("background", {})
+        background_audio = any(key in background for key in MEDIA_AUDIO_FIELDS)
+        if background_audio:
+            asset = background.get("asset", "")
+            if not asset or asset.lower().endswith(IMAGE_SUFFIXES):
+                issues.append({"path": f"{scene_path}.background", "message": "Controles de áudio do background exigem um asset de vídeo."})
+            if background.get("fadeIn", 0) + background.get("fadeOut", 0) > scene["end"] - scene["start"]:
+                issues.append({"path": f"{scene_path}.background", "message": "Fades do áudio do background excedem a duração da cena."})
         for element_index, element in enumerate(scene.get("elements", [])):
+            media_audio = any(key in element for key in MEDIA_AUDIO_FIELDS)
+            if media_audio and element["type"] not in {"video", "overlay"}:
+                issues.append({"path": f"{scene_path}.elements.{element_index}", "message": "Controles de áudio de mídia só se aplicam a video e overlay."})
+            if media_audio and element.get("asset", "").lower().endswith(IMAGE_SUFFIXES):
+                issues.append({"path": f"{scene_path}.elements.{element_index}.asset", "message": "Controles de áudio exigem um asset de vídeo com faixa de áudio."})
+            if element["type"] in {"video", "overlay"}:
+                element_start = element.get("start", scene["start"])
+                element_end = element.get("end", scene["end"])
+                if element.get("fadeIn", 0) + element.get("fadeOut", 0) > element_end - element_start:
+                    issues.append({"path": f"{scene_path}.elements.{element_index}", "message": "Fades do áudio da mídia excedem a duração do elemento."})
             if element["type"] in {"sfx", "overlay"} and not element.get("asset"):
                 issues.append({"path": f"timeline.{scene_index}.elements.{element_index}.asset", "message": "Asset obrigatório para SFX/overlay."})
             if element["type"] == "overlay":

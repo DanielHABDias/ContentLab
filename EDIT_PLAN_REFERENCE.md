@@ -129,7 +129,7 @@ se necessário para preencher seu intervalo. O mix aplica limiter.
 | `id`, `start`, `end`, `elements` | Obrigatórios; `id` é texto não vazio, `start >= 0`, `end > start`, `elements` é array. |
 | `layout` | `fullscreen` (padrão), `left_right`, `three_columns`, `character_vs`, `nox`, `custom_grid`, `3x3`; ou objeto `{ "grid": "3x3", "preset": "nome" }`. O `preset`, quando presente, prevalece e deve ser um layout registrado. |
 | `background.color` | Cor FFmpeg, por exemplo `"#10131B"`; padrão preto. |
-| `background.asset` | URI de imagem/vídeo para fundo; `background.fit` aceita `cover`, `contain`, `stretch`; `background.loop` é booleano. |
+| `background.asset` | URI de imagem/vídeo para fundo; `background.fit` aceita `cover`, `contain`, `stretch`; `background.loop` é booleano. Fundo em vídeo aceita `muted`, `preset`, `trimDb`, `fadeIn` e `fadeOut` com a mesma semântica de mídia; áudio só entra com `muted: false`. |
 | `transitionOut` | `cut` (padrão), `fade`, `blur_left`; aplicada para a cena seguinte contígua. |
 
 `three_columns` distribui os três primeiros elementos visuais em colunas;
@@ -158,7 +158,11 @@ e `sfx`. Todos exigem `type`. Campos comuns possíveis:
 | `box` | Nome de preset ou objeto `{preset,padding,radius,shadow,background,border}`. Detalhes abaixo. |
 | `animation` | Objeto com `enter`, `idle`, `exit`; presets abaixo. |
 | `z` | Inteiro de ordenação das camadas; padrão é o índice do elemento. |
-| `loop` | Booleano; repete vídeo/overlay quando necessário. |
+| `loop` | Booleano; repete vídeo/overlay quando necessário. Para mídia com áudio habilitado, repete também a faixa de áudio. |
+| `muted` | Em `video`/`overlay`, `false` inclui o áudio embutido no mix; `true` silencia. Quando omitido, mantém o comportamento legado silencioso. |
+| `preset` | Com áudio de `video`/`overlay`: `subtle` (−12 dB), `normal` (−6 dB) ou `strong` (0 dB). |
+| `trimDb` | Ganho em dB do áudio embutido de `video`/`overlay`; substitui o ganho do `preset`. |
+| `fadeIn`, `fadeOut` | Fades do áudio embutido em segundos; não podem somar mais que a duração do elemento. |
 | `sync` | Texto opcional; em `kinetic_text`, `"transcript"` procura as palavras na transcrição; sem coincidência, distribui no intervalo. |
 | `emphasis` | Array de palavras; em `kinetic_text`, colore as palavras correspondentes. |
 | `range` | `{start,end}`; em `caption`, restringe o intervalo da legenda. |
@@ -168,12 +172,12 @@ e `sfx`. Todos exigem `type`. Campos comuns possíveis:
 
 | Tipo | Função e particularidades |
 | --- | --- |
-| `video` | Exibe vídeo do asset, como base ou camada, com `fit`, `cells`, `loop`, `box` e `animation`. O áudio do vídeo não entra no mix. |
+| `video` | Exibe vídeo do asset, como base ou camada, com `fit`, `cells`, `loop`, `box` e `animation`. O áudio embutido entra no mix somente com `muted: false`; ganho e fades usam `preset`/`trimDb`/`fadeIn`/`fadeOut`. |
 | `image` | Exibe imagem fixa com as mesmas opções visuais. |
 | `text` | Texto fixo no centro da região; estilo padrão `impact`. |
 | `kinetic_text` | Uma palavra por vez; estilo padrão `word_pop`; usa transcrição se houver correspondência ou distribuição uniforme. |
 | `caption` | Legenda karaoke gerada das palavras de `sources.transcript`; estilo padrão e único `anton_karaoke`. Requer transcrição e palavras no intervalo para exibir algo. |
-| `overlay` | Camada visual com chroma key; estilos aceitos `green_screen`, `green_screen_default`, `green_screen_soft` (a cor e sensibilidade efetivas vêm de `config`). |
+| `overlay` | Camada visual com chroma key; estilos aceitos `green_screen`, `green_screen_default`, `green_screen_soft` (a cor e sensibilidade efetivas vêm de `config`). Vídeos de overlay também podem preservar o áudio embutido com `muted: false`. |
 | `sfx` | Áudio disparado por `at`, sem camada visual; duração padrão de até 10 segundos, limitada pelo fim da timeline. |
 
 Estilos de texto aceitos: `impact`, `impact_yellow`, `word_pop`, `paper_word`,
