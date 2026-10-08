@@ -15,9 +15,9 @@
         {"t": 6.8, "x": 0.5, "y": 0.5, "scale": 1, "easing": "ease_in_out"}
       ]},
       "elements": [
-        {"id": "linha-1", "type": "text", "text": "O QUE", "style": "anton_white", "fontAsset": "project://assets/fontes/Anton-Regular.ttf", "cells": [1], "start": 0, "end": 8, "reveal": {"charactersPerSecond": 7}},
-        {"id": "linha-2", "type": "text", "text": "ACONTECEU", "style": "anton_white", "fontAsset": "project://assets/fontes/Anton-Regular.ttf", "cells": [2, 3], "start": 1.4, "end": 8, "reveal": {"charactersPerSecond": 8}},
-        {"id": "linha-3", "type": "text", "text": "NESTE PAÍS?", "style": "anton_white", "fontAsset": "project://assets/fontes/Anton-Regular.ttf", "cells": [4, 5, 6], "start": 3.3, "end": 8, "reveal": {"charactersPerSecond": 8}},
+        {"id": "linha-1", "type": "text", "text": "O QUE", "style": "anton", "textStyle": {"color": "#FFFFFF", "uppercase": true}, "cells": [1], "start": 0, "end": 8, "reveal": {"charactersPerSecond": 7}},
+        {"id": "linha-2", "type": "text", "text": "ACONTECEU", "style": "anton", "textStyle": {"color": "#FFFFFF", "uppercase": true}, "cells": [2, 3], "start": 1.4, "end": 8, "reveal": {"charactersPerSecond": 8}},
+        {"id": "linha-3", "type": "text", "text": "NESTE PAÍS?", "style": "anton", "textStyle": {"color": "#FFFFFF", "uppercase": true}, "cells": [4, 5, 6], "start": 3.3, "end": 8, "reveal": {"charactersPerSecond": 8}},
         {"type": "sfx", "asset": "builtin://sfx/digitacao.wav", "at": 0, "config": {"duration": 5, "preset": "subtle"}},
         {"type": "sfx", "asset": "builtin://sfx/whoosh.wav", "at": 5, "config": {"duration": 3, "preset": "normal"}}
       ]

@@ -1,4 +1,5 @@
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -91,6 +92,13 @@ def _semantic_issues(data):
                     issues.append({"path": f"{prefix}.elements.{j}.asset", "message": "Imagem v0.2 requer PNG, JPG, WebP ou BMP."})
                 if element["type"] in {"text", "kinetic_text"} and not element.get("text"):
                     issues.append({"path": f"{prefix}.elements.{j}.text", "message": "Texto não pode estar vazio."})
+                if element.get("textStyle"):
+                    if element["type"] not in {"text", "kinetic_text", "caption"}:
+                        issues.append({"path": f"{prefix}.elements.{j}.textStyle", "message": "Aparência tipográfica só se aplica a texto e legendas."})
+                    appearance = element["textStyle"]
+                    for color_path, value in (("color", appearance.get("color")), ("outlineColor", appearance.get("outlineColor")), ("shadow.color", (appearance.get("shadow") or {}).get("color"))):
+                        if value and (not isinstance(value, str) or not re.fullmatch(r"#[0-9A-Fa-f]{6}", value)):
+                            issues.append({"path": f"{prefix}.elements.{j}.textStyle.{color_path}", "message": "Use cor hexadecimal #RRGGBB."})
                 if element.get("reveal") and element["type"] != "text":
                     issues.append({"path": f"{prefix}.elements.{j}.reveal", "message": "Revelação letra a letra requer elemento text."})
                 if element["type"] == "caption" and not data.get("sources", {}).get("transcript"):

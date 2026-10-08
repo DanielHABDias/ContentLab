@@ -17,7 +17,7 @@ DEFAULT_REGISTRY = Registry(
     layouts=frozenset({"fullscreen", "left_right", "three_columns", "character_vs", "nox", "custom_grid", "3x3"}),
     transitions=frozenset(discover_transitions()),
     motions=frozenset({"cut", "none", "fade", "fade_out", "slide_up", "pop_in", "float_soft", "slow_zoom_in", "slow_zoom_out", "pan", "pulse_soft"}),
-    text_styles=frozenset({"impact", "impact_yellow", "word_pop", "paper_word", "versus_big", "anton_white"}),
+    text_styles=frozenset({"impact", "impact_yellow", "word_pop", "paper_word", "versus_big", "anton", "bangers"}),
     caption_styles=frozenset({"anton_karaoke"}),
     overlay_styles=frozenset({"green_screen", "green_screen_default", "green_screen_soft"}),
 )

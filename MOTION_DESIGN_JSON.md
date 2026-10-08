@@ -55,7 +55,7 @@ Tipos de `elements[]`:
 | `image` | `id`, `asset`, `cells`, `fit`, tempos, movimento | PNG/JPG/WebP/BMP. PNG preserva transparência. |
 | `video` | `id`, `asset`, `loop`, `cells`, `fit`, tempos, movimento | Frames visuais da fonte; sem áudio da fonte. Se acabar, mantém o último frame; `loop` repete. |
 | `overlay` | Como vídeo/imagem, `config` | Camada com chroma key. `config.keyColor` (padrão verde) e `similarity` controlam a remoção aproximada. |
-| `text` | `id`, `text`, `style`, tempos, movimento | Texto fixo ou letra a letra com `reveal`; estilos registrados (`impact`, `impact_yellow`, `paper_word`, `versus_big`, `word_pop`, `anton_white`). |
+| `text` | `id`, `text`, `style`, tempos, movimento | Texto fixo ou letra a letra com `reveal`; estilos registrados (`impact`, `impact_yellow`, `paper_word`, `versus_big`, `word_pop`, `anton`, `bangers`). |
 | `kinetic_text` | `id`, `text`, `sync`, `emphasis`, tempos | Uma palavra por vez. Procura a frase na transcrição; sem correspondência distribui as palavras no intervalo. |
 | `caption` | `id`, `style`, `range`, tempos | Mostra grupos de até quatro palavras da transcrição; nesta versão ainda não colore a palavra ativa como o karaoke do `0.1`. |
 | `sfx` | `asset`, `at`, `config` | Apenas áudio; não usa `transform`, `keyframes` nem câmera. |
@@ -70,10 +70,15 @@ Para escrever texto progressivamente, use `type: "text"` com
 elemento; `reveal.delay` (segundos, opcional) retarda o primeiro caractere.
 O texto completo define o tamanho e a posição desde o início: as letras não
 mudam de escala conforme aparecem. `text` continua visível até seu `end`.
-Use `style: "anton_white"` para letras brancas sem contorno. Para exigir a
-fonte Anton exata, forneça um `.ttf`/`.otf` e indique `fontAsset` com URI
-`project://` ou `builtin://`; sem esse arquivo o sistema tenta uma fonte
-instalada e usa uma substituta se não achar Anton. `fontScale` (maior que 0,
+Use `style: "anton"` para selecionar a fonte Anton; escolha a cor com
+`textStyle.color` e a caixa com `textStyle.uppercase`. Sem cor explícita, o
+renderizador usa branco como padrão, mas isso não faz parte do nome do estilo.
+Use `style: "bangers"` para Bangers com contorno preto de 4 px. Ambas as
+fontes acompanham o Content Lab; não dependem de instalação no sistema. Em
+`textStyle`, altere `fontFamily` (`Anton` ou `Bangers`), `uppercase`, `color`,
+`outlineColor`, `outlineWidth` (0–40 px) e `shadow` com `color`, `blur`,
+`offsetX` e `offsetY`. Cores usam `#RRGGBB`. `fontAsset` continua disponível
+para uma fonte própria e tem prioridade sobre a fonte do estilo. `fontScale` (maior que 0,
 até 3) multiplica o tamanho-base antes do ajuste para caber nas `cells`.
 **Não** há sintetizador de som por caractere: adicione um `sfx` de digitação
 no intervalo desejado, com um arquivo de áudio real.

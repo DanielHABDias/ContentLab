@@ -287,7 +287,11 @@ fundo](examples/motion-grid-v0.2.json) demonstra o caso; a
 mostra fundo de vídeo em loop, texto letra a letra, câmera que acompanha a
 escrita, transição com slide e blur, pop, balanço leve e SFX sincronizados. Os
 arquivos citados nesse exemplo são referências a serem fornecidas, não mídia
-inclusa. A fonte Anton exata também deve ser fornecida via `fontAsset`.
+inclusa. Anton e Bangers já vêm com o aplicativo; use `style: "anton"`
+ou `style: "bangers"`. A fonte Anton não impõe cor nem maiúsculas: escolha-as
+separadamente em `textStyle.color` e `textStyle.uppercase`. Em planos 0.2, `textStyle` permite cor, maiúsculas,
+contorno e sombra personalizados, e `reveal.charactersPerSecond` produz a
+escrita letra por letra.
 A [referência completa](MOTION_DESIGN_JSON.md) explica todos os parâmetros
 para pessoas e IAs. O [plano de ação](MOTION_DESIGN_PLAN.md) registra as
 decisões e verificações. O JSON `0.1` continua aceito.

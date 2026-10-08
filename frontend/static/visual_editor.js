@@ -11,7 +11,7 @@
     project: 'Projeto', name: 'Nome', format: 'Formato', profile: 'Perfil', resolution: 'Resolução', width: 'Largura', height: 'Altura', fps: 'Quadros por segundo', seed: 'Semente',
     sources: 'Fontes', assets: 'Pasta de assets', transcript: 'Transcrição', assetCatalog: 'Catálogo de assets', audio: 'Áudio', narration: 'Narração', sourceCuts: 'Cortes da voz', voice: 'Tratamento da voz', ducking: 'Redução automática da música', music: 'Músicas',
     start: 'Início (s)', end: 'Fim (s)', at: 'Momento (s)', id: 'Identificador', elements: 'Camadas', type: 'Tipo', asset: 'Arquivo', text: 'Texto', style: 'Estilo', fontAsset: 'Fonte (arquivo)', fontScale: 'Tamanho da fonte', reveal: 'Escrita letra a letra', charactersPerSecond: 'Letras por segundo', delay: 'Atraso (s)',
-    cells: 'Células do grid 3×3', fit: 'Enquadramento', box: 'Caixa', animation: 'Animação', enter: 'Entrada', idle: 'Enquanto visível', exit: 'Saída', enterDuration: 'Duração da entrada', exitDuration: 'Duração da saída', z: 'Camada (z)', loop: 'Repetir vídeo', sync: 'Sincronização', emphasis: 'Ênfase', range: 'Intervalo', config: 'Configurações do efeito',
+    cells: 'Células do grid 3×3', fit: 'Enquadramento', box: 'Caixa', animation: 'Animação', enter: 'Entrada', idle: 'Enquanto visível', exit: 'Saída', enterDuration: 'Duração da entrada', exitDuration: 'Duração da saída', z: 'Camada (z)', loop: 'Repetir vídeo', sync: 'Sincronização', emphasis: 'Ênfase', range: 'Intervalo', config: 'Configurações do efeito', textStyle: 'Aparência das letras', fontFamily: 'Fonte', uppercase: 'Maiúsculas', outlineColor: 'Cor do contorno', outlineWidth: 'Espessura do contorno (px)', blur: 'Desfoque da sombra', offsetX: 'Sombra horizontal', offsetY: 'Sombra vertical',
     transform: 'Posição e escala', x: 'Posição horizontal', y: 'Posição vertical', scale: 'Escala', rotation: 'Rotação', opacity: 'Opacidade', keyframes: 'Pontos da animação', t: 'Tempo na cena (s)', easing: 'Suavização', background: 'Fundo', color: 'Cor hexadecimal', layout: 'Layout', timeline: 'Cenas', transitionOut: 'Transição para próxima cena', transitionDuration: 'Duração da transição', camera: 'Câmera', shake: 'Balanço', amplitude: 'Amplitude', frequency: 'Frequência',
     preset: 'Predefinição', trimDb: 'Volume (dB)', fadeIn: 'Entrada gradual', fadeOut: 'Saída gradual', normalize: 'Normalizar', targetLufs: 'Alvo LUFS', truePeakDb: 'Pico real (dB)', highpassHz: 'Filtro grave (Hz)', enabled: 'Ativado', threshold: 'Limiar', ratio: 'Intensidade', attackMs: 'Ataque (ms)', releaseMs: 'Retorno (ms)', padding: 'Espaçamento', radius: 'Arredondamento', shadow: 'Sombra', border: 'Borda', grid: 'Grid', keyColor: 'Cor removida', similarity: 'Similaridade', blend: 'Suavidade', duration: 'Duração',
   };
@@ -24,7 +24,7 @@
     enter: ['cut', 'none', 'fade', 'pop_in', 'slide_from_left', 'slide_from_right', 'slide_up', 'slide_down'],
     idle: ['none', 'float_soft', 'pulse_soft', 'slow_zoom_in', 'slow_zoom_out', 'pan'],
     exit: ['cut', 'none', 'fade', 'fade_out', 'slide_to_left', 'slide_to_right', 'slide_to_bottom'],
-    style: ['impact', 'impact_yellow', 'word_pop', 'paper_word', 'versus_big', 'anton_white', 'anton_karaoke', 'green_screen', 'green_screen_default', 'green_screen_soft'],
+    style: ['impact', 'impact_yellow', 'word_pop', 'paper_word', 'versus_big', 'anton', 'bangers', 'anton_karaoke', 'green_screen', 'green_screen_default', 'green_screen_soft'],
     fit: ['cover', 'contain', 'stretch', 'smart_cover'],
   };
   let context = null;

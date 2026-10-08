@@ -26,6 +26,9 @@ from backend.contentlab.audio import remap_transcript
 from backend.contentlab.encoding import select_h264_encoder
 from backend.contentlab.transcription import transcribe_narration
 from backend.contentlab.motion_renderer import interpolate, _visual_state
+from backend.contentlab.motion_renderer import _element_image, _font
+from backend.contentlab.typography import bundled_font_path, appearance
+from backend.contentlab.registry import describe_registry
 from PIL import Image
 
 
@@ -43,6 +46,17 @@ def valid_plan():
 
 
 class ParserTests(unittest.TestCase):
+    def test_anton_style_keeps_color_and_case_independent(self):
+        self.assertIn("anton", describe_registry()["text_styles"])
+        self.assertNotIn("anton_white", describe_registry()["text_styles"])
+        self.assertEqual(appearance({"style": "anton"})["uppercase"], False)
+        self.assertIsNone(appearance({"style": "anton"})["color"])
+        chosen = appearance({"style": "anton", "textStyle": {"color": "#FF0000", "uppercase": True}})
+        self.assertEqual((chosen["fontFamily"], chosen["color"], chosen["uppercase"]), ("Anton", "#FF0000", True))
+        legacy = valid_plan()
+        legacy["timeline"][0]["elements"] = [{"type": "text", "text": "Teste", "style": "anton_white"}]
+        compile_timeline(parse_edit_plan(legacy))
+
     def test_storyboard_motion_contract(self):
         example = Path(__file__).resolve().parents[1] / "examples" / "motion-storyboard-v0.2.json"
         plan = parse_edit_plan(json.loads(example.read_text(encoding="utf-8")))
@@ -708,6 +722,34 @@ class NarrationTranscriptionTests(unittest.TestCase):
 
 
 class MotionTests(unittest.TestCase):
+    def test_bundled_typography_reveal_and_custom_outline_shadow(self):
+        for family in ("Anton", "Bangers"):
+            path = bundled_font_path(family)
+            self.assertTrue(path.is_file())
+            self.assertIn(family, _font(42, family=family).getname()[0])
+        element = SimpleNamespace(type="text", region=(0, 0, 640, 360), data={
+            "text": "Olá mundo", "style": "bangers", "reveal": {"charactersPerSecond": 8},
+            "textStyle": {"uppercase": True, "color": "#FFFFFF", "outlineColor": "#112233",
+                          "outlineWidth": 6, "shadow": {"color": "#000000", "blur": 8, "offsetX": 3, "offsetY": 4}},
+        })
+        shadowed = _element_image(element, 640, 360, "Olá")
+        element.data["textStyle"].pop("shadow")
+        plain = _element_image(element, 640, 360, "Olá")
+        self.assertGreater(shadowed.width, plain.width)
+        self.assertGreater(shadowed.height, plain.height)
+
+    def test_text_appearance_schema_and_color_validation(self):
+        data = valid_plan()
+        data["version"] = "0.2"
+        data["timeline"][0]["layout"] = "3x3"
+        data["timeline"][0]["elements"] = [{"id": "titulo", "type": "text", "text": "Olá", "style": "bangers",
+            "reveal": {"charactersPerSecond": 9}, "textStyle": {"fontFamily": "Bangers", "uppercase": True,
+            "outlineWidth": 6, "shadow": {"color": "#000000", "blur": 8, "offsetX": 3, "offsetY": 4}}}]
+        self.assertEqual(parse_edit_plan(data).version, "0.2")
+        data["timeline"][0]["elements"][0]["textStyle"]["shadow"]["color"] = "preto"
+        with self.assertRaises(PlanValidationError):
+            parse_edit_plan(data)
+
     def test_timed_enter_idle_exit_filters(self):
         filters = motion_filters(
             {"enter": "fade", "idle": "slow_zoom_out", "exit": "fade_out"},

@@ -149,6 +149,8 @@ e `sfx`. Todos exigem `type`. Campos comuns possíveis:
 | `asset` | URI do arquivo. Necessário para imagens, vídeos, overlays e SFX; `overlay`/`sfx` são verificados já na validação semântica. |
 | `text` | Texto exibido por `text` ou dividido em palavras por `kinetic_text`. |
 | `style` | Nome do estilo registrado para texto, legenda ou overlay. |
+| `textStyle` | No JSON 0.2, aparência opcional de `text`, `kinetic_text` ou `caption`: `fontFamily`, `uppercase`, `color`, `outlineColor`, `outlineWidth`, `shadow`. |
+| `reveal` | No JSON 0.2 e com `type: "text"`, `{ "charactersPerSecond": 8, "delay": 0 }` faz o texto aparecer letra por letra. |
 | `start`, `end` | Segundos opcionais; por padrão abrangem a cena. `end` deve ser maior que `start` quando ambos aparecem. Prefira limites dentro da cena. |
 | `at` | Segundo do disparo do `sfx`; se omitido, usa `start` ou início da cena. |
 | `cells` | Array não vazio de inteiros únicos de 1 a 9; região retangular da grade. Aplicado a imagem/vídeo e aos demais elementos pela região calculada. |
@@ -175,8 +177,21 @@ e `sfx`. Todos exigem `type`. Campos comuns possíveis:
 | `sfx` | Áudio disparado por `at`, sem camada visual; duração padrão de até 10 segundos, limitada pelo fim da timeline. |
 
 Estilos de texto aceitos: `impact`, `impact_yellow`, `word_pop`, `paper_word`,
-`versus_big`. São presets fixos de fonte/cor/contorno; o JSON não aceita
-definição livre de tipografia. Estilos de overlay são nomes registrados, mas
+`versus_big`, `anton` e `bangers`. Anton e Bangers estão embutidas no
+aplicativo. Em `0.2`, `textStyle` permite substituir a aparência do preset:
+`fontFamily` é `Anton` ou `Bangers`; `uppercase` é booleano; `color` e
+`outlineColor` usam `#RRGGBB`; `outlineWidth` vai de 0 a 40 px;
+`shadow` é opcional com `color` (`#RRGGBB`), `blur` (0–100 px), `offsetX` e
+`offsetY` (−100 a 100 px). `fontAsset` permite uma fonte própria e prevalece
+sobre `fontFamily`. `fontScale` controla o tamanho relativo. Exemplo:
+
+```json
+{"id":"titulo","type":"text","text":"O QUE ACONTECEU?","style":"anton","start":0,"end":4,"reveal":{"charactersPerSecond":8},"textStyle":{"uppercase":true,"color":"#FFFFFF","outlineWidth":0}}
+```
+
+Para Bangers com sombra e contorno: `"style":"bangers"` e
+`"textStyle":{"fontFamily":"Bangers","outlineColor":"#000000","outlineWidth":6,"shadow":{"color":"#000000","blur":8,"offsetX":3,"offsetY":4}}`.
+Estilos de overlay são nomes registrados, mas
 nesta versão não alteram os parâmetros de chroma por si só.
 
 ### Cards e animações

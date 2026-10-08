@@ -1,6 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, cancelRender, continueRender, delayRender, Img, Sequence, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {Video} from '@remotion/media';
+import {loadFont} from '@remotion/fonts';
 import type {Element, Keyframe, SceneProps, Word} from './types';
 
 const clamp = (n: number) => Math.max(0, Math.min(1, n));
@@ -33,7 +34,9 @@ const styles: Record<string, {color: string; stroke: string; strokeWidth: number
   versus_big: {color: '#ff334f', stroke: '#fff', strokeWidth: 5},
   word_pop: {color: '#fff', stroke: '#000', strokeWidth: 7},
   anton_karaoke: {color: '#fff', stroke: '#000', strokeWidth: 5},
-  anton_white: {color: '#fff', stroke: '#fff', strokeWidth: 0},
+  anton: {color: '#fff', stroke: '#fff', strokeWidth: 0},
+  anton_white: {color: '#fff', stroke: '#fff', strokeWidth: 0}, // Legacy alias.
+  bangers: {color: '#fff', stroke: '#000', strokeWidth: 4},
 };
 const visibleText = (item: Element, absolute: number, words: Word[]) => {
   if (item.type === 'text') {
@@ -117,10 +120,13 @@ const Layer = ({item, props, time, absolute, camera}: {item: Element; props: Sce
   const value = visibleText(item, absolute, props.words);
   if (!value) return null;
   const look = styles[item.data.style ?? (item.type === 'caption' ? 'anton_karaoke' : 'impact')] ?? styles.impact;
+  const appearance = item.data.textStyle ?? {};
   const fullText = String(item.data.text ?? value);
   const baseSize = Math.min(rh * 0.6, rw * 0.26) * Number(item.data.fontScale ?? 1);
   const fontSize = Math.max(12, Math.min(baseSize, rw * 0.94 / Math.max(1, Array.from(fullText).length * 0.58)));
-  return <div style={{...common, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', whiteSpace: 'pre-wrap', fontFamily: item.fontFamily ? `${item.fontFamily}, Arial, sans-serif` : item.data.style === 'anton_white' ? 'Anton, Arial, sans-serif' : 'Arial, sans-serif', fontWeight: 900, fontSize, color: look.color, WebkitTextStroke: `${look.strokeWidth}px ${look.stroke}`, paintOrder: 'stroke fill'}}>{value}</div>;
+  const shadow = appearance.shadow;
+  const uppercase = appearance.uppercase ?? (item.data.style === 'anton_white' || item.data.style === 'bangers');
+  return <div style={{...common, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', whiteSpace: 'pre-wrap', fontFamily: item.fontSrc ? `${item.fontFamily}, Arial, sans-serif` : 'Arial, sans-serif', fontWeight: item.fontSrc ? 400 : 900, fontSize, color: appearance.color ?? look.color, WebkitTextStroke: `${appearance.outlineWidth ?? look.strokeWidth}px ${appearance.outlineColor ?? look.stroke}`, paintOrder: 'stroke fill', textShadow: shadow ? `${shadow.offsetX ?? 3}px ${shadow.offsetY ?? 4}px ${shadow.blur ?? 8}px ${shadow.color ?? '#00000099'}` : undefined}}>{uppercase ? value.toLocaleUpperCase('pt-BR') : value}</div>;
 };
 
 export const Scene = (props: SceneProps) => {
@@ -130,7 +136,7 @@ export const Scene = (props: SceneProps) => {
   const [fontHandle] = React.useState(() => fonts.length ? delayRender('Carregando fontes do projeto') : null);
   React.useEffect(() => {
     if (fontHandle === null) return;
-    Promise.all(fonts.map((item) => document.fonts.load(`900 64px ${item.fontFamily}`)))
+    Promise.all(fonts.map((item) => loadFont({family: item.fontFamily!, url: staticFile(item.fontSrc!)})))
       .then(() => continueRender(fontHandle))
       .catch((error) => cancelRender(error));
   }, [fontHandle, props.scene.elements]);
@@ -152,7 +158,6 @@ export const Scene = (props: SceneProps) => {
     backgroundColor: props.scene.background.color ?? '#000',
   };
   return <AbsoluteFill style={{backgroundColor: props.scene.background.color ?? '#000', overflow: 'hidden'}}>
-    <style>{props.scene.elements.filter((item) => item.fontSrc).map((item) => `@font-face{font-family:${item.fontFamily};src:url('${staticFile(item.fontSrc!)}')}`).join('\n')}</style>
     <div style={worldStyle}>{props.scene.backgroundSrc && <Media src={props.scene.backgroundSrc} isVideo={/\.(mp4|mov|mkv|webm)$/i.test(props.scene.backgroundSrc)} loop={props.scene.background.loop} style={backgroundStyle}/>}</div>
     {props.scene.elements.map((item) => <Sequence key={item.id} from={Math.round((item.start - props.scene.start) * fps)} layout="none"><Layer item={item} props={props} time={time} absolute={absolute} camera={camera}/></Sequence>)}
   </AbsoluteFill>;

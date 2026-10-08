@@ -38,7 +38,7 @@ def compile_timeline(plan, resolved_assets=None, registry=DEFAULT_REGISTRY):
             prefix = f"timeline.{scene_index}.elements.{element_index}"
             element_type = element["type"]
             style = element.get("style")
-            if element_type in {"text", "kinetic_text"} and style and style not in registry.text_styles:
+            if element_type in {"text", "kinetic_text"} and style and style not in registry.text_styles and style != "anton_white":
                 issues.append({"path": f"{prefix}.style", "message": f"Estilo de texto desconhecido: {style}"})
             if element_type == "caption" and style and style not in registry.caption_styles:
                 issues.append({"path": f"{prefix}.style", "message": f"Estilo de legenda desconhecido: {style}"})

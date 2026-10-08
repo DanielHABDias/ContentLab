@@ -9,6 +9,7 @@ from pathlib import Path
 from .errors import RenderError
 from .remotion_runtime import REMOTION_DIR, ensure_remotion
 from .text import _phrase_words, transcript_words
+from .typography import appearance, bundled_font_path
 
 
 def _link_media(path, public, index):
@@ -40,11 +41,12 @@ def render_remotion_scene(scene, output, project, duration, work_dir, runner=sub
         data = {key: value for key, value in element.data.items() if not key.startswith("_")}
         if element.type == "kinetic_text":
             data["phraseWords"] = _phrase_words(data.get("text"), element.start, element.end, words)
+        font_path = element.data.get("_font_path") or bundled_font_path(appearance(data)["fontFamily"])
         elements.append({
             "id": element.data["id"], "type": element.type, "start": element.start,
             "end": element.end, "z": element.z, "region": list(element.region),
             "src": _link_media(element.asset_path, public, index),
-            "fontSrc": _link_media(element.data.get("_font_path"), public, f"font-{index}"),
+            "fontSrc": _link_media(font_path, public, f"font-{index}"),
             "fontFamily": f"contentlab-font-{index}",
             "data": data,
         })

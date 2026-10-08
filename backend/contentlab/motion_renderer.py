@@ -6,6 +6,7 @@ from pathlib import Path
 from PIL import Image, ImageChops, ImageColor, ImageDraw, ImageFilter, ImageFont
 
 from .text import STYLE_DEFINITIONS, _phrase_words, transcript_words
+from .typography import appearance, bundled_font_path
 from .errors import RenderCancelled
 
 
@@ -76,8 +77,8 @@ def _grid_anchor(region, width, height):
     return 0.25 + (x + cell_width / 2) / (2 * width), 0.25 + (y + cell_height / 2) / (2 * height)
 
 
-def _font(size, font_path=None):
-    for name in (font_path, "Anton-Regular.ttf", "Anton.ttf", "DejaVuSansCondensed-Bold.ttf", "DejaVuSans-Bold.ttf", "Arial.ttf"):
+def _font(size, font_path=None, family=None):
+    for name in (font_path, bundled_font_path(family), "DejaVuSansCondensed-Bold.ttf", "DejaVuSans-Bold.ttf", "Arial.ttf"):
         if not name:
             continue
         try:
@@ -93,23 +94,36 @@ def _element_image(element, width, height, text_override=None):
             picture = source.convert("RGBA")
         size = element.region[2:] if element.data.get("cells") else (round(width * 0.8), round(height * 0.8))
         return _fit(picture, size, element.data.get("fit", "contain"))
+    look = appearance(element.data)
     text = str(text_override if text_override is not None else element.data.get("text", ""))
     measure_text = str(element.data.get("text", "")) if element.data.get("reveal") else text
+    if look["uppercase"]:
+        text, measure_text = text.upper(), measure_text.upper()
     style = STYLE_DEFINITIONS.get(element.data.get("style", "impact"), STYLE_DEFINITIONS["impact"])
     limit_width, limit_height = element.region[2:]
     size = max(12, round(min(limit_height * 0.6, limit_width * 0.26) * float(element.data.get("fontScale", 1))))
-    font = _font(size, element.data.get("_font_path"))
+    font = _font(size, element.data.get("_font_path"), look["fontFamily"])
     temporary = Image.new("RGBA", (1, 1))
-    stroke = 0 if style.get("outline_width") == 0 else max(1, round(size * 0.055))
+    stroke = round(look["outlineWidth"]) if look["outlineWidth"] is not None else 0 if style.get("outline_width") == 0 else max(1, round(size * 0.055))
     bounds = ImageDraw.Draw(temporary).textbbox((0, 0), measure_text, font=font, stroke_width=stroke)
     while bounds[2] - bounds[0] > limit_width * 0.94 and size > 12:
         size = max(12, round(size * 0.85))
-        font = _font(size, element.data.get("_font_path"))
-        stroke = 0 if style.get("outline_width") == 0 else max(1, round(size * 0.055))
+        font = _font(size, element.data.get("_font_path"), look["fontFamily"])
+        stroke = round(look["outlineWidth"]) if look["outlineWidth"] is not None else 0 if style.get("outline_width") == 0 else max(1, round(size * 0.055))
         bounds = ImageDraw.Draw(temporary).textbbox((0, 0), measure_text, font=font, stroke_width=stroke)
-    image = Image.new("RGBA", (max(1, bounds[2] - bounds[0] + 8), max(1, bounds[3] - bounds[1] + 8)))
+    has_shadow = look["shadow"] is not None
+    shadow = look["shadow"] or {}
+    blur = float(shadow.get("blur", 8))
+    offset_x, offset_y = float(shadow.get("offsetX", 3)), float(shadow.get("offsetY", 4))
+    padding = max(4, math.ceil(blur * 3 + max(abs(offset_x), abs(offset_y)) + stroke)) if has_shadow else 4
+    image = Image.new("RGBA", (max(1, bounds[2] - bounds[0] + 2 * padding), max(1, bounds[3] - bounds[1] + 2 * padding)))
+    if has_shadow:
+        shadow_layer = Image.new("RGBA", image.size)
+        shadow_color = ImageColor.getrgb(shadow.get("color", "#000000")) + (255 if "color" in shadow else 153,)
+        ImageDraw.Draw(shadow_layer).text((padding - bounds[0] + offset_x, padding - bounds[1] + offset_y), text, font=font, fill=shadow_color, stroke_width=stroke, stroke_fill=shadow_color)
+        image.alpha_composite(shadow_layer.filter(ImageFilter.GaussianBlur(blur)))
     draw = ImageDraw.Draw(image)
-    draw.text((4 - bounds[0], 4 - bounds[1]), text, font=font, fill=style["primary"], stroke_width=stroke, stroke_fill=style["outline"])
+    draw.text((padding - bounds[0], padding - bounds[1]), text, font=font, fill=look["color"] or style["primary"], stroke_width=stroke, stroke_fill=look["outlineColor"] or style["outline"])
     return image
 
 

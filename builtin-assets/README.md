@@ -15,6 +15,9 @@ os nomes reais dos arquivos, inclusive maiúsculas e extensão. Subpastas em
 - `transitions/`: vídeos de transição com fundo verde; use como elemento
   `overlay` no JSON com `style: "green_screen"` e `config.keyColor`,
   `config.similarity` e `config.blend`. Não são presets de `transitionOut`.
+- `fonts/`: Anton e Bangers em TTF, com as respectivas licenças OFL. São
+  selecionadas automaticamente por `style: "anton"` e `style: "bangers"`.
+  A cor e o uso de maiúsculas são escolhas separadas em `textStyle`.
 
 Na aba **Guia do projeto**, o botão **Baixar catálogo para IA** gera um Markdown
 com a lista atual dos arquivos instalados e as referências do JSON. O catálogo

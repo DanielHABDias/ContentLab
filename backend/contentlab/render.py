@@ -158,7 +158,10 @@ def _render_segment(ffmpeg, scene, output, project, duration, runner, warnings, 
     text_event_count, text_warnings = build_scene_ass(scene, project, transcript, ass_path)
     warnings.extend(text_warnings)
     if text_event_count:
-        subtitle_filter = f"subtitles=filename='{_filter_path(ass_path)}':original_size={project.width}x{project.height}"
+        from .typography import bundled_font_path
+        fonts_dir = bundled_font_path("Anton").parent if bundled_font_path("Anton") else None
+        font_option = f":fontsdir='{_filter_path(fonts_dir)}'" if fonts_dir else ""
+        subtitle_filter = f"subtitles=filename='{_filter_path(ass_path)}':original_size={project.width}x{project.height}{font_option}"
         graph.append(f"[{current}]{subtitle_filter}[out]")
         current = "out"
     command += ["-t", str(duration), "-filter_complex", ";".join(graph), "-map", f"[{current}]"]
