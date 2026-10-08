@@ -109,6 +109,42 @@ const visibleText = (item: Element, absolute: number, words: Word[]) => {
   }
   return '';
 };
+const wrappedFontSize = (text: string, baseSize: number, width: number, height: number) => {
+  const paragraphs = String(text).split('\n');
+  const tokens = paragraphs.flatMap((line) => line.split(/\s+/).filter(Boolean));
+  const longest = tokens.reduce((best, token) => token.length > best.length ? token : best, '');
+  let size = Math.max(12, baseSize);
+  while (size > 12) {
+    const charsPerLine = Math.max(1, Math.floor(width * 0.90 / Math.max(1, size * 0.56)));
+    if (longest.length > charsPerLine) {
+      size *= 0.90;
+      continue;
+    }
+    let lines = 0;
+    for (const paragraph of paragraphs) {
+      const words = paragraph.split(/\s+/).filter(Boolean);
+      if (!words.length) {
+        lines += 1;
+        continue;
+      }
+      let used = 0;
+      lines += 1;
+      for (const word of words) {
+        const needed = word.length + (used ? 1 : 0);
+        if (used && used + needed > charsPerLine) {
+          lines += 1;
+          used = word.length;
+        } else {
+          used += needed;
+        }
+      }
+    }
+    const maxLines = Math.max(1, Math.floor(height * 0.90 / Math.max(1, size * 1.12)));
+    if (lines <= maxLines) break;
+    size *= 0.90;
+  }
+  return Math.max(12, size);
+};
 const Media = ({src, isVideo, loop, style}: {src: string; isVideo: boolean; loop?: boolean; style: React.CSSProperties}) =>
   isVideo ? <Video src={staticFile(src)} loop={loop} muted style={style}/> : <Img src={staticFile(src)} style={style}/>;
 
@@ -123,6 +159,7 @@ const Layer = ({item, props, time, absolute, camera}: {item: Element; props: Sce
   const elapsed = absolute - item.start, remaining = item.end - absolute, total = item.end - item.start;
   const enterDuration = Math.min(motion.enterDuration ?? 0.45, total);
   const exitDuration = Math.min(motion.exitDuration ?? 0.35, total);
+  let centerVisibility = 1;
   if (enterDuration && elapsed < enterDuration) {
     const p = ease(elapsed / enterDuration, 'ease_out');
     if (motion.enter === 'slide_from_left') state.x = 0.08 + (state.x - 0.08) * p;
@@ -131,6 +168,7 @@ const Layer = ({item, props, time, absolute, camera}: {item: Element; props: Sce
     if (motion.enter === 'slide_down') state.y = 0.08 + (state.y - 0.08) * p;
     if (motion.enter === 'fade' || motion.enter === 'pop_in') state.opacity *= p;
     if (motion.enter === 'pop_in') state.scale *= 0.65 + 0.35 * p + 0.13 * Math.sin(Math.PI * p);
+    if (motion.enter === 'center_reveal') centerVisibility = p;
   }
   if (exitDuration && remaining < exitDuration) {
     const p = ease(1 - remaining / exitDuration, 'ease_in');
@@ -138,6 +176,7 @@ const Layer = ({item, props, time, absolute, camera}: {item: Element; props: Sce
     if (motion.exit === 'slide_to_right') state.x += (0.92 - state.x) * p;
     if (motion.exit === 'slide_to_bottom') state.y += (0.92 - state.y) * p;
     if (motion.exit === 'fade' || motion.exit === 'fade_out') state.opacity *= 1 - p;
+    if (motion.exit === 'center_close') centerVisibility = 1 - p;
   }
   if (motion.idle === 'float_soft') state.y += 0.005 * Math.sin(elapsed * 2);
   if (motion.idle === 'wiggle_soft') {
@@ -155,10 +194,18 @@ const Layer = ({item, props, time, absolute, camera}: {item: Element; props: Sce
   const elementHeight = item.type === 'filter' ? height : item.data.cells ? rh : height * 0.8;
   const x = (state.x - camera.x) * width * 2 * camera.scale + width / 2;
   const y = (state.y - camera.y) * height * 2 * camera.scale + height / 2;
+  const half = centerVisibility * 50;
+  const feather = Math.min(2.5, Math.max(0.6, half * 0.15));
+  const leftEdge = 50 - half;
+  const rightEdge = 50 + half;
+  const centerMask = centerVisibility >= 0.999 ? undefined :
+    centerVisibility <= 0.001 ? 'linear-gradient(90deg, transparent, transparent)' :
+    `linear-gradient(90deg, transparent 0%, transparent ${Math.max(0, leftEdge - feather)}%, black ${leftEdge}%, black ${rightEdge}%, transparent ${Math.min(100, rightEdge + feather)}%, transparent 100%)`;
   const common: React.CSSProperties = {
     position: 'absolute', left: x, top: y, width: elementWidth, height: elementHeight,
     translate: '-50% -50%', scale: state.scale * camera.scale, rotate: `${state.rotation}deg`,
-    opacity: state.opacity, overflow: 'hidden',
+    opacity: centerVisibility <= 0.001 ? 0 : state.opacity, overflow: 'hidden',
+    maskImage: centerMask, WebkitMaskImage: centerMask,
     borderRadius: card ? (box.radius ?? 28) : undefined,
     background: card ? (box.background ?? 'transparent') : undefined,
     padding: card ? (box.padding ?? 20) : undefined,
@@ -268,10 +315,10 @@ const Layer = ({item, props, time, absolute, camera}: {item: Element; props: Sce
   const appearance = item.data.textStyle ?? {};
   const fullText = String(item.data.text ?? value);
   const baseSize = Math.min(rh * 0.6, rw * 0.26) * Number(item.data.fontScale ?? 1);
-  const fontSize = Math.max(12, Math.min(baseSize, rw * 0.94 / Math.max(1, Array.from(fullText).length * 0.58)));
+  const fontSize = wrappedFontSize(fullText, baseSize, rw, rh);
   const shadow = appearance.shadow;
   const uppercase = appearance.uppercase ?? (item.data.style === 'anton_white' || item.data.style === 'bangers');
-  return <div style={{...common, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', whiteSpace: 'pre-wrap', fontFamily: item.fontSrc ? `${item.fontFamily}, Arial, sans-serif` : 'Arial, sans-serif', fontWeight: item.fontSrc ? 400 : 900, fontSize, color: appearance.color ?? look.color, WebkitTextStroke: `${appearance.outlineWidth ?? look.strokeWidth}px ${appearance.outlineColor ?? look.stroke}`, paintOrder: 'stroke fill', textShadow: shadow ? `${shadow.offsetX ?? 3}px ${shadow.offsetY ?? 4}px ${shadow.blur ?? 8}px ${shadow.color ?? '#00000099'}` : undefined}}>{uppercase ? value.toLocaleUpperCase('pt-BR') : value}</div>;
+  return <div style={{...common, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', whiteSpace: 'pre-wrap', wordBreak: 'normal', overflowWrap: 'normal', hyphens: 'none', lineHeight: 1.08, fontFamily: item.fontSrc ? `${item.fontFamily}, Arial, sans-serif` : 'Arial, sans-serif', fontWeight: item.fontSrc ? 400 : 900, fontSize, color: appearance.color ?? look.color, WebkitTextStroke: `${appearance.outlineWidth ?? look.strokeWidth}px ${appearance.outlineColor ?? look.stroke}`, paintOrder: 'stroke fill', textShadow: shadow ? `${shadow.offsetX ?? 3}px ${shadow.offsetY ?? 4}px ${shadow.blur ?? 8}px ${shadow.color ?? '#00000099'}` : undefined}}>{uppercase ? value.toLocaleUpperCase('pt-BR') : value}</div>;
 };
 
 export const Scene = (props: SceneProps) => {

@@ -151,13 +151,13 @@ Campos comuns possíveis:
 | `text` | Texto exibido por `text` ou dividido em palavras por `kinetic_text`. |
 | `style` | Nome do estilo registrado para texto, legenda ou overlay. |
 | `textStyle` | No JSON 0.2, aparência opcional de `text`, `kinetic_text` ou `caption`: `fontFamily`, `uppercase`, `color`, `outlineColor`, `outlineWidth`, `shadow`. |
-| `reveal` | No JSON 0.2 e com `type: "text"`, `{ "charactersPerSecond": 8, "delay": 0 }` faz o texto aparecer letra por letra. |
+| `reveal` | No JSON 0.2 e com `type: "text"`, `{ "charactersPerSecond": 8, "delay": 0 }` faz o texto aparecer caractere por caractere; espaços também consomem a cadência. O renderer quebra linhas apenas entre palavras e reduz a fonte quando uma palavra inteira não cabe. |
 | `start`, `end` | Segundos opcionais; por padrão abrangem a cena. `end` deve ser maior que `start` quando ambos aparecem. Prefira limites dentro da cena. |
 | `at` | Segundo do disparo do `sfx`; se omitido, usa `start` ou início da cena. |
 | `cells` | Array não vazio de inteiros únicos de 1 a 9; região retangular da grade. Aplicado a imagem/vídeo e aos demais elementos pela região calculada. |
 | `fit` | `cover` (padrão), `contain`, `stretch`, `smart_cover`; este último é aceito, mas usa o mesmo comportamento de `cover` nesta versão. |
 | `box` | Nome de preset ou objeto `{preset,padding,radius,shadow,background,border}`. Detalhes abaixo. |
-| `animation` | Objeto com `enter`, `idle`, `exit`; presets abaixo. |
+| `animation` | Objeto com `enter`, `idle`, `exit`; presets abaixo. No `0.2`, `center_reveal` abre a camada do centro para as bordas e `center_close` fecha das bordas para o centro. |
 | `z` | Inteiro de ordenação das camadas; padrão é o índice do elemento. |
 | `loop` | Booleano; repete vídeo/overlay quando necessário. Para mídia com áudio habilitado, repete também a faixa de áudio. |
 | `muted` | Em `video`/`overlay`, `false` inclui o áudio embutido no mix; `true` silencia. Quando omitido, mantém o comportamento legado silencioso. |
@@ -211,6 +211,31 @@ contorno preto e timestamps por palavra. O `config` aceita
 Sem configuração, usa azul, vermelho e preto e até 7 palavras por chunk.
 O estilo `anton_karaoke` existente continua disponível e não foi alterado.
 
+### Texto longo, quebra por palavras e reveal central
+
+Em cenas `0.2`, texto fixo/revelado usa quebra de linha **entre palavras**.
+O renderer não hifeniza nem parte uma palavra para completar a linha. Se uma
+palavra inteira exceder a largura disponível, a fonte é reduzida até caber.
+Frases longas podem ocupar várias linhas dentro da região.
+
+`reveal.charactersPerSecond` continua sendo caractere por caractere, incluindo
+espaços. Isso permite sincronizar um SFX real de digitação/escrita em uma camada
+separada sem transformar o espaço em um glyph visível.
+
+Motions adicionais:
+
+- `animation.enter: "center_reveal"`: revela a camada do centro para as bordas
+  com borda suavizada;
+- `animation.exit: "center_close"`: fecha a camada das bordas para o centro.
+
+Esses motions são genéricos e podem ser usados em texto ou outras camadas
+visuais do `0.2`.
+
+Para uma frase espalhada por uma composição 3×3 com câmera, divida o texto em
+elementos por célula **somente em fronteiras de palavra** e sincronize
+`camera.keyframes` com o começo de cada fragmento. A câmera pode percorrer
+1→2→3→4→5 etc.; se um fragmento não couber em sua célula, reduza
+`fontScale` ou mova a palavra completa para a próxima célula.
 ### `kinetic_text` com `word_stack_vertical`
 
 O estilo genérico `word_stack_vertical` é exclusivo do `0.2`. Ele usa até

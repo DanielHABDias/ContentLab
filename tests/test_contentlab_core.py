@@ -26,7 +26,7 @@ from backend.contentlab.audio import remap_transcript
 from backend.contentlab.encoding import select_h264_encoder
 from backend.contentlab.transcription import transcribe_narration
 from backend.contentlab.motion_renderer import interpolate, _visual_state
-from backend.contentlab.motion_renderer import _element_image, _font
+from backend.contentlab.motion_renderer import _element_image, _font, _wrap_words
 from backend.contentlab.typography import bundled_font_path, appearance
 from backend.contentlab.registry import describe_registry
 from PIL import Image
@@ -153,6 +153,31 @@ class ParserTests(unittest.TestCase):
         with self.assertRaises(PlanValidationError):
             parse_edit_plan(bad)
 
+    def test_center_text_motions_and_word_safe_wrap(self):
+        registry = describe_registry()
+        self.assertIn("center_reveal", registry["motion_v0.2_enter"])
+        self.assertIn("center_close", registry["motion_v0.2_exit"])
+
+        data = valid_plan()
+        data["version"] = "0.2"
+        data["timeline"][0]["layout"] = "fullscreen"
+        data["timeline"][0]["elements"] = [{
+            "id": "phrase", "type": "text", "style": "anton",
+            "text": "UMA FRASE COMPLETA SEM CORTAR PALAVRAS",
+            "animation": {"enter": "center_reveal", "exit": "center_close"},
+            "reveal": {"charactersPerSecond": 12},
+        }]
+        plan = parse_edit_plan(data)
+        timeline = compile_timeline(plan)
+        element = timeline.scenes[0].elements[0]
+        self.assertLess(_visual_state(element, timeline.scenes[0], 0.05, 1920, 1080)["centerVisibility"], 1)
+        self.assertLess(_visual_state(element, timeline.scenes[0], 4.9, 1920, 1080)["centerVisibility"], 1)
+
+        font = _font(36)
+        source = "UMA PALAVRA COMPLETA"
+        wrapped = _wrap_words(source, font, 0, 130)
+        self.assertEqual(wrapped.replace("\\n", " ").split(), source.split())
+        self.assertIn("\\n", wrapped)
     def test_filter_layers_and_wiggle_soft_are_available_in_v02(self):
         registry = describe_registry()
         self.assertEqual(set(registry["filter_styles"]), {"dim", "crt_tv"})

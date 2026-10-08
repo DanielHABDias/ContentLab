@@ -88,44 +88,92 @@ def _font(size, font_path=None, family=None):
     return ImageFont.load_default(size=size)
 
 
+def _wrap_words(text, font, stroke, max_width):
+    probe = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+    lines = []
+    for paragraph in str(text).split("\n"):
+        words = paragraph.split()
+        if not words:
+            lines.append("")
+            continue
+        current = words[0]
+        for word in words[1:]:
+            candidate = current + " " + word
+            bounds = probe.textbbox((0, 0), candidate, font=font, stroke_width=stroke)
+            if bounds[2] - bounds[0] <= max_width:
+                current = candidate
+            else:
+                lines.append(current)
+                current = word
+        lines.append(current)
+    return "\n".join(lines)
+
+
 def _element_image(element, width, height, text_override=None):
     if element.type in {"image", "video", "overlay"}:
         with Image.open(element.asset_path) as source:
             picture = source.convert("RGBA")
         size = element.region[2:] if element.data.get("cells") else (round(width * 0.8), round(height * 0.8))
         return _fit(picture, size, element.data.get("fit", "contain"))
+
     look = appearance(element.data)
     text = str(text_override if text_override is not None else element.data.get("text", ""))
     measure_text = str(element.data.get("text", "")) if element.data.get("reveal") else text
     if look["uppercase"]:
         text, measure_text = text.upper(), measure_text.upper()
+
     style = STYLE_DEFINITIONS.get(element.data.get("style", "impact"), STYLE_DEFINITIONS["impact"])
     limit_width, limit_height = element.region[2:]
     size = max(12, round(min(limit_height * 0.6, limit_width * 0.26) * float(element.data.get("fontScale", 1))))
-    font = _font(size, element.data.get("_font_path"), look["fontFamily"])
-    temporary = Image.new("RGBA", (1, 1))
-    stroke = round(look["outlineWidth"]) if look["outlineWidth"] is not None else 0 if style.get("outline_width") == 0 else max(1, round(size * 0.055))
-    bounds = ImageDraw.Draw(temporary).textbbox((0, 0), measure_text, font=font, stroke_width=stroke)
-    while bounds[2] - bounds[0] > limit_width * 0.94 and size > 12:
-        size = max(12, round(size * 0.85))
-        font = _font(size, element.data.get("_font_path"), look["fontFamily"])
-        stroke = round(look["outlineWidth"]) if look["outlineWidth"] is not None else 0 if style.get("outline_width") == 0 else max(1, round(size * 0.055))
-        bounds = ImageDraw.Draw(temporary).textbbox((0, 0), measure_text, font=font, stroke_width=stroke)
+
+    def layout(value, font_size):
+        font = _font(font_size, element.data.get("_font_path"), look["fontFamily"])
+        stroke = round(look["outlineWidth"]) if look["outlineWidth"] is not None else 0 if style.get("outline_width") == 0 else max(1, round(font_size * 0.055))
+        wrapped = _wrap_words(value, font, stroke, limit_width * 0.90)
+        draw = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+        bounds = draw.multiline_textbbox((0, 0), wrapped, font=font, stroke_width=stroke, spacing=max(2, round(font_size * 0.08)), align="center")
+        return font, stroke, wrapped, bounds
+
+    font, stroke, measure_wrapped, bounds = layout(measure_text, size)
+    while size > 12 and (
+        bounds[2] - bounds[0] > limit_width * 0.94
+        or bounds[3] - bounds[1] > limit_height * 0.90
+    ):
+        next_size = max(12, round(size * 0.90))
+        if next_size == size:
+            break
+        size = next_size
+        font, stroke, measure_wrapped, bounds = layout(measure_text, size)
+
+    wrapped = _wrap_words(text, font, stroke, limit_width * 0.90)
+    draw_probe = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+    bounds = draw_probe.multiline_textbbox((0, 0), wrapped, font=font, stroke_width=stroke, spacing=max(2, round(size * 0.08)), align="center")
+
     has_shadow = look["shadow"] is not None
     shadow = look["shadow"] or {}
     blur = float(shadow.get("blur", 8))
     offset_x, offset_y = float(shadow.get("offsetX", 3)), float(shadow.get("offsetY", 4))
     padding = max(4, math.ceil(blur * 3 + max(abs(offset_x), abs(offset_y)) + stroke)) if has_shadow else 4
     image = Image.new("RGBA", (max(1, bounds[2] - bounds[0] + 2 * padding), max(1, bounds[3] - bounds[1] + 2 * padding)))
+    origin = (padding - bounds[0], padding - bounds[1])
+    line_spacing = max(2, round(size * 0.08))
+
     if has_shadow:
         shadow_layer = Image.new("RGBA", image.size)
         shadow_color = ImageColor.getrgb(shadow.get("color", "#000000")) + (255 if "color" in shadow else 153,)
-        ImageDraw.Draw(shadow_layer).text((padding - bounds[0] + offset_x, padding - bounds[1] + offset_y), text, font=font, fill=shadow_color, stroke_width=stroke, stroke_fill=shadow_color)
+        ImageDraw.Draw(shadow_layer).multiline_text(
+            (origin[0] + offset_x, origin[1] + offset_y),
+            wrapped, font=font, fill=shadow_color, stroke_width=stroke,
+            stroke_fill=shadow_color, spacing=line_spacing, align="center",
+        )
         image.alpha_composite(shadow_layer.filter(ImageFilter.GaussianBlur(blur)))
-    draw = ImageDraw.Draw(image)
-    draw.text((padding - bounds[0], padding - bounds[1]), text, font=font, fill=look["color"] or style["primary"], stroke_width=stroke, stroke_fill=look["outlineColor"] or style["outline"])
-    return image
 
+    ImageDraw.Draw(image).multiline_text(
+        origin, wrapped, font=font, fill=look["color"] or style["primary"],
+        stroke_width=stroke, stroke_fill=look["outlineColor"] or style["outline"],
+        spacing=line_spacing, align="center",
+    )
+    return image
 
 def _word_stack_image(element, words, absolute, width, height):
     state = word_stack_state(words, absolute, element.data.get("config", {}).get("transitionDuration", 0.18))
@@ -259,6 +307,7 @@ def _visual_state(element, scene, t, width, height):
     total = element.end - element.start
     enter_time = min(float(animation.get("enterDuration", 0.45)), total)
     exit_time = min(float(animation.get("exitDuration", 0.35)), total)
+    state["centerVisibility"] = 1.0
     enter = animation.get("enter", "none")
     if enter_time and elapsed < enter_time:
         progress = _ease(elapsed / enter_time, "ease_out")
@@ -275,6 +324,8 @@ def _visual_state(element, scene, t, width, height):
             state["opacity"] *= progress
         if enter == "pop_in":
             state["scale"] *= 0.65 + 0.35 * progress + 0.13 * math.sin(math.pi * progress)
+        if enter == "center_reveal":
+            state["centerVisibility"] = progress
     exit_motion = animation.get("exit", "none")
     if exit_time and remaining < exit_time:
         progress = _ease(1 - remaining / exit_time, "ease_in")
@@ -286,6 +337,8 @@ def _visual_state(element, scene, t, width, height):
             state["y"] += (0.92 - state["y"]) * progress
         elif exit_motion in {"fade", "fade_out"}:
             state["opacity"] *= 1 - progress
+        elif exit_motion == "center_close":
+            state["centerVisibility"] = 1 - progress
     idle = animation.get("idle", "none")
     if idle == "float_soft":
         state["y"] += 0.005 * math.sin(elapsed * 2)
@@ -302,6 +355,35 @@ def _visual_state(element, scene, t, width, height):
     elif idle == "pan":
         state["x"] += 0.015 * elapsed / max(total, 0.01)
     return state
+
+
+def _apply_center_visibility(image, progress):
+    progress = max(0.0, min(1.0, float(progress)))
+    if progress >= 0.999:
+        return image
+    if progress <= 0.001:
+        return Image.new("RGBA", image.size)
+
+    width, height = image.size
+    center = (width - 1) / 2
+    boundary = progress * width / 2
+    feather = max(1.0, min(width * 0.025, boundary * 0.18))
+    values = []
+    for x in range(width):
+        distance = abs(x - center)
+        if distance <= max(0, boundary - feather):
+            alpha = 255
+        elif distance <= boundary:
+            alpha = round(255 * (boundary - distance) / feather)
+        else:
+            alpha = 0
+        values.append(max(0, min(255, alpha)))
+    mask = Image.new("L", (width, 1))
+    mask.putdata(values)
+    mask = mask.resize((width, height))
+    result = image.copy()
+    result.putalpha(ImageChops.multiply(result.getchannel("A"), mask))
+    return result
 
 
 def _chroma(image, config):
@@ -483,6 +565,7 @@ def render_motion_scene(ffmpeg, scene, output, project, duration, run, work_dir,
             if element.type == "overlay":
                 image = _chroma(image.copy(), element.data.get("config", {}))
             image = _card(image, element.data.get("box"))
+            image = _apply_center_visibility(image, state.get("centerVisibility", 1.0))
             scale = state["scale"] * camera["scale"]
             image = image.resize((max(1, round(image.width * scale)), max(1, round(image.height * scale))), Image.Resampling.LANCZOS)
             if state["rotation"]:

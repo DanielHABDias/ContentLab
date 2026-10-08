@@ -291,6 +291,19 @@ filtro. PNGs estáticos também podem usar `animation.idle: "wiggle_soft"`.
 Assets de textura continuam podendo ser usados como `video` com
 `transform.opacity` reduzido quando o efeito desejado já existe em arquivo.
 
+## Texto digitado e motions pelo centro
+
+No `edit_plan 0.2`, `text` com `reveal.charactersPerSecond` revela
+caracteres — inclusive a cadência dos espaços — e agora faz quebra de linha
+somente entre palavras. Palavras não são partidas/hifenizadas para caber:
+quando necessário, o tamanho é reduzido.
+
+Também estão disponíveis os motions genéricos
+`animation.enter: "center_reveal"` e
+`animation.exit: "center_close"`, que abrem do centro para fora e fecham das
+bordas para o centro. Cenas 3×3 podem combinar vários blocos de texto com
+`camera.keyframes` para a câmera acompanhar uma frase por células sem cortar
+palavras.
 ## Pilha vertical de palavras
 
 No `edit_plan 0.2`, `kinetic_text` aceita

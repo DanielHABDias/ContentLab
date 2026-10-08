@@ -77,9 +77,9 @@ def _semantic_issues(data):
                 if element.get("start", start) < start or element.get("end", end) > end:
                     issues.append({"path": f"{prefix}.elements.{j}", "message": "Elemento deve ficar dentro da cena."})
                 allowed_motions = {
-                    "enter": {"cut", "none", "fade", "pop_in", "slide_from_left", "slide_from_right", "slide_up", "slide_down"},
+                    "enter": {"cut", "none", "fade", "pop_in", "slide_from_left", "slide_from_right", "slide_up", "slide_down", "center_reveal"},
                     "idle": {"none", "float_soft", "wiggle_soft", "pulse_soft", "slow_zoom_in", "slow_zoom_out", "pan"},
-                    "exit": {"cut", "none", "fade", "fade_out", "slide_to_left", "slide_to_right", "slide_to_bottom"},
+                    "exit": {"cut", "none", "fade", "fade_out", "slide_to_left", "slide_to_right", "slide_to_bottom", "center_close"},
                 }
                 for phase, preset in element.get("animation", {}).items():
                     if phase in {"enterDuration", "exitDuration"}:

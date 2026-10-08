@@ -153,6 +153,28 @@ Presets de slide entram a partir de fora do quadro visível. `float_soft`
 oscila levemente na vertical, `pulse_soft` na escala e `pan` na horizontal.
 Esses movimentos são intencionais, não obrigatórios em toda camada.
 
+## Texto digitado, quebra segura e abertura/fechamento central
+
+`text` com `reveal.charactersPerSecond` aparece caractere por caractere.
+Espaços fazem parte da cadência, embora naturalmente não desenhem um glyph.
+O texto `0.2` faz wrap apenas em fronteiras de palavra: não usa hifenização
+automática nem quebra uma palavra no meio. Quando uma palavra completa não
+cabe, o renderer reduz o tamanho até acomodá-la; frases maiores podem ocupar
+várias linhas.
+
+Além de fade/pop/slide, o `0.2` possui:
+
+- `center_reveal` em `animation.enter`: abre a visibilidade do centro para
+  as bordas;
+- `center_close` em `animation.exit`: fecha das bordas para o centro.
+
+As bordas da máscara recebem feather curto para evitar uma abertura dura.
+
+Para motion design de frase longa em grid, use vários elementos `text`, cada
+um em uma célula 3×3, cortando o conteúdo apenas entre palavras. Os
+`camera.keyframes` podem acompanhar os fragmentos na ordem das células. Isso
+mantém a frase legível e permite que a câmera viaje pela composição sem partir
+palavras.
 ## Câmera e continuidade
 
 `scene.camera.keyframes` aceita `t`, `x`, `y`, `scale` e `easing`. Padrão:
