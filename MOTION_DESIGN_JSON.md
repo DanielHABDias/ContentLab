@@ -31,7 +31,7 @@ e a câmera se desloca sobre ele. Para mudar de fundo, inicie outra cena.
 | Origem | Exemplo | Uso |
 | --- | --- | --- |
 | Projeto do vídeo | `project://assets/personagem.png` | Imagem, vídeo, overlay, música ou SFX privados daquele vídeo. |
-| Biblioteca do aplicativo | `builtin://backgrounds/papel.png` | Arquivo recorrente **já instalado** em `builtin-assets/`. A estrutura existe, mas nenhuma mídia foi distribuída ainda. |
+| Biblioteca do aplicativo | `builtin://backgrounds/colecao/arquivo.mp4` | Arquivo recorrente **já instalado** em `builtin-assets/`; escolha o URI exibido no seletor do editor. |
 | Cor sólida | `"background": {"color": "#182238"}` | Não requer arquivo. |
 
 O nome do arquivo, a extensão e as maiúsculas/minúsculas precisam corresponder

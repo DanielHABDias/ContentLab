@@ -263,18 +263,18 @@ mostra fundo de vídeo em loop, texto letra a letra, câmera que acompanha a
 escrita, transição com slide e blur, pop, balanço leve e SFX sincronizados. Os
 arquivos citados nesse exemplo são referências a serem fornecidas, não mídia
 inclusa. A fonte Anton exata também deve ser fornecida via `fontAsset`.
-A
-[referência completa](MOTION_DESIGN_JSON.md) explica todos os parâmetros
+A [referência completa](MOTION_DESIGN_JSON.md) explica todos os parâmetros
 para pessoas e IAs. O [plano de ação](MOTION_DESIGN_PLAN.md) registra as
 decisões e verificações. O JSON `0.1` continua aceito.
 
 ### Assets internos e assets do vídeo
 
 A biblioteca do aplicativo fica em `builtin-assets/backgrounds/`,
-`builtin-assets/music/` e `builtin-assets/sfx/`. Ela está preparada, mas ainda
-sem mídia distribuída. Referencie um arquivo interno como
-`builtin://backgrounds/papel.png`, `builtin://music/tema.mp3` ou
-`builtin://sfx/impacto.wav` **somente depois de adicioná-lo**. Arquivos
+`builtin-assets/music/` e `builtin-assets/sfx/`. Os backgrounds já instalados
+aparecem no seletor do editor; músicas e sons ainda dependem de arquivos
+adicionados. Referencie um arquivo interno como
+`builtin://backgrounds/colecao/arquivo.mp4`, `builtin://music/tema.mp3` ou
+`builtin://sfx/impacto.wav`, sempre com o caminho real. Arquivos
 exclusivos de um vídeo ficam na pasta `assets/` do projeto e usam
 `project://assets/nome.png`. Fundos sólidos usam `background.color` e não
 precisam de arquivo. Veja [o guia da biblioteca](builtin-assets/README.md).

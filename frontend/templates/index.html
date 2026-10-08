@@ -279,9 +279,19 @@
         <ul id="editorAssetLibrary" class="editor-list"></ul>
         <details class="editor-plan">
           <summary>Criar cena motion com grid 3×3</summary>
-          <p class="helper-text">Gera no JSON uma cena contínua com dois assets, entrada deslizante e escala acima da célula. Use URIs como <code>project://assets/personagem.png</code>. O segundo aparece depois do atraso informado.</p>
+          <p class="helper-text">Gera no JSON uma cena contínua com dois assets, entrada deslizante e escala acima da célula. Use URIs como <code>project://assets/personagem.png</code>. O segundo aparece depois do atraso informado. Para sugerir seus arquivos de fundo, escolha a pasta de assets e clique em <strong>Listar</strong>.</p>
           <div class="motion-form">
-            <label>Fundo (cor #RRGGBB ou URI) <input id="motionBackground" type="text" value="#182238"></label>
+            <label>Origem do fundo
+              <select id="motionBackgroundSource">
+                <option value="color">Cor sólida</option>
+                <option value="builtin">Background padrão do aplicativo</option>
+                <option value="project">Arquivo deste projeto</option>
+              </select>
+            </label>
+            <label id="motionColorField">Cor hexadecimal <input id="motionBackground" type="text" value="#182238" placeholder="#182238"></label>
+            <label id="motionBuiltinField" class="hidden">Background padrão <select id="motionBuiltinBackground"><option value="">Carregando…</option></select></label>
+            <label id="motionProjectField" class="hidden">URI do seu background <input id="motionProjectBackground" type="text" list="motionProjectBackgroundOptions" placeholder="project://assets/fundo.mp4"><datalist id="motionProjectBackgroundOptions"></datalist></label>
+            <label id="motionLoopField" class="motion-loop hidden"><input id="motionBackgroundLoop" type="checkbox" checked> Repetir vídeo até o fim da cena</label>
             <label>Imagem da esquerda <input id="motionLeftAsset" type="text" placeholder="project://assets/esquerda.png"></label>
             <label>Imagem da direita <input id="motionRightAsset" type="text" placeholder="project://assets/direita.png"></label>
             <label>Duração (segundos) <input id="motionDuration" type="number" min="1" step="0.1" value="6"></label>
@@ -336,7 +346,7 @@
       <section class="block guide-card">
         <h3>Motion design: cenas contínuas</h3>
         <p>O <code>JSON 0.2</code> permite manter o mesmo fundo (cor, imagem ou vídeo), animar PNGs, vídeos e textos em camadas e mover uma câmera virtual. O grid 3×3 define a posição-base: <code>[1,4,7]</code> é a coluna esquerda e <code>[3,6,9]</code> a direita. <code>scale: 1.2</code> aumenta 20% além das células. O <code>JSON 0.1</code> continua funcionando.</p>
-        <p>No editor, use <strong>Criar cena motion com grid 3×3</strong> para montar o caso comum sem escrever keyframes. Para controle preciso, consulte <code>MOTION_DESIGN_JSON.md</code> e <code>examples/motion-storyboard-v0.2.json</code> no repositório. O storyboard inclui fundo em loop, texto letra a letra, câmera, transição com blur e SFX. Fundos sólidos usam <code>background.color</code>; arquivos próprios usam <code>project://</code> e mídia interna usa <code>builtin://</code> depois de instalada.</p>
+        <p>No editor, use <strong>Criar cena motion com grid 3×3</strong> para montar o caso comum sem escrever keyframes. Você pode escolher uma cor hexadecimal, selecionar um fundo já instalado ou informar o URI de um arquivo próprio. Para controle preciso, consulte <code>MOTION_DESIGN_JSON.md</code> e <code>examples/motion-storyboard-v0.2.json</code> no repositório. Vídeos curtos podem ser repetidos até o fim da cena com <code>background.loop: true</code>.</p>
       </section>
       <section class="block guide-card">
         <h3>1. Organize uma pasta por vídeo</h3>

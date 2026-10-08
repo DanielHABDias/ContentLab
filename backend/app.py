@@ -55,6 +55,20 @@ def download_contentlab_skill():
     return send_file(skill_path, as_attachment=True, download_name="skillContentLabEdicao.zip", mimetype="application/zip", conditional=True)
 
 
+@app.route("/api/editor/backgrounds", methods=["GET"])
+def editor_backgrounds():
+    """List installed background media without exposing arbitrary filesystem paths."""
+    root = Path(resource_path("builtin-assets/backgrounds")).resolve()
+    allowed = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".mp4", ".mov", ".mkv", ".webm"}
+    assets = []
+    if root.is_dir():
+        for path in sorted(root.rglob("*")):
+            if path.is_file() and path.suffix.lower() in allowed and root in path.resolve().parents:
+                relative = path.relative_to(root).as_posix()
+                assets.append({"name": path.name, "uri": f"builtin://backgrounds/{relative}", "type": "video" if path.suffix.lower() in {".mp4", ".mov", ".mkv", ".webm"} else "image"})
+    return jsonify({"backgrounds": assets})
+
+
 @app.after_request
 def no_cache(response):
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"

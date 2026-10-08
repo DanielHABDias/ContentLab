@@ -1,6 +1,6 @@
 # Motion design — plano de ação
 
-Status: motor `0.2` e fluxo de edição entregues para cenas contínuas, incluindo grid 3×3, câmera, keyframes, entradas/saídas deslizantes, texto letra a letra, fundos de vídeo em loop, transição slide com blur, balanço leve de câmera, imagens, vídeos, overlays, captions, música e SFX. O contrato `0.1` continua compatível. A importação da mídia padrão do Drive ficou intencionalmente para outra etapa.
+Status: motor `0.2` e fluxo de edição entregues para cenas contínuas, incluindo grid 3×3, câmera, keyframes, entradas/saídas deslizantes, texto letra a letra, fundos de vídeo em loop, transição slide com blur, balanço leve de câmera, imagens, vídeos, overlays, captions, música e SFX. O contrato `0.1` continua compatível. A biblioteca de backgrounds já começou a ser preenchida; efeitos sonoros, músicas e arquivos numerados ainda dependem de etapas posteriores.
 
 ## Objetivo
 
