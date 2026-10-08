@@ -630,7 +630,7 @@ class NarrationTranscriptionTests(unittest.TestCase):
             project.mkdir()
             self.assertFalse((project / "edit_plan.json").exists())
             with app.test_client() as client, patch("backend.app.transcribe_narration", return_value={"transcript": "transcript.json", "segmentCount": 1, "wordCount": 2}) as transcribe:
-                response = client.post("/api/transcription/jobs", data={"projectRoot": str(project), "model": "small", "detail": "words", "language": "pt", "file": (io.BytesIO(b"audio"), "narration.wav")}, content_type="multipart/form-data")
+                response = client.post("/api/transcription/jobs", data={"projectRoot": str(project), "model": "medium", "detail": "words", "language": "pt", "file": (io.BytesIO(b"audio"), "narration.wav")}, content_type="multipart/form-data")
                 self.assertEqual(response.status_code, 202)
                 job_id = response.get_json()["jobId"]
                 for _ in range(100):
@@ -640,6 +640,7 @@ class NarrationTranscriptionTests(unittest.TestCase):
                     Event().wait(0.01)
                 self.assertEqual(result["status"], "done")
                 self.assertTrue(transcribe.call_args.args[1].startswith(str(project / "audio")))
+                self.assertEqual(transcribe.call_args.args[2:5], ("medium", "words", "pt"))
                 self.assertEqual(result["result"]["wordCount"], 2)
                 TRANSCRIPTION_JOBS.pop(job_id, None)
                 editor_response = client.post("/api/editor/project/narration", data={"projectRoot": str(project), "file": (io.BytesIO(b"audio"), "narration.wav")}, content_type="multipart/form-data")
@@ -671,14 +672,30 @@ class NarrationTranscriptionTests(unittest.TestCase):
                     ])
                     return iter([segment]), SimpleNamespace(language="pt", language_probability=0.99)
 
-            result = transcribe_narration(project, narration, "small", "words", "pt", model_factory=lambda *args, **kwargs: FakeModel())
+            with patch("backend.contentlab.transcription.decode_for_whisper", return_value=__import__("numpy").zeros(16000, dtype="float32")):
+                result = transcribe_narration(project, narration, "small", "words", "pt", model_factory=lambda *args, **kwargs: FakeModel())
             data = json.loads((project / "transcript.json").read_text(encoding="utf-8"))
             self.assertEqual(result["wordCount"], 2)
             self.assertEqual(data["segments"][0]["words"][0]["start"], 0.5)
             self.assertIn("[00:00:00.500 → 00:00:00.900] Olá", (project / "transcript.txt").read_text(encoding="utf-8"))
             self.assertIn("00:00:00,500 --> 00:00:01,500", (project / "transcript.srt").read_text(encoding="utf-8"))
+            self.assertEqual(calls[0][0].shape, (16000,))
             self.assertTrue(calls[0][1]["word_timestamps"])
             self.assertEqual(calls[0][1]["language"], "pt")
+
+    def test_audio_decoder_handles_real_wav_without_pyav_open(self):
+        from backend.audio_decode import decode_for_whisper
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "voice.wav"
+            with wave.open(str(source), "wb") as output:
+                output.setnchannels(1)
+                output.setsampwidth(2)
+                output.setframerate(16000)
+                output.writeframes(b"\0\0" * 16000)
+            with patch("av.open", side_effect=TypeError("open() got an unexpected keyword argument 'metadata_errors'")):
+                samples = decode_for_whisper(source)
+            self.assertEqual(samples.shape, (16000,))
+            self.assertEqual(str(samples.dtype), "float32")
 
     def test_transcription_rejects_outside_project(self):
         with tempfile.TemporaryDirectory() as directory:

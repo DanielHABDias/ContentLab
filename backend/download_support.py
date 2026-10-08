@@ -351,8 +351,14 @@ def ensure_transcript(job, url, common_opts, ffmpeg_dir, model_name="small"):
     model = WhisperModel(model_name, device="cpu", compute_type="int8")
     job["message"] = "Transcrevendo o vídeo. Na primeira vez isso pode demorar; depois ficará em cache..."
     job["indeterminate"] = True
+    try:
+        from .audio_decode import decode_for_whisper
+    except ImportError:
+        from audio_decode import decode_for_whisper
+    job["message"] = "Lendo o áudio para transcrição..."
+    audio = decode_for_whisper(entrada)
     seg_iter, info = model.transcribe(
-        entrada,
+        audio,
         beam_size=5,
         vad_filter=True,
         condition_on_previous_text=True,

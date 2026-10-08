@@ -7,6 +7,11 @@ from pathlib import Path
 
 from .errors import PlanValidationError
 
+try:
+    from ..audio_decode import decode_for_whisper
+except ImportError:  # Importação direta de contentlab no executável.
+    from audio_decode import decode_for_whisper
+
 
 def transcription_folder(directory):
     """A transcription workspace only needs an existing directory, not edit_plan.json."""
@@ -62,8 +67,11 @@ def transcribe_narration(project_root, narration, model_name="small", detail="wo
         progress("Carregando modelo de transcrição...")
     model = model_factory(model_name, device="cpu", compute_type="int8")
     if progress:
+        progress("Lendo o áudio da narração...")
+    audio = decode_for_whisper(source)
+    if progress:
         progress("Transcrevendo a narração com tempos por palavra...")
-    segments_iter, info = model.transcribe(str(source), beam_size=5, vad_filter=True, condition_on_previous_text=True, word_timestamps=True, **({"language": language} if language else {}))
+    segments_iter, info = model.transcribe(audio, beam_size=5, vad_filter=True, condition_on_previous_text=True, word_timestamps=True, **({"language": language} if language else {}))
     segments = []
     for item in segments_iter:
         text = (item.text or "").strip()
