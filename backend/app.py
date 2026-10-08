@@ -89,19 +89,19 @@ try:
     from .download_support import (
         _cache_dirs_for_key, _dir_size_bytes, _download_source_to_cache,
         _filter_transcript_segments, _valid_cache_key, _write_transcript_files,
-        cache_dir_for_url, cache_key_for_url, cache_lock, ensure_transcript,
+        cache_dir_for_url, cache_key_for_url, cache_key_from_ref, cache_lock, ensure_transcript,
         export_transcript, find_cached_source, hhmmss_to_seconds,
-        list_cached_videos, load_cache_metadata, parse_batch_text,
-        resolve_cache_dir_by_key, sanitize_filename, save_cache_metadata,
+        import_local_video_to_cache, list_cached_videos, load_cache_metadata, parse_batch_text,
+        resolve_cache_dir_by_key, sanitize_filename, save_cache_metadata, LOCAL_VIDEO_EXTENSIONS,
     )
 except ImportError:
     from download_support import (
         _cache_dirs_for_key, _dir_size_bytes, _download_source_to_cache,
         _filter_transcript_segments, _valid_cache_key, _write_transcript_files,
-        cache_dir_for_url, cache_key_for_url, cache_lock, ensure_transcript,
+        cache_dir_for_url, cache_key_for_url, cache_key_from_ref, cache_lock, ensure_transcript,
         export_transcript, find_cached_source, hhmmss_to_seconds,
-        list_cached_videos, load_cache_metadata, parse_batch_text,
-        resolve_cache_dir_by_key, sanitize_filename, save_cache_metadata,
+        import_local_video_to_cache, list_cached_videos, load_cache_metadata, parse_batch_text,
+        resolve_cache_dir_by_key, sanitize_filename, save_cache_metadata, LOCAL_VIDEO_EXTENSIONS,
     )
 
 
@@ -180,6 +180,81 @@ def delete_cache_video():
         return jsonify({"ok": True, "deleted_bytes": deleted_bytes, "deleted": deleted})
     except Exception as e:
         return jsonify({"error": f"Não consegui apagar o cache: {e}"}), 500
+
+
+@app.route("/api/choose-video", methods=["POST"])
+def choose_video():
+    """Escolhe um vídeo local sem mover ou alterar o arquivo original."""
+    extensions = " ".join(f"*{ext}" for ext in sorted(LOCAL_VIDEO_EXTENSIONS))
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+        root = tk.Tk()
+        try:
+            root.withdraw()
+            root.attributes("-topmost", True)
+            path = filedialog.askopenfilename(
+                title="Escolher vídeo local",
+                filetypes=[("Vídeos", extensions), ("Todos os arquivos", "*.*")],
+            )
+        finally:
+            root.destroy()
+        return jsonify({"path": path or None, "name": Path(path).name if path else None})
+    except Exception:
+        chooser = shutil.which("zenity") if os.name != "nt" else None
+        if chooser:
+            try:
+                result = subprocess.run(
+                    [chooser, "--file-selection", "--title=Escolher vídeo local",
+                     f"--file-filter=Vídeos | {extensions}", "--file-filter=Todos os arquivos | *"],
+                    capture_output=True, text=True, timeout=180,
+                )
+                if result.returncode == 0:
+                    path = result.stdout.strip()
+                    return jsonify({"path": path if path and Path(path).is_file() else None,
+                                    "name": Path(path).name if path else None})
+                if result.returncode == 1:
+                    return jsonify({"path": None, "name": None})
+            except (OSError, subprocess.TimeoutExpired):
+                pass
+        return jsonify({"error": "Seletor gráfico indisponível."}), 400
+
+
+def run_local_source_import(job_id, source_path):
+    job = JOBS[job_id]
+    try:
+        def ffmpeg_progress(percent, message):
+            job["percent"] = min(5, round((percent or 0) * 0.05, 1))
+            job["message"] = message
+        ffmpeg_dir = ffmpeg_helper.ensure_ffmpeg(ffmpeg_progress)
+        entry = import_local_video_to_cache(job, source_path, ffmpeg_dir)
+        job["status"] = "done"
+        job["percent"] = 100
+        job["message"] = "Vídeo local pronto no cache."
+        job["source"] = entry
+    except Exception as exc:
+        job["status"] = "error"
+        job["error"] = friendly_error(str(exc))
+
+
+@app.route("/api/local-source/import", methods=["POST"])
+def import_local_source():
+    data = request.get_json(silent=True) or {}
+    raw_path = (data.get("path") or "").strip()
+    source = Path(raw_path).expanduser()
+    if not raw_path or not source.is_file():
+        return jsonify({"error": "Selecione um arquivo de vídeo existente."}), 400
+    if source.suffix.lower() not in LOCAL_VIDEO_EXTENSIONS:
+        allowed = ", ".join(sorted(LOCAL_VIDEO_EXTENSIONS))
+        return jsonify({"error": f"Formato não suportado. Use: {allowed}."}), 400
+
+    job_id = str(uuid.uuid4())
+    JOBS[job_id] = {
+        "status": "running", "percent": 0, "message": "Preparando importação...",
+        "error": None, "filepath": None, "folder": None, "source": None,
+    }
+    threading.Thread(target=run_local_source_import, args=(job_id, str(source)), daemon=True).start()
+    return jsonify({"job_id": job_id}), 202
 
 
 @app.route("/api/info", methods=["POST"])
@@ -492,6 +567,8 @@ def download_full_and_cut(job, url, mode, start, end, folder, outtmpl, common_op
             job["message"] = "Vídeo encontrado no cache. Preparando o corte..."
             job["percent"] = 100
         else:
+            if cache_key_from_ref(url):
+                raise RuntimeError("O vídeo selecionado não existe mais no cache.")
             def hook_cache(d):
                 if d.get("status") == "downloading":
                     total = d.get("total_bytes") or d.get("total_bytes_estimate")

@@ -29,7 +29,9 @@ http://127.0.0.1:5000/visual-tests
 If Iris MCP is available, use it as the visual camera. Prefer direct
 checkpoint URLs such as `?case=word-stack` or `?case=crt-dim-png`, wait for
 `data-visual-ready=true`, capture `#visual-frame`, and inspect the actual
-pixels before reporting success.
+pixels before reporting success. For changes to the Content Lab web UI itself,
+also open `http://127.0.0.1:5000/` and inspect the affected panel with Iris;
+the renderer fixture page does not replace UI inspection.
 
 For temporal behavior, inspect multiple checkpoints or play the generated
 preview. Iris is not an audio validator; use the normal preview/render for

@@ -6,6 +6,8 @@ let selectedCacheEntry = null;
 let currentSourceMode = "youtube";
 let currentSourceUrl = "";
 let currentCacheKey = "";
+let selectedLocalPath = "";
+let localImportPoll = null;
 let sourceRequestId = 0;
 
 const $ = (id) => document.getElementById(id);
@@ -65,7 +67,7 @@ function formatBytes(bytes) {
 }
 
 function activeSourceUrl() {
-  if (currentSourceMode === "cache") return currentSourceUrl || "";
+  if (currentSourceMode !== "youtube") return currentSourceUrl || "";
   return $("url").value.trim();
 }
 
@@ -138,6 +140,12 @@ $("previewVideo").addEventListener("loadedmetadata", () => {
     $("videoDuration").textContent = fmt(duration);
     setupSlider();
   }
+});
+
+$("previewVideo").addEventListener("error", () => {
+  if (!videoLoaded || fastToggle?.checked) return;
+  $("previewVideo").classList.add("hidden");
+  $("previewError").classList.remove("hidden");
 });
 
 // ---------- slider ----------
@@ -235,7 +243,7 @@ fastToggle.addEventListener("change", () => {
   applyFastModeUI();
   // se desligou o modo rápido com um vídeo já carregado, busca a prévia agora
   if (!fastToggle.checked && videoLoaded) {
-    if (currentSourceMode === "cache" && currentCacheKey) loadCachedPreview(currentCacheKey);
+    if (currentCacheKey) loadCachedPreview(currentCacheKey);
     else if (activeSourceUrl()) loadPreview(activeSourceUrl());
   }
 });
@@ -275,7 +283,7 @@ function updateModeUI() {
 multiToggle.addEventListener("change", updateModeUI);
 document.querySelectorAll('input[name="mode"]').forEach((el) => el.addEventListener("change", updateModeUI));
 
-// ---------- fonte: YouTube ou cache ----------
+// ---------- fonte: YouTube, cache ou arquivo local ----------
 const sourceModeInputs = document.querySelectorAll('input[name="sourceMode"]');
 
 function updateSourceModeUI() {
@@ -283,6 +291,7 @@ function updateSourceModeUI() {
   currentSourceMode = selected ? selected.value : "youtube";
   $("youtubeSourceBlock").classList.toggle("hidden", currentSourceMode !== "youtube");
   $("cacheSourceBlock").classList.toggle("hidden", currentSourceMode !== "cache");
+  $("localSourceBlock").classList.toggle("hidden", currentSourceMode !== "local");
   $("loadError").classList.add("hidden");
   resetLoadedVideo();
   if (currentSourceMode === "cache") refreshCacheList();
@@ -364,7 +373,8 @@ function updateCacheSelectionUI() {
     return;
   }
   const durationText = selectedCacheEntry.duration ? fmt(selectedCacheEntry.duration) : "duração desconhecida";
-  $("cacheDetails").textContent = `${durationText} • ${formatBytes(selectedCacheEntry.size_bytes)}${selectedCacheEntry.legacy ? " • cache antigo" : ""}`;
+  const originText = selectedCacheEntry.origin === "local" ? " • arquivo local" : "";
+  $("cacheDetails").textContent = `${durationText} • ${formatBytes(selectedCacheEntry.size_bytes)}${originText}${selectedCacheEntry.legacy ? " • cache antigo" : ""}`;
 }
 
 async function refreshCacheList(preserveKey = "") {
@@ -410,11 +420,98 @@ async function refreshCacheList(preserveKey = "") {
 $("cacheSelect").addEventListener("change", updateCacheSelectionUI);
 $("refreshCacheBtn").addEventListener("click", () => refreshCacheList($("cacheSelect").value));
 
+$("chooseLocalVideoBtn").addEventListener("click", async () => {
+  $("loadError").classList.add("hidden");
+  $("localImportStatus").textContent = "";
+  try {
+    const res = await fetch("/api/choose-video", { method: "POST" });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "Não foi possível abrir o seletor de vídeo.");
+    if (!data.path) return;
+    selectedLocalPath = data.path;
+    $("localVideoPath").value = data.path;
+    $("importLocalVideoBtn").disabled = false;
+    resetLoadedVideo();
+  } catch (err) {
+    $("loadError").textContent = err.message;
+    $("loadError").classList.remove("hidden");
+  }
+});
+
+function stopLocalImportPoll() {
+  if (localImportPoll) clearInterval(localImportPoll);
+  localImportPoll = null;
+}
+
+function pollLocalImport(jobId) {
+  stopLocalImportPoll();
+  localImportPoll = setInterval(async () => {
+    try {
+      const res = await fetch(`/api/progress/${jobId}`);
+      const job = await res.json();
+      if (!res.ok || (job.error && job.status !== "error")) throw new Error(job.error || "Falha ao consultar a importação.");
+      const pct = Number(job.percent || 0);
+      $("localImportStatus").textContent = `${job.message || "Copiando..."} ${pct ? `(${pct}%)` : ""}`;
+      if (job.status === "done") {
+        stopLocalImportPoll();
+        const entry = job.source;
+        if (!entry || !entry.key || !entry.url) throw new Error("A importação terminou sem uma fonte de cache válida.");
+        $("localImportStatus").textContent = `Pronto: ${entry.title || entry.original_name || "vídeo local"} está no cache.`;
+        $("importLocalVideoBtn").disabled = false;
+        $("importLocalVideoBtn").textContent = "Copiar para o cache";
+        const selectedMode = document.querySelector('input[name="sourceMode"]:checked')?.value;
+        if (selectedMode === "local") {
+          currentSourceMode = "local";
+          currentSourceUrl = entry.url;
+          currentCacheKey = entry.key;
+          await applyLoadedVideo(entry, "cache", entry.key);
+        }
+        refreshCacheList(entry.key);
+      } else if (job.status === "error") {
+        stopLocalImportPoll();
+        throw new Error(job.error || "Erro ao copiar o vídeo para o cache.");
+      }
+    } catch (err) {
+      stopLocalImportPoll();
+      $("importLocalVideoBtn").disabled = false;
+      $("importLocalVideoBtn").textContent = "Copiar para o cache";
+      $("loadError").textContent = err.message;
+      $("loadError").classList.remove("hidden");
+      $("localImportStatus").textContent = "";
+    }
+  }, 500);
+}
+
+$("importLocalVideoBtn").addEventListener("click", async () => {
+  if (!selectedLocalPath) return;
+  $("loadError").classList.add("hidden");
+  $("importLocalVideoBtn").disabled = true;
+  $("importLocalVideoBtn").textContent = "Copiando...";
+  $("localImportStatus").textContent = "Preparando importação...";
+  resetLoadedVideo();
+  try {
+    const res = await fetch("/api/local-source/import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: selectedLocalPath }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "Não foi possível iniciar a cópia.");
+    pollLocalImport(data.job_id);
+  } catch (err) {
+    $("importLocalVideoBtn").disabled = false;
+    $("importLocalVideoBtn").textContent = "Copiar para o cache";
+    $("localImportStatus").textContent = "";
+    $("loadError").textContent = err.message;
+    $("loadError").classList.remove("hidden");
+  }
+});
+
 $("loadCacheBtn").addEventListener("click", async () => {
   updateCacheSelectionUI();
   if (!selectedCacheEntry) return;
   if (!selectedCacheEntry.url) {
-    $("loadError").textContent = "Este cache antigo não possui a URL original salva. Abra a pasta do cache ou carregue o link uma vez para recriar os metadados.";
+    $("loadError").textContent = "Este item de cache não possui uma referência utilizável.";
     $("loadError").classList.remove("hidden");
     return;
   }

@@ -4,6 +4,8 @@ import hashlib
 import json
 import os
 import re
+import shutil
+import subprocess
 import threading
 from pathlib import Path
 
@@ -11,6 +13,8 @@ import yt_dlp
 
 CACHE_LOCKS = {}
 CACHE_LOCKS_GUARD = threading.Lock()
+CACHE_REFERENCE_SCHEME = "contentlab-cache://"
+LOCAL_VIDEO_EXTENSIONS = {".mp4", ".mkv", ".webm", ".mov", ".m4v", ".avi"}
 
 def sanitize_filename(name):
     name = name.strip()
@@ -73,6 +77,28 @@ def _valid_cache_key(key):
     return bool(re.fullmatch(r"[0-9A-Za-z_-]{1,64}", (key or "").strip()))
 
 
+def cache_ref_for_key(key):
+    key = (key or "").strip()
+    if not _valid_cache_key(key):
+        raise ValueError("Chave de cache inválida.")
+    return CACHE_REFERENCE_SCHEME + key
+
+
+def cache_key_from_ref(value):
+    value = (value or "").strip()
+    if not value.startswith(CACHE_REFERENCE_SCHEME):
+        return None
+    key = value[len(CACHE_REFERENCE_SCHEME):]
+    return key if _valid_cache_key(key) else None
+
+
+def local_cache_key(path):
+    source = Path(path).expanduser().resolve()
+    stat = source.stat()
+    identity = f"{source}|{stat.st_size}|{stat.st_mtime_ns}"
+    return "local_" + hashlib.sha256(identity.encode("utf-8")).hexdigest()[:24]
+
+
 def _dir_size_bytes(path):
     total = 0
     try:
@@ -123,6 +149,8 @@ def cached_entry(key, cache_dir):
     url = meta.get("webpage_url")
     if not url and video_id:
         url = f"https://www.youtube.com/watch?v={video_id}"
+    if not url:
+        url = cache_ref_for_key(key)
     return {
         "key": key,
         "id": video_id,
@@ -132,6 +160,8 @@ def cached_entry(key, cache_dir):
         "thumbnail": meta.get("thumbnail"),
         "size_bytes": _dir_size_bytes(cache_dir),
         "source_file": os.path.basename(source),
+        "origin": meta.get("source_origin") or ("youtube" if video_id else "cache"),
+        "original_name": meta.get("original_name"),
         "legacy": os.path.abspath(cache_dir).startswith(os.path.abspath(legacy_video_cache_root())),
     }
 
@@ -159,7 +189,10 @@ def list_cached_videos():
 
 
 def cache_key_for_url(url):
-    """Usa o ID do YouTube quando disponível; caso contrário, hash da URL."""
+    """Usa ID do YouTube, referência interna de cache ou hash da URL."""
+    cached_key = cache_key_from_ref(url)
+    if cached_key:
+        return cached_key
     video_id = extract_video_id(url)
     if video_id:
         return video_id
@@ -168,6 +201,10 @@ def cache_key_for_url(url):
 
 def cache_dir_for_url(url):
     key = cache_key_for_url(url)
+    if cache_key_from_ref(url):
+        existing = resolve_cache_dir_by_key(key)
+        if existing:
+            return existing
     current = os.path.join(video_cache_root(), key)
     legacy = os.path.join(legacy_app_data_dir(), "cache", "videos", key)
     # Se o vídeo já foi cacheado na versão antiga, reutiliza sem copiar gigabytes.
@@ -189,7 +226,7 @@ def load_cache_metadata(cache_dir):
         return {}
 
 
-def save_cache_metadata(cache_dir, info, source_path, url):
+def save_cache_metadata(cache_dir, info, source_path, url, extra=None):
     data = {
         "id": info.get("id") or extract_video_id(url),
         "title": info.get("title"),
@@ -198,6 +235,8 @@ def save_cache_metadata(cache_dir, info, source_path, url):
         "thumbnail": info.get("thumbnail"),
         "source_file": os.path.basename(source_path),
     }
+    if isinstance(extra, dict):
+        data.update(extra)
     try:
         with open(cache_metadata_path(cache_dir), "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
@@ -261,6 +300,8 @@ def _download_source_to_cache(job, url, common_opts, ffmpeg_dir):
             job["message"] = "Vídeo encontrado no cache."
             job["percent"] = 100
             return entrada, cache_dir
+        if cache_key_from_ref(url):
+            raise RuntimeError("A referência aponta para um vídeo que não existe mais no cache.")
 
         def hook_cache(d):
             if d.get("status") == "downloading":
@@ -288,6 +329,86 @@ def _download_source_to_cache(job, url, common_opts, ffmpeg_dir):
             raise RuntimeError("O download completo terminou, mas o vídeo final não foi encontrado no cache.")
         save_cache_metadata(cache_dir, info or {}, entrada, url)
         return entrada, cache_dir
+
+
+def _probe_local_duration(source_path, ffmpeg_dir):
+    ffprobe = os.path.join(ffmpeg_dir, "ffprobe.exe" if os.name == "nt" else "ffprobe")
+    result = subprocess.run(
+        [ffprobe, "-v", "error", "-show_entries", "format=duration", "-of", "json", str(source_path)],
+        capture_output=True, text=True,
+        creationflags=0x08000000 if os.name == "nt" else 0,
+    )
+    if result.returncode != 0:
+        return 0.0
+    try:
+        payload = json.loads(result.stdout or "{}")
+        return max(0.0, float(payload.get("format", {}).get("duration") or 0))
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return 0.0
+
+
+def import_local_video_to_cache(job, source_path, ffmpeg_dir):
+    """Copy a local video into the persistent cache without modifying the original."""
+    source = Path(source_path).expanduser().resolve()
+    if not source.is_file():
+        raise RuntimeError("O arquivo de vídeo selecionado não existe mais.")
+    if source.suffix.lower() not in LOCAL_VIDEO_EXTENSIONS:
+        allowed = ", ".join(sorted(LOCAL_VIDEO_EXTENSIONS))
+        raise RuntimeError(f"Formato de vídeo não suportado. Use: {allowed}.")
+
+    cache_key = local_cache_key(source)
+    cache_dir = os.path.join(video_cache_root(), cache_key)
+    os.makedirs(cache_dir, exist_ok=True)
+
+    with cache_lock(cache_key):
+        cached = find_cached_source(cache_dir)
+        if cached:
+            job["message"] = "Esse arquivo já está no cache."
+            job["percent"] = 100
+            entry = cached_entry(cache_key, cache_dir)
+            if entry:
+                return entry
+
+        destination = Path(cache_dir) / ("source" + source.suffix.lower())
+        temporary = Path(cache_dir) / (destination.name + ".importing")
+        total = max(1, source.stat().st_size)
+        copied = 0
+        job["message"] = "Copiando o vídeo para o cache..."
+        job["percent"] = 0
+        try:
+            with source.open("rb") as src, temporary.open("wb") as dst:
+                while True:
+                    chunk = src.read(8 * 1024 * 1024)
+                    if not chunk:
+                        break
+                    dst.write(chunk)
+                    copied += len(chunk)
+                    job["percent"] = round(min(99.0, copied / total * 100), 1)
+            shutil.copystat(source, temporary)
+            os.replace(temporary, destination)
+        finally:
+            if temporary.exists():
+                temporary.unlink()
+
+        duration = _probe_local_duration(destination, ffmpeg_dir)
+        ref = cache_ref_for_key(cache_key)
+        save_cache_metadata(
+            cache_dir,
+            {"title": source.stem, "duration": duration, "webpage_url": ref},
+            destination,
+            ref,
+            extra={
+                "source_origin": "local",
+                "original_name": source.name,
+                "original_path": str(source),
+            },
+        )
+        job["message"] = "Vídeo local copiado para o cache."
+        job["percent"] = 100
+        entry = cached_entry(cache_key, cache_dir)
+        if not entry:
+            raise RuntimeError("A cópia terminou, mas o vídeo não foi reconhecido no cache.")
+        return entry
 
 
 def _transcript_paths(cache_dir, model_name):

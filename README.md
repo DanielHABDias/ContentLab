@@ -3,8 +3,10 @@
 Aplicação local para baixar vídeos ou áudios do YouTube, criar cortes, gerar
 transcrições e produzir uma edição automática a partir de `edit_plan.json`,
 narração e assets. Os vídeos completos ficam em cache para serem reutilizados
-em novos cortes. O editor gera preview, render final e rough cut, mantendo
-relatórios de validação e renderização.
+em novos cortes. A fonte pode vir de um link do YouTube, de um item já em cache
+ou de um vídeo existente no computador. No caso local, o Content Lab copia o
+arquivo para o cache persistente sem mover nem alterar o original. O editor gera
+preview, render final e rough cut, mantendo relatórios de validação e renderização.
 
 ## Estrutura
 
@@ -119,6 +121,33 @@ Se o seletor gráfico de pastas não estiver disponível, digite diretamente no
 campo da interface um caminho absoluto, como `/home/usuario/Vídeos`.
 
 No Linux, o cache fica em `${XDG_CACHE_HOME:-~/.cache}/contentlab/cache/videos`.
+
+### Vídeo já existente no computador
+
+Na aba **Vídeos e cortes**, a fonte possui três modos:
+
+- **Link do YouTube** — baixa a fonte completa uma vez e mantém no cache;
+- **Vídeo em cache** — reutiliza uma fonte já preparada;
+- **Arquivo do computador** — abre o seletor nativo, copia o vídeo para o cache
+  e preserva o arquivo original.
+
+A importação local aceita `.mp4`, `.mkv`, `.webm`, `.mov`, `.m4v` e
+`.avi`. Depois da cópia, a fonte recebe uma referência interna
+`contentlab-cache://...` e passa pelo mesmo pipeline dos vídeos do YouTube:
+preview, corte único, extração de áudio, transcrição e cortes em lote.
+
+Para vários clipes, habilite **múltiplos** e use:
+
+```text
+tempo inicial;tempo final;título
+00:15:22;00:15:35;005_reencontro
+00:42:10;00:42:28;006_confronto
+```
+
+A transcrição completa, quando gerada, fica no mesmo cache da fonte e é
+reutilizada em pedidos posteriores. Os timestamps exportados continuam
+referenciando o vídeo-fonte original, o que permite montar o CSV de cortes
+diretamente a partir da localização das cenas.
 
 ## Windows
 

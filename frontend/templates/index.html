@@ -31,7 +31,7 @@
     </nav>
 
     <div id="panel-videos" class="workspace-panel" role="tabpanel" aria-labelledby="tab-videos">
-      <div class="workspace-intro"><span class="eyebrow">BIBLIOTECA DE FONTE</span><h2>Vídeos e cortes</h2><p>Carregue um link ou vídeo em cache, escolha trechos e exporte vídeo, áudio ou legenda.</p></div>
+      <div class="workspace-intro"><span class="eyebrow">BIBLIOTECA DE FONTE</span><h2>Vídeos e cortes</h2><p>Carregue um link, reutilize o cache ou importe um vídeo que já está no computador; depois escolha trechos e exporte vídeo, áudio ou legenda.</p></div>
 
     <!-- STEP 1: fonte -->
     <section class="block">
@@ -44,6 +44,10 @@
         <label class="source-tab">
           <input type="radio" name="sourceMode" value="cache">
           <span>Vídeo em cache</span>
+        </label>
+        <label class="source-tab">
+          <input type="radio" name="sourceMode" value="local">
+          <span>Arquivo do computador</span>
         </label>
       </div>
 
@@ -71,6 +75,17 @@
             <button id="deleteCacheBtn" class="btn btn-danger btn-sm" type="button" disabled>Apagar do cache</button>
           </div>
         </div>
+      </div>
+
+      <div id="localSourceBlock" class="hidden">
+        <label class="block-label source-sub-label" for="localVideoPath">Vídeo no computador</label>
+        <div class="row">
+          <input id="localVideoPath" type="text" readonly placeholder="Nenhum vídeo selecionado">
+          <button id="chooseLocalVideoBtn" class="btn btn-secondary" type="button">Escolher vídeo</button>
+          <button id="importLocalVideoBtn" class="btn btn-primary" type="button" disabled>Copiar para o cache</button>
+        </div>
+        <p class="helper-text">O arquivo original não é movido nem alterado. O Content Lab cria uma cópia no cache persistente e, depois disso, usa o mesmo fluxo de preview, transcrição, corte único e CSV em lote.</p>
+        <p id="localImportStatus" class="helper-text" role="status" aria-live="polite"></p>
       </div>
 
       <div class="trim-toggle-row fast-row">

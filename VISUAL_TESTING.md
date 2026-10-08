@@ -165,7 +165,18 @@ a palavra ativa precisa estar central e em opacidade total; anterior e próxima
 devem estar atenuadas. Não declare o teste visual aprovado sem olhar a captura.
 ```
 
-## 7. O que Iris não substitui
+## 7. Mudanças na própria interface
+
+O harness `/visual-tests` valida pixels produzidos pelo renderer. Alterações
+na interface Flask/HTML/JS também precisam ser vistas na aplicação real.
+
+Exemplo: depois de mudar a aba **Vídeos e cortes**, abra
+`http://127.0.0.1:5000/#videos` com Iris e capture o painel afetado. Confira
+alinhamento, estados disabled/hidden, textos e overflow. Para componentes que
+dependem de um seletor nativo de arquivos, unit tests validam o backend e Iris
+valida os estados da página antes/depois da ação quando possível.
+
+## 8. O que Iris não substitui
 
 Iris trabalha com pixels de um instante. Portanto:
 
