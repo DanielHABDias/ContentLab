@@ -6,6 +6,7 @@ import json
 import math
 import os
 import tempfile
+import traceback
 from pathlib import Path
 
 from flask import jsonify, request, send_file
@@ -226,6 +227,7 @@ def register_editor_routes(app, EDITOR_JOBS, EDITOR_JOBS_LOCK, EDITOR_CANCEL_EVE
         def on_progress(stage, current, total, scene_id):
             if cancel_event.is_set():
                 raise RenderCancelled("Render cancelado pelo usuário.")
+            job.update(stage=stage, current=current, total=total, sceneId=scene_id)
             if stage == "scene":
                 job.update(percent=min(85, round(current / max(total, 1) * 85)), message=f"Renderizando cena {current}/{total}: {scene_id}")
             elif stage == "narration":
@@ -245,7 +247,41 @@ def register_editor_routes(app, EDITOR_JOBS, EDITOR_JOBS_LOCK, EDITOR_CANCEL_EVE
         except RenderCancelled:
             job.update(status="cancelled", message="Render cancelado.", error=None)
         except Exception as exc:
-            job.update(status="error", message="Falha no render.", error=str(exc))
+            trace = traceback.format_exc()
+            log_dir = Path(root) / "output" / "logs"
+            log_path = log_dir / f"render-{job_id}.log"
+            try:
+                log_dir.mkdir(parents=True, exist_ok=True)
+                context = {
+                    "jobId": job_id,
+                    "mode": mode,
+                    "projectRoot": root,
+                    "stage": job.get("stage"),
+                    "sceneId": job.get("sceneId"),
+                    "current": job.get("current"),
+                    "total": job.get("total"),
+                    "percent": job.get("percent"),
+                    "hardwareAccel": hardware_accel,
+                    "errorType": type(exc).__name__,
+                    "error": str(exc),
+                }
+                log_path.write_text(
+                    "CONTENT LAB RENDER ERROR\n"
+                    + json.dumps(context, ensure_ascii=False, indent=2)
+                    + "\n\nTRACEBACK\n"
+                    + trace,
+                    encoding="utf-8",
+                )
+                job.update(errorLog=str(log_path), hasErrorLog=True)
+            except Exception as log_exc:
+                job.update(errorLog=None, hasErrorLog=False, logError=str(log_exc))
+            job.update(
+                status="error",
+                message=f"Falha no render{f' na cena {job.get(\"sceneId\")}' if job.get('sceneId') else ''}.",
+                error=str(exc),
+                errorType=type(exc).__name__,
+                tracebackTail="\n".join(trace.strip().splitlines()[-12:]),
+            )
         finally:
             with EDITOR_JOBS_LOCK:
                 EDITOR_CANCEL_EVENTS.pop(job_id, None)
@@ -273,7 +309,12 @@ def register_editor_routes(app, EDITOR_JOBS, EDITOR_JOBS_LOCK, EDITOR_CANCEL_EVE
             if data.get("revision") and data["revision"] != load_project_document(root)["revision"]:
                 return jsonify({"error": "O plano mudou no disco. Recarregue o projeto antes do render."}), 409
             job_id = uuid.uuid4().hex
-            EDITOR_JOBS[job_id] = {"status": "running", "percent": 0, "message": "Preparando render...", "error": None, "projectRoot": root, "mode": mode, "filepath": None}
+            EDITOR_JOBS[job_id] = {
+                "status": "running", "percent": 0, "message": "Preparando render...",
+                "error": None, "errorType": None, "errorLog": None, "hasErrorLog": False,
+                "tracebackTail": None, "stage": "prepare", "sceneId": None, "current": 0, "total": 0,
+                "projectRoot": root, "mode": mode, "filepath": None,
+            }
             EDITOR_CANCEL_EVENTS[job_id] = threading.Event()
         threading.Thread(target=_run_editor_job, args=(job_id, root, mode, hardware_accel), daemon=True).start()
         return jsonify({"jobId": job_id}), 202
@@ -285,6 +326,21 @@ def register_editor_routes(app, EDITOR_JOBS, EDITOR_JOBS_LOCK, EDITOR_CANCEL_EVE
         if not job:
             return jsonify({"error": "Render não encontrado."}), 404
         return jsonify(job)
+
+
+    @app.route("/api/editor/jobs/<job_id>/log", methods=["GET"])
+    def editor_job_log(job_id):
+        job = EDITOR_JOBS.get(job_id)
+        if not job:
+            return jsonify({"error": "Render não encontrado."}), 404
+        raw = job.get("errorLog")
+        if not raw:
+            return jsonify({"error": "Este render não possui log de erro."}), 404
+        path = Path(raw).resolve()
+        allowed = (Path(job["projectRoot"]) / "output" / "logs").resolve()
+        if allowed not in path.parents or not path.is_file():
+            return jsonify({"error": "Log de erro não encontrado."}), 404
+        return send_file(path, mimetype="text/plain", as_attachment=True, download_name=path.name)
 
 
     @app.route("/api/editor/jobs/<job_id>/cancel", methods=["POST"])
