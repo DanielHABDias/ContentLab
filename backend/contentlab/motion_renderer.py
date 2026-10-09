@@ -555,7 +555,20 @@ def render_motion_scene(ffmpeg, scene, output, project, duration, run, work_dir,
     for media_index, element in enumerate(scene.elements):
         if element.type in {"video", "overlay"} and element.asset_path and element.asset_path.suffix.lower() not in video_suffixes:
             media[element.data["id"]] = _media_frames(ffmpeg, element.asset_path, Path(work_dir) / f"{output.stem}-media-{media_index}", project.fps, element.end - element.start, run, element.data.get("loop", False))
-    images = {element.data["id"]: _element_image(element, width, height) for element in scene.elements if element.type in {"image", "text"} or element.type in {"video", "overlay"} and element.data["id"] not in media}
+    images = {}
+    for element in scene.elements:
+        should_prepare = (
+            element.type in {"image", "text"}
+            or element.type in {"video", "overlay"} and element.data["id"] not in media
+        )
+        if not should_prepare:
+            continue
+        try:
+            images[element.data["id"]] = _element_image(element, width, height)
+        except Exception as exc:
+            raise ValueError(
+                f"Falha ao preparar elemento {element.data['id']} ({element.type}): {exc}"
+            ) from exc
     words = transcript_words(transcript)
     phrases = {element.data["id"]: _phrase_words(element.data.get("text"), element.start, element.end, words) for element in scene.elements if element.type == "kinetic_text"}
     frames_dir = Path(work_dir) / f"{output.stem}-frames"
