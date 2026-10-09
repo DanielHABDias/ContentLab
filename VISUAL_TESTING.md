@@ -151,8 +151,8 @@ transição, chroma ou composição:
 6. comparar os pixels com a expectativa escrita no próprio harness;
 7. corrigir se necessário;
 8. repetir até a captura ficar correta;
-9. para movimento, conferir mais de um checkpoint e/ou assistir ao preview;
-10. para áudio, continuar usando Preview/render e escuta humana: Iris não ouve.
+9. para movimento, conferir mais de um checkpoint e/ou assistir ao render final;
+10. para áudio, continuar usando render final e escuta humana: Iris não ouve.
 
 Exemplo de instrução para um agente:
 
@@ -181,7 +181,7 @@ valida os estados da página antes/depois da ação quando possível.
 Iris trabalha com pixels de um instante. Portanto:
 
 - movimento precisa de checkpoints em tempos diferentes ou reprodução do MP4;
-- áudio exige Preview/render e escuta;
+- áudio exige render final e escuta;
 - sincronização fina exige timestamps e reprodução;
 - duração/codec continuam sendo verificados por FFprobe;
 - regras de schema/parser continuam sendo verificadas por testes automatizados;
