@@ -954,7 +954,6 @@ function editorError(message) {
 function editorBusy(busy) {
   editorRendering = busy;
   const canRender = !!editorProject?.validation?.valid && !editorDirty && !busy;
-  $("editorPreview").disabled = !canRender;
   $("editorFinal").disabled = !canRender;
   $("editorSave").disabled = !editorProject || !editorDirty || busy;
   $("editorValidate").disabled = !editorProject || busy;
@@ -1214,7 +1213,7 @@ $("motionAddScene").addEventListener("click", () => {
     });
     $("editorPlanText").value = JSON.stringify(plan, null, 2);
     $("editorPlanText").dispatchEvent(new Event("input"));
-    $("editorStatus").textContent = "Cena motion adicionada ao rascunho. Valide e salve o JSON antes do preview.";
+    $("editorStatus").textContent = "Cena motion adicionada ao rascunho. Valide e salve o JSON antes do render final.";
   } catch (error) { editorError(error.message); }
 });
 
@@ -1248,7 +1247,7 @@ $("editorSave").addEventListener("click", async () => {
   } catch (error) { editorError(error.message); }
 });
 
-async function startEditorRender(mode) {
+async function startEditorRender() {
   if (!editorProject || !editorProject.validation.valid || editorDirty) return;
   editorError("");
   editorBusy(true);
@@ -1262,7 +1261,7 @@ async function startEditorRender(mode) {
   try {
     const res = await fetch("/api/editor/render", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ projectRoot: editorProject.projectRoot, mode, revision: editorProject.revision, hardwareAccel: $("editorGpu").checked }),
+      body: JSON.stringify({ projectRoot: editorProject.projectRoot, mode: "final", revision: editorProject.revision, hardwareAccel: $("editorGpu").checked }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Não foi possível iniciar o render.");
@@ -1325,8 +1324,7 @@ async function startEditorRender(mode) {
   }
 }
 
-$("editorPreview").addEventListener("click", () => startEditorRender("preview"));
-$("editorFinal").addEventListener("click", () => startEditorRender("final"));
+$("editorFinal").addEventListener("click", () => startEditorRender());
 $("editorCancel").addEventListener("click", async () => {
   if (!editorJobId) return;
   $("editorCancel").disabled = true;
