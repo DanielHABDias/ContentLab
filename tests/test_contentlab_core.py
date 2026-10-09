@@ -26,7 +26,7 @@ from backend.contentlab.audio import remap_transcript
 from backend.contentlab.encoding import select_h264_encoder
 from backend.contentlab.transcription import transcribe_narration
 from backend.contentlab.motion_renderer import interpolate, _visual_state
-from backend.contentlab.motion_renderer import _element_image, _font, _wrap_words
+from backend.contentlab.motion_renderer import _element_image, _font, _wrap_words, _word_stream_image
 from backend.contentlab.typography import bundled_font_path, appearance
 from backend.contentlab.registry import describe_registry
 from PIL import Image
@@ -176,6 +176,76 @@ class ParserTests(unittest.TestCase):
         bad_direction["timeline"][0]["elements"][0]["config"]["direction"] = "sideways"
         with self.assertRaises(PlanValidationError):
             parse_edit_plan(bad_direction)
+
+    def test_vertical_word_stack_accepts_timed_phrase_items(self):
+        data = valid_plan()
+        data["version"] = "0.2"
+        data["timeline"][0]["layout"] = "fullscreen"
+        data["timeline"][0]["elements"] = [{
+            "id": "phrase-stack",
+            "type": "kinetic_text",
+            "style": "word_stack_vertical",
+            "text": "BATMAN NÃO É JUIZ BATMAN NÃO É JÚRI BATMAN NÃO É O CARRASCO",
+            "start": 0,
+            "end": 3,
+            "textStyle": {"fontFamily": "Anton", "uppercase": True, "color": "#175AE8", "outlineWidth": 0},
+            "config": {
+                "align": "left",
+                "direction": "down",
+                "items": [
+                    {"text": "BATMAN NÃO É JUIZ", "start": 0.0, "end": 1.0},
+                    {"text": "BATMAN NÃO É JÚRI", "start": 1.0, "end": 2.0},
+                    {"text": "BATMAN NÃO É O CARRASCO", "start": 2.0, "end": 3.0},
+                ],
+            },
+        }]
+        plan = parse_edit_plan(data)
+        self.assertEqual(plan.version, "0.2")
+
+        bad = json.loads(json.dumps(data))
+        bad["timeline"][0]["elements"][0]["config"]["items"][1]["start"] = 2.5
+        bad["timeline"][0]["elements"][0]["config"]["items"][2]["start"] = 2.0
+        with self.assertRaises(PlanValidationError):
+            parse_edit_plan(bad)
+
+    def test_horizontal_word_stream_contract_and_python_frame(self):
+        self.assertIn("word_stream_horizontal", describe_registry()["text_styles"])
+        look = appearance({"style": "word_stream_horizontal"})
+        self.assertEqual((look["fontFamily"], look["uppercase"]), ("Anton", True))
+
+        data = valid_plan()
+        data["version"] = "0.2"
+        data["sources"] = {"transcript": "transcript.json"}
+        data["timeline"][0]["layout"] = "fullscreen"
+        data["timeline"][0]["elements"] = [{
+            "id": "stream",
+            "type": "kinetic_text",
+            "style": "word_stream_horizontal",
+            "text": "VOCÊ SABE ME DIZER",
+            "sync": "transcript",
+            "start": 0,
+            "end": 2,
+            "fontScale": 1.5,
+            "textStyle": {"fontFamily": "Anton", "uppercase": True, "color": "#FFFFFF", "outlineWidth": 0},
+            "config": {"transitionDuration": 0.16},
+        }]
+        plan = parse_edit_plan(data)
+        timeline = compile_timeline(plan)
+        element = timeline.scenes[0].elements[0]
+        words = [
+            {"word": "VOCÊ", "start": 0.0, "end": 0.5},
+            {"word": "SABE", "start": 0.5, "end": 1.0},
+            {"word": "ME", "start": 1.0, "end": 1.4},
+            {"word": "DIZER", "start": 1.4, "end": 2.0},
+        ]
+        image = _word_stream_image(element, words, 0.65)
+        self.assertIsNotNone(image)
+        self.assertEqual(image.size, (1920, 1080))
+
+        bad = json.loads(json.dumps(data))
+        bad["timeline"][0]["elements"][0]["config"]["transitionDuration"] = 2
+        with self.assertRaises(PlanValidationError):
+            parse_edit_plan(bad)
 
     def test_center_text_motions_and_word_safe_wrap(self):
         registry = describe_registry()
