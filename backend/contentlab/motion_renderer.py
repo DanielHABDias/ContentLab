@@ -70,15 +70,22 @@ def _fit(image, size, mode="contain"):
     return canvas
 
 
-def _media_frames(ffmpeg, path, directory, fps, duration, run, loop=False):
+def _media_frames(ffmpeg, path, directory, fps, duration, run, loop=False, lossless=False):
     directory.mkdir()
     count = max(1, round(duration * fps))
+    threads = max(1, int(os.environ.get("CONTENTLAB_FFMPEG_THREADS", "2")))
+    extension = "png" if lossless else "jpg"
     command = [ffmpeg, "-hide_banner", "-loglevel", "error", "-y"]
     if loop:
         command += ["-stream_loop", "-1"]
-    command += ["-i", str(path), "-vf", f"fps={fps},tpad=stop_mode=clone:stop_duration={duration:.3f},format=rgba", "-frames:v", str(count), "-start_number", "0", str(directory / "frame-%06d.png")]
+    command += ["-i", str(path), "-threads", str(threads), "-vf", f"fps={fps},tpad=stop_mode=clone:stop_duration={duration:.3f}"]
+    if lossless:
+        command += ["-pix_fmt", "rgba"]
+    else:
+        command += ["-q:v", "3"]
+    command += ["-frames:v", str(count), "-start_number", "0", str(directory / f"frame-%06d.{extension}")]
     run(command)
-    frames = sorted(directory.glob("frame-*.png"))
+    frames = sorted(directory.glob(f"frame-*.{extension}"))
     if not frames:
         raise ValueError(f"Vídeo sem quadros decodificáveis: {path}")
     return frames
@@ -547,7 +554,7 @@ def _render_motion_scene_impl(ffmpeg, scene, output, project, duration, run, wor
     video_suffixes = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
     background_video = bool(scene.background_path and scene.background_path.suffix.lower() not in video_suffixes)
     if background_video:
-        background_frames = _media_frames(ffmpeg, scene.background_path, scene_work / "background", project.fps, duration, run, scene.background.get("loop", False))
+        background_frames = _media_frames(ffmpeg, scene.background_path, scene_work / "background", project.fps, duration, run, scene.background.get("loop", False), lossless=False)
     elif scene.background_path:
         with Image.open(scene.background_path) as source:
             background = _fit(source.convert("RGBA"), world_size, scene.background.get("fit", "cover"))
@@ -557,7 +564,11 @@ def _render_motion_scene_impl(ffmpeg, scene, output, project, duration, run, wor
     media = {}
     for media_index, element in enumerate(scene.elements):
         if element.type in {"video", "overlay"} and element.asset_path and element.asset_path.suffix.lower() not in video_suffixes:
-            media[element.data["id"]] = _media_frames(ffmpeg, element.asset_path, scene_work / f"media-{media_index}", project.fps, element.end - element.start, run, element.data.get("loop", False))
+            media[element.data["id"]] = _media_frames(
+                ffmpeg, element.asset_path, scene_work / f"media-{media_index}",
+                project.fps, element.end - element.start, run, element.data.get("loop", False),
+                lossless=element.type == "overlay",
+            )
     images = {}
     for element in scene.elements:
         should_prepare = (
@@ -672,8 +683,14 @@ def _render_motion_scene_impl(ffmpeg, scene, output, project, duration, run, wor
             x = round((state["x"] * world_size[0] - left) * camera["scale"] - image.width / 2)
             y = round((state["y"] * world_size[1] - top) * camera["scale"] - image.height / 2)
             canvas.alpha_composite(image, (x, y))
-        canvas.convert("RGB").save(frames_dir / f"frame-{index:06d}.png")
-    run([ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-framerate", str(project.fps), "-i", str(frames_dir / "frame-%06d.png"), "-frames:v", str(frame_count), "-an", *(video_encoding or ["-c:v", "libx264", "-preset", "veryfast", "-crf", "18"]), "-pix_fmt", "yuv420p", str(output)])
+        canvas.convert("RGB").save(
+            frames_dir / f"frame-{index:06d}.jpg",
+            format="JPEG", quality=95, subsampling=0, optimize=False,
+        )
+    encoding = list(video_encoding or ["-c:v", "libx264", "-preset", "veryfast", "-crf", "18"])
+    if "-threads" not in encoding:
+        encoding += ["-threads", str(max(1, int(os.environ.get("CONTENTLAB_FFMPEG_THREADS", "2"))))]
+    run([ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-framerate", str(project.fps), "-i", str(frames_dir / "frame-%06d.jpg"), "-frames:v", str(frame_count), "-an", *encoding, "-pix_fmt", "yuv420p", str(output)])
 
 
 def render_motion_scene(ffmpeg, scene, output, project, duration, run, work_dir, video_encoding, transcript=None, cancel_event=None):
