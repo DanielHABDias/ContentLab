@@ -230,6 +230,8 @@ def render_project(directory, mode="final", progress=None, ffmpeg_dir=None, runn
                 raise ValueError("output existe, mas não é uma pasta.")
             shutil.rmtree(output_root)
     output_dir = root / "output" / mode
+    if (root / "output").is_symlink() or output_dir.is_symlink():
+        raise ValueError("O diretório de saída do projeto não pode ser um link simbólico.")
     output_dir.mkdir(parents=True, exist_ok=True)
     fingerprint = _render_fingerprint(path, root, mode, hardware_accel)
     report_path = output_dir / "render_report.json"
