@@ -10,6 +10,15 @@ from .typography import appearance, bundled_font_path
 from .errors import RenderCancelled
 
 
+def _pixel_size(size):
+    """Normalize Pillow canvas/resize dimensions to positive integer pixels."""
+    width, height = size
+    return (
+        max(1, int(math.ceil(float(width)))),
+        max(1, int(math.ceil(float(height)))),
+    )
+
+
 def _ease(value, name):
     value = max(0.0, min(1.0, value))
     if name == "ease_in":
@@ -37,7 +46,7 @@ def interpolate(initial, keyframes, t):
 
 
 def _cover(image, size):
-    width, height = size
+    width, height = _pixel_size(size)
     ratio = max(width / image.width, height / image.height)
     resized = image.resize((math.ceil(image.width * ratio), math.ceil(image.height * ratio)), Image.Resampling.LANCZOS)
     left = (resized.width - width) // 2
@@ -46,6 +55,7 @@ def _cover(image, size):
 
 
 def _fit(image, size, mode="contain"):
+    size = _pixel_size(size)
     if mode == "cover":
         return _cover(image, size)
     if mode == "stretch":
@@ -154,7 +164,10 @@ def _element_image(element, width, height, text_override=None):
     blur = float(shadow.get("blur", 8))
     offset_x, offset_y = float(shadow.get("offsetX", 3)), float(shadow.get("offsetY", 4))
     padding = max(4, math.ceil(blur * 3 + max(abs(offset_x), abs(offset_y)) + stroke)) if has_shadow else 4
-    image = Image.new("RGBA", (max(1, bounds[2] - bounds[0] + 2 * padding), max(1, bounds[3] - bounds[1] + 2 * padding)))
+    image = Image.new("RGBA", _pixel_size((
+        bounds[2] - bounds[0] + 2 * padding,
+        bounds[3] - bounds[1] + 2 * padding,
+    )))
     origin = (padding - bounds[0], padding - bounds[1])
     line_spacing = max(2, round(size * 0.08))
 
@@ -209,7 +222,7 @@ def _word_stack_image(element, words, absolute, width, height):
          inactive_opacity * progress, inactive_scale, inactive_color),
     ]
 
-    canvas = Image.new("RGBA", element.region[2:])
+    canvas = Image.new("RGBA", _pixel_size(element.region[2:]))
     panel_rgb = ImageColor.getrgb(panel_color)
     ImageDraw.Draw(canvas).rounded_rectangle(
         (0, 0, canvas.width - 1, canvas.height - 1),
@@ -239,10 +252,10 @@ def _word_stack_image(element, words, absolute, width, height):
         offset_x = float((shadow or {}).get("offsetX", 3))
         offset_y = float((shadow or {}).get("offsetY", 4))
         padding = max(4, math.ceil(blur * 3 + max(abs(offset_x), abs(offset_y)) + stroke)) if shadow else 4
-        image = Image.new("RGBA", (
-            max(1, bounds[2] - bounds[0] + padding * 2),
-            max(1, bounds[3] - bounds[1] + padding * 2),
-        ))
+        image = Image.new("RGBA", _pixel_size((
+            bounds[2] - bounds[0] + padding * 2,
+            bounds[3] - bounds[1] + padding * 2,
+        )))
         origin = (padding - bounds[0], padding - bounds[1])
         if shadow:
             shadow_layer = Image.new("RGBA", image.size)
@@ -324,7 +337,7 @@ def _highlight_caption_image(element, words, absolute):
         size = max(16, round(size * 0.9))
         font, stroke, metrics, lines, line_heights, max_width, total_height = measure(size)
 
-    image = Image.new("RGBA", (limit_width, limit_height))
+    image = Image.new("RGBA", _pixel_size((limit_width, limit_height)))
     shadow = look["shadow"] or {"color": "#000000", "blur": 8, "offsetX": 3, "offsetY": 4}
     shadow_layer = Image.new("RGBA", image.size)
     shadow_draw = ImageDraw.Draw(shadow_layer)
