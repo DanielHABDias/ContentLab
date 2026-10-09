@@ -19,10 +19,10 @@ def bundled_font_path(family):
 def appearance(data):
     preset = data.get("style")
     custom = data.get("textStyle") or {}
-    family = custom.get("fontFamily") or ("Anton" if preset in {"anton", "anton_white", "anton_karaoke", "word_stack_vertical"} else "Bangers" if preset in {"bangers", "bangers_highlight_block"} else None)
+    family = custom.get("fontFamily") or ("Anton" if preset in {"anton", "anton_white", "anton_karaoke", "word_stack_vertical", "word_stream_horizontal"} else "Bangers" if preset in {"bangers", "bangers_highlight_block"} else None)
     return {
         "fontFamily": family,
-        "uppercase": bool(custom.get("uppercase", preset in {"anton_white", "bangers", "bangers_highlight_block", "word_stack_vertical"})),
+        "uppercase": bool(custom.get("uppercase", preset in {"anton_white", "bangers", "bangers_highlight_block", "word_stack_vertical", "word_stream_horizontal"})),
         "color": custom.get("color"),
         "outlineColor": custom.get("outlineColor"),
         "outlineWidth": custom.get("outlineWidth"),
