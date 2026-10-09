@@ -852,7 +852,7 @@ class RendererTests(unittest.TestCase):
         self.assertIn("-threads", args)
         self.assertEqual(args[args.index("-threads") + 1], "2")
 
-    def test_project_preview_and_final_are_separate(self):
+    def test_project_final_render_cache_and_preview_rejection(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "audio").mkdir()
@@ -875,21 +875,19 @@ class RendererTests(unittest.TestCase):
                 Path(command[-1]).write_bytes(b"x")
                 return Result()
 
-            preview = render_project(str(root), "preview", ffmpeg_dir=root / "bin", runner=fake_runner)
             final = render_project(str(root), "final", ffmpeg_dir=root / "bin", runner=fake_runner)
             command_count = len(commands)
-            cached = render_project(str(root), "preview", ffmpeg_dir=root / "bin", runner=fake_runner)
-            self.assertTrue(preview["output"].endswith("/output/preview/preview.mp4"))
+            cached = render_project(str(root), "final", ffmpeg_dir=root / "bin", runner=fake_runner)
             self.assertTrue(final["output"].endswith("/output/final/final.mp4"))
-            self.assertEqual(preview["mode"], "preview")
             self.assertEqual(final["mode"], "final")
             self.assertTrue(cached["cacheHit"])
             self.assertEqual(len(commands), command_count)
+            with self.assertRaises(ValueError):
+                render_project(str(root), "preview", ffmpeg_dir=root / "bin", runner=fake_runner)
             (root / "images" / "a.png").write_bytes(b"changed")
-            refreshed = render_project(str(root), "preview", ffmpeg_dir=root / "bin", runner=fake_runner)
+            refreshed = render_project(str(root), "final", ffmpeg_dir=root / "bin", runner=fake_runner)
             self.assertFalse(refreshed["cacheHit"])
             self.assertGreater(len(commands), command_count)
-            self.assertTrue(any("960x540" in str(part) for command in commands for part in command))
 
     def test_editor_api_loads_project_and_serves_completed_render(self):
         from backend.app import app, EDITOR_JOBS
@@ -900,14 +898,14 @@ class RendererTests(unittest.TestCase):
             (root / "audio" / "narration.wav").touch()
             (root / "images" / "a.png").touch()
             (root / "edit_plan.json").write_text(json.dumps(valid_plan()), encoding="utf-8")
-            output = root / "output" / "preview" / "preview.mp4"
+            output = root / "output" / "final" / "final.mp4"
             output.parent.mkdir(parents=True)
             output.write_bytes(b"test-video")
             finished = Event()
 
             def fake_render(*args, **kwargs):
                 finished.set()
-                return {"status": "completed", "output": str(output), "mode": "preview"}
+                return {"status": "completed", "output": str(output), "mode": "final"}
 
             client = app.test_client()
             loaded = client.post("/api/editor/project", json={"projectRoot": str(root)})
@@ -936,7 +934,7 @@ class RendererTests(unittest.TestCase):
             conflict = client.post("/api/editor/project/save", json={"projectRoot": str(root), "planText": json.dumps(updated), "revision": loaded.get_json()["revision"]})
             self.assertEqual(conflict.status_code, 409)
             with patch("backend.app.render_project", fake_render):
-                response = client.post("/api/editor/render", json={"projectRoot": str(root), "mode": "preview", "revision": saved.get_json()["revision"]})
+                response = client.post("/api/editor/render", json={"projectRoot": str(root), "mode": "final", "revision": saved.get_json()["revision"]})
                 self.assertEqual(response.status_code, 202)
                 self.assertTrue(finished.wait(2))
             job_id = response.get_json()["jobId"]
