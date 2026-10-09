@@ -14,7 +14,7 @@ from threading import Event, Timer
 from backend.contentlab.assets import AssetResolver
 from backend.contentlab.errors import PlanValidationError, UnsafeAssetPathError
 from backend.contentlab.parser import parse_edit_plan
-from backend.contentlab.render import render_edit_plan, _compose_visual, _cleanup_stale_render_workdirs
+from backend.contentlab.render import render_edit_plan, _compose_visual, _cleanup_stale_render_workdirs, _composite_video_overlays
 from backend.contentlab.text import build_scene_ass, caption_chunk, transcript_words, word_stack_state
 from backend.contentlab.timeline import compile_timeline
 from backend.contentlab.layout import box_geometry, create_card_assets
@@ -335,6 +335,55 @@ class ParserTests(unittest.TestCase):
 
             self.assertTrue(output.is_file())
             self.assertFalse((root / "segment-motion").exists())
+
+    def test_composite_video_overlays_uses_base_plus_overlay_without_python_frames(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            base = root / "base.mp4"
+            overlay = root / "cta.mp4"
+            output = root / "out.mp4"
+            base.write_bytes(b"base")
+            overlay.write_bytes(b"overlay")
+            element = SimpleNamespace(
+                type="overlay",
+                start=2.0,
+                end=3.5,
+                region=(0, 0, 1920, 1080),
+                asset_path=overlay,
+                data={
+                    "id": "cta",
+                    "fit": "cover",
+                    "loop": False,
+                    "config": {"keyColor": "#00FF00", "similarity": 0.28, "blend": 0.08},
+                },
+            )
+            scene = SimpleNamespace(id="long-scene", start=0.0, end=40.0)
+            project = SimpleNamespace(width=1920, height=1080, fps=30)
+            commands = []
+
+            class Result:
+                returncode = 0
+                stderr = ""
+                stdout = ""
+
+            def fake_runner(command, **kwargs):
+                commands.append(list(command))
+                Path(command[-1]).write_bytes(b"out")
+                return Result()
+
+            _composite_video_overlays(
+                "ffmpeg", base, scene, (element,), output, project, 40.0,
+                fake_runner, video_encoding=["-c:v", "libx264", "-threads", "2"],
+            )
+
+            self.assertTrue(output.is_file())
+            self.assertEqual(len(commands), 1)
+            command = commands[0]
+            self.assertEqual(command.count("-i"), 2)
+            graph = command[command.index("-filter_complex") + 1]
+            self.assertIn("chromakey=0x00FF00:0.280:0.080", graph)
+            self.assertIn("between(t,2.000000,3.500000)", graph)
+            self.assertNotIn("frame-%06d", " ".join(command))
 
     def test_compose_visual_limits_transition_ffmpeg_to_two_media_inputs(self):
         class Transition:
