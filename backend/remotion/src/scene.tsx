@@ -472,15 +472,12 @@ export const Scene = (props: SceneProps) => {
       camera.y += amplitude * Math.sin(2 * Math.PI * frequency * 1.37 * time);
     }
   }
+  // The 2x virtual world belongs to positioned elements, not to the source video.
+  // A 1920x1080 background on a 1920x1080 canvas must start at 1:1 size.
+  // Camera movement still targets layers below; it must not crop/upsample the footage.
   const backgroundStyle: React.CSSProperties = {position: 'absolute', width: '100%', height: '100%'};
-  const worldStyle: React.CSSProperties = {
-    position: 'absolute', width: props.width * 2 * camera.scale, height: props.height * 2 * camera.scale,
-    left: props.width / 2 - camera.x * props.width * 2 * camera.scale,
-    top: props.height / 2 - camera.y * props.height * 2 * camera.scale,
-    backgroundColor: props.scene.background.color ?? '#000',
-  };
   return <AbsoluteFill style={{backgroundColor: props.scene.background.color ?? '#000', overflow: 'hidden'}}>
-    <div style={worldStyle}>{props.scene.backgroundSrc && <Media src={props.scene.backgroundSrc} isVideo={/\.(mp4|mov|mkv|webm)$/i.test(props.scene.backgroundSrc)} loop={props.scene.background.loop} objectFit={fit(props.scene.background.fit)} style={backgroundStyle}/>}</div>
+    {props.scene.backgroundSrc && <Media src={props.scene.backgroundSrc} isVideo={/\.(mp4|mov|mkv|webm)$/i.test(props.scene.backgroundSrc)} loop={props.scene.background.loop} objectFit={fit(props.scene.background.fit)} style={backgroundStyle}/>} 
     {props.scene.elements.map((item) => <Sequence key={item.id} from={Math.round((item.start - props.scene.start) * fps)} layout="none"><Layer item={item} props={props} time={time} absolute={absolute} camera={camera}/></Sequence>)}
   </AbsoluteFill>;
 };
