@@ -583,16 +583,17 @@ def _render_motion_scene_impl(ffmpeg, scene, output, project, duration, run, wor
     scene_work = Path(scene_work or work_dir)
     width, height = project.width, project.height
     world_size = (width * 2, height * 2)
+    # Backgrounds are viewport-sized; only composited layers use the 2x world.
     video_suffixes = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
     background_video = bool(scene.background_path and scene.background_path.suffix.lower() not in video_suffixes)
     if background_video:
         background_frames = _media_frames(ffmpeg, scene.background_path, scene_work / "background", project.fps, duration, run, scene.background.get("loop", False), lossless=False)
     elif scene.background_path:
         with Image.open(scene.background_path) as source:
-            background = _fit(source.convert("RGBA"), world_size, scene.background.get("fit", "cover"))
+            background = _fit(source.convert("RGBA"), (width, height), scene.background.get("fit", "cover"))
     else:
         color = ImageColor.getrgb(scene.background.get("color", "#000000"))
-        background = Image.new("RGBA", world_size, (*color, 255))
+        background = Image.new("RGBA", (width, height), (*color, 255))
     media = {}
     for media_index, element in enumerate(scene.elements):
         if element.type in {"video", "overlay"} and element.asset_path and element.asset_path.suffix.lower() not in video_suffixes:
@@ -666,11 +667,12 @@ def _render_motion_scene_impl(ffmpeg, scene, output, project, duration, run, wor
         top = center_y - view_height / 2
         if background_video:
             with Image.open(background_frames[min(index, len(background_frames) - 1)]) as source:
-                frame_background = _fit(source.convert("RGBA"), world_size, scene.background.get("fit", "cover"))
+                frame_background = _fit(source.convert("RGBA"), (width, height), scene.background.get("fit", "cover"))
         else:
             frame_background = background
-        canvas = frame_background.crop((round(left), round(top), round(left + view_width), round(top + view_height)))
-        canvas = canvas.resize((width, height), Image.Resampling.BICUBIC)
+        # No implicit 2x crop/upscale of the underlying footage. Camera zoom/pan
+        # remains available to foreground images, captions and other elements.
+        canvas = frame_background.copy()
         for element in scene.elements:
             if element.type == "sfx" or not element.start <= absolute_t < element.end:
                 continue
