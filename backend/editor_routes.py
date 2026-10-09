@@ -296,8 +296,8 @@ def register_editor_routes(app, EDITOR_JOBS, EDITOR_JOBS_LOCK, EDITOR_CANCEL_EVE
         hardware_accel = data.get("hardwareAccel", False)
         if not isinstance(hardware_accel, bool):
             return jsonify({"error": "hardwareAccel deve ser booleano."}), 400
-        if mode not in {"preview", "final"}:
-            return jsonify({"error": "Modo deve ser preview ou final."}), 400
+        if mode != "final":
+            return jsonify({"error": "A geração de preview foi removida. Use o render final."}), 400
         try:
             project = inspect_project(data.get("projectRoot"))
         except PlanValidationError as exc:
