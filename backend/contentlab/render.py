@@ -17,6 +17,26 @@ from .motion_renderer import render_motion_scene
 from .remotion_bridge import render_remotion_scene
 
 
+def _cleanup_stale_render_workdirs(output_dir, minimum_age_seconds=300):
+    """Remove orphaned render workdirs left behind by crashes or hard reboots."""
+    output_dir = Path(output_dir)
+    if not output_dir.is_dir():
+        return []
+    now = time.time()
+    removed = []
+    for path in output_dir.glob("contentlab-render-*"):
+        try:
+            if not path.is_dir() or now - path.stat().st_mtime < minimum_age_seconds:
+                continue
+            shutil.rmtree(path, ignore_errors=False)
+            removed.append(str(path))
+        except OSError:
+            # Cleanup failure must not prevent a new render; the normal disk checks
+            # and FFmpeg errors will still be reported if space remains insufficient.
+            continue
+    return removed
+
+
 def _creation_flags():
     return 0x08000000 if os.name == "nt" else 0
 
@@ -429,9 +449,16 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
 
     output_dir = Path(output_dir or (plan.source_path.parent / "output" if plan.source_path else Path.cwd() / "output")).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
+    stale_workdirs = _cleanup_stale_render_workdirs(output_dir)
     output = output_dir / {"rough": "rough_cut.mp4", "preview": "preview.mp4", "final": "final.mp4"}[mode]
     report_path = output_dir / "render_report.json"
     warnings = []
+    if stale_workdirs:
+        warnings.append({
+            "code": "stale_render_temp_cleaned",
+            "message": "Diretórios temporários abandonados por render anterior foram removidos.",
+            "count": len(stale_workdirs),
+        })
     video_encoding, video_encoder, encoder_warning = select_h264_encoder(ffmpeg, hardware_accel)
     if encoder_warning:
         warnings.append(encoder_warning)
