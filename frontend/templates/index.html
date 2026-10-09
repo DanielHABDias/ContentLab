@@ -347,8 +347,10 @@
           <ul id="editorPlugins" class="editor-list"></ul>
         </details>
         <div class="editor-actions">
-          <button id="editorFinal" class="btn btn-primary" type="button" disabled>Render final</button>
+          <button id="editorReuse" class="btn btn-primary" type="button" disabled>Aproveitar cache</button>
+          <button id="editorRebuild" class="btn btn-secondary" type="button" disabled>Refazer tudo</button>
         </div>
+        <p class="helper-text">Aproveitar cache: renderiza só as cenas alteradas e remonta o vídeo final. Refazer tudo: apaga a pasta output deste projeto e gera tudo novamente.</p>
         <label class="editor-gpu"><input id="editorGpu" type="checkbox"> Tentar aceleração NVIDIA (NVENC); usa CPU se indisponível</label>
         <button id="editorCancel" class="btn btn-danger btn-sm hidden" type="button">Cancelar render</button>
         <p id="editorStatus" class="helper-text" role="status" aria-live="polite"></p>
