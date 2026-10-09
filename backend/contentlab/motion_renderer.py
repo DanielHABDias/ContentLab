@@ -1,6 +1,8 @@
 """Frame-based compositor for continuous edit_plan 0.2 scenes."""
 
+import os
 import math
+import shutil
 from pathlib import Path
 
 from PIL import Image, ImageChops, ImageColor, ImageDraw, ImageFilter, ImageFont
@@ -537,14 +539,15 @@ def _card(image, box):
     return card
 
 
-def render_motion_scene(ffmpeg, scene, output, project, duration, run, work_dir, video_encoding, transcript=None, cancel_event=None):
+def _render_motion_scene_impl(ffmpeg, scene, output, project, duration, run, work_dir, video_encoding, transcript=None, cancel_event=None, scene_work=None):
     """Render a continuous canvas with layered media, grid and camera."""
+    scene_work = Path(scene_work or work_dir)
     width, height = project.width, project.height
     world_size = (width * 2, height * 2)
     video_suffixes = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
     background_video = bool(scene.background_path and scene.background_path.suffix.lower() not in video_suffixes)
     if background_video:
-        background_frames = _media_frames(ffmpeg, scene.background_path, Path(work_dir) / f"{output.stem}-background", project.fps, duration, run, scene.background.get("loop", False))
+        background_frames = _media_frames(ffmpeg, scene.background_path, scene_work / "background", project.fps, duration, run, scene.background.get("loop", False))
     elif scene.background_path:
         with Image.open(scene.background_path) as source:
             background = _fit(source.convert("RGBA"), world_size, scene.background.get("fit", "cover"))
@@ -554,7 +557,7 @@ def render_motion_scene(ffmpeg, scene, output, project, duration, run, work_dir,
     media = {}
     for media_index, element in enumerate(scene.elements):
         if element.type in {"video", "overlay"} and element.asset_path and element.asset_path.suffix.lower() not in video_suffixes:
-            media[element.data["id"]] = _media_frames(ffmpeg, element.asset_path, Path(work_dir) / f"{output.stem}-media-{media_index}", project.fps, element.end - element.start, run, element.data.get("loop", False))
+            media[element.data["id"]] = _media_frames(ffmpeg, element.asset_path, scene_work / f"media-{media_index}", project.fps, element.end - element.start, run, element.data.get("loop", False))
     images = {}
     for element in scene.elements:
         should_prepare = (
@@ -571,7 +574,7 @@ def render_motion_scene(ffmpeg, scene, output, project, duration, run, work_dir,
             ) from exc
     words = transcript_words(transcript)
     phrases = {element.data["id"]: _phrase_words(element.data.get("text"), element.start, element.end, words) for element in scene.elements if element.type == "kinetic_text"}
-    frames_dir = Path(work_dir) / f"{output.stem}-frames"
+    frames_dir = scene_work / "frames"
     frames_dir.mkdir()
     frame_count = max(1, round(duration * project.fps))
     camera_initial = {"x": 0.5, "y": 0.5, "scale": 1.0}
@@ -671,3 +674,19 @@ def render_motion_scene(ffmpeg, scene, output, project, duration, run, work_dir,
             canvas.alpha_composite(image, (x, y))
         canvas.convert("RGB").save(frames_dir / f"frame-{index:06d}.png")
     run([ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-framerate", str(project.fps), "-i", str(frames_dir / "frame-%06d.png"), "-frames:v", str(frame_count), "-an", *(video_encoding or ["-c:v", "libx264", "-preset", "veryfast", "-crf", "18"]), "-pix_fmt", "yuv420p", str(output)])
+
+
+def render_motion_scene(ffmpeg, scene, output, project, duration, run, work_dir, video_encoding, transcript=None, cancel_event=None):
+    """Render a motion scene and release its frame cache immediately afterwards."""
+    scene_work = Path(work_dir) / f"{output.stem}-motion"
+    if scene_work.exists():
+        shutil.rmtree(scene_work, ignore_errors=True)
+    scene_work.mkdir(parents=True, exist_ok=True)
+    try:
+        return _render_motion_scene_impl(
+            ffmpeg, scene, output, project, duration, run, work_dir, video_encoding,
+            transcript=transcript, cancel_event=cancel_event, scene_work=scene_work,
+        )
+    finally:
+        if os.environ.get("CONTENTLAB_KEEP_SCENE_TEMP", "0") != "1":
+            shutil.rmtree(scene_work, ignore_errors=True)
