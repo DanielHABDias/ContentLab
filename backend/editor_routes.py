@@ -227,15 +227,16 @@ def register_editor_routes(app, EDITOR_JOBS, EDITOR_JOBS_LOCK, EDITOR_CANCEL_EVE
         def on_progress(stage, current, total, scene_id):
             if cancel_event.is_set():
                 raise RenderCancelled("Render cancelado pelo usuário.")
-            job.update(stage=stage, current=current, total=total, sceneId=scene_id)
+            job.update(stage=stage, current=current, total=total)
             if stage == "scene":
-                job.update(percent=min(85, round(current / max(total, 1) * 85)), message=f"Renderizando cena {current}/{total}: {scene_id}")
+                job.update(sceneId=scene_id, percent=min(85, round(current / max(total, 1) * 85)),
+                           message=f"Renderizando cena {current}/{total}: {scene_id}")
             elif stage == "narration":
-                job.update(percent=3, message="Narração preparada.")
+                job.update(sceneId=None, percent=3, message="Narração preparada.")
             elif stage == "compose":
-                job.update(percent=90, message="Vídeo composto.")
+                job.update(sceneId=None, percent=90, message="Vídeo composto.")
             elif stage == "audio":
-                job.update(percent=95, message="Mixando áudio...")
+                job.update(sceneId=None, percent=95, message="Mixando áudio...")
 
         try:
             if cancel_event.is_set():
