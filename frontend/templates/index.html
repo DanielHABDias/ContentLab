@@ -261,10 +261,10 @@
     </div>
 
     <div id="panel-editor" class="workspace-panel hidden" role="tabpanel" aria-labelledby="tab-editor" hidden>
-    <div class="workspace-intro"><span class="eyebrow">COMPOSIÇÃO AUTOMÁTICA</span><h2>Editor automático</h2><p>Monte o plano JSON, valide assets e veja a prévia antes de exportar.</p></div>
+    <div class="workspace-intro"><span class="eyebrow">COMPOSIÇÃO AUTOMÁTICA</span><h2>Editor automático</h2><p>Monte o plano JSON, valide os assets e gere diretamente o vídeo final.</p></div>
     <section class="block editor-project" aria-labelledby="editorHeading">
       <h3 id="editorHeading">Projeto de edição</h3>
-      <p class="helper-text">Abra a pasta de um projeto com <code>edit_plan.json</code>. O preview é leve; o render final usa a resolução e o FPS do plano.</p>
+      <p class="helper-text">Abra a pasta de um projeto com <code>edit_plan.json</code>. O render final usa a resolução e o FPS definidos no plano.</p>
       <label class="block-label" for="editorProjectRoot">Pasta do projeto</label>
       <div class="row">
         <input id="editorProjectRoot" type="text" placeholder="/caminho/para/meu-projeto" autocomplete="off">
@@ -347,7 +347,6 @@
           <ul id="editorPlugins" class="editor-list"></ul>
         </details>
         <div class="editor-actions">
-          <button id="editorPreview" class="btn btn-secondary" type="button" disabled>Gerar preview</button>
           <button id="editorFinal" class="btn btn-primary" type="button" disabled>Render final</button>
         </div>
         <label class="editor-gpu"><input id="editorGpu" type="checkbox"> Tentar aceleração NVIDIA (NVENC); usa CPU se indisponível</label>
