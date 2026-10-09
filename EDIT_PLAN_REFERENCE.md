@@ -35,8 +35,7 @@ os objetos tipados do schema, exceto `config`, que é um objeto livre.
    mostra cenas, assets, plugins, progresso, avisos e relatório; permite
    cancelar um render em andamento.
 4. Gere o render final. O CLI também oferece `validate`, `plugins` e `render`.
-   O render final mantém
-   resolução e FPS do plano. O modo `rough` gera `rough_cut.mp4`.
+   O render final mantém resolução e FPS do plano. O modo `rough` gera `rough_cut.mp4`.
 
 O renderer compõe imagens e vídeos, texto fixo e cinético, legenda karaoke,
 layouts, cards, animações, transições, chroma key, narração, música e SFX.
@@ -318,9 +317,7 @@ python -m backend.contentlab.cli render caminho/para/edit_plan.json --mode final
 
 `validate` e `render` aceitam `--project-root`; `render` aceita também
 `--output-dir`. `--gpu` tenta NVENC e retorna a `libx264` se indisponível.
-O CLI retorna código 2 quando o plano ou os assets são inválidos. A UI
-mantém render final em pastas separadas e evita dois renders simultâneos do
-mesmo projeto. Arquivos de saída e relatórios são descritos no README e em
+O CLI retorna código 2 quando o plano ou os assets são inválidos. A UI salva o render final em `output/final/` e evita dois renders simultâneos do mesmo projeto. Arquivos de saída e relatórios são descritos no README e em
 [`MVP_ACCEPTANCE.md`](MVP_ACCEPTANCE.md).
 
 Para um ponto de partida, veja
