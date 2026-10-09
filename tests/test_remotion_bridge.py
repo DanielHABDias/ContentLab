@@ -84,6 +84,52 @@ class RemotionBridgeTests(unittest.TestCase):
             self.assertEqual(payload["scene"]["elements"][0]["src"], "media-0.mp4")
             self.assertEqual(payload["scene"]["backgroundSrc"], "media-0.mp4")
 
+    def test_frame_extraction_timeout_retries_once_in_conservative_mode(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "gameplay.mp4"
+            source.write_bytes(b"video")
+            output = root / "segment.mp4"
+            calls = []
+
+            scene = SimpleNamespace(
+                id="timeout-scene",
+                start=0.0,
+                end=3.0,
+                background={"asset": "project://assets/gameplay.mp4", "fit": "cover"},
+                background_path=source,
+                camera={"keyframes": [], "shake": []},
+                elements=(),
+            )
+            project = SimpleNamespace(width=1920, height=1080, fps=30)
+
+            class Result:
+                stdout = ""
+
+                def __init__(self, returncode, stderr=""):
+                    self.returncode = returncode
+                    self.stderr = stderr
+
+            def fake_runner(command, **kwargs):
+                calls.append(list(command))
+                if len(calls) == 1:
+                    return Result(1, "Error Timeout while extracting frame at time 1.66sec from /public/media-1.mp4")
+                output.write_bytes(b"ok")
+                return Result(0)
+
+            with patch("backend.contentlab.remotion_bridge.ensure_remotion", return_value="node"):
+                render_remotion_scene(
+                    scene, output, project, 3.0, root,
+                    runner=fake_runner, transcript=None,
+                )
+
+            self.assertEqual(len(calls), 2)
+            retry = calls[1]
+            self.assertEqual(retry[retry.index("--concurrency") + 1], "1")
+            self.assertEqual(retry[retry.index("--timeout") + 1], "180000")
+            self.assertEqual(retry[retry.index("--log") + 1], "verbose")
+            self.assertIn("--disallow-parallel-encoding", retry)
+
 
 if __name__ == "__main__":
     unittest.main()
