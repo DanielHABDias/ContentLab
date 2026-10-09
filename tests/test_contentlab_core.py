@@ -957,6 +957,50 @@ class RendererTests(unittest.TestCase):
             self.assertTrue(clip_a.is_file())
             self.assertTrue(clip_b.is_file())
 
+    def test_transition_piece_cache_skips_unchanged_ffmpeg_work(self):
+        from backend.contentlab.render import _compose_visual
+        from backend.contentlab.scene_cache import SceneCache
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            work = root / "work"
+            work.mkdir()
+            first, second = root / "first.mp4", root / "second.mp4"
+            first.write_bytes(b"encoded-first")
+            second.write_bytes(b"encoded-second")
+            cache = SceneCache(root / "output", namespace="pieces")
+            commands = []
+
+            class Result:
+                returncode = 0
+                stderr = ""
+                stdout = ""
+
+            def fake_runner(command, **kwargs):
+                commands.append(command)
+                Path(command[-1]).write_bytes(b"simulated")
+                return Result()
+
+            args = ("ffmpeg", [first, second], [(discover_transitions()["fade"], 0.2)],
+                    [1.0, 1.0], 2.0, 30, 320, 180, work, fake_runner)
+            kwargs = {"preserve_segments": True, "piece_cache": cache}
+            _compose_visual(*args, **kwargs)
+            initial_calls = len(commands)
+            self.assertGreaterEqual(initial_calls, 5)
+            self.assertTrue(first.exists())
+            self.assertTrue(second.exists())
+            self.assertEqual(len(cache.entries), 3)
+
+            _compose_visual(*args, **kwargs)
+            self.assertEqual(len(commands) - initial_calls, 1, "Somente a concatenação final deve rodar.")
+            second.write_bytes(b"reencoded-second-with-changes")
+            before_change = len(commands)
+            _compose_visual(*args, **kwargs)
+            self.assertGreater(len(commands) - before_change, 1)
+            self.assertLess(len(commands) - before_change, initial_calls)
+            self.assertTrue(first.exists())
+            self.assertTrue(second.exists())
+
     def test_scene_cache_invalidates_changed_asset_and_protects_manifest(self):
         from backend.contentlab.scene_cache import SceneCache, scene_fingerprint, code_identity
         from backend.contentlab.models import ProjectSettings
