@@ -274,8 +274,7 @@ partida configuráveis, não uma calibração específica do canal.
 
 Na interface, a seção **Editor automático** abre uma pasta contendo
 `edit_plan.json`, mostra a timeline e verifica assets antes de iniciar o
-render. **Render final** respeita a
-resolução e o FPS do plano e salva em `output/final/final.mp4`. O render gera `render_report.json` e o MP4 pode ser reproduzido na página. Um projeto não executa dois renders simultâneos. O editor textual
+render. **Render final** respeita a resolução e o FPS do plano e salva em `output/final/final.mp4`. O render gera `render_report.json` e o MP4 pode ser reproduzido na página. Um projeto não executa dois renders simultâneos. O editor textual
 permite carregar, validar e salvar `edit_plan.json`; alterações não salvas
 bloqueiam o render. A página lista os assets resolvidos, plugins disponíveis,
 progresso e warnings. Se o arquivo mudar fora da página, o salvamento é
@@ -332,8 +331,7 @@ outros campos pela interface.
 
 Na fase 10, o painel também cria a estrutura inicial de um projeto, importa a
 narração, lista os assets, permite cancelar um render e oferece aceleração
-NVIDIA/NVENC opcional (com fallback automático para CPU). O render final reutiliza o resultado quando plano, arquivos e código do renderer não
-mudaram. O relatório registra cache, encoder, tempo de render e duração dos
+NVIDIA/NVENC opcional (com fallback automático para CPU). O render final reutiliza o resultado quando plano, arquivos e código do renderer não mudaram. O relatório registra cache, encoder, tempo de render e duração dos
 streams; um arquivo com duração inconsistente não é publicado como resultado.
 
 Para executar o aceite técnico integrado de 60 segundos, com mídias sintéticas:
