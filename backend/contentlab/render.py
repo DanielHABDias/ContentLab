@@ -548,7 +548,7 @@ def _load_transcript(plan, project_root, warnings):
 
 
 def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None, runner=subprocess.run, progress=None, mode="rough", hardware_accel=False):
-    if mode not in {"rough", "preview", "final"}:
+    if mode not in {"rough", "final"}:
         raise ValueError("Modo de render inválido.")
     started = time.time()
     plan, timeline, narration, validation = prepare_edit_plan(source, project_root)
@@ -568,7 +568,7 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
     output_dir = Path(output_dir or (plan.source_path.parent / "output" if plan.source_path else Path.cwd() / "output")).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     stale_workdirs = _cleanup_stale_render_workdirs(output_dir)
-    output = output_dir / {"rough": "rough_cut.mp4", "preview": "preview.mp4", "final": "final.mp4"}[mode]
+    output = output_dir / {"rough": "rough_cut.mp4", "final": "final.mp4"}[mode]
     report_path = output_dir / "render_report.json"
     warnings = []
     if stale_workdirs:
