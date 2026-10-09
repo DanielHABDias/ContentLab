@@ -889,6 +889,97 @@ class RendererTests(unittest.TestCase):
             self.assertFalse(refreshed["cacheHit"])
             self.assertGreater(len(commands), command_count)
 
+    def test_scene_cache_reuses_only_unchanged_scene_and_rebuild_clears_output(self):
+        from backend.contentlab.scene_cache import SceneCache
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "audio").mkdir()
+            (root / "images").mkdir()
+            (root / "bin").mkdir()
+            (root / "audio" / "narration.wav").touch()
+            (root / "images" / "a.png").write_bytes(b"png-asset")
+            (root / "bin" / "ffmpeg").touch()
+            plan = valid_plan()
+            first = plan["timeline"][0]
+            first["id"], first["start"], first["end"] = "a-first", 0, 1
+            second = json.loads(json.dumps(first))
+            second["id"], second["start"], second["end"] = "b-second", 1, 2
+            plan["timeline"] = [first, second]
+            plan_path = root / "edit_plan.json"
+            plan_path.write_text(json.dumps(plan), encoding="utf-8")
+            commands = []
+
+            class Result:
+                returncode = 0
+                stderr = ""
+                stdout = ""
+
+            def runner(command, **kwargs):
+                commands.append(command)
+                Path(command[-1]).write_bytes(b"rendered-video")
+                return Result()
+
+            first_report = render_project(str(root), "final", ffmpeg_dir=root / "bin", runner=runner)
+            self.assertEqual(first_report["sceneCache"]["renderedCount"], 2)
+            self.assertEqual(first_report["sceneCache"]["reusedCount"], 0)
+            stored = SceneCache(root / "output" / "final")
+            clip_a = stored.destination("a-first")
+            clip_b = stored.destination("b-second")
+            self.assertTrue(clip_a.is_file())
+            self.assertTrue(clip_b.is_file())
+            first_mtime = clip_a.stat().st_mtime_ns
+            old_b_fingerprint = stored.entries["b-second"]["fingerprint"]
+            self.assertEqual(render_project(str(root), "final", ffmpeg_dir=root / "bin", runner=runner)["cacheHit"], True)
+
+            plan["timeline"][1]["elements"][0]["transform"] = {"scale": 1.3}
+            plan_path.write_text(json.dumps(plan), encoding="utf-8")
+            update = render_project(str(root), "final", ffmpeg_dir=root / "bin", runner=runner)
+            self.assertEqual(update["sceneCache"]["rendered"], ["b-second"])
+            self.assertEqual(update["sceneCache"]["reused"], ["a-first"])
+            self.assertEqual(clip_a.stat().st_mtime_ns, first_mtime)
+            self.assertNotEqual(SceneCache(root / "output" / "final").entries["b-second"]["fingerprint"], old_b_fingerprint)
+
+            marker = root / "output" / "should-be-deleted.txt"
+            marker.write_text("stale", encoding="utf-8")
+            rebuild = render_project(str(root), "final", ffmpeg_dir=root / "bin",
+                                     runner=runner, cache_mode="rebuild")
+            self.assertFalse(marker.exists())
+            self.assertEqual(rebuild["sceneCache"]["renderedCount"], 2)
+            self.assertEqual(rebuild["sceneCache"]["reusedCount"], 0)
+            self.assertTrue(clip_a.is_file())
+            self.assertTrue(clip_b.is_file())
+
+    def test_scene_cache_invalidates_changed_asset_and_protects_manifest(self):
+        from backend.contentlab.scene_cache import SceneCache, scene_fingerprint, code_identity
+        from backend.contentlab.models import ProjectSettings
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            asset = root / "asset.png"
+            asset.write_bytes(b"old")
+            scene = {
+                "id": "center", "start": 0, "end": 2,
+                "elements": [{"id": "batman", "type": "image", "asset": "project://asset.png"}],
+            }
+            project = ProjectSettings(name="test", format="custom", profile="generic", width=640, height=360, fps=30)
+            settings = dict(project=project, resolved_assets={"project://asset.png": str(asset)},
+                            transcript=None, engine="ffmpeg", encoder="libx264",
+                            hardware_accel=False, code_hash=code_identity("ffmpeg"), duration=2)
+            original = scene_fingerprint(scene, **settings)
+            asset.write_bytes(b"changed-file")
+            self.assertNotEqual(original, scene_fingerprint(scene, **settings))
+            cache = SceneCache(root / "output")
+            staged = root / "temp.mp4"
+            staged.write_bytes(b"video")
+            fingerprint = scene_fingerprint(scene, **settings)
+            saved = cache.save("center", fingerprint, staged)
+            self.assertEqual(cache.lookup("center", fingerprint), saved)
+            saved.write_bytes(b"modified-with-different-length")
+            self.assertIsNone(cache.lookup("center", fingerprint))
+            self.assertNotIn("/", cache.destination("../something").name)
+            self.assertNotIn("..", cache.destination("../something").name)
+
     def test_editor_api_loads_project_and_serves_completed_render(self):
         from backend.app import app, EDITOR_JOBS
         with tempfile.TemporaryDirectory() as directory:
