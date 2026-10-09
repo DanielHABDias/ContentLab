@@ -95,6 +95,7 @@ const styles: Record<string, {color: string; stroke: string; strokeWidth: number
   bangers: {color: '#fff', stroke: '#000', strokeWidth: 4},
   bangers_highlight_block: {color: '#fff', stroke: '#000', strokeWidth: 4},
   word_stack_vertical: {color: '#fff', stroke: '#fff', strokeWidth: 0},
+  word_stream_horizontal: {color: '#fff', stroke: '#fff', strokeWidth: 0},
 };
 const visibleText = (item: Element, absolute: number, words: Word[]) => {
   if (item.type === 'text') {
@@ -274,6 +275,52 @@ const Layer = ({item, props, time, absolute, camera}: {item: Element; props: Sce
   if (item.src) {
     const isVideo = item.type === 'video' || (item.type === 'overlay' && /\.(mp4|mov|mkv|webm)$/i.test(item.src));
     return <div style={common}><Media src={item.src} isVideo={isVideo} loop={item.data.loop} objectFit={fit(item.data.fit)} style={{width: '100%', height: '100%'}}/></div>;
+  }
+  if (item.type === 'kinetic_text' && item.data.style === 'word_stream_horizontal') {
+    const candidates: Word[] = item.data.phraseWords ?? props.words.filter((word) => word.end > item.start && word.start < item.end);
+    if (!candidates.length) return null;
+    let activeIndex = candidates.findIndex((word) => word.start <= absolute && absolute < word.end);
+    if (activeIndex < 0) {
+      const started = candidates.map((word, index) => ({word, index})).filter(({word}) => word.start <= absolute);
+      if (!started.length) return null;
+      activeIndex = started[started.length - 1].index;
+    }
+    const active = candidates[activeIndex];
+    const previous = activeIndex > 0 ? candidates[activeIndex - 1] : null;
+    const configured = Number(item.data.config?.transitionDuration ?? 0.16);
+    const duration = Math.max(0.06, Math.min(configured, Math.max(0.06, (active.end - active.start) * 0.55)));
+    const p = ease(clamp((absolute - active.start) / duration), 'ease_out');
+    const appearance = item.data.textStyle ?? {};
+    const look = styles.word_stream_horizontal;
+    const uppercase = appearance.uppercase ?? true;
+    const fontScale = Number(item.data.fontScale ?? 1);
+    const activeLabel = uppercase ? String(active.word).toLocaleUpperCase('pt-BR') : String(active.word);
+    const previousLabel = previous ? (uppercase ? String(previous.word).toLocaleUpperCase('pt-BR') : String(previous.word)) : '';
+    const longest = [activeLabel, previousLabel].reduce((best, value) => value.length > best.length ? value : best, '');
+    const baseSize = Math.min(rh * 0.72, rw * 0.30) * fontScale;
+    const maxByWidth = rw * 0.78 / Math.max(1, Array.from(longest).length * 0.54);
+    const fontSize = Math.max(32, Math.min(baseSize, maxByWidth));
+    const activeX = 1.12 - 0.62 * p;
+    const previousX = 0.50 - 0.68 * p;
+    const activeOpacity = Math.min(1, 0.35 + p * 0.9);
+    const previousOpacity = previous ? Math.max(0, 1 - p * 0.85) : 0;
+    const textBase: React.CSSProperties = {
+      position: 'absolute',
+      top: '50%',
+      translate: '-50% -50%',
+      whiteSpace: 'nowrap',
+      fontFamily: item.fontSrc ? item.fontFamily + ', Arial, sans-serif' : 'Arial, sans-serif',
+      fontWeight: item.fontSrc ? 400 : 900,
+      fontSize,
+      color: appearance.color ?? look.color,
+      WebkitTextStroke: (appearance.outlineWidth ?? look.strokeWidth) + 'px ' + (appearance.outlineColor ?? look.stroke),
+      paintOrder: 'stroke fill',
+      textShadow: appearance.shadow ? (appearance.shadow.offsetX ?? 3) + 'px ' + (appearance.shadow.offsetY ?? 4) + 'px ' + (appearance.shadow.blur ?? 8) + 'px ' + (appearance.shadow.color ?? '#00000099') : undefined,
+    };
+    return <div style={{...common, position: 'absolute', overflow: 'hidden'}}>
+      {previous && <div style={{...textBase, left: (previousX * 100) + '%', opacity: previousOpacity}}>{previousLabel}</div>}
+      <div style={{...textBase, left: (activeX * 100) + '%', opacity: activeOpacity}}>{activeLabel}</div>
+    </div>;
   }
   if (item.type === 'kinetic_text' && item.data.style === 'word_stack_vertical') {
     const stack = wordStackState(item, absolute, props.words);
