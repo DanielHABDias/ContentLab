@@ -377,28 +377,38 @@ def _compose_visual(ffmpeg, segments, boundaries, durations, total, fps, width, 
             "-i", str(segments[index + 1]), "-frames:v", "1", str(first_frame),
         ], runner)
 
-        if spec.name in {"blur_left", "slide_left"}:
-            outgoing_position = f"x='-{width}*t/{transition_duration:.6f}':y=0"
-            incoming_position = f"x='{width}-{width}*t/{transition_duration:.6f}':y=0"
-        elif spec.name == "blur_right":
-            outgoing_position = f"x='{width}*t/{transition_duration:.6f}':y=0"
-            incoming_position = f"x='-{width}+{width}*t/{transition_duration:.6f}':y=0"
-        elif spec.name == "blur_up":
-            outgoing_position = f"x=0:y='-{height}*t/{transition_duration:.6f}'"
-            incoming_position = f"x=0:y='{height}-{height}*t/{transition_duration:.6f}'"
+        if spec.name == "fade":
+            graph = (
+                f"[0:v]fps={fps},scale={width}:{height},"
+                f"trim=duration={transition_duration:.6f},setpts=PTS-STARTPTS[tail];"
+                f"[1:v]fps={fps},scale={width}:{height},"
+                f"trim=duration={transition_duration:.6f},setpts=PTS-STARTPTS[first];"
+                f"[tail][first]xfade=transition=fade:duration={transition_duration:.6f}:offset=0,"
+                f"format=yuv420p[out]"
+            )
         else:
-            outgoing_position = "x=0:y=0"
-            incoming_position = "x=0:y=0"
+            if spec.name in {"blur_left", "slide_left"}:
+                outgoing_position = f"x='-{width}*t/{transition_duration:.6f}':y=0"
+                incoming_position = f"x='{width}-{width}*t/{transition_duration:.6f}':y=0"
+            elif spec.name == "blur_right":
+                outgoing_position = f"x='{width}*t/{transition_duration:.6f}':y=0"
+                incoming_position = f"x='-{width}+{width}*t/{transition_duration:.6f}':y=0"
+            elif spec.name == "blur_up":
+                outgoing_position = f"x=0:y='-{height}*t/{transition_duration:.6f}'"
+                incoming_position = f"x=0:y='{height}-{height}*t/{transition_duration:.6f}'"
+            else:
+                outgoing_position = "x=0:y=0"
+                incoming_position = "x=0:y=0"
 
-        effect = ",gblur=sigma=2" if spec.name.startswith("blur_") else ""
-        graph = (
-            f"[0:v]fps={fps},scale={width}:{height},format=rgba[tail];"
-            f"[1:v]fps={fps},scale={width}:{height},format=rgba[first];"
-            f"color=c=black:s={width}x{height}:r={fps}:d={transition_duration:.6f}[base];"
-            f"[base][tail]overlay={outgoing_position}:eval=frame[tmp];"
-            f"[tmp][first]overlay={incoming_position}:eval=frame"
-            f"{effect},format=yuv420p[out]"
-        )
+            effect = ",gblur=sigma=2" if spec.name.startswith("blur_") else ""
+            graph = (
+                f"[0:v]fps={fps},scale={width}:{height},format=rgba[tail];"
+                f"[1:v]fps={fps},scale={width}:{height},format=rgba[first];"
+                f"color=c=black:s={width}x{height}:r={fps}:d={transition_duration:.6f}[base];"
+                f"[base][tail]overlay={outgoing_position}:eval=frame[tmp];"
+                f"[tmp][first]overlay={incoming_position}:eval=frame"
+                f"{effect},format=yuv420p[out]"
+            )
         _run([
             ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
             "-ss", f"{tail_start:.6f}", "-t", f"{transition_duration:.6f}", "-i", str(segment),
