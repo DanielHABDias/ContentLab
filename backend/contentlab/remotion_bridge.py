@@ -84,28 +84,36 @@ def render_remotion_scene(scene, output, project, duration, work_dir, runner=sub
         "text": True,
         "creationflags": 0x08000000 if os.name == "nt" else 0,
     }
-    result = runner(command, **runner_kwargs)
-    details = (result.stderr or result.stdout or "sem vídeo gerado").strip()
-    if result.returncode and "Timeout while extracting frame" in details:
-        if output.is_file():
-            output.unlink()
-        retry_command = list(command)
-        retry_command[retry_command.index("--timeout") + 1] = str(max(timeout_ms, 180_000))
-        retry_command[retry_command.index("--concurrency") + 1] = "1"
-        retry_command[retry_command.index("--log") + 1] = "verbose"
-        retry_command.append("--disallow-parallel-encoding")
-        first_details = details
-        result = runner(retry_command, **runner_kwargs)
+    try:
+        result = runner(command, **runner_kwargs)
         details = (result.stderr or result.stdout or "sem vídeo gerado").strip()
+        if result.returncode and "Timeout while extracting frame" in details:
+            if output.is_file():
+                output.unlink()
+            retry_command = list(command)
+            retry_command[retry_command.index("--timeout") + 1] = str(max(timeout_ms, 180_000))
+            retry_command[retry_command.index("--concurrency") + 1] = "1"
+            retry_command[retry_command.index("--log") + 1] = "verbose"
+            retry_command.append("--disallow-parallel-encoding")
+            first_details = details
+            result = runner(retry_command, **runner_kwargs)
+            details = (result.stderr or result.stdout or "sem vídeo gerado").strip()
+            if result.returncode or not output.is_file():
+                details = (
+                    "Falha inicial por timeout de extração de frame:\n"
+                    + first_details[-3000:]
+                    + "\n\nRetry conservador também falhou:\n"
+                    + details[-5000:]
+                )
         if result.returncode or not output.is_file():
-            details = (
-                "Falha inicial por timeout de extração de frame:\n"
-                + first_details[-3000:]
-                + "\n\nRetry conservador também falhou:\n"
-                + details[-5000:]
+            raise RenderError(
+                f"Remotion falhou (exit={result.returncode}): "
+                + details[-8000:]
             )
-    if result.returncode or not output.is_file():
-        raise RenderError(
-            f"Remotion falhou (exit={result.returncode}): "
-            + details[-8000:]
-        )
+    finally:
+        if os.environ.get("CONTENTLAB_KEEP_REMOTION_TEMP", "0") != "1":
+            shutil.rmtree(public, ignore_errors=True)
+            try:
+                props.unlink()
+            except FileNotFoundError:
+                pass
