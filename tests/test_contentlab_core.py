@@ -202,6 +202,40 @@ class ParserTests(unittest.TestCase):
         wrapped = _wrap_words(source, font, 0, 130)
         self.assertEqual(wrapped.replace("\\n", " ").split(), source.split())
         self.assertIn("\\n", wrapped)
+    def test_element_image_accepts_fractional_pillow_bbox(self):
+        element = SimpleNamespace(
+            type="text",
+            data={
+                "id": "fractional-text",
+                "text": "A CONTENÇÃO CONTINUA SENDO SUFICIENTE?",
+                "style": "anton",
+                "fontScale": 1.15,
+                "textStyle": {
+                    "fontFamily": "Anton",
+                    "uppercase": True,
+                    "color": "#2470FF",
+                    "outlineWidth": 0,
+                },
+            },
+            region=(0, 0, 1920, 1080),
+            asset_path=None,
+        )
+        fractional_bounds = (0.25, 0.5, 913.75, 188.25)
+        with patch("PIL.ImageDraw.ImageDraw.multiline_textbbox", return_value=fractional_bounds):
+            image = _element_image(element, 1920, 1080)
+
+        self.assertIsInstance(image.width, int)
+        self.assertIsInstance(image.height, int)
+        self.assertGreater(image.width, 0)
+        self.assertGreater(image.height, 0)
+
+    def test_fit_accepts_fractional_target_size(self):
+        from backend.contentlab.motion_renderer import _fit
+
+        source = Image.new("RGBA", (64, 36), (255, 0, 0, 255))
+        fitted = _fit(source, (640.2, 360.7), "contain")
+        self.assertEqual(fitted.size, (641, 361))
+
     def test_filter_layers_and_wiggle_soft_are_available_in_v02(self):
         registry = describe_registry()
         self.assertEqual(set(registry["filter_styles"]), {"dim", "crt_tv"})
