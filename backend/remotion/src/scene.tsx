@@ -246,31 +246,78 @@ const Layer = ({item, props, time, absolute, camera}: {item: Element; props: Sce
     const appearance = item.data.textStyle ?? {};
     const uppercase = appearance.uppercase ?? true;
     const config = item.data.config ?? {};
-    const inactiveOpacity = Number(config.inactiveOpacity ?? 0.32);
+    const inactiveOpacity = Number(config.inactiveOpacity ?? 0.36);
     const gap = rh * Number(config.slotGap ?? 0.24);
+    const activeScale = Number(config.activeScale ?? 1.45);
+    const inactiveScale = Number(config.inactiveScale ?? 0.72);
+    const direction = config.direction === 'up' ? -1 : 1;
+    const align = config.align === 'center' ? 'center' : 'left';
+    const inactiveColor = typeof config.inactiveColor === 'string' ? config.inactiveColor : '#777777';
+    const panelColor = typeof config.panelColor === 'string' ? config.panelColor : '#D9D9D9';
+    const panelOpacity = Number(config.panelOpacity ?? 0.18);
+    const panelRadius = Number(config.panelRadius ?? 28);
+    const panelPaddingX = Number(config.panelPaddingX ?? Math.max(28, rw * 0.045));
+    const panelPaddingY = Number(config.panelPaddingY ?? Math.max(20, rh * 0.045));
     const scaleFactor = Number(item.data.fontScale ?? 1);
     const wordsToMeasure = [stack.previous, stack.active, stack.next].filter(Boolean).map((word) => String(word!.word));
     const longest = wordsToMeasure.reduce((best, value) => value.length > best.length ? value : best, '');
-    const baseSize = Math.min(rh * 0.22, rw * 0.14) * scaleFactor;
-    const fontSize = Math.max(18, Math.min(baseSize, rw * 0.86 / Math.max(1, Array.from(longest).length * 0.52)));
+    const baseSize = Math.min(rh * 0.28, rw * 0.18) * scaleFactor;
+    const maxBaseByWidth = rw * 0.78 / Math.max(1, Array.from(longest).length * 0.52 * activeScale);
+    const fontSize = Math.max(18, Math.min(baseSize, maxBaseByWidth));
     const shadow = appearance.shadow;
     const p = stack.progress;
     const slots = [
-      stack.previous ? {word: stack.previous, y: rh / 2 + gap * p, opacity: 1 - (1 - inactiveOpacity) * p} : null,
-      {word: stack.active, y: rh / 2 - gap + gap * p, opacity: inactiveOpacity + (1 - inactiveOpacity) * p},
-      stack.next ? {word: stack.next, y: rh / 2 - gap * 2 + gap * p, opacity: inactiveOpacity * p} : null,
-    ].filter(Boolean) as Array<{word: Word; y: number; opacity: number}>;
-    return <div style={{...common, position: 'absolute'}}>
+      stack.previous ? {
+        word: stack.previous,
+        y: rh / 2 + direction * gap * p,
+        opacity: 1 - (1 - inactiveOpacity) * p,
+        scale: activeScale - (activeScale - inactiveScale) * p,
+        color: inactiveColor,
+      } : null,
+      {
+        word: stack.active,
+        y: rh / 2 - direction * gap + direction * gap * p,
+        opacity: inactiveOpacity + (1 - inactiveOpacity) * p,
+        scale: inactiveScale + (activeScale - inactiveScale) * p,
+        color: appearance.color ?? look.color,
+      },
+      stack.next ? {
+        word: stack.next,
+        y: rh / 2 - direction * gap * 2 + direction * gap * p,
+        opacity: inactiveOpacity * p,
+        scale: inactiveScale,
+        color: inactiveColor,
+      } : null,
+    ].filter(Boolean) as Array<{word: Word; y: number; opacity: number; scale: number; color: string}>;
+    const panelRgba = /^#[0-9A-Fa-f]{6}$/.test(panelColor)
+      ? `rgba(${parseInt(panelColor.slice(1, 3), 16)}, ${parseInt(panelColor.slice(3, 5), 16)}, ${parseInt(panelColor.slice(5, 7), 16)}, ${panelOpacity})`
+      : panelColor;
+    return <div style={{
+      ...common,
+      position: 'absolute',
+      boxSizing: 'border-box',
+      background: panelRgba,
+      borderRadius: panelRadius,
+      padding: `${panelPaddingY}px ${panelPaddingX}px`,
+    }}>
       {slots.map((slot, index) => {
         const label = uppercase ? String(slot.word.word).toLocaleUpperCase('pt-BR') : String(slot.word.word);
+        const isLeft = align === 'left';
         return <div key={index + '-' + label} style={{
-          position: 'absolute', left: '50%', top: slot.y, translate: '-50% -50%',
-          width: '92%', textAlign: 'center', whiteSpace: 'nowrap',
+          position: 'absolute',
+          left: isLeft ? panelPaddingX : '50%',
+          top: slot.y,
+          translate: isLeft ? '0 -50%' : '-50% -50%',
+          width: isLeft ? `calc(100% - ${panelPaddingX * 2}px)` : '92%',
+          textAlign: isLeft ? 'left' : 'center',
+          whiteSpace: 'nowrap',
           fontFamily: item.fontSrc ? item.fontFamily + ', Arial, sans-serif' : 'Arial, sans-serif',
-          fontWeight: item.fontSrc ? 400 : 900, fontSize,
-          color: appearance.color ?? look.color,
+          fontWeight: item.fontSrc ? 400 : 900,
+          fontSize: fontSize * slot.scale,
+          color: slot.color,
           WebkitTextStroke: (appearance.outlineWidth ?? look.strokeWidth) + 'px ' + (appearance.outlineColor ?? look.stroke),
-          paintOrder: 'stroke fill', opacity: slot.opacity,
+          paintOrder: 'stroke fill',
+          opacity: slot.opacity,
           textShadow: shadow ? (shadow.offsetX ?? 3) + 'px ' + (shadow.offsetY ?? 4) + 'px ' + (shadow.blur ?? 8) + 'px ' + (shadow.color ?? '#00000099') : undefined,
         }}>{label}</div>;
       })}
