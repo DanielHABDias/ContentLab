@@ -13,8 +13,7 @@ python -m unittest discover -s tests -q
 python -m tests.mvp_acceptance
 ```
 
-O segundo comando gera um projeto temporário de 60 segundos, faz preview,
-render final e rough cut, verifica H.264/AAC, duração dos streams de vídeo e
+O segundo comando gera um projeto temporário de 60 segundos, faz render final e rough cut, verifica H.264/AAC, duração dos streams de vídeo e
 áudio, quadros-chave das cenas e reutilização do cache. O arquivo
 `output/rough_cut.mp4` e os relatórios ficam no diretório temporário impresso
 ao fim do teste. `render_report.json` registra `cacheHit`, `videoEncoder`,
@@ -30,8 +29,8 @@ ao fim do teste. `render_report.json` registra `cacheHit`, `videoEncoder`,
 | Apontar para pasta de assets | **Verificado na UI Linux.** A listagem do projeto sintético identificou sete arquivos. |
 | Carregar `edit_plan.json` | **Verificado na UI Linux.** Quatro cenas foram exibidas. |
 | Validar o plano | **Verificado na UI Linux e em testes.** Todos os assets sintéticos foram resolvidos. |
-| Gerar e reproduzir preview | **Render e arquivo verificados por teste integrado; reprodução visual no navegador deve ser conferida manualmente.** |
-| Preview com 2+ clipes, texto de impacto, frase cinética, apresentador com karaoke, grid 3×3 com 3 imagens, card com padding/radius/shadow, overlay/chroma, música e SFX | **Verificado com fixture sintética e quadros-chave.** São dois clipes base, um apresentador substituto, três imagens, CTA com chroma, narração, música e SFX. A identidade visual e o apresentador reais ainda precisam de inspeção. |
+| Gerar e reproduzir o render final | **Render e arquivo verificados por teste integrado; reprodução visual no navegador deve ser conferida manualmente.** |
+| Render final com 2+ clipes, texto de impacto, frase cinética, apresentador com karaoke, grid 3×3 com 3 imagens, card com padding/radius/shadow, overlay/chroma, música e SFX | **Verificado com fixture sintética e quadros-chave.** São dois clipes base, um apresentador substituto, três imagens, CTA com chroma, narração, música e SFX. A identidade visual e o apresentador reais ainda precisam de inspeção. |
 | Render final | **Verificado por teste integrado.** Vídeo e áudio têm 60 segundos; H.264/AAC. |
 | `rough_cut.mp4` e relatório | **Verificado por teste integrado.** Ambos são produzidos. |
 | Abrir o MP4 no CapCut | **Pendente de execução no CapCut.** O arquivo é H.264/AAC, mas compatibilidade de importação não foi atestada nesta máquina. |
@@ -42,7 +41,7 @@ ao fim do teste. `render_report.json` registra `cacheHit`, `videoEncoder`,
    precisar do executável, execute `build.bat` e abra `dist\ContentLab.exe`.
 2. Crie um projeto pela interface. Selecione uma narração real, a pasta de
    assets, carregue/salve um `edit_plan.json` representativo e valide o plano.
-3. Gere e reproduza o preview, conferindo cada item visual e audível da tabela
+3. Gere e reproduza o render final, conferindo cada item visual e audível da tabela
    com os assets reais do canal. Gere o render final e confirme áudio, vídeo,
    duração e relatório.
 4. Abra `output\rough_cut.mp4` (ou `output\final\final.mp4`) no CapCut e
