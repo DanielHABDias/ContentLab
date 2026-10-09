@@ -216,6 +216,13 @@ def render_project(directory, mode="final", progress=None, ffmpeg_dir=None, runn
         if not validation["valid"]:
             raise PlanValidationError([{"path": item["asset"], "message": f"Asset ausente: {item['path']}"} for item in validation["missingAssets"]])
         output_root = root / "output"
+        transcript_ref = load_edit_plan(path).sources.get("transcript")
+        transcript_path = (root / transcript_ref).resolve() if transcript_ref else None
+        dependencies = list(validation["resolvedAssets"].values()) + [validation["narration"]]
+        if transcript_path is not None:
+            dependencies.append(str(transcript_path))
+        if any(Path(item).resolve() == output_root or output_root in Path(item).resolve().parents for item in dependencies):
+            raise ValueError("Não é seguro limpar output: um asset, a narração ou a transcrição do plano está dentro dela.")
         if output_root.is_symlink():
             raise ValueError("A pasta output não pode ser um link simbólico.")
         if output_root.exists():
@@ -231,7 +238,23 @@ def render_project(directory, mode="final", progress=None, ffmpeg_dir=None, runn
         try:
             cached = json.loads(report_path.read_text(encoding="utf-8"))
             if cached.get("status") == "completed" and cached.get("cacheKey") == fingerprint and cached.get("outputBytes") == output_path.stat().st_size:
-                return {**cached, "cacheHit": True}
+                # The old full-video cache cannot stand in for missing scene clips.
+                from .scene_cache import SceneCache
+                metadata = cached.get("sceneCache") or {}
+                scene_ids = list(metadata.get("rendered") or []) + list(metadata.get("reused") or [])
+                scene_store = SceneCache(output_dir)
+                if scene_ids and all(
+                    isinstance(scene_store.entries.get(scene_id), dict)
+                    and scene_store.lookup(scene_id, scene_store.entries[scene_id].get("fingerprint"))
+                    for scene_id in scene_ids
+                ):
+                    return {
+                        **cached, "cacheHit": True,
+                        "sceneCache": {
+                            **metadata, "rendered": [], "renderedCount": 0,
+                            "reused": scene_ids, "reusedCount": len(scene_ids),
+                        },
+                    }
         except (OSError, ValueError):
             pass
     source = path
