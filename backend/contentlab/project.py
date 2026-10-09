@@ -174,17 +174,6 @@ def inspect_project(directory):
     }
 
 
-def _preview_data(path):
-    data = json.loads(path.read_text(encoding="utf-8-sig"))
-    settings = load_edit_plan(path).project
-    factor = min(1.0, 960 / max(settings.width, settings.height))
-    width = max(2, round(settings.width * factor / 2) * 2)
-    height = max(2, round(settings.height * factor / 2) * 2)
-    data["project"]["resolution"] = {"width": width, "height": height}
-    data["project"]["fps"] = min(settings.fps, 15)
-    return data
-
-
 def _render_fingerprint(path, root, mode, hardware_accel=False):
     plan, _, narration, validation = prepare_edit_plan(path, root)
     if not validation["valid"]:
@@ -213,14 +202,14 @@ def _render_fingerprint(path, root, mode, hardware_accel=False):
     return digest.hexdigest()
 
 
-def render_project(directory, mode="preview", progress=None, ffmpeg_dir=None, runner=None, use_cache=True, hardware_accel=False):
-    if mode not in {"preview", "final"}:
-        raise ValueError("Modo de projeto inválido.")
+def render_project(directory, mode="final", progress=None, ffmpeg_dir=None, runner=None, use_cache=True, hardware_accel=False):
+    if mode != "final":
+        raise ValueError("A geração de preview foi removida; use o render final.")
     root, path = project_plan_path(directory)
     output_dir = root / "output" / mode
     fingerprint = _render_fingerprint(path, root, mode, hardware_accel)
     report_path = output_dir / "render_report.json"
-    output_path = output_dir / ("preview.mp4" if mode == "preview" else "final.mp4")
+    output_path = output_dir / "final.mp4"
     if use_cache and fingerprint and report_path.is_file() and output_path.is_file() and output_path.stat().st_size > 0:
         try:
             cached = json.loads(report_path.read_text(encoding="utf-8"))
@@ -228,7 +217,7 @@ def render_project(directory, mode="preview", progress=None, ffmpeg_dir=None, ru
                 return {**cached, "cacheHit": True}
         except (OSError, ValueError):
             pass
-    source = _preview_data(path) if mode == "preview" else path
+    source = path
     options = {"output_dir": output_dir, "project_root": root, "progress": progress, "mode": mode, "hardware_accel": hardware_accel}
     if ffmpeg_dir is not None:
         options["ffmpeg_dir"] = ffmpeg_dir
