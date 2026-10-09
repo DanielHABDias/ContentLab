@@ -3,6 +3,7 @@ import os
 import subprocess
 import tempfile
 import time
+from dataclasses import replace
 from pathlib import Path
 
 from .errors import PlanValidationError, RenderError, RenderCancelled
@@ -191,6 +192,112 @@ def _render_segment(ffmpeg, scene, output, project, duration, runner, warnings, 
         warnings.append({"scene": scene.id, "code": "elements_not_rendered", "elements": unsupported})
     command += ["-an", "-r", str(project.fps), *(video_encoding or ["-c:v", "libx264", "-preset", "veryfast", "-crf", "18"]), "-pix_fmt", "yuv420p", str(output)]
     _run(command, runner)
+
+
+def _composite_video_overlays(ffmpeg, base, scene, overlays, output, project, duration, runner, video_encoding=None):
+    """Apply chroma-key video overlays after Remotion rendered the base scene.
+
+    This avoids sending an otherwise normal long v0.2 scene through the
+    frame-by-frame Python compositor just because it contains a short CTA.
+    """
+    if not overlays:
+        os.replace(base, output)
+        return
+
+    command = [ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-i", str(base)]
+    graph = []
+    current = "0:v"
+    for index, element in enumerate(overlays, start=1):
+        if not element.asset_path:
+            raise RenderError(f"Cena {scene.id}: overlay sem asset resolvido.")
+        if element.data.get("loop"):
+            command += ["-stream_loop", "-1"]
+        command += ["-i", str(element.asset_path)]
+
+        x, y, layer_width, layer_height = element.region
+        fit = element.data.get("fit", "cover")
+        if fit == "contain":
+            sizing = (
+                f"scale={layer_width}:{layer_height}:force_original_aspect_ratio=decrease,"
+                f"pad={layer_width}:{layer_height}:(ow-iw)/2:(oh-ih)/2:color=black@0"
+            )
+        elif fit == "stretch":
+            sizing = f"scale={layer_width}:{layer_height}"
+        else:
+            sizing = (
+                f"scale={layer_width}:{layer_height}:force_original_aspect_ratio=increase,"
+                f"crop={layer_width}:{layer_height}"
+            )
+
+        local_start = max(0.0, element.start - scene.start)
+        local_end = min(duration, element.end - scene.start)
+        config = element.data.get("config", {})
+        chroma_color = str(config.get("keyColor", "0x00FF00")).replace("#", "0x")
+        similarity = float(config.get("similarity", 0.18))
+        blend = float(config.get("blend", 0.08))
+        filters = [
+            f"setpts=PTS-STARTPTS+{local_start:.6f}/TB",
+            sizing,
+            "format=rgba",
+            f"chromakey={chroma_color}:{similarity:.3f}:{blend:.3f}",
+        ]
+        filters.extend(
+            motion_filters(
+                element.data.get("animation", {}),
+                layer_width, layer_height, project.fps, duration,
+                local_start, local_end,
+            )
+        )
+        raw = f"overlay_src_{index}"
+        graph.append(f"[{index}:v]{','.join(filters)}[{raw}]")
+        position_x, position_y = overlay_position(
+            x, y, layer_height, element.data.get("animation", {}), local_start
+        )
+        next_label = f"overlay_composed_{index}"
+        graph.append(
+            f"[{current}][{raw}]overlay=x='{position_x}':y='{position_y}':"
+            f"eval=frame:shortest=0:eof_action=pass:"
+            f"enable='between(t,{local_start:.6f},{local_end:.6f})'[{next_label}]"
+        )
+        current = next_label
+
+    encoding = list(video_encoding or ["-c:v", "libx264", "-preset", "veryfast", "-crf", "18"])
+    if "-threads" not in encoding:
+        encoding += ["-threads", str(max(1, int(os.environ.get("CONTENTLAB_FFMPEG_THREADS", "2"))))]
+    command += [
+        "-filter_complex", ";".join(graph),
+        "-map", f"[{current}]",
+        "-an", "-t", f"{duration:.6f}", "-r", str(project.fps),
+        *encoding, "-pix_fmt", "yuv420p", str(output),
+    ]
+    _run(command, runner)
+
+
+def _render_remotion_scene_with_overlays(
+    ffmpeg, scene, output, project, duration, work, runner, transcript,
+    cancel_event=None, hardware_accel=False, video_encoding=None,
+):
+    overlays = tuple(element for element in scene.elements if element.type == "overlay")
+    base_scene = replace(
+        scene,
+        elements=tuple(element for element in scene.elements if element.type != "overlay"),
+    )
+    base = Path(work) / f"{output.stem}-remotion-base.mp4"
+    try:
+        render_remotion_scene(
+            base_scene, base, project, duration, work,
+            runner=runner, transcript=transcript,
+            cancel_event=cancel_event, hardware_accel=hardware_accel,
+        )
+        _composite_video_overlays(
+            ffmpeg, base, scene, overlays, output, project, duration,
+            runner, video_encoding=video_encoding,
+        )
+    finally:
+        try:
+            base.unlink()
+        except FileNotFoundError:
+            pass
 
 
 def _concat_file_line(path):
@@ -522,8 +629,9 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
                 renderer_name = "ffmpeg"
                 try:
                     if plan.version == "0.2" and scene is not None:
-                        use_python = os.environ.get("CONTENTLAB_MOTION_ENGINE", "remotion") == "python" or any(element.type == "overlay" for element in scene.elements)
-                        if use_python:
+                        force_python = os.environ.get("CONTENTLAB_MOTION_ENGINE", "remotion") == "python"
+                        overlays = tuple(element for element in scene.elements if element.type == "overlay")
+                        if force_python:
                             renderer_name = "python"
                             scene_renderers.append({"scene": scene.id, "renderer": renderer_name})
                             if duration >= 20:
@@ -536,6 +644,16 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
                                 })
                             render_motion_scene(ffmpeg, scene_for_render, segment, plan.project, duration,
                                                 lambda command: _run(command, runner), work, video_encoding, transcript, getattr(runner, "event", None))
+                        elif overlays:
+                            renderer_name = "remotion+ffmpeg-overlay"
+                            scene_renderers.append({"scene": scene.id, "renderer": renderer_name})
+                            _render_remotion_scene_with_overlays(
+                                ffmpeg, scene_for_render, segment, plan.project, duration,
+                                work, runner, transcript,
+                                cancel_event=getattr(runner, "event", None),
+                                hardware_accel=hardware_accel,
+                                video_encoding=video_encoding,
+                            )
                         else:
                             renderer_name = "remotion"
                             scene_renderers.append({"scene": scene.id, "renderer": renderer_name})
