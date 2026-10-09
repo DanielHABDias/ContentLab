@@ -15,6 +15,7 @@ STYLE_DEFINITIONS = {
     "bangers": {"font": "Bangers", "size": 86, "primary": "#FFFFFF", "outline": "#000000", "outline_width": 4, "bold": False},
     "bangers_highlight_block": {"font": "Bangers", "size": 64, "primary": "#FFFFFF", "outline": "#000000", "outline_width": 4, "bold": False},
     "word_stack_vertical": {"font": "Anton", "size": 92, "primary": "#FFFFFF", "outline": "#FFFFFF", "outline_width": 0, "bold": True},
+    "word_stream_horizontal": {"font": "Anton", "size": 108, "primary": "#FFFFFF", "outline": "#FFFFFF", "outline_width": 0, "bold": True},
 }
 
 
