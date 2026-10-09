@@ -275,9 +275,10 @@ def register_editor_routes(app, EDITOR_JOBS, EDITOR_JOBS_LOCK, EDITOR_CANCEL_EVE
                 job.update(errorLog=str(log_path), hasErrorLog=True)
             except Exception as log_exc:
                 job.update(errorLog=None, hasErrorLog=False, logError=str(log_exc))
+            scene_suffix = f" na cena {job.get('sceneId')}" if job.get("sceneId") else ""
             job.update(
                 status="error",
-                message=f"Falha no render{f' na cena {job.get(\"sceneId\")}' if job.get('sceneId') else ''}.",
+                message=f"Falha no render{scene_suffix}.",
                 error=str(exc),
                 errorType=type(exc).__name__,
                 tracebackTail="\n".join(trace.strip().splitlines()[-12:]),
