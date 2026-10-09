@@ -584,7 +584,27 @@ def _render_motion_scene_impl(ffmpeg, scene, output, project, duration, run, wor
                 f"Falha ao preparar elemento {element.data['id']} ({element.type}): {exc}"
             ) from exc
     words = transcript_words(transcript)
-    phrases = {element.data["id"]: _phrase_words(element.data.get("text"), element.start, element.end, words) for element in scene.elements if element.type == "kinetic_text"}
+    phrases = {}
+    for element in scene.elements:
+        if element.type != "kinetic_text":
+            continue
+        configured_items = (element.data.get("config") or {}).get("items")
+        if element.data.get("style") == "word_stack_vertical" and isinstance(configured_items, list):
+            items = []
+            for entry in configured_items:
+                if not isinstance(entry, dict):
+                    continue
+                try:
+                    start = float(entry["start"])
+                    end = float(entry["end"])
+                except (KeyError, TypeError, ValueError):
+                    continue
+                text = str(entry.get("text", "")).strip()
+                if text and end > start:
+                    items.append({"word": text, "start": start, "end": end})
+            phrases[element.data["id"]] = items
+        else:
+            phrases[element.data["id"]] = _phrase_words(element.data.get("text"), element.start, element.end, words)
     frames_dir = scene_work / "frames"
     frames_dir.mkdir()
     frame_count = max(1, round(duration * project.fps))
