@@ -123,7 +123,21 @@ class ParserTests(unittest.TestCase):
             "text": "ALFA BETA GAMA DELTA",
             "sync": "transcript",
             "textStyle": {"fontFamily": "Anton", "uppercase": True, "color": "#FFFFFF"},
-            "config": {"inactiveOpacity": 0.30, "transitionDuration": 0.18, "slotGap": 0.24},
+            "config": {
+                "inactiveOpacity": 0.36,
+                "transitionDuration": 0.18,
+                "slotGap": 0.24,
+                "direction": "down",
+                "align": "left",
+                "activeScale": 1.45,
+                "inactiveScale": 0.72,
+                "inactiveColor": "#777777",
+                "panelColor": "#D9D9D9",
+                "panelOpacity": 0.18,
+                "panelRadius": 28,
+                "panelPaddingX": 42,
+                "panelPaddingY": 28,
+            },
         }]
         self.assertEqual(parse_edit_plan(data).version, "0.2")
 
@@ -152,6 +166,16 @@ class ParserTests(unittest.TestCase):
         bad["timeline"][0]["elements"][0]["config"]["inactiveOpacity"] = 1.4
         with self.assertRaises(PlanValidationError):
             parse_edit_plan(bad)
+
+        bad_align = json.loads(json.dumps(data))
+        bad_align["timeline"][0]["elements"][0]["config"]["align"] = "right"
+        with self.assertRaises(PlanValidationError):
+            parse_edit_plan(bad_align)
+
+        bad_direction = json.loads(json.dumps(data))
+        bad_direction["timeline"][0]["elements"][0]["config"]["direction"] = "sideways"
+        with self.assertRaises(PlanValidationError):
+            parse_edit_plan(bad_direction)
 
     def test_center_text_motions_and_word_safe_wrap(self):
         registry = describe_registry()
