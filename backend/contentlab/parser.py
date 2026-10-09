@@ -131,6 +131,32 @@ def _semantic_issues(data):
                         value = config.get(key)
                         if value is not None and (not isinstance(value, str) or not re.fullmatch(r"#[0-9A-Fa-f]{6}", value)):
                             issues.append({"path": f"{prefix}.elements.{j}.config.{key}", "message": f"{key} deve usar cor hexadecimal #RRGGBB."})
+                    items = config.get("items")
+                    if items is not None:
+                        if not isinstance(items, list) or not 2 <= len(items) <= 20:
+                            issues.append({"path": f"{prefix}.elements.{j}.config.items", "message": "items deve conter de 2 a 20 frases temporizadas."})
+                        else:
+                            previous_item_start = -1.0
+                            for item_index, item in enumerate(items):
+                                ipath = f"{prefix}.elements.{j}.config.items.{item_index}"
+                                if not isinstance(item, dict):
+                                    issues.append({"path": ipath, "message": "Cada item deve ser objeto com text/start/end."})
+                                    continue
+                                text_value = item.get("text")
+                                item_start = item.get("start")
+                                item_end = item.get("end")
+                                if not isinstance(text_value, str) or not text_value.strip():
+                                    issues.append({"path": f"{ipath}.text", "message": "A frase do carrossel não pode estar vazia."})
+                                if not isinstance(item_start, (int, float)) or not isinstance(item_end, (int, float)):
+                                    issues.append({"path": ipath, "message": "start/end do item devem ser numéricos."})
+                                    continue
+                                if item_end <= item_start:
+                                    issues.append({"path": ipath, "message": "O item deve terminar depois de começar."})
+                                if item_start < element.get("start", start) or item_end > element.get("end", end):
+                                    issues.append({"path": ipath, "message": "O item deve ficar dentro do intervalo do kinetic_text."})
+                                if item_start < previous_item_start:
+                                    issues.append({"path": f"{ipath}.start", "message": "Items devem estar em ordem cronológica."})
+                                previous_item_start = item_start
                 if element["type"] == "filter":
                     if element.get("style") not in {"dim", "crt_tv"}:
                         issues.append({"path": f"{prefix}.elements.{j}.style", "message": "Filtro v0.2 requer style dim ou crt_tv."})
