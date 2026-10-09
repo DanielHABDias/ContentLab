@@ -43,7 +43,7 @@
     $('editorPlanText').value = JSON.stringify(plan, null, 2);
     $('editorPlanText').dispatchEvent(new Event('input'));
     writing = false;
-    message('Rascunho atualizado. Valide e salve o plano antes do preview.');
+    message('Rascunho atualizado. Valide e salve o plano antes do render final.');
   };
   const changed = () => {
     writing = true;
