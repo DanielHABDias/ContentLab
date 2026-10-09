@@ -52,7 +52,19 @@ const captionChunk = (item: Element, absolute: number, words: Word[]) => {
   return null;
 };
 const wordStackState = (item: Element, absolute: number, words: Word[]) => {
-  const candidates: Word[] = item.data.phraseWords ?? words.filter((word) => word.end > item.start && word.start < item.end);
+  const configuredItems = Array.isArray(item.data.config?.items)
+    ? item.data.config.items
+        .filter((entry: unknown) => entry && typeof entry === 'object')
+        .map((entry: any) => ({
+          word: String(entry.text ?? ''),
+          start: Number(entry.start),
+          end: Number(entry.end),
+        }))
+        .filter((entry: Word) => entry.word && Number.isFinite(entry.start) && Number.isFinite(entry.end) && entry.end > entry.start)
+    : [];
+  const candidates: Word[] = configuredItems.length
+    ? configuredItems
+    : item.data.phraseWords ?? words.filter((word) => word.end > item.start && word.start < item.end);
   if (!candidates.length) return null;
   let activeIndex = candidates.findIndex((word) => word.start <= absolute && absolute < word.end);
   if (activeIndex < 0) {
