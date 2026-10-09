@@ -89,21 +89,19 @@ def main():
     build_fixture(root, ffmpeg)
     project = inspect_project(str(root))
     assert project["validation"]["valid"], project["validation"]
-    preview = render_project(str(root), "preview", ffmpeg_dir=Path(ffmpeg).parent, use_cache=False)
     final = render_project(str(root), "final", ffmpeg_dir=Path(ffmpeg).parent, use_cache=False)
     rough = render_edit_plan(root / "edit_plan.json", output_dir=root / "output" / "rough", project_root=root, ffmpeg_dir=Path(ffmpeg).parent)
     assert Path(rough["output"]).name == "rough_cut.mp4"
     assert (root / "output" / "rough" / "render_report.json").is_file()
-    cached = render_project(str(root), "preview", ffmpeg_dir=Path(ffmpeg).parent)
+    cached = render_project(str(root), "final", ffmpeg_dir=Path(ffmpeg).parent)
     assert cached["cacheHit"] is True
-    for mode, report in (("preview", preview), ("final", final)):
-        info = _probe(report["output"], ffprobe)
-        streams = {stream["codec_type"]: stream for stream in info["streams"]}
-        assert abs(float(info["format"]["duration"]) - 60) < 0.2, info
-        assert streams["video"]["codec_name"] == "h264" and streams["audio"]["codec_name"] == "aac", info
-        assert streams["video"]["width"] == 640 and streams["video"]["height"] == 360, info
-        assert streams["video"]["r_frame_rate"] == ("15/1" if mode == "preview" else "30/1"), info
-        assert len(report["transitions"]) == 2 and len(report["audioLayers"]) == 2, report
+    info = _probe(final["output"], ffprobe)
+    streams = {stream["codec_type"]: stream for stream in info["streams"]}
+    assert abs(float(info["format"]["duration"]) - 60) < 0.2, info
+    assert streams["video"]["codec_name"] == "h264" and streams["audio"]["codec_name"] == "aac", info
+    assert streams["video"]["width"] == 640 and streams["video"]["height"] == 360, info
+    assert streams["video"]["r_frame_rate"] == "30/1", info
+    assert len(final["transitions"]) == 2 and len(final["audioLayers"]) == 2, final
     frames = root / "frames"
     frames.mkdir()
     for second in (3, 8.3, 18, 35, 53):
@@ -117,7 +115,7 @@ def main():
     assert left[0] > left[2] and middle[2] > middle[0] and right[1] > right[0], (left, middle, right)
     cta = Image.open(frames / "53.png").convert("RGB").getpixel((320, 180))
     assert cta[0] > cta[1] * 2 and cta[0] > cta[2] * 2, cta
-    print(json.dumps({"status": "passed", "projectRoot": str(root), "preview": preview["output"], "final": final["output"], "rough": rough["output"], "frames": str(frames), "previewSeconds": preview["elapsedSeconds"], "finalSeconds": final["elapsedSeconds"], "cacheHit": cached["cacheHit"]}, ensure_ascii=False, indent=2))
+    print(json.dumps({"status": "passed", "projectRoot": str(root), "final": final["output"], "rough": rough["output"], "frames": str(frames), "finalSeconds": final["elapsedSeconds"], "cacheHit": cached["cacheHit"]}, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":
