@@ -66,10 +66,14 @@ def render_remotion_scene(scene, output, project, duration, work_dir, runner=sub
     cli = REMOTION_DIR / "node_modules" / "@remotion" / "cli" / "remotion-cli.js"
     command = [str(node), str(cli), "render", str(REMOTION_DIR / "src/index.ts"), "Scene", str(output),
                "--props", str(props), "--public-dir", str(public), "--codec", "h264",
-               "--log", "error", "--overwrite"]
+               "--log", "info", "--overwrite"]
     if hardware_accel:
         command.append("--hardware-acceleration=if-possible")
     result = runner(command, cwd=REMOTION_DIR, capture_output=True, text=True,
                     creationflags=0x08000000 if os.name == "nt" else 0)
     if result.returncode or not output.is_file():
-        raise RenderError("Remotion falhou: " + (result.stderr or result.stdout or "sem vídeo gerado")[-3000:])
+        details = (result.stderr or result.stdout or "sem vídeo gerado").strip()
+        raise RenderError(
+            f"Remotion falhou (exit={result.returncode}): "
+            + details[-6000:]
+        )
