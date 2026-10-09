@@ -272,7 +272,7 @@ class ParserTests(unittest.TestCase):
         source = "UMA PALAVRA COMPLETA"
         wrapped = _wrap_words(source, font, 0, 130)
         self.assertEqual(wrapped.replace("\\n", " ").split(), source.split())
-        self.assertIn("\\n", wrapped)
+        self.assertIn("\n", wrapped)
     def test_element_image_accepts_fractional_pillow_bbox(self):
         element = SimpleNamespace(
             type="text",
