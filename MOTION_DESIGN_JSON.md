@@ -243,13 +243,26 @@ a próxima assume o centro e uma nova palavra entra por cima.
 O timing vem de `phraseWords`, normalmente resolvido a partir de
 `sources.transcript`. O objeto `config` aceita:
 
-- `inactiveOpacity`: 0–1; padrão 0,32;
+- `inactiveOpacity`: 0–1; padrão 0,36;
 - `transitionDuration`: 0,05–1 s; padrão 0,18;
-- `slotGap`: 0,10–0,45 da altura da região; padrão 0,24.
+- `slotGap`: 0,10–0,45 da altura da região; padrão 0,24;
+- `direction`: `"down"` ou `"up"`; padrão `"down"`. Em `down`, a palavra seguinte entra por cima, assume a posição ativa e a anterior desce;
+- `align`: `"left"` ou `"center"`; padrão `"left"`;
+- `activeScale`: escala relativa da palavra ativa; padrão 1,45;
+- `inactiveScale`: escala relativa de anterior/próxima; padrão 0,72;
+- `inactiveColor`: cor das palavras inativas; padrão `#777777`;
+- `panelColor`: cor do painel atrás da pilha; padrão `#D9D9D9`;
+- `panelOpacity`: opacidade do painel; padrão 0,18;
+- `panelRadius`: raio dos cantos do painel em px; padrão 28;
+- `panelPaddingX` / `panelPaddingY`: respiro interno em px.
 
-A aparência continua em `textStyle`. O preset usa Anton/caixa alta por
-padrão, mas pode ser reaproveitado por outro projeto com Bangers ou outra cor
-suportada pelo contrato.
+A palavra ativa cresce durante a troca enquanto a anterior reduz de tamanho.
+Isso cria hierarquia clara sem precisar reconstruir a pilha com vários elementos.
+A aparência principal continua em `textStyle`. O preset usa Anton/caixa alta
+por padrão, mas pode ser reaproveitado por outro projeto com Bangers ou outra
+cor suportada pelo contrato. Para composições editoriais à esquerda, combine
+`align: "left"` com uma região larga do grid, por exemplo
+`cells: [1,2,4,5,7,8]`.
 
 ## Caption com destaque por palavra
 
