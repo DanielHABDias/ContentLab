@@ -62,7 +62,7 @@
 4. Caption karaoke e preset de apresentador central. **Implementado como caption ASS e vídeo em região sobre background.**
 5. Grid 3x3, boxes e motions. **Implementado com presets de entrada, idle e saída.**
 6. Transições, chroma, música/SFX e relatórios. **Implementado: plugins cut/fade/blur_left, chroma key, mixagem e relatório de camadas.**
-7. UI de projeto, preview e render final. **Implementado: painel web, jobs assíncronos, preview reduzido e export final separado.**
+7. UI de projeto, render final. **Implementado: painel web, jobs assíncronos, export final.**
 8. Áudio do roadmap original. **Implementado: sourceCuts, narração limpa, remapeamento da transcrição, normalização, ducking, fades, limiter e relatório.** A numeração das fases 6–7 neste resumo local não coincidia com a do roadmap do Drive; a fase 8 segue o escopo de áudio daquele documento.
-9. Web UI do roadmap original. **Implementado: carregar e editar JSON, validação de rascunho, salvamento atômico com revisão, inventário de assets/plugins, preview/final, progresso e warnings.**
+9. Web UI do roadmap original. **Implementado: carregar e editar JSON, validação de rascunho, salvamento atômico com revisão, inventário de assets/plugins, render final, progresso e warnings.**
 10. Estabilização e aceite do MVP. **Implementado no código: cache de render por fingerprint, NVENC opcional com fallback, cancelamento, checagem FFprobe do resultado, fixture integrada de 60 segundos, criação/importação de projeto na UI e scripts Windows mais robustos.** A execução no Windows e a importação no CapCut dependem de validação manual nesse ambiente; veja [MVP_ACCEPTANCE.md](MVP_ACCEPTANCE.md).
