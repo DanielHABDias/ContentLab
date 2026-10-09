@@ -932,7 +932,7 @@ class RendererTests(unittest.TestCase):
             old_b_fingerprint = stored.entries["b-second"]["fingerprint"]
             self.assertEqual(render_project(str(root), "final", ffmpeg_dir=root / "bin", runner=runner)["cacheHit"], True)
 
-            plan["timeline"][1]["elements"][0]["transform"] = {"scale": 1.3}
+            plan["timeline"][1]["elements"][0]["cells"] = [1, 4, 7]
             plan_path.write_text(json.dumps(plan), encoding="utf-8")
             update = render_project(str(root), "final", ffmpeg_dir=root / "bin", runner=runner)
             self.assertEqual(update["sceneCache"]["rendered"], ["b-second"])
