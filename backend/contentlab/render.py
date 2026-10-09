@@ -350,10 +350,13 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
     transcript = _load_transcript(plan, actual_project_root, warnings)
     transcript = remap_transcript(transcript, plan.audio.get("sourceCuts", []))
 
+    current_stage = "prepare"
+    current_scene = None
     try:
         with tempfile.TemporaryDirectory(prefix="contentlab-render-", dir=output_dir) as work:
             work = Path(work)
             cleaned_temp = work / "narration.cleaned.wav"
+            current_stage = "narration"
             narration_report = prepare_narration(
                 ffmpeg, narration, cleaned_temp, plan.audio,
                 lambda command: _run(command, runner),
@@ -396,40 +399,66 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
                 if scene_for_render is None:
                     from .models import ResolvedScene
                     scene_for_render = ResolvedScene(id=f"gap-{index}", start=0, end=duration, transition_out="cut", elements=(), background={"color": "#000000"})
+                current_stage = "scene"
+                current_scene = scene_for_render.id
                 if progress:
                     progress("scene", index + 1, len(render_scenes), scene_for_render.id)
-                if plan.version == "0.2" and scene is not None:
-                    if os.environ.get("CONTENTLAB_MOTION_ENGINE", "remotion") == "python" or any(element.type == "overlay" for element in scene.elements):
-                        scene_renderers.append({"scene": scene.id, "renderer": "python"})
-                        render_motion_scene(ffmpeg, scene_for_render, segment, plan.project, duration,
-                                            lambda command: _run(command, runner), work, video_encoding, transcript, getattr(runner, "event", None))
+                renderer_name = "ffmpeg"
+                try:
+                    if plan.version == "0.2" and scene is not None:
+                        use_python = os.environ.get("CONTENTLAB_MOTION_ENGINE", "remotion") == "python" or any(element.type == "overlay" for element in scene.elements)
+                        if use_python:
+                            renderer_name = "python"
+                            scene_renderers.append({"scene": scene.id, "renderer": renderer_name})
+                            if duration >= 20:
+                                warnings.append({
+                                    "scene": scene.id,
+                                    "code": "python_renderer_long_scene",
+                                    "message": "Cena longa caiu no compositor Python quadro a quadro; isso pode consumir muito disco temporário.",
+                                    "duration": round(duration, 3),
+                                    "estimatedFrames": max(1, round(duration * plan.project.fps)),
+                                })
+                            render_motion_scene(ffmpeg, scene_for_render, segment, plan.project, duration,
+                                                lambda command: _run(command, runner), work, video_encoding, transcript, getattr(runner, "event", None))
+                        else:
+                            renderer_name = "remotion"
+                            scene_renderers.append({"scene": scene.id, "renderer": renderer_name})
+                            render_remotion_scene(scene_for_render, segment, plan.project, duration,
+                                                  work, runner=runner, transcript=transcript,
+                                                  cancel_event=getattr(runner, "event", None),
+                                                  hardware_accel=hardware_accel)
                     else:
-                        scene_renderers.append({"scene": scene.id, "renderer": "remotion"})
-                        render_remotion_scene(scene_for_render, segment, plan.project, duration,
-                                              work, runner=runner, transcript=transcript,
-                                              cancel_event=getattr(runner, "event", None),
-                                              hardware_accel=hardware_accel)
-                else:
-                    if scene is not None:
-                        scene_renderers.append({"scene": scene.id, "renderer": "ffmpeg"})
-                    _render_segment(
-                        ffmpeg, scene_for_render, segment, plan.project, duration, runner, warnings,
-                        transcript=transcript, work_dir=work, video_encoding=video_encoding,
-                    )
+                        if scene is not None:
+                            scene_renderers.append({"scene": scene.id, "renderer": renderer_name})
+                        _render_segment(
+                            ffmpeg, scene_for_render, segment, plan.project, duration, runner, warnings,
+                            transcript=transcript, work_dir=work, video_encoding=video_encoding,
+                        )
+                except RenderCancelled:
+                    raise
+                except Exception as exc:
+                    raise RenderError(
+                        f"Falha ao renderizar cena {index + 1}/{len(render_scenes)} "
+                        f"({scene_for_render.id}) com renderer {renderer_name}: {exc}"
+                    ) from exc
                 segments.append(segment)
                 segment_durations.append(duration)
 
             if timeline.scenes[-1].transition_out != "cut":
                 warnings.append({"scene": timeline.scenes[-1].id, "code": "transition_at_end", "requested": timeline.scenes[-1].transition_out, "used": "cut"})
 
+            current_stage = "compose"
+            current_scene = None
             visual = _compose_visual(ffmpeg, segments, boundaries, segment_durations, timeline.duration, plan.project.fps, work, runner, video_encoding=video_encoding)
             if progress:
                 progress("compose", len(render_scenes), len(render_scenes), "Vídeo composto")
 
             temp_output = work / output.name
+            current_stage = "audio"
             if progress:
                 progress("audio", len(render_scenes), len(render_scenes), "Mixando áudio")
             applied_audio = _audio_mix(ffmpeg, visual, cleaned_temp, plan, timeline, validation["resolvedAssets"], temp_output, runner)
+            current_stage = "verify"
             output_probe = _verify_output(ffmpeg_dir, temp_output, timeline.duration, plan.project.fps)
             os.replace(temp_output, output)
             cleaned_output = output_dir / "narration.cleaned.wav"
@@ -457,6 +486,15 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
         report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
         return report
     except Exception as exc:
-        report = {"status": "cancelled" if isinstance(exc, RenderCancelled) else "failed", "project": plan.project.name, "error": str(exc), "warnings": warnings, "elapsedSeconds": round(time.time() - started, 3)}
+        report = {
+            "status": "cancelled" if isinstance(exc, RenderCancelled) else "failed",
+            "project": plan.project.name,
+            "error": str(exc),
+            "errorType": type(exc).__name__,
+            "stage": current_stage,
+            "scene": current_scene,
+            "warnings": warnings,
+            "elapsedSeconds": round(time.time() - started, 3),
+        }
         report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
         raise
