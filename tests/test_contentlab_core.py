@@ -307,6 +307,48 @@ class ParserTests(unittest.TestCase):
         fitted = _fit(source, (640.2, 360.7), "contain")
         self.assertEqual(fitted.size, (641, 361))
 
+    def test_motion_background_keeps_native_full_frame_without_implicit_zoom(self):
+        import backend.contentlab.motion_renderer as motion_renderer
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            background = root / "quadrants.png"
+            source = Image.new("RGB", (64, 36), (0, 0, 0))
+            for y in range(36):
+                for x in range(64):
+                    source.putpixel((x, y), (255 if x < 32 else 0, 255 if y < 18 else 0, 0))
+            source.save(background)
+            scene = SimpleNamespace(
+                id="background-native-size", start=0.0, end=1 / 30,
+                background_path=background, background={"asset": "quadrants.png", "fit": "contain"},
+                camera={"keyframes": [], "shake": []}, elements=(),
+            )
+            project = SimpleNamespace(width=64, height=36, fps=30)
+
+            def fake_run(command):
+                Path(command[-1]).write_bytes(b"mock-encoded-video")
+
+            motion_renderer.render_motion_scene(
+                "ffmpeg", scene, root / "scene.mp4", project, 1 / 30,
+                fake_run, root, ["-c:v", "libx264"], transcript=None,
+            )
+            # Re-render preserving the one-frame cache to inspect the actual compositor.
+            with patch.dict(os.environ, {"CONTENTLAB_KEEP_SCENE_TEMP": "1"}):
+                motion_renderer.render_motion_scene(
+                    "ffmpeg", scene, root / "scene.mp4", project, 1 / 30,
+                    fake_run, root, ["-c:v", "libx264"], transcript=None,
+                )
+            frame = root / "scene-motion" / "frames" / "frame-000000.jpg"
+            with Image.open(frame) as rendered:
+                self.assertEqual(rendered.size, (64, 36))
+                rgb = rendered.convert("RGB")
+                left_top = rgb.getpixel((3, 3))
+                right_bottom = rgb.getpixel((60, 32))
+                self.assertGreater(left_top[0], 180)
+                self.assertGreater(left_top[1], 180)
+                self.assertLess(right_bottom[0], 60)
+                self.assertLess(right_bottom[1], 60)
+
     def test_motion_renderer_cleans_scene_frame_cache(self):
         import backend.contentlab.motion_renderer as motion_renderer
 
