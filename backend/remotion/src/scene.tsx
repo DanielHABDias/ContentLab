@@ -26,7 +26,7 @@ const stateAt = (initial: Record<string, number>, frames: Keyframe[] = [], time:
   }
   return state;
 };
-const fit = (name?: string): React.CSSProperties['objectFit'] => name === 'stretch' ? 'fill' : name === 'contain' ? 'contain' : 'cover';
+const fit = (name?: string): 'fill' | 'contain' | 'cover' => name === 'stretch' ? 'fill' : name === 'contain' ? 'contain' : 'cover';
 const captionChunk = (item: Element, absolute: number, words: Word[]) => {
   const range = item.data.range ?? {};
   const start = Number(range.start ?? item.start), end = Number(range.end ?? item.end);
@@ -145,8 +145,32 @@ const wrappedFontSize = (text: string, baseSize: number, width: number, height: 
   }
   return Math.max(12, size);
 };
-const Media = ({src, isVideo, loop, style}: {src: string; isVideo: boolean; loop?: boolean; style: React.CSSProperties}) =>
-  isVideo ? <Video src={staticFile(src)} loop={loop} muted style={style}/> : <Img src={staticFile(src)} style={style}/>;
+const Media = ({
+  src,
+  isVideo,
+  loop,
+  style,
+  objectFit,
+}: {
+  src: string;
+  isVideo: boolean;
+  loop?: boolean;
+  style: React.CSSProperties;
+  objectFit: 'fill' | 'contain' | 'cover';
+}) =>
+  isVideo ? (
+    <Video
+      src={staticFile(src)}
+      loop={loop}
+      muted
+      style={style}
+      objectFit={objectFit}
+      delayRenderTimeoutInMilliseconds={90_000}
+      delayRenderRetries={2}
+    />
+  ) : (
+    <Img src={staticFile(src)} style={{...style, objectFit}}/>
+  );
 
 const Layer = ({item, props, time, absolute, camera}: {item: Element; props: SceneProps; time: number; absolute: number; camera: Record<string, number>}) => {
   if (item.type === 'sfx' || absolute < item.start || absolute >= item.end) return null;
@@ -237,7 +261,7 @@ const Layer = ({item, props, time, absolute, camera}: {item: Element; props: Sce
   }
   if (item.src) {
     const isVideo = item.type === 'video' || (item.type === 'overlay' && /\.(mp4|mov|mkv|webm)$/i.test(item.src));
-    return <div style={common}><Media src={item.src} isVideo={isVideo} loop={item.data.loop} style={{width: '100%', height: '100%', objectFit: fit(item.data.fit)}}/></div>;
+    return <div style={common}><Media src={item.src} isVideo={isVideo} loop={item.data.loop} objectFit={fit(item.data.fit)} style={{width: '100%', height: '100%'}}/></div>;
   }
   if (item.type === 'kinetic_text' && item.data.style === 'word_stack_vertical') {
     const stack = wordStackState(item, absolute, props.words);
@@ -389,7 +413,7 @@ export const Scene = (props: SceneProps) => {
       camera.y += amplitude * Math.sin(2 * Math.PI * frequency * 1.37 * time);
     }
   }
-  const backgroundStyle: React.CSSProperties = {position: 'absolute', width: '100%', height: '100%', objectFit: fit(props.scene.background.fit)};
+  const backgroundStyle: React.CSSProperties = {position: 'absolute', width: '100%', height: '100%'};
   const worldStyle: React.CSSProperties = {
     position: 'absolute', width: props.width * 2 * camera.scale, height: props.height * 2 * camera.scale,
     left: props.width / 2 - camera.x * props.width * 2 * camera.scale,
@@ -397,7 +421,7 @@ export const Scene = (props: SceneProps) => {
     backgroundColor: props.scene.background.color ?? '#000',
   };
   return <AbsoluteFill style={{backgroundColor: props.scene.background.color ?? '#000', overflow: 'hidden'}}>
-    <div style={worldStyle}>{props.scene.backgroundSrc && <Media src={props.scene.backgroundSrc} isVideo={/\.(mp4|mov|mkv|webm)$/i.test(props.scene.backgroundSrc)} loop={props.scene.background.loop} style={backgroundStyle}/>}</div>
+    <div style={worldStyle}>{props.scene.backgroundSrc && <Media src={props.scene.backgroundSrc} isVideo={/\.(mp4|mov|mkv|webm)$/i.test(props.scene.backgroundSrc)} loop={props.scene.background.loop} objectFit={fit(props.scene.background.fit)} style={backgroundStyle}/>}</div>
     {props.scene.elements.map((item) => <Sequence key={item.id} from={Math.round((item.start - props.scene.start) * fps)} layout="none"><Layer item={item} props={props} time={time} absolute={absolute} camera={camera}/></Sequence>)}
   </AbsoluteFill>;
 };
