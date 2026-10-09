@@ -93,10 +93,14 @@ def scene_fingerprint(scene_data, project, resolved_assets, transcript, engine, 
 class SceneCache:
     def __init__(self, output_dir):
         self.directory = Path(output_dir) / "scenes"
+        if Path(output_dir).is_symlink() or self.directory.is_symlink():
+            raise ValueError("O cache de cenas não pode usar links simbólicos.")
         self.manifest_path = self.directory / "manifest.json"
         self.directory.mkdir(parents=True, exist_ok=True)
         self.entries = {}
         try:
+            if self.manifest_path.is_symlink():
+                raise ValueError("O manifesto de cenas não pode usar links simbólicos.")
             payload = json.loads(self.manifest_path.read_text(encoding="utf-8"))
             if payload.get("version") == CACHE_VERSION and isinstance(payload.get("scenes"), dict):
                 self.entries = payload["scenes"]
@@ -113,7 +117,7 @@ class SceneCache:
         file = self.destination(scene_id)
         try:
             stat = file.stat()
-            if file.is_file() and stat.st_size > 0 and stat.st_size == entry.get("size") and stat.st_mtime_ns == entry.get("mtimeNs"):
+            if not file.is_symlink() and file.is_file() and stat.st_size > 0 and stat.st_size == entry.get("size") and stat.st_mtime_ns == entry.get("mtimeNs"):
                 return file
         except OSError:
             pass
@@ -122,6 +126,8 @@ class SceneCache:
     def save(self, scene_id, fingerprint, staged_file):
         """Publish only completed segments and atomically persist each entry."""
         target = self.destination(scene_id)
+        if target.is_symlink():
+            raise ValueError("O destino do trecho não pode ser um link simbólico.")
         os.replace(staged_file, target)
         stat = target.stat()
         if stat.st_size <= 0:
