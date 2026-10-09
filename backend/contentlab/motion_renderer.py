@@ -176,27 +176,95 @@ def _element_image(element, width, height, text_override=None):
     return image
 
 def _word_stack_image(element, words, absolute, width, height):
-    state = word_stack_state(words, absolute, element.data.get("config", {}).get("transitionDuration", 0.18))
+    config = element.data.get("config", {})
+    state = word_stack_state(words, absolute, config.get("transitionDuration", 0.18))
     if not state:
         return None
+
     look = appearance(element.data)
-    config = element.data.get("config", {})
-    inactive_opacity = float(config.get("inactiveOpacity", 0.32))
+    style = STYLE_DEFINITIONS["word_stack_vertical"]
+    inactive_opacity = float(config.get("inactiveOpacity", 0.36))
     gap = element.region[3] * float(config.get("slotGap", 0.24))
+    active_scale = float(config.get("activeScale", 1.45))
+    inactive_scale = float(config.get("inactiveScale", 0.72))
+    direction = -1 if config.get("direction") == "up" else 1
+    align = "center" if config.get("align") == "center" else "left"
+    inactive_color = str(config.get("inactiveColor", "#777777"))
+    active_color = look["color"] or style["primary"]
+    panel_color = str(config.get("panelColor", "#D9D9D9"))
+    panel_opacity = max(0.0, min(1.0, float(config.get("panelOpacity", 0.18))))
+    panel_radius = max(0, round(float(config.get("panelRadius", 28))))
+    panel_padding_x = max(0, round(float(config.get("panelPaddingX", max(28, element.region[2] * 0.045)))))
+    panel_padding_y = max(0, round(float(config.get("panelPaddingY", max(20, element.region[3] * 0.045)))))
+
     progress = state["progress"]
     slots = [
-        (state["previous"], element.region[3] / 2 + gap * progress, 1 - (1 - inactive_opacity) * progress),
-        (state["active"], element.region[3] / 2 - gap + gap * progress, inactive_opacity + (1 - inactive_opacity) * progress),
-        (state["next"], element.region[3] / 2 - gap * 2 + gap * progress, inactive_opacity * progress),
+        (state["previous"], element.region[3] / 2 + direction * gap * progress,
+         1 - (1 - inactive_opacity) * progress,
+         active_scale - (active_scale - inactive_scale) * progress, inactive_color),
+        (state["active"], element.region[3] / 2 - direction * gap + direction * gap * progress,
+         inactive_opacity + (1 - inactive_opacity) * progress,
+         inactive_scale + (active_scale - inactive_scale) * progress, active_color),
+        (state["next"], element.region[3] / 2 - direction * gap * 2 + direction * gap * progress,
+         inactive_opacity * progress, inactive_scale, inactive_color),
     ]
+
     canvas = Image.new("RGBA", element.region[2:])
-    for word, center_y, opacity in slots:
+    panel_rgb = ImageColor.getrgb(panel_color)
+    ImageDraw.Draw(canvas).rounded_rectangle(
+        (0, 0, canvas.width - 1, canvas.height - 1),
+        radius=panel_radius,
+        fill=(*panel_rgb, round(255 * panel_opacity)),
+    )
+
+    labels = [str(word["word"]) for word, *_ in slots if word]
+    longest = max(labels, key=len, default="")
+    scale_factor = float(element.data.get("fontScale", 1))
+    base_size = min(element.region[3] * 0.28, element.region[2] * 0.18) * scale_factor
+    max_base_by_width = element.region[2] * 0.78 / max(1, len(longest) * 0.52 * active_scale)
+    base_size = max(18, min(base_size, max_base_by_width))
+    uppercase = look["uppercase"]
+
+    def render_word(word, scale, color):
+        label = str(word["word"])
+        if uppercase:
+            label = label.upper()
+        font_size = max(12, round(base_size * scale))
+        font = _font(font_size, element.data.get("_font_path"), look["fontFamily"])
+        stroke = round(look["outlineWidth"]) if look["outlineWidth"] is not None else style.get("outline_width", 0)
+        probe = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+        bounds = probe.textbbox((0, 0), label, font=font, stroke_width=stroke)
+        shadow = look["shadow"]
+        blur = float((shadow or {}).get("blur", 8))
+        offset_x = float((shadow or {}).get("offsetX", 3))
+        offset_y = float((shadow or {}).get("offsetY", 4))
+        padding = max(4, math.ceil(blur * 3 + max(abs(offset_x), abs(offset_y)) + stroke)) if shadow else 4
+        image = Image.new("RGBA", (
+            max(1, bounds[2] - bounds[0] + padding * 2),
+            max(1, bounds[3] - bounds[1] + padding * 2),
+        ))
+        origin = (padding - bounds[0], padding - bounds[1])
+        if shadow:
+            shadow_layer = Image.new("RGBA", image.size)
+            shadow_color = ImageColor.getrgb(shadow.get("color", "#000000")) + (153,)
+            ImageDraw.Draw(shadow_layer).text(
+                (origin[0] + offset_x, origin[1] + offset_y),
+                label, font=font, fill=shadow_color, stroke_width=stroke, stroke_fill=shadow_color,
+            )
+            image.alpha_composite(shadow_layer.filter(ImageFilter.GaussianBlur(blur)))
+        ImageDraw.Draw(image).text(
+            origin, label, font=font, fill=color,
+            stroke_width=stroke, stroke_fill=look["outlineColor"] or style["outline"],
+        )
+        return image
+
+    for word, center_y, opacity, scale, color in slots:
         if not word or opacity <= 0:
             continue
-        image = _element_image(element, width, height, word["word"])
+        image = render_word(word, scale, color)
         if opacity < 1:
             image.putalpha(image.getchannel("A").point(lambda alpha: round(alpha * opacity)))
-        x = round((canvas.width - image.width) / 2)
+        x = panel_padding_x if align == "left" else round((canvas.width - image.width) / 2)
         y = round(center_y - image.height / 2)
         canvas.alpha_composite(image, (x, y))
     return canvas
