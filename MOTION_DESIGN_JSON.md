@@ -232,6 +232,41 @@ de 3 s, pop, flutuação, balanço de câmera, saída inferior e SFX. É um mode
 de estrutura: troque os URIs pelos arquivos reais antes de validar/renderizar;
 nenhum efeito sonoro, fonte ou mídia desse exemplo foi distribuído ainda.
 
+## Fluxo horizontal palavra por palavra
+
+`style: "word_stream_horizontal"` é um preset genérico de `kinetic_text` do
+`0.2` para frases que devem atravessar a tela **uma palavra por vez**, da
+direita para a esquerda. O timing vem de `phraseWords`, normalmente resolvido
+a partir de `sources.transcript` quando o elemento usa `sync: "transcript"`.
+
+Exemplo:
+
+```json
+{
+  "id": "hook-palavras",
+  "type": "kinetic_text",
+  "style": "word_stream_horizontal",
+  "text": "VOCÊ SABE ME DIZER QUAL É O MAIOR CÓDIGO MORAL DO",
+  "sync": "transcript",
+  "start": 0.05,
+  "end": 3.35,
+  "fontScale": 1.6,
+  "textStyle": {
+    "fontFamily": "Anton",
+    "uppercase": true,
+    "color": "#FFFFFF",
+    "outlineWidth": 0
+  },
+  "config": {
+    "transitionDuration": 0.14
+  }
+}
+```
+
+O texto não vira uma frase completa deslizando. A palavra anterior sai enquanto
+a nova entra. Ao terminar o elemento, o fluxo desaparece por inteiro; outro
+elemento pode então assumir o centro da composição.
+
 ## Pilha vertical de palavras
 
 `style: "word_stack_vertical"` é um preset genérico de `kinetic_text` do
@@ -263,6 +298,28 @@ por padrão, mas pode ser reaproveitado por outro projeto com Bangers ou outra
 cor suportada pelo contrato. Para composições editoriais à esquerda, combine
 `align: "left"` com uma região larga do grid, por exemplo
 `cells: [1,2,4,5,7,8]`.
+
+Para carrosséis em que cada linha é uma **frase inteira**, use `config.items`.
+Cada item recebe `text`, `start` e `end` absolutos. A frase ativa ocupa a
+linha central; anterior/próxima ficam nas linhas vizinhas. O renderer mantém
+cada item em uma única linha e reduz a fonte para caber.
+
+```json
+"config": {
+  "direction": "down",
+  "align": "left",
+  "activeScale": 1.0,
+  "inactiveScale": 0.66,
+  "items": [
+    {"text": "BATMAN NÃO É JUIZ", "start": 320.07, "end": 321.17},
+    {"text": "BATMAN NÃO É JÚRI", "start": 321.17, "end": 322.63},
+    {"text": "BATMAN NÃO É O CARRASCO", "start": 322.63, "end": 325.19}
+  ]
+}
+```
+
+Não simular esse carrossel com vários elementos `text` independentes quando
+`config.items` resolver o caso.
 
 ## Caption com destaque por palavra
 
