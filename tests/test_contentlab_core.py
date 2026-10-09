@@ -792,6 +792,46 @@ class RendererTests(unittest.TestCase):
             self.assertEqual(len(commands), 4)
             self.assertTrue(all(isinstance(command, list) for command in commands))
 
+    def test_failed_render_report_keeps_stage_and_scene_context(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "audio").mkdir()
+            (root / "images").mkdir()
+            (root / "bin").mkdir()
+            (root / "audio" / "narration.wav").touch()
+            (root / "images" / "a.png").touch()
+            (root / "bin" / "ffmpeg").touch()
+            plan_path = root / "edit_plan.json"
+            plan_path.write_text(json.dumps(valid_plan()), encoding="utf-8")
+            calls = 0
+
+            class Result:
+                stdout = ""
+
+                def __init__(self, returncode=0, stderr=""):
+                    self.returncode = returncode
+                    self.stderr = stderr
+
+            def fake_runner(command, **kwargs):
+                nonlocal calls
+                calls += 1
+                if calls == 1:
+                    Path(command[-1]).touch()
+                    return Result()
+                return Result(1, "falha de cena proposital")
+
+            with self.assertRaises(Exception):
+                render_edit_plan(
+                    plan_path, output_dir=root / "output", ffmpeg_dir=root / "bin", runner=fake_runner
+                )
+
+            report = json.loads((root / "output" / "render_report.json").read_text(encoding="utf-8"))
+            self.assertEqual(report["status"], "failed")
+            self.assertEqual(report["stage"], "scene")
+            self.assertEqual(report["scene"], "s1")
+            self.assertIn("Falha ao renderizar cena", report["error"])
+            self.assertIn("falha de cena proposital", report["error"])
+
     def test_three_columns_assigns_visual_regions_and_card_assets(self):
         data = valid_plan()
         data["timeline"][0]["layout"] = "three_columns"
