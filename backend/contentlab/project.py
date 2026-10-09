@@ -3,6 +3,7 @@
 import json
 import hashlib
 import os
+import shutil
 import tempfile
 import threading
 import re
@@ -16,7 +17,7 @@ from .service import prepare_edit_plan
 
 _SAVE_LOCK = threading.Lock()
 _MAX_PLAN_BYTES = 5 * 1024 * 1024
-_CACHE_VERSION = "render-v13-remotion"
+_CACHE_VERSION = "render-v14-scene-cache"
 
 
 def project_plan_path(directory):
@@ -202,15 +203,31 @@ def _render_fingerprint(path, root, mode, hardware_accel=False):
     return digest.hexdigest()
 
 
-def render_project(directory, mode="final", progress=None, ffmpeg_dir=None, runner=None, use_cache=True, hardware_accel=False):
+def render_project(directory, mode="final", progress=None, ffmpeg_dir=None, runner=None, use_cache=True, hardware_accel=False, cache_mode="reuse"):
     if mode != "final":
         raise ValueError("A geração de preview foi removida; use o render final.")
+    if cache_mode not in {"reuse", "rebuild"}:
+        raise ValueError("Modo de cache inválido; use reuse ou rebuild.")
     root, path = project_plan_path(directory)
+    if cache_mode == "rebuild":
+        # Validate before deleting anything. Only this project's exact output dir
+        # can be cleaned; reject symlinks to avoid following external directories.
+        validation = inspect_project(str(root))["validation"]
+        if not validation["valid"]:
+            raise PlanValidationError([{"path": item["asset"], "message": f"Asset ausente: {item['path']}"} for item in validation["missingAssets"]])
+        output_root = root / "output"
+        if output_root.is_symlink():
+            raise ValueError("A pasta output não pode ser um link simbólico.")
+        if output_root.exists():
+            if not output_root.is_dir():
+                raise ValueError("output existe, mas não é uma pasta.")
+            shutil.rmtree(output_root)
     output_dir = root / "output" / mode
+    output_dir.mkdir(parents=True, exist_ok=True)
     fingerprint = _render_fingerprint(path, root, mode, hardware_accel)
     report_path = output_dir / "render_report.json"
     output_path = output_dir / "final.mp4"
-    if use_cache and fingerprint and report_path.is_file() and output_path.is_file() and output_path.stat().st_size > 0:
+    if cache_mode == "reuse" and use_cache and fingerprint and report_path.is_file() and output_path.is_file() and output_path.stat().st_size > 0:
         try:
             cached = json.loads(report_path.read_text(encoding="utf-8"))
             if cached.get("status") == "completed" and cached.get("cacheKey") == fingerprint and cached.get("outputBytes") == output_path.stat().st_size:
@@ -218,7 +235,8 @@ def render_project(directory, mode="final", progress=None, ffmpeg_dir=None, runn
         except (OSError, ValueError):
             pass
     source = path
-    options = {"output_dir": output_dir, "project_root": root, "progress": progress, "mode": mode, "hardware_accel": hardware_accel}
+    options = {"output_dir": output_dir, "project_root": root, "progress": progress, "mode": mode, "hardware_accel": hardware_accel,
+               "scene_cache_enabled": True, "reuse_scenes": cache_mode == "reuse" and use_cache}
     if ffmpeg_dir is not None:
         options["ffmpeg_dir"] = ffmpeg_dir
     if runner is not None:
