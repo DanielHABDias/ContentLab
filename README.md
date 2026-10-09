@@ -6,7 +6,7 @@ narração e assets. Os vídeos completos ficam em cache para serem reutilizados
 em novos cortes. A fonte pode vir de um link do YouTube, de um item já em cache
 ou de um vídeo existente no computador. No caso local, o Content Lab copia o
 arquivo para o cache persistente sem mover nem alterar o original. O editor gera
-preview, render final e rough cut, mantendo relatórios de validação e renderização.
+render final e rough cut, mantendo relatórios de validação e renderização.
 
 ## Estrutura
 
@@ -204,7 +204,7 @@ http://127.0.0.1:5000/visual-tests
 
 A página permite escolher checkpoints como `word-stack`, `crt-dim-png`,
 `caption-highlight`, `blur-left`, `blur-right` e `blur-up`. Ela pausa
-o preview no tempo previsto e marca `data-visual-ready=true` quando o frame
+o vídeo de teste no tempo previsto e marca `data-visual-ready=true` quando o frame
 está pronto para captura.
 
 Para agentes MCP, o projeto recomenda [Iris](https://github.com/brijr/iris)
@@ -274,11 +274,8 @@ partida configuráveis, não uma calibração específica do canal.
 
 Na interface, a seção **Editor automático** abre uma pasta contendo
 `edit_plan.json`, mostra a timeline e verifica assets antes de iniciar o
-render. **Gerar preview** usa no máximo 960 px no maior lado e 15 FPS,
-salvando em `output/preview/preview.mp4`. **Render final** respeita a
-resolução e o FPS do plano e salva em `output/final/final.mp4`. Cada modo
-possui seu próprio `render_report.json`; a prévia pode ser reproduzida na
-página. Um projeto não executa dois renders simultâneos. O editor textual
+render. **Render final** respeita a
+resolução e o FPS do plano e salva em `output/final/final.mp4`. O render gera `render_report.json` e o MP4 pode ser reproduzido na página. Um projeto não executa dois renders simultâneos. O editor textual
 permite carregar, validar e salvar `edit_plan.json`; alterações não salvas
 bloqueiam o render. A página lista os assets resolvidos, plugins disponíveis,
 progresso e warnings. Se o arquivo mudar fora da página, o salvamento é
@@ -321,7 +318,7 @@ camadas. Em cada objeto, **+ Campo** mostra as opções disponíveis no contrato
 JSON; em listas, **+ Camada** ou **+ Item** acrescenta elementos, música,
 keyframes e outros itens. Os campos de asset sugerem os arquivos do projeto
 e os arquivos padrão instalados. O campo `z` define a ordem visual das
-camadas. Use **Validar JSON** e **Salvar plano** antes do preview.
+camadas. Use **Validar JSON** e **Salvar plano** antes do render final.
 
 O painel lateral carrega `transcript.json` da pasta do projeto ou permite
 importá-lo. Os botões **Usar início** e **Usar fim** copiam o tempo de uma
@@ -335,8 +332,7 @@ outros campos pela interface.
 
 Na fase 10, o painel também cria a estrutura inicial de um projeto, importa a
 narração, lista os assets, permite cancelar um render e oferece aceleração
-NVIDIA/NVENC opcional (com fallback automático para CPU). Preview e render
-final reutilizam o resultado quando plano, arquivos e código do renderer não
+NVIDIA/NVENC opcional (com fallback automático para CPU). O render final reutiliza o resultado quando plano, arquivos e código do renderer não
 mudaram. O relatório registra cache, encoder, tempo de render e duração dos
 streams; um arquivo com duração inconsistente não é publicado como resultado.
 
@@ -450,8 +446,7 @@ ajuda o GPT a criar um `edit_plan.json` para o editor automático. Entregue ao
 GPT o roteiro, a narração ou transcrição, a lista de assets disponíveis e as
 preferências visuais; peça um plano conforme
 [a referência do JSON](EDIT_PLAN_REFERENCE.md). Depois, salve o resultado como
-`edit_plan.json` na pasta do projeto, valide no Content Lab e gere o preview
-antes do render final. A skill auxilia na autoria do plano; os arquivos de
+`edit_plan.json` na pasta do projeto, valide no Content Lab e gere diretamente o render final. A skill auxilia na autoria do plano; os arquivos de
 áudio, imagem e vídeo referenciados precisam existir no projeto.
 O ZIP também pode ser baixado pelo botão **Baixar skill (.zip)** na aba
 **Guia do projeto**; a mesma rota funciona no aplicativo empacotado para
