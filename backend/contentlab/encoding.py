@@ -4,13 +4,17 @@ import os
 import subprocess
 
 
-SOFTWARE_H264 = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "18"]
 NVENC_H264 = ["-c:v", "h264_nvenc", "-preset", "p4", "-cq", "18"]
+
+
+def _software_h264():
+    threads = max(1, int(os.environ.get("CONTENTLAB_FFMPEG_THREADS", "2")))
+    return ["-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-threads", str(threads)]
 
 
 def select_h264_encoder(ffmpeg, hardware_accel=False):
     if not hardware_accel:
-        return SOFTWARE_H264, "libx264", None
+        return _software_h264(), "libx264", None
     command = [
         ffmpeg, "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i",
         "color=c=black:s=64x64:r=1:d=1", "-frames:v", "1", *NVENC_H264,
@@ -25,7 +29,7 @@ def select_h264_encoder(ffmpeg, hardware_accel=False):
             return NVENC_H264, "h264_nvenc", None
     except (OSError, subprocess.TimeoutExpired):
         pass
-    return SOFTWARE_H264, "libx264", {
+    return _software_h264(), "libx264", {
         "code": "hardware_encoder_unavailable",
         "message": "NVENC não está disponível; render executado com libx264.",
     }
