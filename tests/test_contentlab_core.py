@@ -1,5 +1,6 @@
 import json
 import io
+import os
 import tempfile
 import unittest
 import wave
@@ -13,7 +14,7 @@ from threading import Event, Timer
 from backend.contentlab.assets import AssetResolver
 from backend.contentlab.errors import PlanValidationError, UnsafeAssetPathError
 from backend.contentlab.parser import parse_edit_plan
-from backend.contentlab.render import render_edit_plan, _compose_visual
+from backend.contentlab.render import render_edit_plan, _compose_visual, _cleanup_stale_render_workdirs
 from backend.contentlab.text import build_scene_ass, caption_chunk, transcript_words, word_stack_state
 from backend.contentlab.timeline import compile_timeline
 from backend.contentlab.layout import box_geometry, create_card_assets
@@ -733,6 +734,32 @@ class RendererTests(unittest.TestCase):
         mapped = remap_transcript(transcript, [{"start": 0, "end": 1}, {"start": 2, "end": 3}])
         self.assertEqual([word["word"] for word in mapped["words"]], ["um", "dois"])
         self.assertAlmostEqual(mapped["words"][1]["start"], 1.2)
+
+    def test_cleanup_stale_render_workdirs_keeps_fresh_and_removes_old(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            old_dir = root / "contentlab-render-old"
+            fresh_dir = root / "contentlab-render-fresh"
+            other_dir = root / "other"
+            old_dir.mkdir()
+            fresh_dir.mkdir()
+            other_dir.mkdir()
+            old_time = 1_000_000_000
+            os.utime(old_dir, (old_time, old_time))
+            with patch("backend.contentlab.render.time.time", return_value=old_time + 1000):
+                removed = _cleanup_stale_render_workdirs(root, minimum_age_seconds=300)
+            self.assertEqual(removed, [str(old_dir)])
+            self.assertFalse(old_dir.exists())
+            self.assertTrue(fresh_dir.exists())
+            self.assertTrue(other_dir.exists())
+
+    def test_software_encoder_caps_threads(self):
+        with patch.dict("os.environ", {"CONTENTLAB_FFMPEG_THREADS": "2"}, clear=False):
+            args, encoder, warning = select_h264_encoder("ffmpeg", False)
+        self.assertEqual(encoder, "libx264")
+        self.assertIsNone(warning)
+        self.assertIn("-threads", args)
+        self.assertEqual(args[args.index("-threads") + 1], "2")
 
     def test_project_preview_and_final_are_separate(self):
         with tempfile.TemporaryDirectory() as directory:
