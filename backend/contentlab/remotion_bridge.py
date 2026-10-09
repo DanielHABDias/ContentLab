@@ -71,7 +71,7 @@ def render_remotion_scene(scene, output, project, duration, work_dir, runner=sub
     props.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
     cli = REMOTION_DIR / "node_modules" / "@remotion" / "cli" / "remotion-cli.js"
     timeout_ms = max(30_000, int(os.environ.get("CONTENTLAB_REMOTION_TIMEOUT_MS", "90000")))
-    concurrency = max(1, int(os.environ.get("CONTENTLAB_REMOTION_CONCURRENCY", "2")))
+    concurrency = max(1, int(os.environ.get("CONTENTLAB_REMOTION_CONCURRENCY", "1")))
     command = [str(node), str(cli), "render", str(REMOTION_DIR / "src/index.ts"), "Scene", str(output),
                "--props", str(props), "--public-dir", str(public), "--codec", "h264",
                "--timeout", str(timeout_ms), "--concurrency", str(concurrency),
