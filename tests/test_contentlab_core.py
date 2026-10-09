@@ -13,7 +13,7 @@ from threading import Event, Timer
 from backend.contentlab.assets import AssetResolver
 from backend.contentlab.errors import PlanValidationError, UnsafeAssetPathError
 from backend.contentlab.parser import parse_edit_plan
-from backend.contentlab.render import render_edit_plan
+from backend.contentlab.render import render_edit_plan, _compose_visual
 from backend.contentlab.text import build_scene_ass, caption_chunk, transcript_words, word_stack_state
 from backend.contentlab.timeline import compile_timeline
 from backend.contentlab.layout import box_geometry, create_card_assets
@@ -235,6 +235,83 @@ class ParserTests(unittest.TestCase):
         source = Image.new("RGBA", (64, 36), (255, 0, 0, 255))
         fitted = _fit(source, (640.2, 360.7), "contain")
         self.assertEqual(fitted.size, (641, 361))
+
+    def test_motion_renderer_cleans_scene_frame_cache(self):
+        import backend.contentlab.motion_renderer as motion_renderer
+
+        scene = SimpleNamespace(
+            id="overlay-scene",
+            start=0.0,
+            end=1 / 30,
+            background_path=None,
+            background={"color": "#000000"},
+            camera={"keyframes": [], "shake": []},
+            elements=(),
+        )
+        project = SimpleNamespace(width=64, height=36, fps=30)
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            output = root / "segment.mp4"
+
+            def fake_run(command):
+                Path(command[-1]).write_bytes(b"segment")
+
+            motion_renderer.render_motion_scene(
+                "ffmpeg", scene, output, project, 1 / 30,
+                fake_run, root, ["-c:v", "libx264"], transcript=None,
+            )
+
+            self.assertTrue(output.is_file())
+            self.assertFalse((root / "segment-motion").exists())
+
+    def test_compose_visual_limits_transition_ffmpeg_to_two_media_inputs(self):
+        class Transition:
+            def __init__(self, name, ffmpeg_name):
+                self.name = name
+                self.ffmpeg_name = ffmpeg_name
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            segments = []
+            for index in range(4):
+                path = root / f"segment-{index}.mp4"
+                path.write_bytes(b"segment")
+                segments.append(path)
+
+            commands = []
+
+            class Result:
+                returncode = 0
+                stderr = ""
+                stdout = ""
+
+            def fake_runner(command, **kwargs):
+                commands.append(list(command))
+                destination = Path(command[-1])
+                if destination.suffix in {".mp4", ".png"}:
+                    destination.write_bytes(b"out")
+                return Result()
+
+            boundaries = [
+                (Transition("blur_left", "slideleft"), 0.4),
+                (Transition("cut", None), 0),
+                (Transition("blur_up", "slideup"), 0.4),
+            ]
+            visual = _compose_visual(
+                "ffmpeg", segments, boundaries, [2.0, 2.0, 2.0, 2.0],
+                8.0, 30, 1920, 1080, root, fake_runner,
+                video_encoding=["-c:v", "libx264"],
+            )
+
+            self.assertTrue(visual.is_file())
+            transition_commands = [
+                command for command in commands
+                if "-filter_complex" in command and "overlay=" in command[command.index("-filter_complex") + 1]
+            ]
+            self.assertEqual(len(transition_commands), 2)
+            for command in transition_commands:
+                self.assertLessEqual(command.count("-i"), 2)
 
     def test_filter_layers_and_wiggle_soft_are_available_in_v02(self):
         registry = describe_registry()
