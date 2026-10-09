@@ -17,6 +17,7 @@ from .audio import prepare_narration, remap_transcript
 from .encoding import select_h264_encoder
 from .motion_renderer import render_motion_scene
 from .remotion_bridge import render_remotion_scene
+from .scene_cache import SceneCache, scene_fingerprint, code_identity
 
 
 def _cleanup_stale_render_workdirs(output_dir, minimum_age_seconds=300):
@@ -306,7 +307,7 @@ def _concat_file_line(path):
     return f"file '{escaped}'\n"
 
 
-def _compose_visual(ffmpeg, segments, boundaries, durations, total, fps, width, height, work, runner, video_encoding=None):
+def _compose_visual(ffmpeg, segments, boundaries, durations, total, fps, width, height, work, runner, video_encoding=None, preserve_segments=False):
     """Compose scene segments without opening the whole timeline at once.
 
     Cut-only timelines keep the fast stream-copy path. Timelines with blur/xfade
@@ -325,7 +326,7 @@ def _compose_visual(ffmpeg, segments, boundaries, durations, total, fps, width, 
             "-f", "concat", "-safe", "0", "-i", str(concat_list),
             "-c", "copy", str(visual),
         ], runner)
-        if os.environ.get("CONTENTLAB_KEEP_COMPOSE_TEMP", "0") != "1":
+        if not preserve_segments and os.environ.get("CONTENTLAB_KEEP_COMPOSE_TEMP", "0") != "1":
             for segment in segments:
                 try:
                     Path(segment).unlink()
@@ -421,12 +422,13 @@ def _compose_visual(ffmpeg, segments, boundaries, durations, total, fps, width, 
         ], runner)
         pieces.append(transition)
 
-        try:
-            Path(segment).unlink()
-        except FileNotFoundError:
-            pass
+        if not preserve_segments:
+            try:
+                Path(segment).unlink()
+            except FileNotFoundError:
+                pass
 
-    if segments:
+    if segments and not preserve_segments:
         try:
             Path(segments[-1]).unlink()
         except FileNotFoundError:
@@ -547,7 +549,7 @@ def _load_transcript(plan, project_root, warnings):
         return None
 
 
-def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None, runner=subprocess.run, progress=None, mode="rough", hardware_accel=False):
+def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None, runner=subprocess.run, progress=None, mode="rough", hardware_accel=False, scene_cache_enabled=True, reuse_scenes=True):
     if mode not in {"rough", "final"}:
         raise ValueError("Modo de render inválido.")
     started = time.time()
@@ -567,6 +569,11 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
 
     output_dir = Path(output_dir or (plan.source_path.parent / "output" if plan.source_path else Path.cwd() / "output")).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
+    cache = SceneCache(output_dir) if mode == "final" and scene_cache_enabled else None
+    reused_scene_ids = []
+    rendered_scene_ids = []
+    code_hashes = {}
+    raw_scenes = {scene["id"]: scene for scene in plan.timeline}
     stale_workdirs = _cleanup_stale_render_workdirs(output_dir)
     output = output_dir / {"rough": "rough_cut.mp4", "final": "final.mp4"}[mode]
     report_path = output_dir / "render_report.json"
@@ -637,55 +644,81 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
                 current_scene = scene_for_render.id
                 if progress:
                     progress("scene", index + 1, len(render_scenes), scene_for_render.id)
-                renderer_name = "ffmpeg"
-                try:
-                    if plan.version == "0.2" and scene is not None:
-                        force_python = os.environ.get("CONTENTLAB_MOTION_ENGINE", "remotion") == "python"
-                        overlays = tuple(element for element in scene.elements if element.type == "overlay")
-                        if force_python:
-                            renderer_name = "python"
-                            scene_renderers.append({"scene": scene.id, "renderer": renderer_name})
-                            if duration >= 20:
-                                warnings.append({
-                                    "scene": scene.id,
-                                    "code": "python_renderer_long_scene",
-                                    "message": "Cena longa caiu no compositor Python quadro a quadro; isso pode consumir muito disco temporário.",
-                                    "duration": round(duration, 3),
-                                    "estimatedFrames": max(1, round(duration * plan.project.fps)),
-                                })
-                            render_motion_scene(ffmpeg, scene_for_render, segment, plan.project, duration,
-                                                lambda command: _run(command, runner), work, video_encoding, transcript, getattr(runner, "event", None))
-                        elif overlays:
-                            renderer_name = "remotion+ffmpeg-overlay"
-                            scene_renderers.append({"scene": scene.id, "renderer": renderer_name})
-                            _render_remotion_scene_with_overlays(
-                                ffmpeg, scene_for_render, segment, plan.project, duration,
-                                work, runner, transcript,
-                                cancel_event=getattr(runner, "event", None),
-                                hardware_accel=hardware_accel,
-                                video_encoding=video_encoding,
-                            )
+                overlays = tuple(element for element in scene.elements if element.type == "overlay") if scene else ()
+                engine = ("python" if os.environ.get("CONTENTLAB_MOTION_ENGINE", "remotion") == "python"
+                          else "remotion+ffmpeg-overlay" if overlays else "remotion") if plan.version == "0.2" and scene else "ffmpeg"
+                fingerprint = None
+                cached_segment = None
+                if cache is not None:
+                    if engine not in code_hashes:
+                        code_hashes[engine] = code_identity(engine)
+                    fingerprint = scene_fingerprint(
+                        raw_scenes[scene.id] if scene else None,
+                        plan.project, validation["resolvedAssets"], transcript,
+                        engine, video_encoder, hardware_accel, code_hashes[engine], duration,
+                    )
+                    if reuse_scenes:
+                        cached_segment = cache.lookup(scene_for_render.id, fingerprint)
+                if cached_segment is not None:
+                    segment = cached_segment
+                    reused_scene_ids.append(scene_for_render.id)
+                    if scene:
+                        scene_renderers.append({"scene": scene.id, "renderer": engine, "cached": True})
+                    if progress:
+                        progress("scene", index + 1, len(render_scenes), f"{scene_for_render.id} (cache)")
+                else:
+                    renderer_name = "ffmpeg"
+                    try:
+                        if plan.version == "0.2" and scene is not None:
+                            force_python = os.environ.get("CONTENTLAB_MOTION_ENGINE", "remotion") == "python"
+                            overlays = tuple(element for element in scene.elements if element.type == "overlay")
+                            if force_python:
+                                renderer_name = "python"
+                                scene_renderers.append({"scene": scene.id, "renderer": renderer_name})
+                                if duration >= 20:
+                                    warnings.append({
+                                        "scene": scene.id,
+                                        "code": "python_renderer_long_scene",
+                                        "message": "Cena longa caiu no compositor Python quadro a quadro; isso pode consumir muito disco temporário.",
+                                        "duration": round(duration, 3),
+                                        "estimatedFrames": max(1, round(duration * plan.project.fps)),
+                                    })
+                                render_motion_scene(ffmpeg, scene_for_render, segment, plan.project, duration,
+                                                    lambda command: _run(command, runner), work, video_encoding, transcript, getattr(runner, "event", None))
+                            elif overlays:
+                                renderer_name = "remotion+ffmpeg-overlay"
+                                scene_renderers.append({"scene": scene.id, "renderer": renderer_name})
+                                _render_remotion_scene_with_overlays(
+                                    ffmpeg, scene_for_render, segment, plan.project, duration,
+                                    work, runner, transcript,
+                                    cancel_event=getattr(runner, "event", None),
+                                    hardware_accel=hardware_accel,
+                                    video_encoding=video_encoding,
+                                )
+                            else:
+                                renderer_name = "remotion"
+                                scene_renderers.append({"scene": scene.id, "renderer": renderer_name})
+                                render_remotion_scene(scene_for_render, segment, plan.project, duration,
+                                                      work, runner=runner, transcript=transcript,
+                                                      cancel_event=getattr(runner, "event", None),
+                                                      hardware_accel=hardware_accel)
                         else:
-                            renderer_name = "remotion"
-                            scene_renderers.append({"scene": scene.id, "renderer": renderer_name})
-                            render_remotion_scene(scene_for_render, segment, plan.project, duration,
-                                                  work, runner=runner, transcript=transcript,
-                                                  cancel_event=getattr(runner, "event", None),
-                                                  hardware_accel=hardware_accel)
-                    else:
-                        if scene is not None:
-                            scene_renderers.append({"scene": scene.id, "renderer": renderer_name})
-                        _render_segment(
-                            ffmpeg, scene_for_render, segment, plan.project, duration, runner, warnings,
-                            transcript=transcript, work_dir=work, video_encoding=video_encoding,
-                        )
-                except RenderCancelled:
-                    raise
-                except Exception as exc:
-                    raise RenderError(
-                        f"Falha ao renderizar cena {index + 1}/{len(render_scenes)} "
-                        f"({scene_for_render.id}) com renderer {renderer_name}: {exc}"
-                    ) from exc
+                            if scene is not None:
+                                scene_renderers.append({"scene": scene.id, "renderer": renderer_name})
+                            _render_segment(
+                                ffmpeg, scene_for_render, segment, plan.project, duration, runner, warnings,
+                                transcript=transcript, work_dir=work, video_encoding=video_encoding,
+                            )
+                    except RenderCancelled:
+                        raise
+                    except Exception as exc:
+                        raise RenderError(
+                            f"Falha ao renderizar cena {index + 1}/{len(render_scenes)} "
+                            f"({scene_for_render.id}) com renderer {renderer_name}: {exc}"
+                        ) from exc
+                    if cache is not None:
+                        segment = cache.save(scene_for_render.id, fingerprint, segment)
+                    rendered_scene_ids.append(scene_for_render.id)
                 segments.append(segment)
                 segment_durations.append(duration)
 
@@ -698,6 +731,7 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
                 ffmpeg, segments, boundaries, segment_durations, timeline.duration,
                 plan.project.fps, plan.project.width, plan.project.height,
                 work, runner, video_encoding=video_encoding,
+                preserve_segments=cache is not None,
             )
             if progress:
                 progress("compose", len(render_scenes), len(render_scenes), "Vídeo composto")
@@ -719,6 +753,9 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
             "output": str(output), "outputBytes": output.stat().st_size, "duration": timeline.duration, "scenes": len(timeline.scenes), "videoEncoder": video_encoder,
             "warnings": warnings, "transitions": applied_transitions, "audioLayers": applied_audio,
             "sceneRenderers": scene_renderers,
+            "sceneCache": {"enabled": cache is not None, "reused": reused_scene_ids,
+                           "rendered": rendered_scene_ids, "reusedCount": len(reused_scene_ids),
+                           "renderedCount": len(rendered_scene_ids)},
             "narration": narration_report,
             "outputProbe": output_probe,
             "ducking": {
