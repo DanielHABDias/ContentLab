@@ -933,6 +933,8 @@ class RendererTests(unittest.TestCase):
             self.assertEqual(saved.status_code, 200)
             conflict = client.post("/api/editor/project/save", json={"projectRoot": str(root), "planText": json.dumps(updated), "revision": loaded.get_json()["revision"]})
             self.assertEqual(conflict.status_code, 409)
+            rejected = client.post("/api/editor/render", json={"projectRoot": str(root), "mode": "preview", "revision": saved.get_json()["revision"]})
+            self.assertEqual(rejected.status_code, 400)
             with patch("backend.app.render_project", fake_render):
                 response = client.post("/api/editor/render", json={"projectRoot": str(root), "mode": "final", "revision": saved.get_json()["revision"]})
                 self.assertEqual(response.status_code, 202)
