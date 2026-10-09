@@ -25,7 +25,7 @@ usam o renderizador Python atual para preservar o chroma key.
    de palavras se usar `caption` ou sincronizar `kinetic_text`.
 3. Crie uma ou mais cenas em `timeline`. Para cada cena, defina `id`, `start`,
    `end`, `background`, `elements` e, opcionalmente, `camera`.
-4. Valide o plano e os assets, salve, gerar diretamente o render final.
+4. Valide o plano e os assets, salve e gere diretamente o render final.
    O render final respeita a resolução e o FPS do plano; a geometria mantém a mesma
    lógica de movimento.
 
