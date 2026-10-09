@@ -1284,7 +1284,25 @@ async function startEditorRender(mode) {
           $("editorStatus").textContent = "Render cancelado.";
           return;
         }
-        if (job.status === "error") throw new Error(job.error || "Render falhou.");
+        if (job.status === "error") {
+          const where = job.sceneId ? `Cena: ${job.sceneId}` : job.stage ? `Etapa: ${job.stage}` : "";
+          const kind = job.errorType ? `${job.errorType}: ` : "";
+          $("editorStatus").textContent = job.message || "Falha no render.";
+          const output = $("editorOutput");
+          output.replaceChildren();
+          if (job.hasErrorLog) {
+            output.append(document.createTextNode("Log de erro: "));
+            const link = document.createElement("a");
+            link.href = `/api/editor/jobs/${data.jobId}/log`;
+            link.textContent = job.errorLog || "baixar log";
+            link.target = "_blank";
+            output.append(link);
+          } else if (job.errorLog) {
+            output.textContent = `Log: ${job.errorLog}`;
+          }
+          editorError([where, `${kind}${job.error || "Render falhou."}`].filter(Boolean).join(" — "));
+          return;
+        }
         $("editorVideo").src = `/api/editor/media/${data.jobId}`;
         $("editorVideo").classList.remove("hidden");
         $("editorOutput").textContent = `Arquivo: ${job.filepath}`;
