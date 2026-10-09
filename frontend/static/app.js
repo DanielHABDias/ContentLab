@@ -954,7 +954,8 @@ function editorError(message) {
 function editorBusy(busy) {
   editorRendering = busy;
   const canRender = !!editorProject?.validation?.valid && !editorDirty && !busy;
-  $("editorFinal").disabled = !canRender;
+  $("editorReuse").disabled = !canRender;
+  $("editorRebuild").disabled = !canRender;
   $("editorSave").disabled = !editorProject || !editorDirty || busy;
   $("editorValidate").disabled = !editorProject || busy;
   $("editorLoad").disabled = busy;
@@ -1247,7 +1248,8 @@ $("editorSave").addEventListener("click", async () => {
   } catch (error) { editorError(error.message); }
 });
 
-async function startEditorRender() {
+async function startEditorRender(cacheMode = "reuse") {
+  if (cacheMode === "rebuild" && !window.confirm("Refazer tudo apagará a pasta output deste projeto, incluindo vídeos de cenas e renders anteriores. Continuar?")) return;
   if (!editorProject || !editorProject.validation.valid || editorDirty) return;
   editorError("");
   editorBusy(true);
@@ -1261,7 +1263,7 @@ async function startEditorRender() {
   try {
     const res = await fetch("/api/editor/render", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ projectRoot: editorProject.projectRoot, mode: "final", revision: editorProject.revision, hardwareAccel: $("editorGpu").checked }),
+      body: JSON.stringify({ projectRoot: editorProject.projectRoot, mode: "final", cacheMode, revision: editorProject.revision, hardwareAccel: $("editorGpu").checked }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Não foi possível iniciar o render.");
@@ -1306,6 +1308,10 @@ async function startEditorRender() {
         $("editorVideo").classList.remove("hidden");
         $("editorOutput").textContent = `Arquivo: ${job.filepath}`;
         $("editorReport").textContent = JSON.stringify(job.report, null, 2);
+        if (job.report?.sceneCache?.enabled) {
+          const cache = job.report.sceneCache;
+          $("editorStatus").textContent = `Render concluído. ${cache.reusedCount} cena(s) reaproveitada(s), ${cache.renderedCount} renderizada(s).`;
+        }
         $("editorReportDetails").classList.remove("hidden");
         const warnings = (job.report?.warnings || []).map(item => ({ text: `${item.code || "Aviso"}: ${item.message || item.scene || JSON.stringify(item)}`, invalid: true }));
         editorList("editorWarnings", warnings);
@@ -1324,7 +1330,8 @@ async function startEditorRender() {
   }
 }
 
-$("editorFinal").addEventListener("click", () => startEditorRender());
+$("editorReuse").addEventListener("click", () => startEditorRender("reuse"));
+$("editorRebuild").addEventListener("click", () => startEditorRender("rebuild"));
 $("editorCancel").addEventListener("click", async () => {
   if (!editorJobId) return;
   $("editorCancel").disabled = true;
