@@ -313,7 +313,7 @@ def main():
     if not validation["valid"]:
         raise RuntimeError(json.dumps(validation, ensure_ascii=False, indent=2))
 
-    report = render_project(str(PROJECT_ROOT), "preview", ffmpeg_dir=Path(ffmpeg).parent, use_cache=False)
+    report = render_project(str(PROJECT_ROOT), "final", ffmpeg_dir=Path(ffmpeg).parent, use_cache=False)
     source = Path(report["output"])
     target = OUTPUT_ROOT / "visual-tests.mp4"
     shutil.copy2(source, target)
@@ -331,7 +331,7 @@ def main():
         "version": 1,
         "video": target.name,
         "duration": duration,
-        "renderer": "Content Lab preview / edit_plan 0.2",
+        "renderer": "Content Lab final / edit_plan 0.2",
         "cases": cases,
     }
     (OUTPUT_ROOT / "manifest.json").write_text(
