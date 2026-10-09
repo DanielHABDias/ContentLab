@@ -91,16 +91,18 @@ def scene_fingerprint(scene_data, project, resolved_assets, transcript, engine, 
 
 
 class SceneCache:
-    def __init__(self, output_dir):
-        self.directory = Path(output_dir) / "scenes"
-        if Path(output_dir).is_symlink() or self.directory.is_symlink():
+    def __init__(self, output_dir, namespace="scenes"):
+        if namespace not in {"scenes", "pieces"}:
+            raise ValueError("Namespace de cache inválido.")
+        self.directory = Path(output_dir) / namespace
+        if Path(output_dir).is_symlink() or Path(output_dir).parent.is_symlink() or self.directory.is_symlink():
             raise ValueError("O cache de cenas não pode usar links simbólicos.")
         self.manifest_path = self.directory / "manifest.json"
         self.directory.mkdir(parents=True, exist_ok=True)
         self.entries = {}
+        if self.manifest_path.is_symlink():
+            raise ValueError("O manifesto de cache não pode usar links simbólicos.")
         try:
-            if self.manifest_path.is_symlink():
-                raise ValueError("O manifesto de cenas não pode usar links simbólicos.")
             payload = json.loads(self.manifest_path.read_text(encoding="utf-8"))
             if payload.get("version") == CACHE_VERSION and isinstance(payload.get("scenes"), dict):
                 self.entries = payload["scenes"]
@@ -154,3 +156,13 @@ class SceneCache:
         finally:
             if temporary is not None and temporary.exists():
                 temporary.unlink()
+
+
+def composition_fingerprint(inputs, parameters):
+    """Invalidate composed pieces when either source clip or FFmpeg recipe changes."""
+    return _json_hash({
+        "version": "pieces-v1",
+        "inputs": [_file_identity(path) for path in inputs],
+        "params": parameters,
+        "composer": _file_identity(Path(__file__).with_name("render.py")),
+    })
