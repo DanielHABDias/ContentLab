@@ -940,6 +940,13 @@ class RendererTests(unittest.TestCase):
             self.assertEqual(clip_a.stat().st_mtime_ns, first_mtime)
             self.assertNotEqual(SceneCache(root / "output" / "final").entries["b-second"]["fingerprint"], old_b_fingerprint)
 
+            # Replacing narration remixes the complete output, but visual scene
+            # segments are independent from the global voice file.
+            (root / "audio" / "narration.wav").write_bytes(b"new-narration")
+            audio_only = render_project(str(root), "final", ffmpeg_dir=root / "bin", runner=runner)
+            self.assertEqual(audio_only["sceneCache"]["renderedCount"], 0)
+            self.assertEqual(audio_only["sceneCache"]["reused"], ["a-first", "b-second"])
+
             marker = root / "output" / "should-be-deleted.txt"
             marker.write_text("stale", encoding="utf-8")
             rebuild = render_project(str(root), "final", ffmpeg_dir=root / "bin",
