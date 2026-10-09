@@ -274,7 +274,7 @@ partida configuráveis, não uma calibração específica do canal.
 
 Na interface, a seção **Editor automático** abre uma pasta contendo
 `edit_plan.json`, mostra a timeline e verifica assets antes de iniciar o
-render. **Render final** respeita a resolução e o FPS do plano e salva em `output/final/final.mp4`. O render gera `render_report.json` e o MP4 pode ser reproduzido na página. Um projeto não executa dois renders simultâneos. O editor textual
+render. Há dois botões: **Aproveitar cache** (renderiza apenas as cenas alteradas, reutiliza os arquivos intermediários e recompõe o vídeo) e **Refazer tudo** (após confirmação, limpa a pasta `output/` do projeto). Ambos produzem `output/final/final.mp4` na resolução e no FPS originais. As cenas e transições reutilizáveis ficam em `output/final/scenes/` e `output/final/pieces/`, acompanhadas de manifestos. O render gera `render_report.json` e o MP4 pode ser reproduzido na página. Um projeto não executa dois renders simultâneos. O editor textual
 permite carregar, validar e salvar `edit_plan.json`; alterações não salvas
 bloqueiam o render. A página lista os assets resolvidos, plugins disponíveis,
 progresso e warnings. Se o arquivo mudar fora da página, o salvamento é
@@ -427,6 +427,8 @@ adicionados. Referencie um arquivo interno como
 exclusivos de um vídeo ficam na pasta `assets/` do projeto e usam
 `project://assets/nome.png`. Fundos sólidos usam `background.color` e não
 precisam de arquivo. Veja [o guia da biblioteca](builtin-assets/README.md).
+
+Veja também [Cache incremental por cena](SCENE_CACHE.md) para entender invalidação, arquivos persistentes, transições e segurança.
 
 ## Dados e cache
 
