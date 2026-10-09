@@ -220,7 +220,7 @@ def register_editor_routes(app, EDITOR_JOBS, EDITOR_JOBS_LOCK, EDITOR_CANCEL_EVE
         return jsonify(job)
 
 
-    def _run_editor_job(job_id, root, mode, hardware_accel):
+    def _run_editor_job(job_id, root, mode, hardware_accel, cache_mode):
         job = EDITOR_JOBS[job_id]
         cancel_event = EDITOR_CANCEL_EVENTS[job_id]
 
@@ -241,7 +241,7 @@ def register_editor_routes(app, EDITOR_JOBS, EDITOR_JOBS_LOCK, EDITOR_CANCEL_EVE
         try:
             if cancel_event.is_set():
                 raise RenderCancelled("Render cancelado pelo usuário.")
-            report = app_module.render_project(root, mode=mode, progress=on_progress, hardware_accel=hardware_accel, runner=CancelRunner(cancel_event))
+            report = app_module.render_project(root, mode=mode, progress=on_progress, hardware_accel=hardware_accel, runner=CancelRunner(cancel_event), cache_mode=cache_mode)
             if cancel_event.is_set():
                 raise RenderCancelled("Render cancelado pelo usuário.")
             job.update(status="done", percent=100, message="Render concluído.", report=report, filepath=report["output"])
@@ -293,6 +293,9 @@ def register_editor_routes(app, EDITOR_JOBS, EDITOR_JOBS_LOCK, EDITOR_CANCEL_EVE
     def editor_render():
         data = request.get_json(silent=True) or {}
         mode = data.get("mode")
+        cache_mode = data.get("cacheMode", "reuse")
+        if cache_mode not in {"reuse", "rebuild"}:
+            return jsonify({"error": "cacheMode deve ser reuse ou rebuild."}), 400
         hardware_accel = data.get("hardwareAccel", False)
         if not isinstance(hardware_accel, bool):
             return jsonify({"error": "hardwareAccel deve ser booleano."}), 400
@@ -315,10 +318,10 @@ def register_editor_routes(app, EDITOR_JOBS, EDITOR_JOBS_LOCK, EDITOR_CANCEL_EVE
                 "status": "running", "percent": 0, "message": "Preparando render...",
                 "error": None, "errorType": None, "errorLog": None, "hasErrorLog": False,
                 "tracebackTail": None, "stage": "prepare", "sceneId": None, "current": 0, "total": 0,
-                "projectRoot": root, "mode": mode, "filepath": None,
+                "projectRoot": root, "mode": mode, "cacheMode": cache_mode, "filepath": None,
             }
             EDITOR_CANCEL_EVENTS[job_id] = threading.Event()
-        threading.Thread(target=_run_editor_job, args=(job_id, root, mode, hardware_accel), daemon=True).start()
+        threading.Thread(target=_run_editor_job, args=(job_id, root, mode, hardware_accel, cache_mode), daemon=True).start()
         return jsonify({"jobId": job_id}), 202
 
 
