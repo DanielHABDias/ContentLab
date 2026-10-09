@@ -34,7 +34,7 @@ also open `http://127.0.0.1:5000/` and inspect the affected panel with Iris;
 the renderer fixture page does not replace UI inspection.
 
 For temporal behavior, inspect multiple checkpoints or play the generated
-preview. Iris is not an audio validator; use the normal preview/render for
+render final. Iris is not an audio validator; use the normal render final/render for
 mixing and synchronization.
 
 See `VISUAL_TESTING.md` for setup, checkpoint names and agent workflow.
