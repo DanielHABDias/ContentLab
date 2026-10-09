@@ -113,10 +113,24 @@ def _semantic_issues(data):
                         "inactiveOpacity": (0, 1),
                         "transitionDuration": (0.05, 1),
                         "slotGap": (0.10, 0.45),
+                        "activeScale": (0.5, 2.5),
+                        "inactiveScale": (0.3, 1.5),
+                        "panelOpacity": (0, 1),
+                        "panelRadius": (0, 200),
+                        "panelPaddingX": (0, 300),
+                        "panelPaddingY": (0, 300),
                     }
                     for key, (minimum, maximum) in limits.items():
                         if key in config and (not isinstance(config[key], (int, float)) or not minimum <= config[key] <= maximum):
                             issues.append({"path": f"{prefix}.elements.{j}.config.{key}", "message": f"{key} deve ficar entre {minimum} e {maximum}."})
+                    if "align" in config and config["align"] not in {"left", "center"}:
+                        issues.append({"path": f"{prefix}.elements.{j}.config.align", "message": "align deve ser left ou center."})
+                    if "direction" in config and config["direction"] not in {"down", "up"}:
+                        issues.append({"path": f"{prefix}.elements.{j}.config.direction", "message": "direction deve ser down ou up."})
+                    for key in ("inactiveColor", "panelColor"):
+                        value = config.get(key)
+                        if value is not None and (not isinstance(value, str) or not re.fullmatch(r"#[0-9A-Fa-f]{6}", value)):
+                            issues.append({"path": f"{prefix}.elements.{j}.config.{key}", "message": f"{key} deve usar cor hexadecimal #RRGGBB."})
                 if element["type"] == "filter":
                     if element.get("style") not in {"dim", "crt_tv"}:
                         issues.append({"path": f"{prefix}.elements.{j}.style", "message": "Filtro v0.2 requer style dim ou crt_tv."})
