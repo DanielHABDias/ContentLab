@@ -105,6 +105,15 @@ def _semantic_issues(data):
                     issues.append({"path": f"{prefix}.elements.{j}.reveal", "message": "Revelação letra a letra requer elemento text."})
                 if element["type"] == "caption" and not data.get("sources", {}).get("transcript"):
                     issues.append({"path": f"{prefix}.elements.{j}", "message": "Caption requer sources.transcript."})
+                if element.get("style") == "word_stream_horizontal":
+                    if element["type"] != "kinetic_text":
+                        issues.append({"path": f"{prefix}.elements.{j}.style", "message": "word_stream_horizontal requer type kinetic_text."})
+                    config = element.get("config", {})
+                    if "transitionDuration" in config and (
+                        not isinstance(config["transitionDuration"], (int, float))
+                        or not 0.05 <= config["transitionDuration"] <= 1
+                    ):
+                        issues.append({"path": f"{prefix}.elements.{j}.config.transitionDuration", "message": "transitionDuration deve ficar entre 0.05 e 1."})
                 if element.get("style") == "word_stack_vertical":
                     if element["type"] != "kinetic_text":
                         issues.append({"path": f"{prefix}.elements.{j}.style", "message": "word_stack_vertical requer type kinetic_text."})
@@ -189,6 +198,8 @@ def _semantic_issues(data):
                 issues.append({"path": f"{epath}.style", "message": "bangers_highlight_block está disponível apenas no edit_plan 0.2."})
             if data.get("version") != "0.2" and element.get("style") == "word_stack_vertical":
                 issues.append({"path": f"{epath}.style", "message": "word_stack_vertical está disponível apenas no edit_plan 0.2."})
+            if data.get("version") != "0.2" and element.get("style") == "word_stream_horizontal":
+                issues.append({"path": f"{epath}.style", "message": "word_stream_horizontal está disponível apenas no edit_plan 0.2."})
             if "start" in element and "end" in element and element["end"] <= element["start"]:
                 issues.append({"path": epath, "message": "O elemento deve terminar depois de começar."})
             cells = element.get("cells")
