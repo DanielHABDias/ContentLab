@@ -17,7 +17,7 @@ from .audio import prepare_narration, remap_transcript
 from .encoding import select_h264_encoder
 from .motion_renderer import render_motion_scene
 from .remotion_bridge import render_remotion_scene
-from .scene_cache import SceneCache, scene_fingerprint, code_identity
+from .scene_cache import SceneCache, scene_fingerprint, code_identity, composition_fingerprint
 
 
 def _cleanup_stale_render_workdirs(output_dir, minimum_age_seconds=300):
@@ -307,7 +307,7 @@ def _concat_file_line(path):
     return f"file '{escaped}'\n"
 
 
-def _compose_visual(ffmpeg, segments, boundaries, durations, total, fps, width, height, work, runner, video_encoding=None, preserve_segments=False):
+def _compose_visual(ffmpeg, segments, boundaries, durations, total, fps, width, height, work, runner, video_encoding=None, preserve_segments=False, piece_cache=None):
     """Compose scene segments without opening the whole timeline at once.
 
     Cut-only timelines keep the fast stream-copy path. Timelines with blur/xfade
@@ -351,14 +351,25 @@ def _compose_visual(ffmpeg, segments, boundaries, durations, total, fps, width, 
 
         if body_duration > 1 / max(fps, 1):
             body = pieces_dir / f"body-{index:04d}.mp4"
-            _run([
-                ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
-                "-i", str(segment),
-                "-t", f"{body_duration:.6f}",
-                "-an", "-r", str(fps),
-                *encoding, "-pix_fmt", "yuv420p",
-                str(body),
-            ], runner)
+            piece_id = f"body:{Path(segment).stem}:{body_duration:.6f}"
+            piece_hash = composition_fingerprint(
+                (segment,), {"kind": "body", "duration": body_duration,
+                             "fps": fps, "encoding": encoding},
+            ) if piece_cache is not None else None
+            cached_body = piece_cache.lookup(piece_id, piece_hash) if piece_cache is not None else None
+            if cached_body is not None:
+                body = cached_body
+            else:
+                _run([
+                    ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
+                    "-i", str(segment),
+                    "-t", f"{body_duration:.6f}",
+                    "-an", "-r", str(fps),
+                    *encoding, "-pix_fmt", "yuv420p",
+                    str(body),
+                ], runner)
+                if piece_cache is not None:
+                    body = piece_cache.save(piece_id, piece_hash, body)
             pieces.append(body)
 
         if index >= len(boundaries):
@@ -368,11 +379,22 @@ def _compose_visual(ffmpeg, segments, boundaries, durations, total, fps, width, 
             continue
 
         transition = pieces_dir / f"transition-{index:04d}.mp4"
-        first_frame = pieces_dir / f"first-{index + 1:04d}.png"
         tail_start = max(0.0, duration - transition_duration)
         transition_frames = max(1, round(transition_duration * fps))
         transition_duration = transition_frames / fps
+        piece_id = f"transition:{Path(segment).stem}:{Path(segments[index + 1]).stem}:{spec.name}:{transition_duration:.6f}"
+        piece_hash = composition_fingerprint(
+            (segment, segments[index + 1]),
+            {"kind": "transition", "name": spec.name, "duration": transition_duration,
+             "tailStart": tail_start, "fps": fps, "width": width,
+             "height": height, "encoding": encoding},
+        ) if piece_cache is not None else None
+        cached_transition = piece_cache.lookup(piece_id, piece_hash) if piece_cache is not None else None
+        if cached_transition is not None:
+            pieces.append(cached_transition)
+            continue
 
+        first_frame = pieces_dir / f"first-{index + 1:04d}.png"
         _run([
             ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
             "-i", str(segments[index + 1]), "-frames:v", "1", str(first_frame),
@@ -420,6 +442,8 @@ def _compose_visual(ffmpeg, segments, boundaries, durations, total, fps, width, 
             *encoding, "-pix_fmt", "yuv420p",
             str(transition),
         ], runner)
+        if piece_cache is not None:
+            transition = piece_cache.save(piece_id, piece_hash, transition)
         pieces.append(transition)
 
         if not preserve_segments:
@@ -570,6 +594,7 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
     output_dir = Path(output_dir or (plan.source_path.parent / "output" if plan.source_path else Path.cwd() / "output")).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     cache = SceneCache(output_dir) if mode == "final" and scene_cache_enabled else None
+    piece_cache = SceneCache(output_dir, namespace="pieces") if cache is not None else None
     reused_scene_ids = []
     rendered_scene_ids = []
     code_hashes = {}
@@ -731,7 +756,7 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
                 ffmpeg, segments, boundaries, segment_durations, timeline.duration,
                 plan.project.fps, plan.project.width, plan.project.height,
                 work, runner, video_encoding=video_encoding,
-                preserve_segments=cache is not None,
+                preserve_segments=cache is not None, piece_cache=piece_cache,
             )
             if progress:
                 progress("compose", len(render_scenes), len(render_scenes), "Vídeo composto")
