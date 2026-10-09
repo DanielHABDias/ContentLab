@@ -178,7 +178,7 @@ def _concat_file_line(path):
     return f"file '{escaped}'\n"
 
 
-def _compose_visual(ffmpeg, segments, boundaries, durations, total, fps, work, runner, video_encoding=None):
+def _compose_visual(ffmpeg, segments, boundaries, durations, total, fps, width, height, work, runner, video_encoding=None):
     """Compose scene segments without opening the whole timeline at once.
 
     Cut-only timelines keep the fast stream-copy path. Timelines with blur/xfade
@@ -227,23 +227,45 @@ def _compose_visual(ffmpeg, segments, boundaries, durations, total, fps, work, r
             continue
 
         transition = pieces_dir / f"transition-{index:04d}.mp4"
+        first_frame = pieces_dir / f"first-{index + 1:04d}.png"
         tail_start = max(0.0, duration - transition_duration)
-        blur_filter = ",gblur=sigma=2" if spec.name.startswith("blur_") else ""
+        transition_frames = max(1, round(transition_duration * fps))
+        transition_duration = transition_frames / fps
+
+        _run([
+            ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
+            "-i", str(segments[index + 1]), "-frames:v", "1", str(first_frame),
+        ], runner)
+
+        if spec.name in {"blur_left", "slide_left"}:
+            outgoing_position = f"x='-{width}*t/{transition_duration:.6f}':y=0"
+            incoming_position = f"x='{width}-{width}*t/{transition_duration:.6f}':y=0"
+        elif spec.name == "blur_right":
+            outgoing_position = f"x='{width}*t/{transition_duration:.6f}':y=0"
+            incoming_position = f"x='-{width}+{width}*t/{transition_duration:.6f}':y=0"
+        elif spec.name == "blur_up":
+            outgoing_position = f"x=0:y='-{height}*t/{transition_duration:.6f}'"
+            incoming_position = f"x=0:y='{height}-{height}*t/{transition_duration:.6f}'"
+        else:
+            outgoing_position = "x=0:y=0"
+            incoming_position = "x=0:y=0"
+
+        effect = ",gblur=sigma=2" if spec.name.startswith("blur_") else ""
         graph = (
-            f"[0:v]trim=start={tail_start:.6f}:end={duration:.6f},"
-            f"setpts=PTS-STARTPTS,fps={fps},format=yuv420p[tail];"
-            f"[1:v]trim=start=0:end={1 / fps:.6f},setpts=PTS-STARTPTS,"
-            f"tpad=stop_mode=clone:stop_duration={transition_duration:.6f},"
-            f"trim=duration={transition_duration:.6f},fps={fps},format=yuv420p[first];"
-            f"[tail][first]xfade=transition={spec.ffmpeg_name}:"
-            f"duration={transition_duration:.6f}:offset=0[xf];"
-            f"[xf]{blur_filter[1:] if blur_filter else 'null'}[out]"
+            f"[0:v]fps={fps},scale={width}:{height},format=rgba[tail];"
+            f"[1:v]fps={fps},scale={width}:{height},format=rgba[first];"
+            f"color=c=black:s={width}x{height}:r={fps}:d={transition_duration:.6f}[base];"
+            f"[base][tail]overlay={outgoing_position}:eval=frame[tmp];"
+            f"[tmp][first]overlay={incoming_position}:eval=frame"
+            f"{effect},format=yuv420p[out]"
         )
         _run([
             ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
-            "-i", str(segment), "-i", str(segments[index + 1]),
+            "-ss", f"{tail_start:.6f}", "-t", f"{transition_duration:.6f}", "-i", str(segment),
+            "-loop", "1", "-framerate", str(fps), "-i", str(first_frame),
             "-filter_complex", graph,
-            "-map", "[out]", "-an", "-r", str(fps),
+            "-map", "[out]", "-frames:v", str(transition_frames),
+            "-an", "-r", str(fps),
             *encoding, "-pix_fmt", "yuv420p",
             str(transition),
         ], runner)
@@ -486,7 +508,11 @@ def render_edit_plan(source, output_dir=None, project_root=None, ffmpeg_dir=None
 
             current_stage = "compose"
             current_scene = None
-            visual = _compose_visual(ffmpeg, segments, boundaries, segment_durations, timeline.duration, plan.project.fps, work, runner, video_encoding=video_encoding)
+            visual = _compose_visual(
+                ffmpeg, segments, boundaries, segment_durations, timeline.duration,
+                plan.project.fps, plan.project.width, plan.project.height,
+                work, runner, video_encoding=video_encoding,
+            )
             if progress:
                 progress("compose", len(render_scenes), len(render_scenes), "Vídeo composto")
 
