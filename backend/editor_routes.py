@@ -229,8 +229,10 @@ def register_editor_routes(app, EDITOR_JOBS, EDITOR_JOBS_LOCK, EDITOR_CANCEL_EVE
                 raise RenderCancelled("Render cancelado pelo usuário.")
             job.update(stage=stage, current=current, total=total)
             if stage == "scene":
-                job.update(sceneId=scene_id, percent=min(85, round(current / max(total, 1) * 85)),
-                           message=f"Renderizando cena {current}/{total}: {scene_id}")
+                cache_hit = str(scene_id).endswith(" (cache)")
+                clean_id = str(scene_id)[:-8] if cache_hit else scene_id
+                job.update(sceneId=clean_id, percent=min(85, round(current / max(total, 1) * 85)),
+                           message=f"{'Reaproveitando' if cache_hit else 'Renderizando'} cena {current}/{total}: {clean_id}")
             elif stage == "narration":
                 job.update(sceneId=None, percent=3, message="Narração preparada.")
             elif stage == "compose":
