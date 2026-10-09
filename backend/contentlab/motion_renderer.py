@@ -197,6 +197,38 @@ def _element_image(element, width, height, text_override=None):
     )
     return image
 
+def _word_stream_image(element, words, absolute):
+    if not words:
+        return None
+    active_index = next((index for index, word in enumerate(words) if word["start"] <= absolute < word["end"]), None)
+    if active_index is None:
+        started = [index for index, word in enumerate(words) if word["start"] <= absolute]
+        if not started:
+            return None
+        active_index = started[-1]
+    active = words[active_index]
+    previous = words[active_index - 1] if active_index > 0 else None
+    configured = float((element.data.get("config") or {}).get("transitionDuration", 0.16))
+    duration = max(0.06, min(configured, max(0.06, (active["end"] - active["start"]) * 0.55)))
+    progress = _ease((absolute - active["start"]) / duration, "ease_out")
+    canvas = Image.new("RGBA", _pixel_size(element.region[2:]))
+
+    def place(word, x_ratio, opacity):
+        if not word or opacity <= 0:
+            return
+        image = _element_image(element, element.region[2], element.region[3], str(word["word"]))
+        if opacity < 1:
+            image.putalpha(image.getchannel("A").point(lambda alpha: round(alpha * opacity)))
+        x = round(canvas.width * x_ratio - image.width / 2)
+        y = round((canvas.height - image.height) / 2)
+        canvas.alpha_composite(image, (x, y))
+
+    if previous:
+        place(previous, 0.50 - 0.68 * progress, max(0, 1 - progress * 0.85))
+    place(active, 1.12 - 0.62 * progress, min(1, 0.35 + progress * 0.9))
+    return canvas
+
+
 def _word_stack_image(element, words, absolute, width, height):
     config = element.data.get("config", {})
     state = word_stack_state(words, absolute, config.get("transitionDuration", 0.18))
@@ -657,6 +689,10 @@ def _render_motion_scene_impl(ffmpeg, scene, output, project, duration, run, wor
             elif element.type == "kinetic_text":
                 if element.data.get("style") == "word_stack_vertical":
                     image = _word_stack_image(element, phrases[element.data["id"]], absolute_t, width, height)
+                    if image is None:
+                        continue
+                elif element.data.get("style") == "word_stream_horizontal":
+                    image = _word_stream_image(element, phrases[element.data["id"]], absolute_t)
                     if image is None:
                         continue
                 else:
