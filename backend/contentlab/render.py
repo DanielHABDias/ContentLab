@@ -197,12 +197,24 @@ def _compose_visual(ffmpeg, segments, boundaries, durations, total, fps, width, 
             "-f", "concat", "-safe", "0", "-i", str(concat_list),
             "-c", "copy", str(visual),
         ], runner)
+        if os.environ.get("CONTENTLAB_KEEP_COMPOSE_TEMP", "0") != "1":
+            for segment in segments:
+                try:
+                    Path(segment).unlink()
+                except FileNotFoundError:
+                    pass
+            try:
+                concat_list.unlink()
+            except FileNotFoundError:
+                pass
         return visual
 
     pieces_dir = work / "compose-pieces"
     pieces_dir.mkdir(exist_ok=True)
     pieces = []
-    encoding = video_encoding or ["-c:v", "libx264", "-preset", "veryfast", "-crf", "18"]
+    encoding = list(video_encoding or ["-c:v", "libx264", "-preset", "veryfast", "-crf", "18"])
+    if "-threads" not in encoding:
+        encoding += ["-threads", str(max(1, int(os.environ.get("CONTENTLAB_COMPOSE_THREADS", "2"))))]
 
     for index, (segment, duration) in enumerate(zip(segments, durations)):
         outgoing = boundaries[index][1] if index < len(boundaries) else 0
@@ -271,6 +283,17 @@ def _compose_visual(ffmpeg, segments, boundaries, durations, total, fps, width, 
         ], runner)
         pieces.append(transition)
 
+        try:
+            Path(segment).unlink()
+        except FileNotFoundError:
+            pass
+
+    if segments:
+        try:
+            Path(segments[-1]).unlink()
+        except FileNotFoundError:
+            pass
+
     if not pieces:
         raise RenderError("A composição visual não gerou nenhum trecho intermediário.")
 
@@ -286,6 +309,13 @@ def _compose_visual(ffmpeg, segments, boundaries, durations, total, fps, width, 
         *encoding, "-pix_fmt", "yuv420p",
         str(visual),
     ], runner)
+    if os.environ.get("CONTENTLAB_KEEP_COMPOSE_TEMP", "0") != "1":
+        import shutil
+        shutil.rmtree(pieces_dir, ignore_errors=True)
+        try:
+            concat_list.unlink()
+        except FileNotFoundError:
+            pass
     return visual
 
 def _audio_mix(ffmpeg, visual, narration, plan, timeline, resolved_assets, output, runner):
