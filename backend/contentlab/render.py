@@ -179,55 +179,92 @@ def _concat_file_line(path):
 
 
 def _compose_visual(ffmpeg, segments, boundaries, durations, total, fps, work, runner, video_encoding=None):
+    """Compose scene segments without opening the whole timeline at once.
+
+    Cut-only timelines keep the fast stream-copy path. Timelines with blur/xfade
+    transitions are materialized as small body/transition clips and concatenated
+    sequentially, keeping FFmpeg memory and decoder pressure bounded.
+    """
     visual = work / "visual.mp4"
     if all(spec.ffmpeg_name is None for spec, _ in boundaries):
         concat_list = work / "segments.ffconcat"
-        concat_list.write_text("ffconcat version 1.0\n" + "".join(_concat_file_line(path) for path in segments), encoding="utf-8")
-        _run([ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(concat_list), "-c", "copy", str(visual)], runner)
+        concat_list.write_text(
+            "ffconcat version 1.0\n" + "".join(_concat_file_line(path) for path in segments),
+            encoding="utf-8",
+        )
+        _run([
+            ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
+            "-f", "concat", "-safe", "0", "-i", str(concat_list),
+            "-c", "copy", str(visual),
+        ], runner)
         return visual
-    command = [ffmpeg, "-hide_banner", "-loglevel", "error", "-y"]
-    graph = []
-    for index, segment in enumerate(segments):
-        command += ["-i", str(segment)]
-        graph.append(f"[{index}:v]setpts=PTS-STARTPTS,format=yuv420p,fps={fps}[v{index}]")
-    # Each transition is an independent short clip: outgoing tail -> frozen
-    # first frame of the next scene. A chain of xfade filters can truncate
-    # everything after the second transition on FFmpeg 6/7.
-    for index, duration in enumerate(durations):
-        incoming = boundaries[index - 1][1] if index else 0
-        outgoing = boundaries[index][1] if index < len(boundaries) else 0
-        labels = [f"rawbody{index}"]
-        if outgoing:
-            labels.append(f"rawtail{index}")
-        if incoming:
-            labels.append(f"rawfirst{index}")
-        if len(labels) > 1:
-            graph.append(f"[v{index}]split={len(labels)}" + "".join(f"[{label}]" for label in labels))
-        else:
-            graph.append(f"[v{index}]null[rawbody{index}]")
-        body_duration = duration - outgoing
-        graph.append(f"[rawbody{index}]trim=start=0:end={body_duration:.6f},setpts=PTS-STARTPTS,fps={fps}[body{index}]")
-        if outgoing:
-            graph.append(f"[rawtail{index}]trim=start={body_duration:.6f}:end={duration:.6f},setpts=PTS-STARTPTS,fps={fps}[tail{index}]")
-        if incoming:
-            graph.append(f"[rawfirst{index}]trim=start=0:end={1 / fps:.6f},setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration={incoming:.6f},trim=duration={incoming:.6f},fps={fps}[first{index}]")
-    pieces = []
-    for index in range(len(segments)):
-        pieces.append(f"[body{index}]")
-        if index < len(boundaries):
-            spec, transition_duration = boundaries[index]
-            if spec.ffmpeg_name:
-                uses_blur = spec.name.startswith("blur_")
-                transition_label = f"transitionraw{index}" if uses_blur else f"transition{index}"
-                graph.append(f"[tail{index}][first{index + 1}]xfade=transition={spec.ffmpeg_name}:duration={transition_duration:.6f}:offset=0[{transition_label}]")
-                if uses_blur:
-                    graph.append(f"[{transition_label}]gblur=sigma=2[transition{index}]")
-                pieces.append(f"[transition{index}]")
-    graph.append("".join(pieces) + f"concat=n={len(pieces)}:v=1:a=0[out]")
-    command += ["-filter_complex", ";".join(graph), "-map", "[out]", "-an", "-t", str(total), "-r", str(fps), *(video_encoding or ["-c:v", "libx264", "-preset", "veryfast", "-crf", "18"]), "-pix_fmt", "yuv420p", str(visual)]
-    _run(command, runner)
-    return visual
 
+    pieces_dir = work / "compose-pieces"
+    pieces_dir.mkdir(exist_ok=True)
+    pieces = []
+    encoding = video_encoding or ["-c:v", "libx264", "-preset", "veryfast", "-crf", "18"]
+
+    for index, (segment, duration) in enumerate(zip(segments, durations)):
+        outgoing = boundaries[index][1] if index < len(boundaries) else 0
+        body_duration = max(0.0, duration - outgoing)
+
+        if body_duration > 1 / max(fps, 1):
+            body = pieces_dir / f"body-{index:04d}.mp4"
+            _run([
+                ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
+                "-i", str(segment),
+                "-t", f"{body_duration:.6f}",
+                "-an", "-r", str(fps),
+                *encoding, "-pix_fmt", "yuv420p",
+                str(body),
+            ], runner)
+            pieces.append(body)
+
+        if index >= len(boundaries):
+            continue
+        spec, transition_duration = boundaries[index]
+        if not spec.ffmpeg_name or transition_duration <= 0:
+            continue
+
+        transition = pieces_dir / f"transition-{index:04d}.mp4"
+        tail_start = max(0.0, duration - transition_duration)
+        blur_filter = ",gblur=sigma=2" if spec.name.startswith("blur_") else ""
+        graph = (
+            f"[0:v]trim=start={tail_start:.6f}:end={duration:.6f},"
+            f"setpts=PTS-STARTPTS,fps={fps},format=yuv420p[tail];"
+            f"[1:v]trim=start=0:end={1 / fps:.6f},setpts=PTS-STARTPTS,"
+            f"tpad=stop_mode=clone:stop_duration={transition_duration:.6f},"
+            f"trim=duration={transition_duration:.6f},fps={fps},format=yuv420p[first];"
+            f"[tail][first]xfade=transition={spec.ffmpeg_name}:"
+            f"duration={transition_duration:.6f}:offset=0[xf];"
+            f"[xf]{blur_filter[1:] if blur_filter else 'null'}[out]"
+        )
+        _run([
+            ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
+            "-i", str(segment), "-i", str(segments[index + 1]),
+            "-filter_complex", graph,
+            "-map", "[out]", "-an", "-r", str(fps),
+            *encoding, "-pix_fmt", "yuv420p",
+            str(transition),
+        ], runner)
+        pieces.append(transition)
+
+    if not pieces:
+        raise RenderError("A composição visual não gerou nenhum trecho intermediário.")
+
+    concat_list = work / "compose-pieces.ffconcat"
+    concat_list.write_text(
+        "ffconcat version 1.0\n" + "".join(_concat_file_line(path) for path in pieces),
+        encoding="utf-8",
+    )
+    _run([
+        ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
+        "-f", "concat", "-safe", "0", "-i", str(concat_list),
+        "-an", "-t", str(total), "-r", str(fps),
+        *encoding, "-pix_fmt", "yuv420p",
+        str(visual),
+    ], runner)
+    return visual
 
 def _audio_mix(ffmpeg, visual, narration, plan, timeline, resolved_assets, output, runner):
     duration = timeline.duration
