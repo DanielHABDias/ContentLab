@@ -133,12 +133,34 @@ export function resolveAsset(uri,root){
   }
   return target;
 }
+export function visualWarnings(plan){
+  const result=[],textTypes=new Set(['text','caption','kinetic_text']);
+  const {width,height}=settings(plan);
+  for(const scene of plan.timeline||[]){
+    const texts=(scene.elements||[]).filter(item=>textTypes.has(item.type));
+    for(let a=0;a<texts.length;a++)for(let b=a+1;b<texts.length;b++){
+      const left=texts[a],right=texts[b];
+      const start=Math.max(left.start??scene.start,right.start??scene.start);
+      const end=Math.min(left.end??scene.end,right.end??scene.end);
+      if(end<=start+0.04)continue;
+      const [ax,ay,aw,ah]=region(left.cells,width,height);
+      const [bx,by,bw,bh]=region(right.cells,width,height);
+      const ox=Math.max(0,Math.min(ax+aw,bx+bw)-Math.max(ax,bx));
+      const oy=Math.max(0,Math.min(ay+ah,by+bh)-Math.max(ay,by));
+      if(ox*oy/Math.max(1,Math.min(aw*ah,bw*bh))<0.35)continue;
+      result.push({code:'text_overlap',scene:scene.id,
+        message:'As camadas '+(left.id||'texto '+(a+1))+' e '+(right.id||'texto '+(b+1))+
+          ' dividem região e tempo ('+start.toFixed(2)+'–'+end.toFixed(2)+'s). Verifique se é intencional.'});
+    }
+  }
+  return result;
+}
 export function assetReport(plan,root){
   const issues=validatePlan(plan),uris=new Set();
   if(issues.length){
     const defaults=(plan&&typeof plan==='object'&&plan.project?.format)?
       settings({...plan,project:plan.project}):{width:1920,height:1080,fps:30};
-    return {valid:false,errors:issues,missingAssets:[],resolvedAssets:{},
+    return {valid:false,errors:issues,missingAssets:[],resolvedAssets:{},warnings:[],
       narration:null,duration:0,scenes:0,sceneCount:0,elementCount:0,
       resolution:{width:defaults.width,height:defaults.height},fps:defaults.fps};
   }
@@ -159,6 +181,7 @@ export function assetReport(plan,root){
   if(transcript&&path.relative(root,transcript).startsWith('..'))issues.push({path:'sources.transcript',message:'Transcrição fora do projeto.'});
   else if(transcript&&!fs.existsSync(transcript)&&plan.timeline?.some(s=>s.elements?.some(e=>e.type==='caption')))missingAssets.push({asset:'sources.transcript',path:transcript});
   return {valid:!issues.length&&!missingAssets.length,errors:issues,missingAssets,resolvedAssets,
+    warnings:visualWarnings(plan),
     narration,duration:Math.max(0,...(plan.timeline||[]).map(s=>s.end||0)),
     scenes:plan.timeline?.length||0,sceneCount:plan.timeline?.length||0,
     elementCount:plan.timeline?.reduce((n,s)=>n+(s.elements?.length||0),0)||0,
