@@ -240,3 +240,7 @@ code,.guide-card code {background:#F1F4FA;color:#3C6DAE;border-radius:5px;paddin
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after {transition:none!important;animation:none!important;scroll-behavior:auto!important}
 }
+
+.storyboard-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.storyboard-actions .btn{white-space:nowrap}
+@media(max-width:640px){.storyboard-actions{justify-content:flex-start}}
