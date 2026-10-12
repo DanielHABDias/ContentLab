@@ -16,6 +16,8 @@ test('every declared schema property is represented and documented meaningfully'
   assert.ok(fields.some(f=>f.path==='timeline[].elements[].textStyle.shadow.blur'));
   assert.ok(fields.some(f=>f.path==='timeline[].camera.shake[].frequency'));
   assert.ok(fields.some(f=>f.path==='timeline[].elements[].keyframes[].easing'));
+  assert.ok(fields.some(f=>f.path==='timeline[].elements[].transform.offsetX'));
+  assert.ok(fields.some(f=>f.path==='timeline[].elements[].transform.offsetY'));
 });
 test('documents cover all main capabilities, include examples and all JS-generated figures',()=>{
   const model=documentationModel(),md=buildMarkdown(),html=buildHtml();
