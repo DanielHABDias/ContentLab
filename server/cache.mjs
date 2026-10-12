@@ -64,7 +64,7 @@ export function rendererIdentity(appRoot){
     for(const e of fs.readdirSync(directory,{withFileTypes:true})){
       const full=path.join(directory,e.name);
       if(e.isDirectory())walk(full);
-      else if(e.isFile()&&/\\.(tsx?|jsx?|ttf|otf)$/i.test(e.name))include(full);
+      else if(e.isFile()&&/\.(tsx?|jsx?|ttf|otf)$/i.test(e.name))include(full);
     }
   };
   walk(path.join(appRoot,'backend/remotion/src'));
