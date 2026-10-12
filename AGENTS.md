@@ -27,3 +27,15 @@ npm start
 Verify `http://127.0.0.1:5000/health`, and inspect a rendered MP4 and its scene cache.
 Review multiple frame checkpoints and listen to the audio before declaring visual
 parity. Check both Windows and Linux. Tests alone do not prove correct pixels.
+
+
+## Studio UI
+
+Follow `STUDIO_UI.md` for navigation and scene-editing conventions.
+Keep existing DOM IDs when reworking `frontend/templates/index.html`, since
+`frontend/static/app.js` and `visual_editor.js` bind controls by ID.
+The new `studio.css` layers visual design over existing functional CSS.
+Never render video as a side effect of merely selecting or previewing a scene.
+The scene playback API must validate project IDs, manifest entries and file
+metadata. Preserve the distinction between a cached previous version and a
+newly edited draft. Run browser and backend tests before merging UI changes.
