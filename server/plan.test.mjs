@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {validatePlan, validateShape, settings, region, compileScene, resolveAsset, assetReport, schema} from './plan.mjs';
 import {SegmentCache,sceneFingerprint,cleanOutput,idFilename} from './cache.mjs';
+import {remapTranscriptWords} from './remotion.mjs';
 
 function example(root){
   return {project:{name:'Teste',format:'custom',profile:'generic',resolution:{width:1920,height:1080},fps:30},
@@ -68,4 +69,10 @@ test('rebuild must not delete project media stored in output',()=>{
     cleanOutput(root,[path.join(root,'audio','voice.wav')]);
     assert.ok(!fs.existsSync(path.join(root,'output')));
   } finally {fs.rmSync(root,{recursive:true,force:true});}
+});
+
+test('source cuts remap transcript words to the final timeline',()=>{
+  const words=[{word:'INTRO',start:0.5,end:0.9},{word:'BATMAN',start:3.1,end:3.6}];
+  const clipped=remapTranscriptWords(words,[{start:0,end:1},{start:3,end:4}]);
+  assert.deepEqual(clipped,[{word:'INTRO',start:0.5,end:0.9},{word:'BATMAN',start:1.1,end:1.6}]);
 });
