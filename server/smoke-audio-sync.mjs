@@ -44,8 +44,9 @@ try{
   // audible near "at", and its internal silence must remain silent.
   const peakAt=async(source,start,length=.05)=>{
     const {stderr}=await run('ffmpeg',['-hide_banner','-nostats','-loglevel','info',
-      '-i',source,'-ss',String(start),'-t',String(length),'-vn',
-      '-af','volumedetect','-f','null','-']);
+      '-i',source,'-vn','-af',
+      'atrim=start='+String(start)+':end='+String(start+length)+',asetpts=PTS-STARTPTS,volumedetect',
+      '-f','null','-']);
     const match=stderr.match(/max_volume:\s*(-?[\d.]+)\s*dB/);
     if(!match)throw Error('volumedetect não retornou pico de áudio.');
     return Number(match[1]);
