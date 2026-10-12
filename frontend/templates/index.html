@@ -297,16 +297,33 @@
         </div>
         <ul id="editorAssetLibrary" class="editor-list"></ul>
         <section class="visual-builder" aria-labelledby="visualBuilderHeading">
-          <div class="visual-builder-head"><div><span class="eyebrow">EDIÇÃO SEM ESCREVER JSON</span><h3 id="visualBuilderHeading">Montagem visual do plano</h3><p class="helper-text">Adicione cenas e camadas; os campos abaixo geram o mesmo edit_plan.json usado pela IA. Intervalos sem cena ficam pretos, com a narração mantida.</p></div><button id="visualRefresh" class="btn btn-ghost btn-sm" type="button">Atualizar assets e transcrição</button></div>
-          <p id="visualMessage" class="helper-text" role="status"></p>
-          <div class="visual-layout">
-            <div class="visual-main">
-              <details class="visual-global"><summary>Configurações do projeto, narração e música</summary><div id="visualGlobalFields"></div></details>
-              <div class="visual-scenes-head"><h4>Cenas</h4><button id="visualAddScene" class="btn btn-primary btn-sm" type="button">+ Nova cena</button></div>
-              <div id="visualSceneList" class="visual-scene-list"></div>
-              <div id="visualSceneFields"></div>
+          <div class="visual-builder-head"><div><span class="eyebrow">02 / STORYBOARD</span><h3 id="visualBuilderHeading">Sua linha do tempo</h3>
+            <p class="helper-text">Selecione uma cena para editar. Assista diretamente aos MP4s salvos em cache.</p></div>
+            <button id="visualRefresh" class="btn btn-ghost btn-sm" type="button">↻ Atualizar mídias</button></div>
+          <p id="visualMessage" class="helper-text" role="status" aria-live="polite"></p>
+          <div class="scene-workspace">
+            <div class="scene-rail">
+              <div class="visual-scenes-head"><h4>Cenas <span id="visualSceneCount" class="scene-count"></span></h4><button id="visualAddScene" class="btn btn-primary btn-sm" type="button">+ Nova cena</button></div>
+              <label class="scene-search-label" for="visualSceneSearch">Encontrar cena</label>
+              <input id="visualSceneSearch" class="scene-search" type="search" autocomplete="off" placeholder="Buscar por ID, texto, tempo...">
+              <div id="visualSceneList" class="visual-scene-list" role="list" aria-label="Cenas do projeto"></div>
+              <p class="scene-rail-tip">Duplicar mantém os elementos, mas cria um novo ID. Apenas cenas alteradas são reprocessadas.</p>
             </div>
-            <aside class="visual-transcript" aria-label="Transcrição de referência"><h4>Transcrição</h4><p class="helper-text">Use os tempos das frases para marcar início e fim da cena selecionada. Se já estiver na pasta como transcript.json, ela aparece automaticamente.</p><button id="visualImportTranscript" class="btn btn-secondary btn-sm" type="button">Carregar transcript.json</button><input id="visualTranscriptFile" class="hidden" type="file" accept=".json,application/json"><div id="visualTranscriptRows"></div></aside>
+            <div class="scene-inspector">
+              <div class="scene-preview-card">
+                <div class="scene-preview-top"><div><span class="eyebrow">CENA SELECIONADA</span><strong id="visualSelectedSceneTitle">Selecione uma cena</strong></div><span id="visualSelectedSceneCache" class="cache-pill">Sem cache</span></div>
+                <div class="scene-preview-screen"><video id="visualSceneVideo" class="hidden" controls playsinline preload="metadata" aria-label="Vídeo da cena em cache"></video>
+                  <div id="visualSceneEmpty" class="scene-preview-empty"><span aria-hidden="true">▷</span><strong>Seu trecho aparece aqui</strong><small>Depois do primeiro render, cada cena terá sua reprodução.</small></div></div>
+                <div class="scene-preview-meta"><span id="visualSceneTime">—</span><span id="visualSceneLayerCount">—</span></div>
+              </div>
+              <div id="visualSceneFields" class="scene-fields"></div>
+              <details class="visual-global"><summary>Configurações gerais do vídeo e áudio</summary><div id="visualGlobalFields"></div></details>
+              <details class="visual-transcript" aria-label="Transcrição de referência"><summary>Transcrição e marcação de tempos</summary>
+                <p class="helper-text">Use os tempos da narração para definir o início e o fim da cena.</p>
+                <button id="visualImportTranscript" class="btn btn-secondary btn-sm" type="button">Importar transcript.json</button>
+                <input id="visualTranscriptFile" class="hidden" type="file" accept=".json,application/json"><div id="visualTranscriptRows"></div>
+              </details>
+            </div>
           </div>
         </section>
         <details class="editor-plan">
