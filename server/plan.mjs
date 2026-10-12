@@ -60,6 +60,28 @@ export function validateShape(obj, definition=schema()) {
 export function validatePlan(plan){
   const issues=validateShape(plan);
   if(!isObject(plan)||!Array.isArray(plan.timeline))return issues;
+  const a=plan.audio||{};
+  if(a.narrationTrim&&a.sourceCuts?.length)
+    issues.push({path:'audio.narrationTrim',message:'Escolha narrationTrim OU sourceCuts para a narração, não os dois.'});
+  if(a.narrationTrim&&!(a.narrationTrim.end>a.narrationTrim.start))
+    issues.push({path:'audio.narrationTrim',message:'O fim do trim da narração deve superar o início.'});
+  for(let i=0;i<(a.sourceCuts||[]).length;i++){
+    const cut=a.sourceCuts[i];
+    if(!(cut.end>cut.start))
+      issues.push({path:'audio.sourceCuts.'+i,message:'O fim do recorte da narração deve superar o início.'});
+  }
+  for(let i=0;i<(a.music||[]).length;i++){
+    const m=a.music[i],path='audio.music.'+i,clip=m.end-m.start;
+    if(!(clip>0))issues.push({path,message:'Música deve terminar após seu início na timeline.'});
+    if(m.sourceEnd!==undefined&&!(m.sourceEnd>(m.sourceStart??0)))
+      issues.push({path:path+'.sourceEnd',message:'sourceEnd deve ser posterior a sourceStart.'});
+    if(m.fadeIn!==undefined&&m.fadeIn>clip)
+      issues.push({path:path+'.fadeIn',message:'Fade-in não pode exceder a duração da música na timeline.'});
+    if(m.fadeOut!==undefined&&m.fadeOut>clip)
+      issues.push({path:path+'.fadeOut',message:'Fade-out não pode exceder a duração da música na timeline.'});
+    if(m.loop===false&&m.sourceEnd!==undefined&&m.sourceEnd-(m.sourceStart??0)+0.001<clip)
+      issues.push({path:path+'.loop',message:'Sem loop, o trecho da fonte não cobre a duração escolhida.'});
+  }
   const inserts=plan.audio?.silenceInserts||[];
   let previousGapEnd=-1;
   for(let i=0;i<inserts.length;i++){
