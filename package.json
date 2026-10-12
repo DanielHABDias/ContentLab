@@ -1,0 +1,20 @@
+{
+  "name": "contentlab",
+  "private": true,
+  "type": "module",
+  "version": "0.0.0-node-migration",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server/http.mjs",
+    "test": "node --test server/*.test.mjs",
+    "check": "node --check server/http.mjs && node --test server/*.test.mjs",
+    "render": "node server/cli.mjs"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "multer": "^2.0.0",
+    "youtubei.js": "^18.1.0"
+  }
+}
