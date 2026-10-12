@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {validatePlan, validateShape, settings, region, compileScene, resolveAsset, assetReport, schema} from './plan.mjs';
+import {validatePlan, validateShape, settings, region, compileScene, resolveAsset, assetReport, schema, visualWarnings} from './plan.mjs';
 import {SegmentCache,sceneFingerprint,rendererIdentity,cleanOutput,idFilename} from './cache.mjs';
 import {remapTranscriptWords,applyNarrationSilence} from './remotion.mjs';
 import {silenceSourcePositions,edgeSilenceBounds} from './audio.mjs';
@@ -126,4 +126,19 @@ test('narration insertions keep later words in sync and forbid overlapping silen
   const p=example();p.audio.silenceInserts=[{at:1,duration:1},{at:1.4,duration:.5}];
   assert.ok(validatePlan(p).some(e=>e.path.includes('silenceInserts')));
   assert.deepEqual(edgeSilenceBounds('',2),{start:0,end:2,empty:false});
+});
+
+test('text overlaps report a warning, while separate text regions do not block rendering',()=>{
+  const p=example();
+  p.timeline[0].elements=[
+    {id:'a',type:'text',text:'BATMAN',start:0,end:1.3,cells:[5]},
+    {id:'b',type:'text',text:'JASON',start:1,end:2,cells:[5]},
+    {id:'different',type:'text',text:'OTHER',start:1,end:2,cells:[1]},
+    {id:'later',type:'text',text:'END',start:2.1,end:2.8,cells:[5]}
+  ];
+  const warns=visualWarnings(p);
+  assert.equal(warns.length,1);
+  assert.equal(warns[0].code,'text_overlap');
+  assert.equal(warns[0].scene,'batman');
+  assert.deepEqual(validatePlan(p),[]);
 });
