@@ -2,8 +2,12 @@ name: tests
 
 on:
   push:
-    branches: ["main", "refactor/node-remotion-single-plan", "feat/studio-ui-scene-workspace", "fix/cache-audio-sync-transitions"]
+    branches: ["main", "refactor/node-remotion-single-plan", "feat/studio-ui-scene-workspace"]
   pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
 
 jobs:
   node:
