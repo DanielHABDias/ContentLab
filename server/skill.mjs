@@ -2,23 +2,70 @@ import fs from 'node:fs';
 import path from 'node:path';
 import archiver from 'archiver';
 import {APP_ROOT} from './plan.mjs';
+import {buildMarkdown,buildHtml,figureAssets} from './docs.mjs';
 
-const skillText="---\nname: contentlab-edicao\ndescription: Criar edit_plan.json no contrato único do Content Lab/Remotion\n---\n\n# Skill de edição do Content Lab\n\nVocê produz somente edit_plan.json, sem campo version no objeto JSON.\nLeia EDIT_PLAN_REFERENCE.md, MOTION_DESIGN_JSON.md e schemas/edit_plan.schema.json incluídos neste ZIP.\n\n- Cada cena possui ID estável, start, end, elements e limites temporais válidos.\n- IDs das camadas visuais são únicos dentro da cena.\n- Use apenas project:// e builtin:// para mídia realmente presente.\n- Para personagens transparentes use cells [2,5,8] se devem ocupar o centro.\n- Ajuste tamanho com transform.scale e preserve proporção da imagem.\n- Vídeo 1920x1080 não deve receber zoom implícito num projeto 1920x1080.\n- Prefira fit contain para clipes de gameplay onde o quadro inteiro deve ser preservado.\n- Evite dois textos que permaneçam visíveis sobrepostos sem intenção.\n- Use animações determinísticas baseadas no tempo/frame.\n- Preserve os IDs antigos de cenas para aproveitar cache incremental.\n- O motor visual é Remotion, e FFmpeg faz mixagem e composição final.\n- Valide JSON e assets antes de renderizar; não envie JS arbitrário no plano.\n";
+const instruction=[
+  '---','name: contentlab-edicao',
+  'description: Cria edit_plan.json validado para o editor Content Lab, com Remotion, timeline, narração e cache.',
+  '---','',
+  '# Content Lab — skill de autoria',
+  '',
+  '## Fontes obrigatórias',
+  '- Leia docs/Documentacao-ContentLab.md antes de construir cenas.',
+  '- Confira schemas/edit_plan.schema.json: é o contrato único; não adicione um campo version.',
+  '- Consulte os exemplos em examples/ e os diagramas docs/figures/ quando útil.',
+  '',
+  '## Fluxo recomendado',
+  '1. Conheça narração, arquivos reais e formato de saída.',
+  '2. Escolha cenas coerentes com a fala e IDs únicos estáveis.',
+  '3. Gere edit_plan.json com project, audio e timeline; sources é opcional.',
+  '4. Valide limites de tempo, tipos, URIs e propriedades com o schema.',
+  '5. Preserve IDs de cenas e elementos ao ajustar um vídeo existente para aproveitar o cache.',
+  '6. Não afirme ter renderizado ou validado imagens sem testes correspondentes.',
+  '',
+  '## Regras essenciais',
+  '- Use project://assets/arquivo.ext e builtin://categoria/arquivo.ext para mídia existente; não invente arquivos.',
+  '- O motor visual é Remotion; o FFmpeg compõe áudio e transições.',
+  '- O modo padrão contain preserva o vídeo inteiro; só use cover para recorte intencional.',
+  '- Para personagem centralizado numa grade 3x3, cells [2,5,8] é uma opção; escala em transform.scale.',
+  '- start/end de cenas e camadas são segundos ABSOLUTOS. t dos keyframes é RELATIVO ao início da cena.',
+  '- O campo at do SFX define o início audível. O sistema remove somente silêncio das bordas, não pausas internas.',
+  '- Ao inserir uma cena no meio, ajuste música e eventos posteriores e preserve o alinhamento da narração via silenceInserts.',
+  '- Evite textos que se sobreponham sem intenção; confirme intervalos e cells.',
+  '- Use animações e estilos que constam no catálogo instalado. config admite campos arbitrários no schema, mas apenas os usados pelo renderer têm efeito.',
+  '- Nunca adicione código JS executável ao edit_plan.json; ele é estritamente declarativo.',
+  '- O storyboard reproduz vídeos por cena em cache, mas não é um render novo. A saída final deve ser conferida separadamente.',
+  '',
+  '## Checklist final',
+  '- Cada cena tem id único, start < end e elementos válidos.',
+  '- Cada camada visual possui id único dentro da cena.',
+  '- Caminhos existem no projeto; fundos 16:9 não são ampliados sem pedido.',
+  '- Legendas e eventos sonoros seguem os tempos absolutos, sourceCuts e silenceInserts.',
+  '- O plano satisfaz schemas/edit_plan.schema.json e as regras adicionais de validação.',
+  '',
+  'A referência completa de cada campo, exemplos e diagramas está na documentação dentro deste ZIP.',
+  ''
+].join('\n');
 export function streamSkillZip(response){
   response.setHeader('Content-Type','application/zip');
-  response.setHeader('Content-Disposition','attachment; filename="ContentLab-Edicao.zip"');
-  const archive=archiver('zip',{zlib:{level:7}});
-  archive.on('error',error=>response.destroy(error));
-  archive.pipe(response);
-  archive.append(skillText,{name:'SKILL.md'});
+  response.setHeader('Content-Disposition','attachment; filename="ContentLab-Skill.zip"');
+  const zip=archiver('zip',{zlib:{level:8}});
+  zip.on('error',err=>response.destroy(err));
+  zip.pipe(response);
+  zip.append(instruction,{name:'SKILL.md'});
+  zip.append(buildMarkdown(),{name:'docs/Documentacao-ContentLab.md'});
+  zip.append(buildHtml({standalone:true}),{name:'docs/Documentacao-ContentLab.html'});
+  for(const figure of figureAssets())
+    zip.append(figure.content,{name:figure.name});
   for(const file of [
-    'schemas/edit_plan.schema.json','EDIT_PLAN_REFERENCE.md','MOTION_DESIGN_JSON.md',
-    'MOTION_ENGINE_STRATEGY.md','SCENE_CACHE.md',
-    'examples/motion-grid.json','examples/motion-storyboard.json',
-    'examples/word-stack.json','examples/tipografia.json'
+    'schemas/edit_plan.schema.json','EDIT_PLAN_REFERENCE.md','SCENE_CACHE.md',
+    'CORRECOES_CACHE_AUDIO_TRANSICOES.md',
+    'examples/minimal-edit-plan.json','examples/motion-grid.json',
+    'examples/motion-storyboard.json','examples/tipografia.json',
+    'examples/word-stack.json','examples/audio-phase8-edit-plan.json'
   ]){
     const source=path.join(APP_ROOT,file);
-    if(fs.existsSync(source))archive.file(source,{name:file});
+    if(fs.existsSync(source))zip.file(source,{name:file});
   }
-  return archive.finalize();
+  return zip.finalize();
 }
