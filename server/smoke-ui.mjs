@@ -113,5 +113,11 @@ try{
     new Promise(resolve=>chrome.once('exit',resolve)),
     sleep(2000)
   ]);
-  fs.rmSync(root,{recursive:true,force:true,maxRetries:20,retryDelay:150});
+  try{fs.rmSync(root,{recursive:true,force:true,maxRetries:20,retryDelay:150});}
+  catch(error){
+    // Chromium can still be flushing profile files after its parent exits.
+    // A temporary CI profile being removed is not part of the UI smoke assertion.
+    if(error.code!=='ENOTEMPTY'&&error.code!=='EBUSY')throw error;
+    console.warn('Chrome still closing temporary profile:',error.code);
+  }
 }
