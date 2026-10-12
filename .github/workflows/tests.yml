@@ -2,7 +2,7 @@ name: tests
 
 on:
   push:
-    branches: ["main", "refactor/node-remotion-single-plan", "feat/studio-ui-scene-workspace"]
+    branches: ["main", "refactor/node-remotion-single-plan", "feat/studio-ui-scene-workspace", "feat/complete-docs-skill-site"]
   pull_request:
 
 concurrency:
