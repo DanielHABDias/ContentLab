@@ -55,6 +55,11 @@ try{
   const firstTone=await peakAt(result,1.29);
   const middleGap=await peakAt(result,1.52);
   const lastTone=await peakAt(result,1.68);
+  const wholePeak=await peakAt(result,0,4);
+  const {stderr:timelineLog}=await run('ffmpeg',['-hide_banner','-nostats','-loglevel','info',
+    '-i',result,'-vn','-af','silencedetect=noise=-50dB:d=0.03','-f','null','-']);
+  const intervals=timelineLog.split('\n').filter(line=>line.includes('silence_start')||line.includes('silence_end')).slice(0,25);
+  console.log('FINAL_AUDIO_TIMELINE',JSON.stringify({wholePeak,intervals}));
   console.log('AUDIBLE_CUE_PEAKS',JSON.stringify({beforeCue,firstTone,middleGap,lastTone}));
   assert.ok(firstTone>beforeCue+18,'SFX deve começar perto de at, sem leading silence: '+JSON.stringify({beforeCue,firstTone,middleGap,lastTone}));
   assert.ok(lastTone>middleGap+18,'Silêncio interno do efeito precisa continuar silencioso.');
