@@ -430,6 +430,10 @@ precisam de arquivo. Veja [o guia da biblioteca](builtin-assets/README.md).
 
 Veja também [Cache incremental por cena](SCENE_CACHE.md) para entender invalidação, arquivos persistentes, transições e segurança.
 
+## Próxima arquitetura de motion design
+
+A evolução do motor visual será [Remotion-first, usando técnicas e skills do HyperFrames como referência](MOTION_ENGINE_STRATEGY.md). A proposta inclui componentes cinematográficos reutilizáveis, presets com parâmetros, composição por frame e um futuro editor de cenas com Remotion Player, mantendo o [cache incremental](SCENE_CACHE.md).
+
 ## Dados e cache
 
 - O primeiro processamento guarda a fonte completa no cache.
