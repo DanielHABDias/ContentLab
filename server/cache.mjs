@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import os from 'node:os';
 
 const hash=value=>crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
 export const statIdentity=file=>{
@@ -51,35 +50,59 @@ export class SegmentCache{
   }
   valid(){return Object.entries(this.entries).every(([id,entry])=>this.lookup(id,entry.fingerprint));}
 }
+// Only changes to the visual engine should invalidate existing scene MP4s.
+// Hash bytes and project-relative names, never checkout-specific mtimes/paths.
 export function rendererIdentity(appRoot){
   const files=[];
-  for(const directory of ['backend/remotion/src','server']){
-    const root=path.join(appRoot,directory);
-    if(!fs.existsSync(root))continue;
-    const walk=dir=>{
-      for(const e of fs.readdirSync(dir,{withFileTypes:true})){
-        const full=path.join(dir,e.name);
-        if(e.isDirectory())walk(full);
-        else if(/\.(tsx?|mjs|js)$/.test(e.name))files.push(statIdentity(full));
-      }
-    };
-    walk(root);
-  }
-  const lock=path.join(appRoot,'backend/remotion/package-lock.json');
-  if(fs.existsSync(lock))files.push(statIdentity(lock));
-  return hash(files.sort((a,b)=>a.path.localeCompare(b.path)));
+  const include=file=>{
+    if(fs.existsSync(file)&&fs.statSync(file).isFile())
+      files.push([path.relative(appRoot,file).split(path.sep).join('/'),
+        crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')]);
+  };
+  const walk=directory=>{
+    if(!fs.existsSync(directory))return;
+    for(const e of fs.readdirSync(directory,{withFileTypes:true})){
+      const full=path.join(directory,e.name);
+      if(e.isDirectory())walk(full);
+      else if(e.isFile()&&/\.(tsx?|jsx?|ttf|otf)$/i.test(e.name))include(full);
+    }
+  };
+  walk(path.join(appRoot,'backend/remotion/src'));
+  walk(path.join(appRoot,'builtin-assets/fonts'));
+  include(path.join(appRoot,'server/remotion.mjs'));
+  include(path.join(appRoot,'server/plan.mjs'));
+  include(path.join(appRoot,'backend/remotion/package-lock.json'));
+  return hash({visualEngine:'remotion-visual-2',files:files.sort((a,b)=>a[0].localeCompare(b[0]))});
 }
+const relativeTime=(value,start)=>typeof value==='number'?Number((value-start).toFixed(6)):value;
 export function sceneFingerprint(raw,compiled,settings,resolvedAssets,words,rendererKey){
   const uris=new Set();
   if(raw.background?.asset)uris.add(raw.background.asset);
-  for(const e of raw.elements||[])for(const k of ['asset','fontAsset'])if(e[k])uris.add(e[k]);
-  const relevant=(raw.elements||[]).some(e=>e.type==='caption'||e.type==='kinetic_text');
+  const visualElements=(raw.elements||[]).filter(item=>item.type!=='sfx');
+  for(const e of visualElements)for(const k of ['asset','fontAsset'])if(e[k])uris.add(e[k]);
+  const relevant=visualElements.some(e=>e.type==='caption'||e.type==='kinetic_text');
+  const scene={
+    ...raw,start:0,end:Number((raw.end-raw.start).toFixed(6)),
+    elements:visualElements.map(({muted,trimDb,fadeIn,fadeOut,...item})=>({
+      ...item,start:relativeTime(item.start,raw.start),
+      end:relativeTime(item.end,raw.start),
+      at:relativeTime(item.at,raw.start)
+    })),
+  };
+  delete scene.transitionOut;
+  delete scene.transitionDuration;
+  if(scene.background){
+    scene.background={...scene.background};
+    delete scene.background.muted;
+  }
+  const timestamps=relevant?words.filter(w=>w.end>compiled.start&&w.start<compiled.end)
+    .map(w=>({word:w.word,start:relativeTime(w.start,compiled.start),
+      end:relativeTime(w.end,compiled.start)})):[];
   return hash({
-    rendererKey,
-    scene:raw,
+    rendererKey,scene,
     settings:{width:settings.width,height:settings.height,fps:settings.fps,seed:settings.seed},
     assets:[...uris].sort().map(uri=>[uri,resolvedAssets[uri]&&fs.existsSync(resolvedAssets[uri])?statIdentity(resolvedAssets[uri]):null]),
-    transcript:relevant?words.filter(w=>w.end>compiled.start&&w.start<compiled.end):[],
+    transcript:timestamps
   });
 }
 export function cleanOutput(root,dependencies=[]){

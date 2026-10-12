@@ -23,6 +23,9 @@ Uma edição simples não exige editar JSON manualmente. Os campos do editor vis
 
 ### Ações e linha do tempo
 
+O storyboard possui **Desfazer** e **Refazer** para edições visuais, inclusive criação, exclusão, inserção e duplicação. Inserir/duplicar agora escreve uma pausa na narração (`audio.silenceInserts`) e desloca eventos posteriores; editar manualmente o JSON reinicia o histórico visual. Veja [guia de sincronização](CORRECOES_CACHE_AUDIO_TRANSICOES.md).
+
+
 - **+ Nova cena:** acrescenta uma cena de cinco segundos após o último trecho.
 - **Inserir após:** insere imediatamente depois da cena selecionada e desloca os timestamps absolutos das cenas seguintes, incluindo camadas e SFX, para evitar sobreposição.
 - **Duplicar:** duplica uma cena e seus elementos, cria um ID novo e insere após a original; as seguintes são deslocadas.

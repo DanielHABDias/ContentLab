@@ -35,6 +35,35 @@
   let initialScenes = new Map();
   let sceneCache = new Map();
   let searchQuery = '';
+  let undoStates=[],redoStates=[],lastSnapshot='';
+  const historyButtons=()=>{
+    $('visualUndo').disabled=!undoStates.length;
+    $('visualRedo').disabled=!redoStates.length;
+  };
+  const recordChange=()=>{
+    const latest=JSON.stringify(plan);
+    if(lastSnapshot&&lastSnapshot!==latest){
+      undoStates.push(lastSnapshot);
+      if(undoStates.length>80)undoStates.shift();
+      redoStates=[];
+    }
+    lastSnapshot=latest;
+    historyButtons();
+  };
+  const restoreSnapshot=(source,target)=>{
+    if(!source.length)return;
+    target.push(JSON.stringify(plan));
+    plan=JSON.parse(source.pop());
+    lastSnapshot=JSON.stringify(plan);
+    writing=true;
+    $('editorPlanText').value=JSON.stringify(plan,null,2);
+    $('editorPlanText').dispatchEvent(new Event('input'));
+    writing=false;
+    selectedScene=Math.min(selectedScene,Math.max(0,plan.timeline.length-1));
+    render();
+    historyButtons();
+  };
+
   const fmtTime = seconds => Number(seconds || 0).toFixed(2).replace(/\.00$/, '') + 's';
   const uniqueSceneId = prefix => {
     const existing = new Set((plan?.timeline || []).map(item => item.id));
@@ -56,10 +85,27 @@
     const duration = scene.end - scene.start;
     const start = at > 0 ? plan.timeline[at - 1].end : 0;
     shiftScene(scene, start - scene.start);
+    // Ripple is applied to narration AND global soundtrack, not only video scenes.
+    // Existing voice remains synchronized; the new segment is silent until narration is added.
+    plan.audio = plan.audio || {};
+    const gaps = plan.audio.silenceInserts || [];
+    for (const gap of gaps) if (gap.at >= start) gap.at = Number((gap.at+duration).toFixed(6));
+    gaps.push({at:start,duration});
+    gaps.sort((a,b)=>a.at-b.at);
+    plan.audio.silenceInserts = gaps;
+    for (const music of plan.audio.music || []) {
+      if (music.start >= start) {
+        music.start = Number((music.start+duration).toFixed(6));
+        music.end = Number((music.end+duration).toFixed(6));
+      } else if (music.end > start) {
+        music.end = Number((music.end+duration).toFixed(6));
+      }
+    }
     for (let i = at; i < plan.timeline.length; i++) shiftScene(plan.timeline[i], duration);
     plan.timeline.splice(at, 0, scene);
     selectedScene = at;
     changed();
+    message('Cena inserida; narração e trilha alinhadas. A nova cena recebeu silêncio de voz, sem alterar a fala existente.');
   };
   const cloneScene = scene => JSON.parse(JSON.stringify(scene));
   const cacheStatus = scene => {
@@ -90,6 +136,7 @@
     let parent = plan;
     for (const part of path.slice(0, -1)) parent = parent[part];
     parent[path.at(-1)] = value;
+    recordChange();
     writing = true;
     $('editorPlanText').value = JSON.stringify(plan, null, 2);
     $('editorPlanText').dispatchEvent(new Event('input'));
@@ -98,6 +145,7 @@
     message('Rascunho atualizado. Valide e salve o plano antes do render final.');
   };
   const changed = () => {
+    recordChange();
     writing = true;
     $('editorPlanText').value = JSON.stringify(plan, null, 2);
     $('editorPlanText').dispatchEvent(new Event('input'));
@@ -385,7 +433,23 @@
           }
           if(step && (value<0 || (key==='end'&&value<=scene.start) ||
             (key==='start'&&value>=scene.end))){message('Verifique o início e o fim da cena.');input.value=scene[key];return;}
-          update(['timeline',selectedScene,key],value);
+          if(key==='start'){
+            const previous=selectedScene?plan.timeline[selectedScene-1].end:0;
+            const following=plan.timeline[selectedScene+1]?.start??Infinity;
+            const delta=value-scene.start;
+            if(value<previous||scene.end+delta>following){
+              message('Mover a cena causaria sobreposição. Insira tempo ou escolha outro ponto.');
+              input.value=scene.start;return;
+            }
+            shiftScene(scene,delta);changed();
+            message('Cena e efeitos locais deslocados. A narração global permaneceu na posição original.');
+          }else if(key==='end'){
+            const next=plan.timeline[selectedScene+1]?.start??Infinity;
+            if(value>next){message('O fim da cena ultrapassa a próxima.');input.value=scene.end;return;}
+            const former=scene.end;
+            for(const layer of scene.elements||[])if(layer.end===former)layer.end=value;
+            scene.end=value;changed();
+          }else update(['timeline',selectedScene,key],value);
         });
         labelNode.append(input);quickGrid.append(labelNode);
       }
@@ -449,15 +513,26 @@
       selectedScene = Math.max(0,plan.timeline.findIndex(scene=>scene.id===previouslySelected));
       projectRoot = project.projectRoot;
       initialScenes = new Map((plan.timeline||[]).map(item=>[item.id,cloneScene(item)]));
+      lastSnapshot=JSON.stringify(plan);undoStates=[];redoStates=[];historyButtons();
       await loadCacheState();render();
       message('Editor visual pronto. Alterações aparecem também no JSON abaixo.');
     } catch (error) { message(error.message); }
   };
   const syncFromJson = () => {
     if (writing || !context) return;
-    try { plan = JSON.parse($('editorPlanText').value); selectedScene = Math.min(selectedScene, Math.max(0, plan.timeline.length - 1)); render(); }
+    try { plan = JSON.parse($('editorPlanText').value); selectedScene = Math.min(selectedScene, Math.max(0, plan.timeline.length - 1));
+      lastSnapshot=JSON.stringify(plan);undoStates=[];redoStates=[];historyButtons();render(); }
     catch (_) { message('Corrija o JSON para voltar a usar o editor visual.'); }
   };
+  $('visualUndo').addEventListener('click',()=>restoreSnapshot(undoStates,redoStates));
+  $('visualRedo').addEventListener('click',()=>restoreSnapshot(redoStates,undoStates));
+  $('panel-editor').addEventListener('keydown',event=>{
+    if(!(event.ctrlKey||event.metaKey)||event.key.toLowerCase()!=='z')return;
+    if(event.target.closest('input,textarea,select,[contenteditable]'))return;
+    event.preventDefault();
+    if(event.shiftKey)restoreSnapshot(redoStates,undoStates);
+    else restoreSnapshot(undoStates,redoStates);
+  });
   $('visualAddScene').addEventListener('click', () => {
     if (!plan || !context) return message('Abra ou crie um projeto primeiro.');
     const start=plan.timeline.length?Math.max(...plan.timeline.map(scene=>Number(scene.end))):0;

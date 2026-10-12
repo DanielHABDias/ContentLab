@@ -188,6 +188,28 @@
             },
             "additionalProperties": false
           }
+        },
+        "silenceInserts": {
+          "type": "array",
+          "description": "Pausas em segundos, inseridas na timeline final da narração para acompanhar inserções de cenas (sem alterar pausas internas da fonte).",
+          "items": {
+            "type": "object",
+            "required": [
+              "at",
+              "duration"
+            ],
+            "properties": {
+              "at": {
+                "type": "number",
+                "minimum": 0
+              },
+              "duration": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              }
+            },
+            "additionalProperties": false
+          }
         }
       },
       "additionalProperties": false

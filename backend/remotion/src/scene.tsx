@@ -26,7 +26,7 @@ const stateAt = (initial: Record<string, number>, frames: Keyframe[] = [], time:
   }
   return state;
 };
-const fit = (name?: string): 'fill' | 'contain' | 'cover' => name === 'stretch' ? 'fill' : name === 'contain' ? 'contain' : 'cover';
+const fit = (name?: string): 'fill' | 'contain' | 'cover' => name === 'stretch' ? 'fill' : name === 'cover' || name === 'smart_cover' ? 'cover' : 'contain';
 const captionChunk = (item: Element, absolute: number, words: Word[]) => {
   const range = item.data.range ?? {};
   const start = Number(range.start ?? item.start), end = Number(range.end ?? item.end);

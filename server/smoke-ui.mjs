@@ -53,7 +53,7 @@ try{
   const pages=await wait(async()=>{
     const res=await fetch('http://127.0.0.1:'+debugPort+'/json/list');
     const items=await res.json();return items.some(x=>x.type==='page')&&items;
-  },'Chrome CDP');
+  },'Chrome CDP',160);
   const target=pages.find(x=>x.type==='page');
   ws=new WebSocket(target.webSocketDebuggerUrl);
   await new Promise((resolve,reject)=>{
@@ -98,12 +98,29 @@ try{
   assert.equal(await evaluate('JSON.parse(document.getElementById("editorPlanText").value).timeline.length'),3);
   await evaluate('document.querySelector(".scene-action-row button:nth-child(2)").click()');
   assert.equal(await evaluate('JSON.parse(document.getElementById("editorPlanText").value).timeline.length'),4);
+  await evaluate('document.getElementById("visualUndo").click()');
+  assert.equal(await evaluate('JSON.parse(document.getElementById("editorPlanText").value).timeline.length'),3);
+  await evaluate('document.getElementById("visualRedo").click()');
+  assert.equal(await evaluate('JSON.parse(document.getElementById("editorPlanText").value).timeline.length'),4);
+  await evaluate('document.querySelectorAll("#visualSceneList .visual-scene")[0].click()');
+  await evaluate('document.querySelector(".scene-action-row button:first-child").click()');
+  const ripple=await evaluate('JSON.parse(document.getElementById("editorPlanText").value)');
+  assert.equal(ripple.timeline.length,5);
+  assert.equal(ripple.timeline[1].start,3);
+  assert.equal(ripple.timeline[2].start,8);
+  assert.equal(ripple.audio.silenceInserts.length,2);
+  assert.equal(ripple.audio.silenceInserts[0].at,3);
+  assert.equal(ripple.audio.silenceInserts[0].duration,5);
+  await evaluate('document.getElementById("visualUndo").click()');
+  assert.equal(await evaluate('JSON.parse(document.getElementById("editorPlanText").value).timeline.length'),4);
+  await evaluate('document.getElementById("visualRedo").click()');
+  assert.equal(await evaluate('JSON.parse(document.getElementById("editorPlanText").value).timeline.length'),5);
   assert.equal(await evaluate('document.getElementById("editorSave").disabled'),false);
   const shot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
   const screenshot=path.join(os.tmpdir(),'contentlab-studio-ui.png');
   fs.writeFileSync(screenshot,Buffer.from(shot.data,'base64'));
   assert.deepEqual(errors,[]);
-  console.log(JSON.stringify({status:'passed',sceneCount:4,logo:true,
+  console.log(JSON.stringify({status:'passed',sceneCount:5,logo:true,
     screenshot,errors:errors.length}));
 }finally{
   ws?.close();
@@ -113,13 +130,10 @@ try{
     new Promise(resolve=>chrome.once('exit',resolve)),
     sleep(2000)
   ]);
-  // Chromium may spawn helper processes that briefly keep its profile busy
-  // after the browser smoke assertions have already passed. Do not make
-  // asynchronous OS cleanup turn a passing UI test into a failing build.
   try {
     await fs.promises.rm(root,{recursive:true,force:true,maxRetries:8,retryDelay:200});
-  } catch (error) {
-    if (!['ENOTEMPTY','EBUSY','EPERM'].includes(error.code)) throw error;
-    console.warn('Chrome temporary profile cleanup deferred to the CI runner:',error.code);
+  } catch(error) {
+    if(!['ENOTEMPTY','EBUSY','EPERM'].includes(error.code))throw error;
+    console.warn('Chrome temporary profile cleanup deferred to CI runner:',error.code);
   }
 }

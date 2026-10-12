@@ -3,7 +3,7 @@ import path from 'node:path';
 import os from 'node:os';
 import {APP_ROOT,readJson,assetReport,settings,compileScene,sha,projectFile,PlanError} from './plan.mjs';
 import {statIdentity,SegmentCache,rendererIdentity,sceneFingerprint,cleanOutput} from './cache.mjs';
-import {transcriptWords,remapTranscriptWords,renderRemotionScene} from './remotion.mjs';
+import {transcriptWords,remapTranscriptWords,applyNarrationSilence,renderRemotionScene} from './remotion.mjs';
 import {prepareNarration,mixAudio,probeOutput} from './audio.mjs';
 import {composeVisual} from './compose.mjs';
 
@@ -52,7 +52,7 @@ export async function renderProject(directory,{
   if(plan.sources?.transcript&&fs.existsSync(path.resolve(root,plan.sources.transcript))){
     transcript=readJson(path.resolve(root,plan.sources.transcript));
   }
-  const words=remapTranscriptWords(transcriptWords(transcript),plan.audio.sourceCuts);
+  const words=applyNarrationSilence(remapTranscriptWords(transcriptWords(transcript),plan.audio.sourceCuts),plan.audio.silenceInserts);
   const identity=rendererIdentity(APP_ROOT);
   const signature=hashRender(plan,validation,identity),reportFile=path.join(finalDir,'render_report.json');
   const fingerprints=raws.map((raw,i)=>sceneFingerprint(raw,scenes[i],cfg,validation.resolvedAssets,words,identity));
@@ -91,10 +91,10 @@ export async function renderProject(directory,{
     });
     emit('compose',scenes.length,scenes.length,'Vídeo composto');
     const voice=path.join(work,'narration.cleaned.wav');
-    await prepareVoice(validation.narration,voice,plan.audio,{ffmpeg,signal});
+    await prepareVoice(validation.narration,voice,plan.audio,{ffmpeg,signal,duration});
     emit('narration',scenes.length,scenes.length,'Narração preparada');
     const tempFinal=path.join(work,'final.mp4');
-    const layers=await mix(silent,voice,plan,validation.resolvedAssets,tempFinal,duration,{ffmpeg,signal});
+    const layers=await mix(silent,voice,plan,validation.resolvedAssets,tempFinal,duration,{ffmpeg,ffprobe,signal});
     emit('audio',scenes.length,scenes.length,'Áudio mixado');
     const verified=await probe(tempFinal,{ffprobe,signal});
     const tolerance=Math.max(.15,2/cfg.fps);
@@ -109,6 +109,7 @@ export async function renderProject(directory,{
       cacheKey:signature,cacheHit:false,sceneCache:{enabled:true,reused,rendered,
         reusedCount:reused.length,renderedCount:rendered.length},
       transitions:composed.transitions||[],audioLayers:layers,outputProbe:verified,
+      warnings:validation.warnings||[],
       elapsedSeconds:Math.round((Date.now()-started)/10)/100,
     };
     fs.writeFileSync(reportFile,JSON.stringify(report,null,2)+'\n');

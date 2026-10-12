@@ -22,6 +22,8 @@ output/final/
     <trecho-de-composição>.mp4
 ```
 
+A assinatura visual separa propriedades renderizadas pelo Remotion de propriedades apenas sonoras (`sfx`, fades/volume de áudio e transição de montagem). O motor é identificado por hash do conteúdo visual, não por horários dos arquivos do servidor. Alterar apenas o SFX ou deslocar uma cena inteira com suas camadas deixa o clipe visual aproveitável. O arquivo de mídia em si ainda usa metadados de arquivo para evitar hashear vídeos grandes a cada verificação. A primeira renderização após esta migração pode atualizar assinaturas antigas.
+
 O manifesto é atualizado atomicamente **depois de cada MP4 concluído**, antes da montagem final. Se a composição final falhar, os clipes já concluídos permanecem disponíveis.
 
 A identidade de um segmento inclui JSON da cena, ID, parâmetros globais de resolução/FPS, motor, arquivos referenciados, transcrição relevante e identidade do renderer. Alterar o `scale` do Batman invalida a própria cena, não todos os outros clipes. Alterações de fundo ou fonte podem exigir novo render da cena que os utiliza. Ajustes de áudio normalmente exigem nova mixagem, mas preservam os quadros visuais.
