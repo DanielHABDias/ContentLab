@@ -59,7 +59,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: contentlab-studio-ui
-          path: /tmp/contentlab-studio-ui.png
+          path: |
+            /tmp/contentlab-studio-ui.png
+            /tmp/contentlab-docs-ui.png
           if-no-files-found: ignore
       - name: Test HTTP server startup
         run: |
