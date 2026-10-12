@@ -54,7 +54,8 @@ try{
   const firstTone=await peakAt(result,1.29);
   const middleGap=await peakAt(result,1.52);
   const lastTone=await peakAt(result,1.68);
-  assert.ok(firstTone>beforeCue+18,'SFX deve começar perto de at, sem leading silence.');
+  console.log('AUDIBLE_CUE_PEAKS',JSON.stringify({beforeCue,firstTone,middleGap,lastTone}));
+  assert.ok(firstTone>beforeCue+18,'SFX deve começar perto de at, sem leading silence: '+JSON.stringify({beforeCue,firstTone,middleGap,lastTone}));
   assert.ok(lastTone>middleGap+18,'Silêncio interno do efeito precisa continuar silencioso.');
 
   const tone=file('tone.wav');
