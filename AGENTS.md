@@ -5,6 +5,17 @@
 Preserve the existing edit-plan contracts and keep generic renderer features
 separate from DiazVerso-specific editorial choices.
 
+### Motion-design direction
+
+Read `MOTION_ENGINE_STRATEGY.md` before modifying visual renderers or planning
+motion-design features. Use **Remotion** as the canonical visual engine for
+new 0.2+ scenes; study the official **HyperFrames** skills, animation recipes,
+and seek-safe composition patterns as references rather than introducing a
+second required renderer. Keep the per-scene cache (`SCENE_CACHE.md`), project
+JSON compatibility, and FFmpeg audio/post-processing. Do not reintroduce the
+old full-encode Preview. A future interactive scene preview should use the
+Remotion Player and match exported frames. Validate any new presets visually.
+
 ### Required validation
 
 For backend/parser/schema-only changes, run the relevant unit tests.
