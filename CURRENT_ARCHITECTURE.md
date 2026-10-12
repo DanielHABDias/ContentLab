@@ -34,8 +34,8 @@ incremental. A montagem final e mixagem podem precisar ser repetidas.
 
 ## Riscos e critérios para integração
 
-O código antigo permanece no repositório de migração exclusivamente como
-referência até os serviços Node passarem nos testes de paridade.
+Os módulos legados foram excluídos desta branch. A integração no `main`
+aguarda validação manual das funções essenciais no Zorin OS e no Windows.
 Prioridades: áudio, overlay/chroma, transições, HTML, downloads, transcrição,
 empacotamento e compatibilidade com os 101 trechos do VD_0005. A branch
 não deve substituir o `main` antes da validação.
