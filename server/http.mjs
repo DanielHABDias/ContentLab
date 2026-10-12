@@ -10,6 +10,7 @@ import {renderProject} from './render.mjs';
 import {run} from './exec.mjs';
 import {SOURCE_CACHE,listSources,cachedSource,importLocalSource,removeSource,getYoutubeInfo,resolveSource,exportCut} from './source.mjs';
 import {transcribeAudio} from './transcribe.mjs';
+import {streamSkillZip} from './skill.mjs';
 
 const PORT=Number(process.env.PORT||5000);
 const HOST='127.0.0.1';
@@ -165,7 +166,7 @@ app.get('/api/catalog/download',api(async(req,res)=>{
   res.type('text/markdown').send(lines.join('\n'));
 }));
 app.get('/api/skill/download',api(async(req,res)=>{
-  res.status(501).json({error:'A skill antiga ainda requer atualização para o contrato único antes de ser redistribuída.'});
+  await streamSkillZip(res);
 }));
 const makeSourceJob=(task,details={})=>{
   const id=crypto.randomUUID(),job={status:'running',percent:0,message:'Iniciando...',...details};
