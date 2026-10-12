@@ -127,6 +127,13 @@ export function resolveAsset(uri,root){
 }
 export function assetReport(plan,root){
   const issues=validatePlan(plan),uris=new Set();
+  if(issues.length){
+    const defaults=(plan&&typeof plan==='object'&&plan.project?.format)?
+      settings({...plan,project:plan.project}):{width:1920,height:1080,fps:30};
+    return {valid:false,errors:issues,missingAssets:[],resolvedAssets:{},
+      narration:null,duration:0,scenes:0,sceneCount:0,elementCount:0,
+      resolution:{width:defaults.width,height:defaults.height},fps:defaults.fps};
+  }
   for(const music of plan.audio?.music||[])if(music.asset)uris.add(music.asset);
   for(const scene of plan.timeline||[]){
     if(scene.background?.asset)uris.add(scene.background.asset);
