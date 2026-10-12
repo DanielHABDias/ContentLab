@@ -80,7 +80,8 @@ export function installedAssets(){
         const file=path.join(folder,item.name);
         if(item.isSymbolicLink())continue;
         if(item.isDirectory())visit(file);
-        else if(item.isFile()&&extensions.includes(path.extname(item.name).toLowerCase()))items.push({name:item.name,uri:'builtin://'+path.relative(path.join(APP_ROOT,'builtin-assets'),file).split(path.sep).join('/')});
+        else if(item.isFile()&&extensions.includes(path.extname(item.name).toLowerCase()))items.push({name:item.name,uri:'builtin://'+path.relative(path.join(APP_ROOT,'builtin-assets'),file).split(path.sep).join('/'),
+          type:/\.(mp4|mov|mkv|webm)$/i.test(item.name)?'video':'image'});
       }
     };
     if(fs.existsSync(root))visit(root);
