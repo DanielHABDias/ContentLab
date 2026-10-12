@@ -3,7 +3,7 @@ import path from 'node:path';
 import os from 'node:os';
 import {APP_ROOT,readJson,assetReport,settings,compileScene,sha,projectFile,PlanError} from './plan.mjs';
 import {statIdentity,SegmentCache,rendererIdentity,sceneFingerprint,cleanOutput} from './cache.mjs';
-import {transcriptWords,renderRemotionScene} from './remotion.mjs';
+import {transcriptWords,remapTranscriptWords,renderRemotionScene} from './remotion.mjs';
 import {prepareNarration,mixAudio,probeOutput} from './audio.mjs';
 import {composeVisual} from './compose.mjs';
 
@@ -52,7 +52,7 @@ export async function renderProject(directory,{
   if(plan.sources?.transcript&&fs.existsSync(path.resolve(root,plan.sources.transcript))){
     transcript=readJson(path.resolve(root,plan.sources.transcript));
   }
-  const words=transcriptWords(transcript);
+  const words=remapTranscriptWords(transcriptWords(transcript),plan.audio.sourceCuts);
   const identity=rendererIdentity(APP_ROOT);
   const signature=hashRender(plan,validation,identity),reportFile=path.join(finalDir,'render_report.json');
   const fingerprints=raws.map((raw,i)=>sceneFingerprint(raw,scenes[i],cfg,validation.resolvedAssets,words,identity));
