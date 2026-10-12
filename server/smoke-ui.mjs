@@ -96,5 +96,10 @@ try{
 }finally{
   ws?.close();
   service.kill();chrome.kill();
-  fs.rmSync(root,{recursive:true,force:true});
+  // Chrome writes its profile for a moment after receiving SIGTERM.
+  await Promise.race([
+    new Promise(resolve=>chrome.once('exit',resolve)),
+    sleep(2000)
+  ]);
+  fs.rmSync(root,{recursive:true,force:true,maxRetries:20,retryDelay:150});
 }
