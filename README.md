@@ -1,6 +1,6 @@
 # Content Lab — Node.js + Remotion
 
-Editor automático e utilitários de vídeo para o canal Diazverso. **A migração para Node.js está em desenvolvimento na branch `refactor/node-remotion-single-plan`; esta branch não é uma release estável.** O `main` mantém o aplicativo anterior até os testes de paridade terminarem.
+Editor automático e utilitários de vídeo para o Diazverso, com servidor Node.js, interface JavaScript, Remotion e FFmpeg. A migração do backend foi executada e os testes automatizados de Linux e Windows estão disponíveis no GitHub Actions. A validação estética com todos os assets reais do VD_0005 ainda precisa ser realizada.
 
 ## Tecnologias
 
@@ -17,10 +17,12 @@ Remotion concentra a renderização visual; o FFmpeg continua responsável por �
 
 1. Instale Node.js 22+, npm, FFmpeg e FFprobe no PATH.
 2. Execute `npm install` e `npm ci --prefix backend/remotion`.
-3. Execute `npm start` ou `./run.sh` no Linux e `iniciar.bat` no Windows.
+3. Execute `npm start` para desenvolvimento (primeiro plano), `./run.sh` ou o atalho no Linux e `iniciar.vbs` no Windows para abrir sem deixar terminal rodando.
 4. Abra `http://127.0.0.1:5000`.
 
 No Zorin/Ubuntu, use `sudo apt install ffmpeg` para as ferramentas de mídia. O browser Chrome/Chromium pode precisar ser instalado/baixado pelo Remotion.
+
+**Abertura sem terminal:** no Zorin rode `bash instalar-atalho.sh` uma vez e depois abra **Content Lab** pelo menu de aplicativos. No Windows execute `iniciar.vbs` por duplo clique. O servidor inicia em segundo plano e abre o navegador; o botão **Encerrar** finaliza o serviço. Para encerrar manualmente, use `node server/launcher.mjs --stop`.
 
 ### Migração de planos anteriores
 
@@ -87,21 +89,21 @@ O resultado é `output/final/final.mp4`, com relatório `render_report.json`, na
 
 O adaptador de transcrição usa o executável `whisper-cli` e um modelo `ggml-*.bin` do whisper.cpp. Configure `CONTENTLAB_WHISPER_CLI` e `CONTENTLAB_WHISPER_MODEL` ou armazene o modelo na pasta `~/.cache/whisper.cpp/`. A segmentação e a precisão dos timestamps ainda precisam de comparação com o motor anterior.
 
-## Estado e limites desta migração
+## Estado e limites de validação
 
 - Validação do contrato único e cache por cena: testes automáticos em Node.
 - Render de ponta a ponta com Remotion + FFmpeg: smoke test na CI da branch.
 - Downloads, corte, transcrição, CLI e HTTP: adaptadores Node implementados; ainda precisam de testes reais de compatibilidade.
 - Empacotamento Windows, efeitos chroma/overlay, importação e recursos de interface: **paridade ainda não confirmada**.
 - A skill do editor é gerada dinamicamente a partir do schema e dos guias atuais pela rota de download do aplicativo.
-- O código legado foi excluído desta branch; a integração no `main` depende da aceitação completa para não perder funcionalidades.
+- Os módulos de runtime legados foram excluídos e a aplicação não depende mais de Python para abrir, renderizar, baixar mídia ou controlar projetos.
 
-## Próximos passos
+## Próximos passos de qualidade
 
 1. Validar render do VD_0005 com assets reais e comparar frames, áudio e transições.
 2. Concluir testes de downloads e transcrição nativa, revisar limites de APIs externas.
 3. Corrigir diferenças visuais e testes, atualizar skill e instalador Windows.
-4. Verificar os instaladores e os testes manuais com vídeos reais, então integrar a branch ao `main`.
+4. Medir desempenho de render e aprimorar os componentes de motion design Remotion/HyperFrames.
 5. Integrar a branch ao `main` após os testes de aceitação.
 
 [Direção Remotion/HyperFrames](MOTION_ENGINE_STRATEGY.md).
