@@ -23,6 +23,7 @@
       <button class="workspace-tab is-active" id="tab-videos" role="tab" aria-selected="true" aria-controls="panel-videos" type="button" data-workspace="videos"><span>01</span> Vídeos e cortes</button>
       <button class="workspace-tab" id="tab-transcription" role="tab" aria-selected="false" aria-controls="panel-transcription" type="button" data-workspace="transcription"><span>02</span> Transcrição</button>
       <button class="workspace-tab" id="tab-editor" role="tab" aria-selected="false" aria-controls="panel-editor" type="button" data-workspace="editor"><span>03</span> Editor automático</button>
+      <button class="workspace-tab" id="tab-docs" role="tab" aria-selected="false" aria-controls="panel-docs" type="button" data-workspace="docs"><span>04</span> Documentação</button>
       <button class="workspace-tab" id="tab-guide" role="tab" aria-selected="false" aria-controls="panel-guide" type="button" data-workspace="guide"><span>ⓘ</span> Guia do projeto</button>
   </nav><div class="sidebar-foot"><span class="sidebar-foot-icon">✦</span><strong>Faça a ideia ganhar movimento.</strong><small>Node.js · Remotion · Local</small></div></aside>
   <main class="panel">
@@ -372,6 +373,25 @@
     </section>
     </div>
 
+    <div id="panel-docs" class="workspace-panel hidden" role="tabpanel" aria-labelledby="tab-docs" hidden>
+      <div class="workspace-intro">
+        <span class="eyebrow">CONTENT LAB / REFERÊNCIA OFICIAL</span>
+        <h2>Aprenda cada recurso.<br><span class="heading-muted">No seu ritmo.</span></h2>
+        <p>Consulte todos os campos do JSON, exemplos completos, boas práticas e diagramas ilustrativos gerados em JavaScript. A documentação acompanha o código instalado.</p>
+      </div>
+      <section class="block docs-download-bar" aria-label="Arquivos disponíveis">
+        <div><span class="eyebrow">REFERÊNCIA E SKILL</span><h3>Leia aqui ou leve com você.</h3>
+          <p class="helper-text">A skill em ZIP já inclui a documentação completa em Markdown e HTML, os exemplos e os diagramas.</p></div>
+        <div class="docs-download-buttons">
+          <a class="btn btn-secondary" href="/api/docs/download?format=md" download="Documentacao-ContentLab.md"><span aria-hidden="true">↓</span> Documentação .md</a>
+          <a class="btn btn-secondary" href="/api/docs/download?format=html" download="Documentacao-ContentLab.html"><span aria-hidden="true">↓</span> Documentação .html</a>
+          <a class="btn btn-primary" href="/api/skill/download" download="ContentLab-Skill.zip"><span aria-hidden="true">↓</span> Skill .zip</a>
+        </div>
+      </section>
+      <section class="docs-viewer-block" aria-label="Manual do Content Lab">
+        <iframe id="docsManual" title="Manual completo do Content Lab" data-src="/api/docs/view" loading="lazy"></iframe>
+      </section>
+    </div>
     <div id="panel-guide" class="workspace-panel hidden" role="tabpanel" aria-labelledby="tab-guide" hidden>
       <div class="workspace-intro"><span class="eyebrow">COMECE POR AQUI</span><h2>Como organizar seu projeto</h2><p>Estrutura recomendada para o editor encontrar narração, transcrição e arquivos de mídia.</p></div>
       <section class="block guide-skill">
