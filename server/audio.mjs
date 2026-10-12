@@ -136,7 +136,9 @@ export async function mixAudio(visual,cleaned,plan,resolvedAssets,output,duratio
       'aformat=sample_rates=48000:channel_layouts=stereo','volume='+gain+'dB'];
     if(fadeIn>0)filters.push('afade=t=in:st=0:d='+fmt(fadeIn));
     if(fadeOut>0)filters.push('afade=t=out:st='+fmt(audibleLength-fadeOut)+':d='+fmt(fadeOut));
-    filters.push('adelay='+Math.round(start*1000)+':all=1','apad','atrim=end='+fmt(duration));
+    // Do not atrim after adelay: atrim's timestamp offset discards leading
+    // silence at the muxer and moves every cue to time zero.
+    filters.push('adelay='+Math.round(start*1000)+':all=1','apad=whole_dur='+fmt(duration));
     const label='audio'+index;
     graph.push('['+index+':a]'+filters.join(',')+'['+label+']');
     (type==='music'?musicLabels:effectLabels).push('['+label+']');
