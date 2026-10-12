@@ -4,6 +4,9 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
 import net from 'node:net';
+import {run} from './exec.mjs';
+import {APP_ROOT,assetReport,compileScene,settings} from './plan.mjs';
+import {sceneFingerprint,rendererIdentity,SegmentCache} from './cache.mjs';
 
 const port=()=>new Promise(resolve=>{
   const srv=net.createServer();srv.listen(0,'127.0.0.1',()=>{
@@ -29,6 +32,13 @@ const plan={project:{name:'Storyboarding',format:'custom',profile:'generic',
       elements:[{id:'title2',type:'text',text:'JASON',start:3,end:6}]}
   ]};
 fs.writeFileSync(path.join(root,'edit_plan.json'),JSON.stringify(plan));
+const sceneTemp=path.join(root,'batman-render.mp4');
+await run('ffmpeg',['-hide_banner','-loglevel','error','-y','-f','lavfi',
+  '-i','color=c=navy:s=320x180:r=30:d=3','-an','-c:v','libx264','-pix_fmt','yuv420p',sceneTemp]);
+const resolved=assetReport(plan,root).resolvedAssets;
+const fingerprint=sceneFingerprint(plan.timeline[0],compileScene(plan.timeline[0],plan,resolved),
+  settings(plan),resolved,[],rendererIdentity(APP_ROOT));
+new SegmentCache(path.join(root,'output','final','scenes')).save('batman',fingerprint,sceneTemp);
 const chromeBin=process.env.CHROME_BIN||'google-chrome';
 const service=spawn(process.execPath,['server/http.mjs'],{
   cwd:process.cwd(),env:{...process.env,PORT:String(appPort)},stdio:'ignore'
@@ -77,6 +87,8 @@ try{
   await evaluate('document.getElementById("editorLoad").click()');
   await wait(()=>evaluate('document.querySelectorAll("#visualSceneList .visual-scene").length === 2'),'Storyboarding scene list');
   assert.equal(await evaluate('document.getElementById("visualSelectedSceneTitle").textContent'),'batman');
+  await wait(()=>evaluate('document.getElementById("visualSceneVideo").readyState >= 1'),'Cached MP4 loads');
+  assert.equal(await evaluate('document.getElementById("visualSelectedSceneCache").textContent'),'Em cache');
   await evaluate('document.querySelectorAll("#visualSceneList .visual-scene")[1].click()');
   assert.equal(await evaluate('document.getElementById("visualSelectedSceneTitle").textContent'),'jason');
   await evaluate('document.getElementById("visualSceneSearch").value="batman"; document.getElementById("visualSceneSearch").dispatchEvent(new Event("input"))');
