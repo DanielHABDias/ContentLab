@@ -4,8 +4,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {validatePlan, validateShape, settings, region, compileScene, resolveAsset, assetReport, schema} from './plan.mjs';
-import {SegmentCache,sceneFingerprint,cleanOutput,idFilename} from './cache.mjs';
-import {remapTranscriptWords} from './remotion.mjs';
+import {SegmentCache,sceneFingerprint,rendererIdentity,cleanOutput,idFilename} from './cache.mjs';
+import {remapTranscriptWords,applyNarrationSilence} from './remotion.mjs';
+import {silenceSourcePositions,edgeSilenceBounds} from './audio.mjs';
 
 function example(root){
   return {project:{name:'Teste',format:'custom',profile:'generic',resolution:{width:1920,height:1080},fps:30},
@@ -85,4 +86,44 @@ test('all shipped edit-plan examples conform to the single schema',()=>{
     assert.deepEqual(validateShape(file),[],name);
     assert.deepEqual(validatePlan(file),[],name);
   }
+});
+
+test('cache visual identity depends on code bytes, not timestamps or nonvisual server files',()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'cl-identity-'));
+  try{
+    for(const dir of ['backend/remotion/src','server'])fs.mkdirSync(path.join(root,dir),{recursive:true});
+    const visual=path.join(root,'backend/remotion/src/scene.tsx'),http=path.join(root,'server/http.mjs');
+    fs.writeFileSync(visual,'export const frame = 1;');fs.writeFileSync(http,'server-one');
+    const initial=rendererIdentity(root);
+    fs.utimesSync(visual,new Date(2020,0,1),new Date(2020,0,1));
+    assert.equal(rendererIdentity(root),initial);
+    fs.writeFileSync(http,'server-two');
+    assert.equal(rendererIdentity(root),initial);
+    fs.writeFileSync(visual,'export const frame = 2;');
+    assert.notEqual(rendererIdentity(root),initial);
+  }finally{fs.rmSync(root,{recursive:true,force:true});}
+});
+test('moving an entire scene and editing sound do not invalidate its visual MP4',()=>{
+  const p=example(),raw=p.timeline[0],cfg=settings(p),files={};
+  const base=sceneFingerprint(raw,compileScene(raw,p,files),cfg,files,[],'renderer');
+  const withSound={...raw,transitionOut:'fade',elements:[
+    ...raw.elements,{id:'boom',type:'sfx',asset:'project://sfx/boom.wav',at:1,config:{duration:2}}
+  ]};
+  assert.equal(sceneFingerprint(withSound,compileScene(withSound,p,files),cfg,files,[],'renderer'),base);
+  const shifted={...raw,start:10,end:13,elements:raw.elements.map(e=>({
+    ...e,start:e.start+10,end:e.end+10
+  }))};
+  assert.equal(sceneFingerprint(shifted,compileScene(shifted,p,files),cfg,files,[],'renderer'),base);
+});
+test('narration insertions keep later words in sync and forbid overlapping silent gaps',()=>{
+  const inserts=[{at:1,duration:.5},{at:3,duration:1}];
+  assert.deepEqual(silenceSourcePositions(inserts),[
+    {at:1,duration:.5,sourceAt:1},{at:3,duration:1,sourceAt:2.5}
+  ]);
+  const words=applyNarrationSilence([{word:'A',start:.25,end:.5},
+    {word:'B',start:1.5,end:1.75},{word:'C',start:3,end:3.25}],inserts);
+  assert.deepEqual(words.map(w=>w.start),[.25,2,4.5]);
+  const p=example();p.audio.silenceInserts=[{at:1,duration:1},{at:1.4,duration:.5}];
+  assert.ok(validatePlan(p).some(e=>e.path.includes('silenceInserts')));
+  assert.deepEqual(edgeSilenceBounds('',2),{start:0,end:2,empty:false});
 });
