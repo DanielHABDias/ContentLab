@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {APP_ROOT,readJson,assetReport,settings,compileScene,projectFile} from './plan.mjs';
 import {sceneFingerprint,rendererIdentity,idFilename,statIdentity} from './cache.mjs';
-import {transcriptWords,remapTranscriptWords} from './remotion.mjs';
+import {transcriptWords,remapTranscriptWords,applyNarrationSilence} from './remotion.mjs';
 
 function inspectStored(root,id) {
   const directory=path.join(root,'output','final','scenes');
@@ -28,7 +28,7 @@ export function sceneCacheOverview(directory){
   const report=assetReport(plan,root);
   if(!report.valid)return {scenes:[],error:'O plano precisa ser válido para conferir o cache.'};
   const words=plan.sources?.transcript&&fs.existsSync(path.resolve(root,plan.sources.transcript))?
-    remapTranscriptWords(transcriptWords(readJson(path.resolve(root,plan.sources.transcript))),plan.audio.sourceCuts):[];
+    applyNarrationSilence(remapTranscriptWords(transcriptWords(readJson(path.resolve(root,plan.sources.transcript))),plan.audio.sourceCuts),plan.audio.silenceInserts):[];
   const identity=rendererIdentity(APP_ROOT),cfg=settings(plan);
   return {scenes:plan.timeline.map(scene=>{
     const stored=inspectStored(root,scene.id);
