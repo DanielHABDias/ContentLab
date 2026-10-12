@@ -11,6 +11,8 @@ import {run} from './exec.mjs';
 import {SOURCE_CACHE,listSources,cachedSource,importLocalSource,removeSource,getYoutubeInfo,resolveSource,exportCut} from './source.mjs';
 import {transcribeAudio} from './transcribe.mjs';
 import {streamSkillZip} from './skill.mjs';
+import {buildMarkdown,buildHtml} from './docs.mjs';
+import {diagramNames,diagramSvg} from './docs-diagrams.mjs';
 import {sceneCacheOverview,savedSceneFile} from './scene-browser.mjs';
 
 const PORT=Number(process.env.PORT||5000);
@@ -180,6 +182,27 @@ app.get('/api/catalog/download',api(async(req,res)=>{
   }
   res.set('Content-Disposition','attachment; filename="catalogo-contentlab.md"');
   res.type('text/markdown').send(lines.join('\n'));
+}));
+app.get('/api/docs/view',api(async(req,res)=>{
+  res.setHeader('Cache-Control','no-store');
+  res.setHeader('X-Content-Type-Options','nosniff');
+  res.type('html').send(buildHtml());
+}));
+app.get('/api/docs/download',api(async(req,res)=>{
+  const format=req.query.format;
+  if(format!=='md'&&format!=='html')
+    return res.status(400).json({error:'Formato permitido: md ou html.'});
+  res.setHeader('Cache-Control','no-store');
+  res.setHeader('X-Content-Type-Options','nosniff');
+  res.setHeader('Content-Disposition','attachment; filename="Documentacao-ContentLab.'+format+'"');
+  if(format==='md')res.type('text/markdown; charset=utf-8').send(buildMarkdown());
+  else res.type('text/html; charset=utf-8').send(buildHtml({standalone:true}));
+}));
+app.get('/api/docs/figures/:name.svg',api(async(req,res)=>{
+  const name=req.params.name;
+  if(!diagramNames.includes(name))return res.status(404).json({error:'Figura não encontrada.'});
+  res.setHeader('X-Content-Type-Options','nosniff');
+  res.type('image/svg+xml').send(diagramSvg(name));
 }));
 app.get('/api/skill/download',api(async(req,res)=>{
   await streamSkillZip(res);
