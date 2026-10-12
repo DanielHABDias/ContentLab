@@ -1,77 +1,41 @@
-# Arquitetura atual
+# Arquitetura do Content Lab — migração para Node
 
-## Stack e entrypoints
+**Estado:** em construção na branch `refactor/node-remotion-single-plan`.
+A versão estável do projeto ainda não foi substituída.
 
-- Python 3.9+, Flask, yt-dlp, FFmpeg/FFprobe e faster-whisper.
-- `python -m backend.app`: servidor web local em `127.0.0.1:5000`.
-- `python -m backend.tray_app`: servidor com bandeja, usado no Windows.
-- `./run.sh`, `iniciar.bat` e `build.bat`: execução e empacotamento.
+## Camadas
 
-## REUTILIZAR
+- `frontend/templates/index.html`, `frontend/static/*.js`, `frontend/static/*.css`: web UI JavaScript.
+- `server/http.mjs`: servidor HTTP, rotas do editor e jobs de render.
+- `server/plan.mjs`: schema único, validação, URIs de assets e compilação de cenas.
+- `server/project.mjs`: criação, leitura, revisão, inventário de mídia e salvamento.
+- `server/render.mjs`: orquestração do render final e cache incremental.
+- `server/remotion.mjs`: chamada Node ao motor Remotion, preparando props e mídia.
+- `backend/remotion/src`: cenas em React/TypeScript.
+- `server/cache.mjs`: manifestos persistentes por ID.
+- `server/compose.mjs`: concatenação e transições via FFmpeg.
+- `server/audio.mjs`: preparação de voz, trilha, SFX e mux.
+- `server/source.mjs`: importação de arquivos locais, YouTube.js, cortes e cache de fontes.
+- `server/transcribe.mjs`: integração com whisper.cpp (executável externo).
+- `server/cli.mjs`, `server/migrate.mjs`: comandos e conversão de plano.
 
-- Download e cache persistente por vídeo em `backend/app.py`.
-- Corte único/lote com FFmpeg, extração de áudio e exportação.
-- Transcrição e cache do faster-whisper.
-- Localização multiplataforma do FFmpeg em `backend/ffmpeg_helper.py`.
-- Interface Flask existente, progresso assíncrono e abertura de outputs.
+## Contrato
 
-## ADAPTAR
+`edit_plan.json` não tem campo de versão; `schemas/edit_plan.schema.json` é
+a fonte de verdade. Novos efeitos exigem mudança de schema e tests, sem flags de
+compatibilidade com formatos abandonados.
 
-- `backend/app.py` está monolítico; novas rotas devem delegar para serviços do
-  pacote `backend.contentlab`, sem mover o fluxo estável de download agora.
-- A UI atual continuará atendendo download/corte e ganhará uma área de projetos
-  e planos de edição de forma incremental.
-- O helper de FFmpeg será reutilizado pelo futuro backend de render.
+## Cache
 
-## DEPRECAR
+Clipes de cena e trechos de composição são preservados em
+`output/final/scenes` e `output/final/pieces`. Cada cena é identificada por
+`id` e uma assinatura dos elementos visuais e assets, permitindo render
+incremental. A montagem final e mixagem podem precisar ser repetidas.
 
-- Não há mais FastAPI/Gemini/RAG no repositório: pertenciam ao produto antigo.
-- O instalador avulso de FFmpeg foi substituído pela descoberta integrada no
-  Windows e pela instalação do sistema no Linux.
-- OpenCut não será incorporado neste momento: o ZIP analisado é a reescrita
-  inicial 0.1.0, com timeline/preview ainda como placeholders. A licença é MIT.
+## Riscos e critérios para integração
 
-## CRIAR
-
-- Contrato JSON versionado, parser e validação semântica.
-- Modelos de domínio independentes de Flask e FFmpeg.
-- Asset resolver seguro para `project://` e `builtin://`.
-- Registry de layouts, transições, motions e estilos.
-- Timeline compiler (`ValidatedEditPlan` -> `ResolvedTimeline`).
-- RenderGraph e backend FFmpeg, seguidos de áudio, texto e captions.
-- CLI e API usando o mesmo serviço.
-- Testes unitários, integração e fixtures golden.
-
-## Direção de evolução: motion design
-
-A estratégia futura é [Remotion como motor visual principal e HyperFrames
-como referência de técnicas, receitas e composições](MOTION_ENGINE_STRATEGY.md).
-O pipeline híbrido atual continua até que existam testes de paridade, uma
-biblioteca de presets em Remotion e um editor por cena com Player. O cache por
-ID e a mixagem FFmpeg permanecem necessários.
-
-## Integração e riscos
-
-- Downloads, transcrição e cortes existentes não devem ser reescritos durante a
-  criação do renderer.
-- Tempos da timeline representam o áudio final, depois de `sourceCuts`.
-- Caminhos vindos do JSON nunca podem escapar das raízes permitidas.
-- Windows, espaços em caminhos e UTF-8 são requisitos permanentes.
-- A ausência de FFmpeg/assets deve falhar antes do render longo.
-- `skillContentLabEdicao.zip` é a skill compartilhável que ajuda o GPT a criar
-  `edit_plan.json`. Ela não é dependência do renderer nem substitui a
-  validação do contrato JSON.
-
-## Plano incremental
-
-1. Parser, schema, resolver, registry, compiler e CLI. **Implementado.**
-2. Render mínimo de imagem/vídeo com cortes secos. **Implementado via CLI.**
-3. Texto e kinetic text. **Implementado com ASS/libass e word timestamps.**
-4. Caption karaoke e preset de apresentador central. **Implementado como caption ASS e vídeo em região sobre background.**
-5. Grid 3x3, boxes e motions. **Implementado com presets de entrada, idle e saída.**
-6. Transições, chroma, música/SFX e relatórios. **Implementado: plugins cut/fade/blur_left, chroma key, mixagem e relatório de camadas.**
-7. UI de projeto, render final. **Implementado: painel web, jobs assíncronos, export final.**
-8. Áudio do roadmap original. **Implementado: sourceCuts, narração limpa, remapeamento da transcrição, normalização, ducking, fades, limiter e relatório.** A numeração das fases 6–7 neste resumo local não coincidia com a do roadmap do Drive; a fase 8 segue o escopo de áudio daquele documento.
-9. Web UI do roadmap original. **Implementado: carregar e editar JSON, validação de rascunho, salvamento atômico com revisão, inventário de assets/plugins, render final, progresso e warnings.**
-10. Cache incremental de cenas e transições. **Implementado: manifestos persistentes por ID em `output/final/scenes/` e `output/final/pieces/`, assinatura por conteúdo e dependências, reutilização seletiva e reconstrução integral com limpeza de `output/`.** Detalhes em [SCENE_CACHE.md](SCENE_CACHE.md).
-11. Estabilização e aceite do MVP. **Implementado no código: cache de render por fingerprint, NVENC opcional com fallback, cancelamento, checagem FFprobe do resultado, fixture integrada de 60 segundos, criação/importação de projeto na UI e scripts Windows mais robustos.** A execução no Windows e a importação no CapCut dependem de validação manual nesse ambiente; veja [MVP_ACCEPTANCE.md](MVP_ACCEPTANCE.md).
+O código antigo permanece no repositório de migração exclusivamente como
+referência até os serviços Node passarem nos testes de paridade.
+Prioridades: áudio, overlay/chroma, transições, HTML, downloads, transcrição,
+empacotamento e compatibilidade com os 101 trechos do VD_0005. A branch
+não deve substituir o `main` antes da validação.

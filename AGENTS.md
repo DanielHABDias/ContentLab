@@ -1,51 +1,28 @@
-# AGENTS.md
+# Content Lab development — Node / Remotion migration
 
-## Content Lab development
+Read `README.md`, `EDIT_PLAN_REFERENCE.md`, `MOTION_ENGINE_STRATEGY.md`
+and `SCENE_CACHE.md` before changing the automatic editor.
 
-Preserve the existing edit-plan contracts and keep generic renderer features
-separate from DiazVerso-specific editorial choices.
+## Architecture
 
-### Motion-design direction
+- Target backend: Node.js 22+; web UI: JavaScript; visual scene renderer: Remotion React/TypeScript.
+- FFmpeg is retained for audio, source cuts, transitions and final assembly.
+- There is **one JSON schema**, `schemas/edit_plan.schema.json`, and no top-level version field.
+- Treat scene IDs as stable keys for persistent caches.
+- The migration branch is not production-ready; do not remove the current stable backend
+  or merge before checking media downloads, audio, overlays, editor and packaging parity.
+- Use official Remotion documentation and HyperFrames composition/animation skills as
+  references. Avoid introducing a second mandatory visual renderer.
+- Do not reintroduce the obsolete full-encode Preview.
 
-Read `MOTION_ENGINE_STRATEGY.md` before modifying visual renderers or planning
-motion-design features. Use **Remotion** as the canonical visual engine for
-new 0.2+ scenes; study the official **HyperFrames** skills, animation recipes,
-and seek-safe composition patterns as references rather than introducing a
-second required renderer. Keep the per-scene cache (`SCENE_CACHE.md`), project
-JSON compatibility, and FFmpeg audio/post-processing. Do not reintroduce the
-old full-encode Preview. A future interactive scene preview should use the
-Remotion Player and match exported frames. Validate any new presets visually.
-
-### Required validation
-
-For backend/parser/schema-only changes, run the relevant unit tests.
-
-For changes that affect rendered pixels or the web UI (text, caption, layout,
-camera, filters, chroma, motion, transitions, overlays, visual editor), do not
-claim visual correctness from code inspection alone.
-
-Run:
+## Required validation
 
 ```bash
-python -m unittest discover -s tests -q
-python -m tests.visual_acceptance
+node --test server/*.test.mjs
+node server/smoke.mjs
+npm start
 ```
 
-Then start the app and inspect the matching fixture at:
-
-```text
-http://127.0.0.1:5000/visual-tests
-```
-
-If Iris MCP is available, use it as the visual camera. Prefer direct
-checkpoint URLs such as `?case=word-stack` or `?case=crt-dim-png`, wait for
-`data-visual-ready=true`, capture `#visual-frame`, and inspect the actual
-pixels before reporting success. For changes to the Content Lab web UI itself,
-also open `http://127.0.0.1:5000/` and inspect the affected panel with Iris;
-the renderer fixture page does not replace UI inspection.
-
-For temporal behavior, inspect multiple checkpoints or play the generated
-final render. Iris is not an audio validator; listen to the final output for
-mixing and synchronization.
-
-See `VISUAL_TESTING.md` for setup, checkpoint names and agent workflow.
+Verify `http://127.0.0.1:5000/health`, and inspect a rendered MP4 and its scene cache.
+Review multiple frame checkpoints and listen to the audio before declaring visual
+parity. Check both Windows and Linux. Tests alone do not prove correct pixels.
