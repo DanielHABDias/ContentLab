@@ -50,3 +50,12 @@ jobs:
           curl -fsS http://127.0.0.1:5000/ >/dev/null
       - name: Render a real scene and exercise persistent cache
         run: node server/smoke.mjs
+      - name: Render real transitions, music and SFX
+        run: node server/smoke-transitions.mjs
+      - name: Verify detached launcher survives parent shell
+        env:
+          XDG_STATE_HOME: ${{ runner.temp }}
+        run: |
+          node server/launcher.mjs
+          curl -fsS http://127.0.0.1:5000/health
+          node server/launcher.mjs --stop
