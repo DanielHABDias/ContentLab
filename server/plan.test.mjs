@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {validatePlan, validateShape, settings, region, compileScene, resolveAsset, assetReport, schema, visualWarnings} from './plan.mjs';
 import {SegmentCache,sceneFingerprint,rendererIdentity,cleanOutput,idFilename} from './cache.mjs';
-import {remapTranscriptWords,applyNarrationSilence} from './remotion.mjs';
+import {transcriptWords,remapTranscriptWords,applyNarrationSilence} from './remotion.mjs';
 import {silenceSourcePositions,edgeSilenceBounds} from './audio.mjs';
 
 function example(root){
@@ -141,4 +141,12 @@ test('text overlaps report a warning, while separate text regions do not block r
   assert.equal(warns[0].code,'text_overlap');
   assert.equal(warns[0].scene,'batman');
   assert.deepEqual(validatePlan(p),[]);
+});
+
+test('canonical transcript words win over duplicated segment tokens',()=>{
+  const words=[{word:'Batman',start:0,end:0.45},{word:'chega',start:0.45,end:1}];
+  const segments=[{start:0,end:1,text:'Batman chega',words}];
+  assert.deepEqual(transcriptWords({segments,words}),words);
+  assert.deepEqual(transcriptWords({segments}),words);
+  assert.deepEqual(transcriptWords({segments:[{start:0,end:1,text:'Batman chega'}]}).map(x=>x.word),['Batman','chega']);
 });

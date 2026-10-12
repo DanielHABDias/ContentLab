@@ -53,7 +53,7 @@ try{
   const pages=await wait(async()=>{
     const res=await fetch('http://127.0.0.1:'+debugPort+'/json/list');
     const items=await res.json();return items.some(x=>x.type==='page')&&items;
-  },'Chrome CDP');
+  },'Chrome CDP',160);
   const target=pages.find(x=>x.type==='page');
   ws=new WebSocket(target.webSocketDebuggerUrl);
   await new Promise((resolve,reject)=>{
@@ -130,11 +130,10 @@ try{
     new Promise(resolve=>chrome.once('exit',resolve)),
     sleep(2000)
   ]);
-  try{fs.rmSync(root,{recursive:true,force:true,maxRetries:20,retryDelay:150});}
-  catch(error){
-    // Chromium can still be flushing profile files after its parent exits.
-    // A temporary CI profile being removed is not part of the UI smoke assertion.
-    if(error.code!=='ENOTEMPTY'&&error.code!=='EBUSY')throw error;
-    console.warn('Chrome still closing temporary profile:',error.code);
+  try {
+    await fs.promises.rm(root,{recursive:true,force:true,maxRetries:8,retryDelay:200});
+  } catch(error) {
+    if(!['ENOTEMPTY','EBUSY','EPERM'].includes(error.code))throw error;
+    console.warn('Chrome temporary profile cleanup deferred to CI runner:',error.code);
   }
 }

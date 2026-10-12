@@ -13,6 +13,8 @@ export function transcriptWords(transcript){
     if(word&&Number.isFinite(start)&&end>start)words.push({word,start,end});
   };
   for(const w of transcript.words||[])add(w);
+  // Canonical word-level timestamps take precedence over duplicate segment summaries.
+  if(words.length)return words.sort((a,b)=>a.start-b.start||a.end-b.end);
   for(const segment of transcript.segments||[]){
     if(segment.words?.length){for(const w of segment.words)add(w);continue;}
     const items=String(segment.text||'').trim().split(/\s+/).filter(Boolean);
