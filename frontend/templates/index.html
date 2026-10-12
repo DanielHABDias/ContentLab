@@ -10,26 +10,21 @@
 <body>
 
 <div class="wrap">
-
-  <header class="topbar">
-    <div class="brand">
-      <span class="brand-mark"><span class="brand-logo"></span></span>
-      <div>
-        <h1>Content Lab</h1>
-        <p class="tagline">seu estúdio de cortes, transcrição e edição</p>
-      </div>
-    </div>
-    <button id="shutdownBtn" class="btn btn-danger btn-sm" type="button" title="Encerrar o Content Lab">Encerrar</button>
-  </header>
-
-  <main class="panel">
-    <nav class="workspace-tabs" role="tablist" aria-label="Áreas de trabalho">
+<header class="topbar">
+  <div class="brand"><span class="brand-mark"><img class="brand-logo" src="/static/contentlab-mark.svg" width="44" height="44" alt="Monograma CT do Content Lab"></span>
+    <div class="brand-type"><h1>Content Lab<span class="brand-period">.</span></h1><p class="tagline">Seu estúdio criativo</p></div></div>
+  <div class="topbar-right"><span class="system-status"><span aria-hidden="true"></span> Estúdio local</span>
+    <button id="shutdownBtn" class="btn btn-ghost btn-sm" type="button" title="Encerrar o Content Lab">Encerrar sessão</button></div>
+</header>
+<div class="studio-shell"><aside class="studio-sidebar">
+  <span class="sidebar-caption">WORKSPACE</span>
+  <nav class="workspace-tabs" role="tablist" aria-label="Áreas de trabalho">
       <button class="workspace-tab is-active" id="tab-videos" role="tab" aria-selected="true" aria-controls="panel-videos" type="button" data-workspace="videos"><span>01</span> Vídeos e cortes</button>
       <button class="workspace-tab" id="tab-transcription" role="tab" aria-selected="false" aria-controls="panel-transcription" type="button" data-workspace="transcription"><span>02</span> Transcrição</button>
       <button class="workspace-tab" id="tab-editor" role="tab" aria-selected="false" aria-controls="panel-editor" type="button" data-workspace="editor"><span>03</span> Editor automático</button>
       <button class="workspace-tab" id="tab-guide" role="tab" aria-selected="false" aria-controls="panel-guide" type="button" data-workspace="guide"><span>ⓘ</span> Guia do projeto</button>
-    </nav>
-
+  </nav><div class="sidebar-foot"><span class="sidebar-foot-icon">✦</span><strong>Faça a ideia ganhar movimento.</strong><small>Node.js · Remotion · Local</small></div></aside>
+  <main class="panel">
     <div id="panel-videos" class="workspace-panel" role="tabpanel" aria-labelledby="tab-videos">
       <div class="workspace-intro"><span class="eyebrow">BIBLIOTECA DE FONTE</span><h2>Vídeos e cortes</h2><p>Carregue um link, reutilize o cache ou importe um vídeo que já está no computador; depois escolha trechos e exporte vídeo, áudio ou legenda.</p></div>
 
@@ -261,10 +256,9 @@
     </div>
 
     <div id="panel-editor" class="workspace-panel hidden" role="tabpanel" aria-labelledby="tab-editor" hidden>
-    <div class="workspace-intro"><span class="eyebrow">COMPOSIÇÃO AUTOMÁTICA</span><h2>Editor automático</h2><p>Monte o plano JSON, valide os assets e gere diretamente o vídeo final.</p></div>
+    <div class="workspace-intro"><span class="eyebrow">STUDIO / EDITOR</span><h2>Crie cena por cena.<br><span class="heading-muted">Sem complicar.</span></h2><p>Explore os trechos, ajuste camadas e aproveite o cache. O render final continua sendo um único clique.</p></div>
     <section class="block editor-project" aria-labelledby="editorHeading">
-      <h3 id="editorHeading">Projeto de edição</h3>
-      <p class="helper-text">Abra a pasta de um projeto com <code>edit_plan.json</code>. O render final usa a resolução e o FPS definidos no plano.</p>
+      <div class="section-heading"><div><span class="eyebrow">01 / PROJETO</span><h3 id="editorHeading">Seu projeto</h3></div><p class="helper-text">Abra uma pasta com <code>edit_plan.json</code> para começar.</p></div>
       <label class="block-label" for="editorProjectRoot">Pasta do projeto</label>
       <div class="row">
         <input id="editorProjectRoot" type="text" placeholder="/caminho/para/meu-projeto" autocomplete="off">
@@ -427,7 +421,7 @@
         <p>Arquivos que acompanham o aplicativo usam <code>builtin://</code>. Arquivos seus usam <code>project://</code>. Caminhos que saem da pasta do projeto são bloqueados.</p>
       </section>
     </div>
-  </main>
+  </main></div>
 </div>
 
 <div id="shutdownScreen" class="shutdown-screen hidden" role="status" aria-live="polite">
