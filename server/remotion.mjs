@@ -39,6 +39,20 @@ export function remapTranscriptWords(words,cuts=[]){
   }
   return remapped;
 }
+export function applyNarrationSilence(words,inserts=[]){
+  const shifted=words.map(word=>({...word}));
+  for(const {at,duration} of [...inserts].sort((a,b)=>a.at-b.at)){
+    for(const word of shifted){
+      if(word.start>=at){
+        word.start=Number((word.start+duration).toFixed(6));
+        word.end=Number((word.end+duration).toFixed(6));
+      }else if(word.end>at){
+        word.end=Number((word.end+duration).toFixed(6));
+      }
+    }
+  }
+  return shifted;
+}
 export function phraseWords(text,start,end,words){
   const tokens=String(text||'').trim().split(/\s+/).filter(Boolean);
   if(!tokens.length)return [];
