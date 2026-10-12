@@ -4,7 +4,7 @@ import os from 'node:os';
 import {APP_ROOT,readJson,assetReport,settings,compileScene,sha,projectFile,PlanError} from './plan.mjs';
 import {statIdentity,SegmentCache,rendererIdentity,sceneFingerprint,cleanOutput} from './cache.mjs';
 import {transcriptWords,remapTranscriptWords,applyNarrationSilence,renderRemotionScene} from './remotion.mjs';
-import {prepareNarration,mixAudio,probeOutput} from './audio.mjs';
+import {prepareNarration,mixAudio,probeOutput,narrationCuts} from './audio.mjs';
 import {composeVisual} from './compose.mjs';
 
 function hashRender(plan,validation,identity){
@@ -52,7 +52,7 @@ export async function renderProject(directory,{
   if(plan.sources?.transcript&&fs.existsSync(path.resolve(root,plan.sources.transcript))){
     transcript=readJson(path.resolve(root,plan.sources.transcript));
   }
-  const words=applyNarrationSilence(remapTranscriptWords(transcriptWords(transcript),plan.audio.sourceCuts),plan.audio.silenceInserts);
+  const words=applyNarrationSilence(remapTranscriptWords(transcriptWords(transcript),narrationCuts(plan.audio)),plan.audio.silenceInserts);
   const identity=rendererIdentity(APP_ROOT);
   const signature=hashRender(plan,validation,identity),reportFile=path.join(finalDir,'render_report.json');
   const fingerprints=raws.map((raw,i)=>sceneFingerprint(raw,scenes[i],cfg,validation.resolvedAssets,words,identity));

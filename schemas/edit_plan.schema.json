@@ -117,6 +117,16 @@
               "type": "number",
               "minimum": 0,
               "maximum": 300
+            },
+            "fadeIn": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Fade-in em segundos, aplicado após a limpeza da voz."
+            },
+            "fadeOut": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Fade-out em segundos no fim audível da voz, antes da cauda musical."
             }
           },
           "additionalProperties": false
@@ -184,6 +194,20 @@
               "fadeOut": {
                 "type": "number",
                 "minimum": 0
+              },
+              "sourceStart": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Início do trecho escolhido dentro do arquivo musical, em segundos."
+              },
+              "sourceEnd": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Fim do trecho escolhido dentro do arquivo musical, em segundos; omitir para ir ao fim da fonte."
+              },
+              "loop": {
+                "type": "boolean",
+                "description": "Repetir apenas o trecho escolhido para preencher start/end; padrão true."
               }
             },
             "additionalProperties": false
@@ -210,6 +234,10 @@
             },
             "additionalProperties": false
           }
+        },
+        "narrationTrim": {
+          "$ref": "#/$defs/timeRange",
+          "description": "Trecho contínuo mantido da narração original (início/fim em segundos); incompatível com sourceCuts."
         }
       },
       "additionalProperties": false

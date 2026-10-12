@@ -23,9 +23,9 @@ export const chapters=[
     'O validador produz avisos para duas camadas de texto sobrepostas em tempo e região; isso não é erro bloqueante, pois composições intencionais são permitidas.'
   ]},
   {id:'som',title:'Áudio, narração, música e SFX',diagram:'audio',paragraphs:[
-    'Narração é exigida no fluxo atual. sourceCuts seleciona trechos da gravação original; silenceInserts adiciona pausas à versão final para preservar a sincronização ao inserir uma cena.',
+    'Narração é exigida no fluxo atual. narrationTrim mantém um intervalo start/end da gravação original, enquanto sourceCuts une vários trechos (não usar ambos); silenceInserts cria pausas para sincronizar inserções de cenas. Em voice, fadeIn e fadeOut controlam a entrada e a saída da fala, inclusive antes de uma cauda musical.',
     'SFX usa at como início audível. O FFmpeg detecta aproximadamente -50 dBFS de silêncio contínuo nas bordas, com duração mínima de 40 ms, e corta somente início e final. Pausas internas não são removidas.',
-    'A música é posicionada na timeline global e possui presets, ganho e fades. Ducking reduz a música durante a voz usando compressor sidechain. Mudanças só de som não precisam invalidar todos os clipes visuais.'
+    'A música tem start/end na timeline e pode escolher um trecho do arquivo usando sourceStart/sourceEnd; loop repete somente esse trecho quando necessário. Duas músicas podem se cruzar: a primeira termina em 20 s com fadeOut de 3 s; a próxima começa em 17 s com fadeIn de 3 s. A sobreposição de 17 a 20 s produz o crossfade no mixer. Ducking reduz o volume durante a voz. Mudanças só de som não invalidam clipes visuais.'
   ]},
   {id:'timeline',title:'Cenas, tempo e transições',diagram:'timeline',paragraphs:[
     'A lista timeline é ordenada pelo start absoluto. Cada cena possui ID estável; cenas não se sobrepõem. A duração real resulta da diferença entre end e start.',
@@ -75,6 +75,11 @@ export const exampleCases=[
  music:[{asset:'project://audio/trilha.wav',start:0,end:14,preset:'subtle',fadeIn:1,fadeOut:1}]},
  scene:{id:'impacto',start:5,end:7,elements:[
  {type:'sfx',asset:'project://audio/impacto.wav',at:5.2,preset:'normal',config:{duration:1.5}}]}}},
+ {title:'Trim e crossfade de duas músicas',summary:'Recortar trechos da fonte e sobrepor fades em segundos absolutos. Narração com corte simples e fades próprios.',
+ data:{audio:{narration:'audio/narration.wav',narrationTrim:{start:2,end:30},
+ voice:{normalize:true,fadeIn:0.4,fadeOut:0.8},
+ music:[{asset:'project://audio/trilha-a.wav',start:0,end:20,sourceStart:12,sourceEnd:32,fadeOut:3},
+ {asset:'project://audio/trilha-b.wav',start:17,end:40,sourceStart:5,sourceEnd:45,fadeIn:3,fadeOut:2}]}}},
  {title:'Legendas e texto cinético',summary:'Duas modalidades que usam a transcrição temporizada.',
  data:{id:'dialogo',start:15,end:21,layout:'3x3',elements:[
  {id:'palavras',type:'kinetic_text',text:'EU SOU A VINGANÇA',start:15,end:19,

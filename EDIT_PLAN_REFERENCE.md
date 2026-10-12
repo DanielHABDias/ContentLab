@@ -90,3 +90,27 @@ Veja `MOTION_DESIGN_JSON.md`, `SCENE_CACHE.md`, exemplos em `examples/` e o sche
 ```json
 {"id":"nox","type":"image","asset":"project://assets/nox.png","cells":[5,8],"fit":"contain","z":3,"transform":{"scale":1.05,"offsetY":35,"opacity":0.65}}
 ```
+
+## Cortes e fades de narração e música, com crossfade (FFmpeg)
+
+A narração pode usar **ou** `audio.narrationTrim: {"start":2,"end":30}` (um único intervalo mantido da gravação original) **ou** `audio.sourceCuts: [{"start":2,"end":8},{"start":12,"end":30}]` (vários intervalos mantidos concatenados). Esses campos não podem coexistir. Ambos alteram a duração e o relógio da fala, por isso a transcrição deve ser remapeada e os eventos sincronizados conferidos. `audio.silenceInserts` continua inserindo pausas após os cortes, quando necessário.
+
+`audio.voice.fadeIn` e `fadeOut` aceitam segundos não negativos; o segundo se aplica ao **final audível da fala**, antes da eventual cauda musical do vídeo. `audio.voice.trimDb` continua sendo ganho em decibéis, não um corte temporal.
+
+Para cada música, `audio.music[].start/end` são **segundos absolutos da timeline final**; `sourceStart/sourceEnd` selecionam o **trecho da fonte musical** em segundos a partir do arquivo original. O `loop` opcional (padrão `true`) repete apenas o trecho selecionado até cobrir a duração do clipe. `loop:false` exige que o trecho da fonte seja longo o bastante.
+
+**Crossfade**: a sobreposição é explícita, sem deslocar a narração e sem campo de transição especial. Neste exemplo, os três segundos de 17 até 20 pertencem a ambas as músicas. A primeira diminui enquanto a segunda cresce:
+
+```json
+{
+  "narration": "audio/narration.wav",
+  "narrationTrim": {"start": 2, "end": 30},
+  "voice": {"fadeIn": 0.4, "fadeOut": 0.8},
+  "music": [
+    {"asset":"project://audio/a.wav","start":0,"end":20,"sourceStart":5,"sourceEnd":25,"fadeOut":3},
+    {"asset":"project://audio/b.wav","start":17,"end":40,"sourceStart":2,"sourceEnd":30,"fadeIn":3,"fadeOut":2}
+  ]
+}
+```
+
+O JSON acima representa somente o objeto `audio` parcial de um projeto. Os caminhos são ilustrativos; sempre validar os assets reais. O mixer já soma as músicas em paralelo via FFmpeg (`amix`) e a compressão de ducking contra a voz pode reduzir ambos os trechos durante uma narração.

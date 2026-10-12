@@ -18,7 +18,10 @@ const example=(path,node)=>{
  const values={
   'project.name':'"Meu vídeo"','project.format':'"youtube_long"','project.profile':'"generic"',
   'project.resolution.width':'1920','project.resolution.height':'1080','project.fps':'30',
-  'audio.narration':'"audio/narration.wav"','audio.sourceCuts[].start':'0',
+  'audio.narration':'"audio/narration.wav"','audio.narrationTrim.start':'2','audio.narrationTrim.end':'30',
+  'audio.voice.fadeIn':'0.4','audio.voice.fadeOut':'0.8',
+  'audio.music[].sourceStart':'12','audio.music[].sourceEnd':'32',
+  'audio.sourceCuts[].start':'0',
   'audio.sourceCuts[].end':'12','audio.music[].asset':'"project://audio/trilha.wav"',
   'audio.silenceInserts[].at':'5','audio.silenceInserts[].duration':'2',
   'timeline[].id':'"batman"','timeline[].start':'0','timeline[].end':'5',
