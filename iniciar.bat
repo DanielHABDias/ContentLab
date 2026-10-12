@@ -10,9 +10,9 @@ if not exist "node_modules" call npm install --no-audit --no-fund
 if errorlevel 1 goto failed
 if not exist "backend\remotion\node_modules" call npm ci --prefix backend/remotion --no-audit --no-fund
 if errorlevel 1 goto failed
-echo Abra http://127.0.0.1:5000
-node server/http.mjs
-exit /b %errorlevel%
+node server/launcher.mjs
+if errorlevel 1 goto failed
+exit /b 0
 :missing
 echo Instale Node.js 22+ e npm.
 goto failed
