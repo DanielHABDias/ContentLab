@@ -40,6 +40,23 @@ try{
   assert.ok(layers[0].edgeTrim.start>.3,'Cue must begin on the supplied at, without source preroll.');
   assert.ok(layers[0].edgeTrim.end>.39);
 
+  // Decode short windows from the exported MP4: the effect must really become
+  // audible near "at", and its internal silence must remain silent.
+  const peakAt=async(source,start,length=.05)=>{
+    const {stderr}=await run('ffmpeg',['-hide_banner','-nostats','-loglevel','info',
+      '-i',source,'-ss',String(start),'-t',String(length),'-vn',
+      '-af','volumedetect','-f','null','-']);
+    const match=stderr.match(/max_volume:\s*(-?[\d.]+)\s*dB/);
+    if(!match)throw Error('volumedetect não retornou pico de áudio.');
+    return Number(match[1]);
+  };
+  const beforeCue=await peakAt(result,1.12);
+  const firstTone=await peakAt(result,1.29);
+  const middleGap=await peakAt(result,1.52);
+  const lastTone=await peakAt(result,1.68);
+  assert.ok(firstTone>beforeCue+18,'SFX deve começar perto de at, sem leading silence.');
+  assert.ok(lastTone>middleGap+18,'Silêncio interno do efeito precisa continuar silencioso.');
+
   const tone=file('tone.wav');
   await run('ffmpeg',['-hide_banner','-loglevel','error','-y',
     '-f','lavfi','-i','sine=frequency=350:sample_rate=48000:duration=4','-c:a','pcm_s16le',tone]);
@@ -48,6 +65,10 @@ try{
     silenceInserts:[{at:1,duration:0.5}]},{duration:4.5});
   const seconds=await probeAudioDuration(aligned);
   assert.ok(Math.abs(seconds-4.5)<0.04,'Ripple narration duration must match video length.');
+  assert.ok((await peakAt(aligned,.85))>(await peakAt(aligned,1.20))+18,
+    'A inserção de silêncio deve interromper a voz exatamente no ponto solicitado.');
+  assert.ok((await peakAt(aligned,1.70))>(await peakAt(aligned,1.20))+18,
+    'A narração existente deve continuar após a pausa adicionada.');
   console.log(JSON.stringify({status:'passed',trimStart:trim.start,trimEnd:trim.end,
     audioLayers:layers.length,narrationSeconds:seconds}));
 }finally{fs.rmSync(folder,{recursive:true,force:true});}
