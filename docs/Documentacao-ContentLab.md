@@ -58,11 +58,11 @@ O validador produz avisos para duas camadas de texto sobrepostas em tempo e regi
 
 ## Áudio, narração, música e SFX
 
-Narração é exigida no fluxo atual. sourceCuts seleciona trechos da gravação original; silenceInserts adiciona pausas à versão final para preservar a sincronização ao inserir uma cena.
+Narração é exigida no fluxo atual. narrationTrim mantém um intervalo start/end da gravação original, enquanto sourceCuts une vários trechos (não usar ambos); silenceInserts cria pausas para sincronizar inserções de cenas. Em voice, fadeIn e fadeOut controlam a entrada e a saída da fala, inclusive antes de uma cauda musical.
 
 SFX usa at como início audível. O FFmpeg detecta aproximadamente -50 dBFS de silêncio contínuo nas bordas, com duração mínima de 40 ms, e corta somente início e final. Pausas internas não são removidas.
 
-A música é posicionada na timeline global e possui presets, ganho e fades. Ducking reduz a música durante a voz usando compressor sidechain. Mudanças só de som não precisam invalidar todos os clipes visuais.
+A música tem start/end na timeline e pode escolher um trecho do arquivo usando sourceStart/sourceEnd; loop repete somente esse trecho quando necessário. Duas músicas podem se cruzar: a primeira termina em 20 s com fadeOut de 3 s; a próxima começa em 17 s com fadeIn de 3 s. A sobreposição de 17 a 20 s produz o crossfade no mixer. Ducking reduz o volume durante a voz. Mudanças só de som não invalidam clipes visuais.
 
 ![Trim de silêncio nas bordas dos SFX](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/docs/figures/audio.svg)
 
@@ -199,6 +199,8 @@ Obrigatório significa exigido dentro do objeto pai. Um bloco opcional pode ter 
 | `audio.voice.targetLufs` | number | Não | mín. -30; máx. -5 | `-30` | Loudness alvo da narração, normalmente -16 LUFS. |
 | `audio.voice.truePeakDb` | number | Não | mín. -9; máx. 0 | `-9` | Limite de pico verdadeiro da narração, normalmente -1,5 dBTP. |
 | `audio.voice.highpassHz` | number | Não | mín. 0; máx. 300 | `0` | Frequência de filtro passa-altas, normalmente 70 Hz; zero desliga. |
+| `audio.voice.fadeIn` | number | Não | mín. 0 | `0.4` | Fade-in da narração em segundos, aplicado no começo audível da voz. |
+| `audio.voice.fadeOut` | number | Não | mín. 0 | `0.8` | Fade-out da narração em segundos, aplicado no fim audível da voz mesmo com música após a fala. |
 | `audio.ducking` | object | Não | — | `{}` | Redução da música quando a narração está ativa. |
 | `audio.ducking.enabled` | boolean | Não | — | `true` | Ativa o compressor sidechain comandado pela voz. |
 | `audio.ducking.threshold` | number | Não | maior que 0; máx. 1 | `1` | Limiar linear do compressor, padrão aproximado 0,02. |
@@ -213,10 +215,16 @@ Obrigatório significa exigido dentro do objeto pai. Um bloco opcional pode ter 
 | `audio.music[].trimDb` | number | Não | — | `1` | Volume da música em decibéis, sobrepondo o preset. |
 | `audio.music[].fadeIn` | number | Não | mín. 0 | `0` | Duração da subida de volume inicial. |
 | `audio.music[].fadeOut` | number | Não | mín. 0 | `0` | Duração da descida de volume final. |
+| `audio.music[].sourceStart` | number | Não | mín. 0 | `12` | Ponto inicial da música dentro do arquivo de origem, em segundos (padrão 0). |
+| `audio.music[].sourceEnd` | number | Não | maior que 0 | `32` | Ponto final da música dentro do arquivo de origem, em segundos; ausente significa fim do arquivo. |
+| `audio.music[].loop` | boolean | Não | — | `true` | Repete apenas o trecho musical selecionado até preencher start/end; padrão true. |
 | `audio.silenceInserts` | array | Não | — | `[]` | Pausas adicionadas à narração para preservar sincronização quando cenas são inseridas. |
 | `audio.silenceInserts[].at` | number | Sim | mín. 0 | `5` | Posição absoluta da pausa na timeline resultante. |
 | `audio.silenceInserts[].duration` | number | Sim | maior que 0 | `2` | Duração positiva da pausa adicionada à voz. |
 
+| `audio.narrationTrim` | object | Não | — | `{}` | Trecho único da gravação original que será mantido, com start/end em segundos; não combinar com sourceCuts. |
+| `audio.narrationTrim.start` | number | Sim | mín. 0 | `2` | Início do trecho contínuo da voz no arquivo original. |
+| `audio.narrationTrim.end` | number | Sim | maior que 0 | `30` | Fim do trecho contínuo da voz no arquivo original. |
 ### Cenas e transições
 
 | Caminho | Tipo | Obrigatório | Restrições | Exemplo | Significado |
@@ -510,6 +518,46 @@ Vídeo 16:9 mantido inteiro em fullscreen.
         "config": {
           "duration": 1.5
         }
+      }
+    ]
+  }
+}
+```
+
+### Trim e crossfade de duas músicas
+
+Recortar trechos da fonte e sobrepor fades em segundos absolutos. Narração com corte simples e fades próprios.
+
+```json
+{
+  "audio": {
+    "narration": "audio/narration.wav",
+    "narrationTrim": {
+      "start": 2,
+      "end": 30
+    },
+    "voice": {
+      "normalize": true,
+      "fadeIn": 0.4,
+      "fadeOut": 0.8
+    },
+    "music": [
+      {
+        "asset": "project://audio/trilha-a.wav",
+        "start": 0,
+        "end": 20,
+        "sourceStart": 12,
+        "sourceEnd": 32,
+        "fadeOut": 3
+      },
+      {
+        "asset": "project://audio/trilha-b.wav",
+        "start": 17,
+        "end": 40,
+        "sourceStart": 5,
+        "sourceEnd": 45,
+        "fadeIn": 3,
+        "fadeOut": 2
       }
     ]
   }
