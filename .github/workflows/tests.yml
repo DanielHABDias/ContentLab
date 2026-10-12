@@ -53,6 +53,8 @@ jobs:
         run: node server/smoke-http.mjs
       - name: Verify local source import and media cuts
         run: node server/smoke-source.mjs
+      - name: Verify native whisper.cpp adapter
+        run: node server/smoke-transcription.mjs
       - name: End-to-end Remotion render and cache
         run: node server/smoke.mjs
       - name: Two scenes, transitions, music, SFX and reuse
