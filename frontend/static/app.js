@@ -43,6 +43,7 @@ document.querySelectorAll(".workspace-tab").forEach((tab) => {
   });
 });
 showWorkspace(workspaces.includes(location.hash.slice(1)) ? location.hash.slice(1) : "videos");
+$("guideOpenDocs")?.addEventListener("click", () => {showWorkspace("docs");$("tab-docs").focus();});
 
 function fmt(sec) {
   sec = Math.max(0, Math.round(sec));
