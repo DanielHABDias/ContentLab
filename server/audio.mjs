@@ -6,8 +6,8 @@ const musicPresets={subtle:-22,normal:-18,present:-12,music_only:-6};
 const mediaPresets={subtle:-12,normal:-6,strong:0};
 // Silencedetect recognizes silence *at the edges*. Internal pauses are intentionally preserved.
 export function edgeSilenceBounds(log,duration,{padding=0.008}={}){
-  const starts=[...log.matchAll(/silence_start:\\s*([\\d.]+)/g)].map(x=>Number(x[1]));
-  const ends=[...log.matchAll(/silence_end:\\s*([\\d.]+)/g)].map(x=>Number(x[1]));
+  const starts=[...log.matchAll(/silence_start:\s*([\d.]+)/g)].map(x=>Number(x[1]));
+  const ends=[...log.matchAll(/silence_end:\s*([\d.]+)/g)].map(x=>Number(x[1]));
   if(!Number.isFinite(duration)||duration<=0)return {start:0,end:0,empty:true};
   let start=0,end=duration;
   if(starts.length&&starts[0]<=0.03&&ends.length)start=Math.min(duration,Math.max(0,ends[0]-padding));
