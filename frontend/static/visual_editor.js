@@ -56,10 +56,27 @@
     const duration = scene.end - scene.start;
     const start = at > 0 ? plan.timeline[at - 1].end : 0;
     shiftScene(scene, start - scene.start);
+    // Ripple is applied to narration AND global soundtrack, not only video scenes.
+    // Existing voice remains synchronized; the new segment is silent until narration is added.
+    plan.audio = plan.audio || {};
+    const gaps = plan.audio.silenceInserts || [];
+    for (const gap of gaps) if (gap.at >= start) gap.at = Number((gap.at+duration).toFixed(6));
+    gaps.push({at:start,duration});
+    gaps.sort((a,b)=>a.at-b.at);
+    plan.audio.silenceInserts = gaps;
+    for (const music of plan.audio.music || []) {
+      if (music.start >= start) {
+        music.start = Number((music.start+duration).toFixed(6));
+        music.end = Number((music.end+duration).toFixed(6));
+      } else if (music.end > start) {
+        music.end = Number((music.end+duration).toFixed(6));
+      }
+    }
     for (let i = at; i < plan.timeline.length; i++) shiftScene(plan.timeline[i], duration);
     plan.timeline.splice(at, 0, scene);
     selectedScene = at;
     changed();
+    message('Cena inserida; narração e trilha alinhadas. A nova cena recebeu silêncio de voz, sem alterar a fala existente.');
   };
   const cloneScene = scene => JSON.parse(JSON.stringify(scene));
   const cacheStatus = scene => {
@@ -385,7 +402,23 @@
           }
           if(step && (value<0 || (key==='end'&&value<=scene.start) ||
             (key==='start'&&value>=scene.end))){message('Verifique o início e o fim da cena.');input.value=scene[key];return;}
-          update(['timeline',selectedScene,key],value);
+          if(key==='start'){
+            const previous=selectedScene?plan.timeline[selectedScene-1].end:0;
+            const following=plan.timeline[selectedScene+1]?.start??Infinity;
+            const delta=value-scene.start;
+            if(value<previous||scene.end+delta>following){
+              message('Mover a cena causaria sobreposição. Insira tempo ou escolha outro ponto.');
+              input.value=scene.start;return;
+            }
+            shiftScene(scene,delta);changed();
+            message('Cena e efeitos locais deslocados. A narração global permaneceu na posição original.');
+          }else if(key==='end'){
+            const next=plan.timeline[selectedScene+1]?.start??Infinity;
+            if(value>next){message('O fim da cena ultrapassa a próxima.');input.value=scene.end;return;}
+            const former=scene.end;
+            for(const layer of scene.elements||[])if(layer.end===former)layer.end=value;
+            scene.end=value;changed();
+          }else update(['timeline',selectedScene,key],value);
         });
         labelNode.append(input);quickGrid.append(labelNode);
       }
