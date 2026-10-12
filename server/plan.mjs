@@ -60,6 +60,14 @@ export function validateShape(obj, definition=schema()) {
 export function validatePlan(plan){
   const issues=validateShape(plan);
   if(!isObject(plan)||!Array.isArray(plan.timeline))return issues;
+  const inserts=plan.audio?.silenceInserts||[];
+  let previousGapEnd=-1;
+  for(let i=0;i<inserts.length;i++){
+    const gap=inserts[i];
+    if(gap.at<previousGapEnd)
+      issues.push({path:'audio.silenceInserts.'+i,message:'Pausas da narração fora de ordem ou sobrepostas.'});
+    previousGapEnd=Math.max(previousGapEnd,gap.at+gap.duration);
+  }
   const ids=new Set();
   let lastEnd=0;
   for(let i=0;i<plan.timeline.length;i++){
