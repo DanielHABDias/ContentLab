@@ -323,7 +323,9 @@
       list.append(card);
     });
     if (!visible) list.append(el('p','Nenhuma cena corresponde à busca.','helper-text'));
-    const fields = $('visualSceneFields'); fields.replaceChildren();
+    const fields = $('visualSceneFields');
+    const openDetails=[...fields.querySelectorAll('details')].map(node=>node.open);
+    fields.replaceChildren();
     const scene = plan.timeline[selectedScene];
     const player = $('visualSceneVideo'),empty = $('visualSceneEmpty');
     if (scene) {
@@ -430,6 +432,9 @@
       empty.classList.remove('hidden');
       fields.append(el('p','Clique em + Nova cena para começar seu storyboard.','helper-text'));
     }
+    [...fields.querySelectorAll('details')].forEach((node,i)=>{
+      if(i < openDetails.length) node.open=openDetails[i];
+    });
     renderTranscript();
   };
   const load = async (project) => {
@@ -438,7 +443,10 @@
       const response = await fetch('/api/editor/visual-context', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({projectRoot: project.projectRoot})});
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Não foi possível carregar o editor visual.');
-      context = data; plan = JSON.parse($('editorPlanText').value); selectedScene = 0;
+      const previouslySelected = projectRoot === project.projectRoot ?
+        plan?.timeline?.[selectedScene]?.id : null;
+      context = data; plan = JSON.parse($('editorPlanText').value);
+      selectedScene = Math.max(0,plan.timeline.findIndex(scene=>scene.id===previouslySelected));
       projectRoot = project.projectRoot;
       initialScenes = new Map((plan.timeline||[]).map(item=>[item.id,cloneScene(item)]));
       await loadCacheState();render();
