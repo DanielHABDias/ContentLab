@@ -1,7 +1,6 @@
 # Arquitetura do Content Lab — migração para Node
 
-**Estado:** em construção na branch `refactor/node-remotion-single-plan`.
-A versão estável do projeto ainda não foi substituída.
+**Estado:** backend Node.js e motor Remotion; testes automatizados Linux/Windows. Revisão visual do VD_0005 com assets reais permanece como teste de aceitação manual.
 
 ## Camadas
 
@@ -34,8 +33,7 @@ incremental. A montagem final e mixagem podem precisar ser repetidas.
 
 ## Riscos e critérios para integração
 
-Os módulos legados foram excluídos desta branch. A integração no `main`
-aguarda validação manual das funções essenciais no Zorin OS e no Windows.
+Os módulos legados foram excluídos. A revisão manual precisa cobrir funções essenciais com as mídias reais no Zorin OS e no Windows.
 Prioridades: áudio, overlay/chroma, transições, HTML, downloads, transcrição,
 empacotamento e compatibilidade com os 101 trechos do VD_0005. A branch
 não deve substituir o `main` antes da validação.
