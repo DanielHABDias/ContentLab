@@ -981,6 +981,7 @@ function editorList(id, rows) {
 function editorShowValidation(validation, draft = false) {
   const problems = (validation.errors || []).map(item => ({ text: `${item.path}: ${item.message}`, invalid: true }));
   for (const item of validation.missingAssets || []) problems.push({ text: `Ausente: ${item.asset} → ${item.path}`, invalid: true });
+  for (const item of validation.warnings || []) problems.push({ text: `Aviso (${item.scene || "visual"}): ${item.message}`, invalid: false });
   if (!problems.length) problems.push({ text: "Plano válido; todos os assets foram encontrados.", invalid: false });
   editorList("editorValidation", problems);
   $("editorDraftState").textContent = draft
