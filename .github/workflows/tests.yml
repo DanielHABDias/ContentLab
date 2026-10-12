@@ -51,6 +51,8 @@ jobs:
           curl -fsS http://127.0.0.1:5000/ >/dev/null
       - name: Exercise HTTP editor API and skill ZIP
         run: node server/smoke-http.mjs
+      - name: Verify local source import and media cuts
+        run: node server/smoke-source.mjs
       - name: End-to-end Remotion render and cache
         run: node server/smoke.mjs
       - name: Two scenes, transitions, music, SFX and reuse
