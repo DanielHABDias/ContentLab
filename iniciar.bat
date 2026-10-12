@@ -1,31 +1,24 @@
 @echo off
 cd /d "%~dp0"
-where python >nul 2>&1
-if errorlevel 1 goto python_missing
-
-if not exist ".venv\Scripts\python.exe" (
-    echo Criando ambiente virtual...
-    python -m venv .venv
-    if errorlevel 1 goto failed
-)
-
-echo Verificando dependencias...
-".venv\Scripts\python.exe" -m pip install -r backend\requirements-desktop.txt --quiet --disable-pip-version-check
+where node >nul 2>&1
+if errorlevel 1 goto missing
+where npm >nul 2>&1
+if errorlevel 1 goto missing
+where ffmpeg >nul 2>&1
+if errorlevel 1 goto ffmpeg_missing
+if not exist "node_modules" call npm install --no-audit --no-fund
 if errorlevel 1 goto failed
-
-echo Preparando Remotion...
-".venv\Scripts\python.exe" -m backend.prepare_runtime
+if not exist "backend\remotion\node_modules" call npm ci --prefix backend/remotion --no-audit --no-fund
 if errorlevel 1 goto failed
-
-start "" ".venv\Scripts\pythonw.exe" -m backend.tray_app
-if errorlevel 1 goto failed
-exit /b 0
-
-:python_missing
-echo Python nao encontrado. Instale Python 3.9 ou superior.
+echo Abra http://127.0.0.1:5000
+node server/http.mjs
+exit /b %errorlevel%
+:missing
+echo Instale Node.js 22+ e npm.
 goto failed
-
+:ffmpeg_missing
+echo Instale FFmpeg e adicione ao PATH.
+goto failed
 :failed
-echo Falha ao iniciar o Content Lab. Veja a mensagem acima.
 pause
 exit /b 1
