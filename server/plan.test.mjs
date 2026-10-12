@@ -76,3 +76,13 @@ test('source cuts remap transcript words to the final timeline',()=>{
   const clipped=remapTranscriptWords(words,[{start:0,end:1},{start:3,end:4}]);
   assert.deepEqual(clipped,[{word:'INTRO',start:0.5,end:0.9},{word:'BATMAN',start:1.1,end:1.6}]);
 });
+
+test('all shipped edit-plan examples conform to the single schema',()=>{
+  const examples=fs.readdirSync(path.join(process.cwd(),'examples')).filter(name=>name.endsWith('.json'));
+  assert.ok(examples.length>=5);
+  for(const name of examples){
+    const file=JSON.parse(fs.readFileSync(path.join(process.cwd(),'examples',name),'utf8'));
+    assert.deepEqual(validateShape(file),[],name);
+    assert.deepEqual(validatePlan(file),[],name);
+  }
+});
