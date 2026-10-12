@@ -58,11 +58,38 @@ try{
     projectRoot:root,mode:'preview',cacheMode:'reuse'
   });
   assert.equal(previewRemoved,400);
+  const docsView=await fetch(base+'/api/docs/view');
+  assert.equal(docsView.status,200);
+  const docsPage=await docsView.text();
+  assert.ok(docsPage.includes('audio.silenceInserts'));
+  assert.ok(docsPage.includes('id="fieldSearch"'));
+  assert.ok(docsPage.includes('<svg'));
+  const mdFile=await fetch(base+'/api/docs/download?format=md');
+  assert.equal(mdFile.status,200);
+  assert.match(mdFile.headers.get('content-disposition'),/Documentacao-ContentLab.md/);
+  const md=await mdFile.text();
+  assert.ok(md.includes('timeline[].elements[].transform.scale'));
+  const htmlFile=await fetch(base+'/api/docs/download?format=html');
+  assert.equal(htmlFile.status,200);
+  assert.match(htmlFile.headers.get('content-disposition'),/Documentacao-ContentLab.html/);
+  const htmlDoc=await htmlFile.text();
+  assert.ok(htmlDoc.includes('<svg'));
+  assert.ok(!htmlDoc.includes('/api/docs/download?format=md'),'Offline HTML must not require server download links');
+  const bad=await fetch(base+'/api/docs/download?format=pdf');
+  assert.equal(bad.status,400,'Only the 2 documentation export formats are supported');
+  const image=await fetch(base+'/api/docs/figures/grid.svg');
+  assert.equal(image.status,200);
+  assert.match(image.headers.get('content-type'),/svg/);
   const skill=await fetch(base+'/api/skill/download');
   assert.equal(skill.status,200);
   assert.match(skill.headers.get('content-type'),/zip/);
   const bytes=new Uint8Array(await skill.arrayBuffer());
   assert.equal(bytes[0],0x50);assert.equal(bytes[1],0x4b);
+  const zipIndex=Buffer.from(bytes).toString('latin1');
+  for(const required of ['SKILL.md','docs/Documentacao-ContentLab.md',
+    'docs/Documentacao-ContentLab.html','docs/figures/grid.svg','schemas/edit_plan.schema.json']){
+    assert.ok(zipIndex.includes(required),'Skill ZIP is missing '+required);
+  }
   const [closeStatus]=await json('/api/shutdown',{force:true});
   assert.equal(closeStatus,200);
   console.log(JSON.stringify({status:'passed',server:'node',html:true,schema:true,skillZipBytes:bytes.length}));
