@@ -98,12 +98,29 @@ try{
   assert.equal(await evaluate('JSON.parse(document.getElementById("editorPlanText").value).timeline.length'),3);
   await evaluate('document.querySelector(".scene-action-row button:nth-child(2)").click()');
   assert.equal(await evaluate('JSON.parse(document.getElementById("editorPlanText").value).timeline.length'),4);
+  await evaluate('document.getElementById("visualUndo").click()');
+  assert.equal(await evaluate('JSON.parse(document.getElementById("editorPlanText").value).timeline.length'),3);
+  await evaluate('document.getElementById("visualRedo").click()');
+  assert.equal(await evaluate('JSON.parse(document.getElementById("editorPlanText").value).timeline.length'),4);
+  await evaluate('document.querySelectorAll("#visualSceneList .visual-scene")[0].click()');
+  await evaluate('document.querySelector(".scene-action-row button:first-child").click()');
+  const ripple=await evaluate('JSON.parse(document.getElementById("editorPlanText").value)');
+  assert.equal(ripple.timeline.length,5);
+  assert.equal(ripple.timeline[1].start,3);
+  assert.equal(ripple.timeline[2].start,8);
+  assert.equal(ripple.audio.silenceInserts.length,2);
+  assert.equal(ripple.audio.silenceInserts[0].at,3);
+  assert.equal(ripple.audio.silenceInserts[0].duration,5);
+  await evaluate('document.getElementById("visualUndo").click()');
+  assert.equal(await evaluate('JSON.parse(document.getElementById("editorPlanText").value).timeline.length'),4);
+  await evaluate('document.getElementById("visualRedo").click()');
+  assert.equal(await evaluate('JSON.parse(document.getElementById("editorPlanText").value).timeline.length'),5);
   assert.equal(await evaluate('document.getElementById("editorSave").disabled'),false);
   const shot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
   const screenshot=path.join(os.tmpdir(),'contentlab-studio-ui.png');
   fs.writeFileSync(screenshot,Buffer.from(shot.data,'base64'));
   assert.deepEqual(errors,[]);
-  console.log(JSON.stringify({status:'passed',sceneCount:4,logo:true,
+  console.log(JSON.stringify({status:'passed',sceneCount:5,logo:true,
     screenshot,errors:errors.length}));
 }finally{
   ws?.close();
