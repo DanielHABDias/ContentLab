@@ -24,6 +24,21 @@ export function transcriptWords(transcript){
   return words.sort((a,b)=>a.start-b.start||a.end-b.end);
 }
 function normalize(value){return String(value).normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/gi,'').toLowerCase();}
+export function remapTranscriptWords(words,cuts=[]){
+  if(!cuts?.length)return words;
+  let offset=0;
+  const remapped=[];
+  for(const cut of cuts){
+    for(const word of words){
+      const left=Math.max(Number(cut.start),word.start),right=Math.min(Number(cut.end),word.end);
+      if(right>left)remapped.push({word:word.word,
+        start:Number((offset+left-cut.start).toFixed(6)),
+        end:Number((offset+right-cut.start).toFixed(6))});
+    }
+    offset+=Number(cut.end)-Number(cut.start);
+  }
+  return remapped;
+}
 export function phraseWords(text,start,end,words){
   const tokens=String(text||'').trim().split(/\s+/).filter(Boolean);
   if(!tokens.length)return [];
