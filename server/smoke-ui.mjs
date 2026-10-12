@@ -113,5 +113,13 @@ try{
     new Promise(resolve=>chrome.once('exit',resolve)),
     sleep(2000)
   ]);
-  fs.rmSync(root,{recursive:true,force:true,maxRetries:20,retryDelay:150});
+  // Chromium may spawn helper processes that briefly keep its profile busy
+  // after the browser smoke assertions have already passed. Do not make
+  // asynchronous OS cleanup turn a passing UI test into a failing build.
+  try {
+    await fs.promises.rm(root,{recursive:true,force:true,maxRetries:8,retryDelay:200});
+  } catch (error) {
+    if (!['ENOTEMPTY','EBUSY','EPERM'].includes(error.code)) throw error;
+    console.warn('Chrome temporary profile cleanup deferred to the CI runner:',error.code);
+  }
 }

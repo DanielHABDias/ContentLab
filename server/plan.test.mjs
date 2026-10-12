@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {validatePlan, validateShape, settings, region, compileScene, resolveAsset, assetReport, schema} from './plan.mjs';
 import {SegmentCache,sceneFingerprint,cleanOutput,idFilename} from './cache.mjs';
-import {remapTranscriptWords} from './remotion.mjs';
+import {remapTranscriptWords,transcriptWords} from './remotion.mjs';
 
 function example(root){
   return {project:{name:'Teste',format:'custom',profile:'generic',resolution:{width:1920,height:1080},fps:30},
@@ -85,4 +85,16 @@ test('all shipped edit-plan examples conform to the single schema',()=>{
     assert.deepEqual(validateShape(file),[],name);
     assert.deepEqual(validatePlan(file),[],name);
   }
+});
+
+test('transcription with segments and canonical words does not duplicate subtitle tokens',()=>{
+  const transcript={
+    segments:[{start:0,end:1,text:'Batman chega',words:[
+      {word:'Batman',start:0,end:0.45},{word:'chega',start:0.45,end:1}]}],
+    words:[{word:'Batman',start:0,end:0.45},{word:'chega',start:0.45,end:1}]
+  };
+  assert.deepEqual(transcriptWords(transcript),transcript.words);
+  assert.deepEqual(transcriptWords({segments:transcript.segments}),transcript.words);
+  assert.deepEqual(transcriptWords({segments:[{
+    start:0,end:1,text:'Batman chega'}]}).map(w=>w.word),['Batman','chega']);
 });
