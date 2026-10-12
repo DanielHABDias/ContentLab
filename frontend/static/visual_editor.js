@@ -35,6 +35,35 @@
   let initialScenes = new Map();
   let sceneCache = new Map();
   let searchQuery = '';
+  let undoStates=[],redoStates=[],lastSnapshot='';
+  const historyButtons=()=>{
+    $('visualUndo').disabled=!undoStates.length;
+    $('visualRedo').disabled=!redoStates.length;
+  };
+  const recordChange=()=>{
+    const latest=JSON.stringify(plan);
+    if(lastSnapshot&&lastSnapshot!==latest){
+      undoStates.push(lastSnapshot);
+      if(undoStates.length>80)undoStates.shift();
+      redoStates=[];
+    }
+    lastSnapshot=latest;
+    historyButtons();
+  };
+  const restoreSnapshot=(source,target)=>{
+    if(!source.length)return;
+    target.push(JSON.stringify(plan));
+    plan=JSON.parse(source.pop());
+    lastSnapshot=JSON.stringify(plan);
+    writing=true;
+    $('editorPlanText').value=JSON.stringify(plan,null,2);
+    $('editorPlanText').dispatchEvent(new Event('input'));
+    writing=false;
+    selectedScene=Math.min(selectedScene,Math.max(0,plan.timeline.length-1));
+    render();
+    historyButtons();
+  };
+
   const fmtTime = seconds => Number(seconds || 0).toFixed(2).replace(/\.00$/, '') + 's';
   const uniqueSceneId = prefix => {
     const existing = new Set((plan?.timeline || []).map(item => item.id));
@@ -107,6 +136,7 @@
     let parent = plan;
     for (const part of path.slice(0, -1)) parent = parent[part];
     parent[path.at(-1)] = value;
+    recordChange();
     writing = true;
     $('editorPlanText').value = JSON.stringify(plan, null, 2);
     $('editorPlanText').dispatchEvent(new Event('input'));
@@ -115,6 +145,7 @@
     message('Rascunho atualizado. Valide e salve o plano antes do render final.');
   };
   const changed = () => {
+    recordChange();
     writing = true;
     $('editorPlanText').value = JSON.stringify(plan, null, 2);
     $('editorPlanText').dispatchEvent(new Event('input'));
@@ -482,15 +513,26 @@
       selectedScene = Math.max(0,plan.timeline.findIndex(scene=>scene.id===previouslySelected));
       projectRoot = project.projectRoot;
       initialScenes = new Map((plan.timeline||[]).map(item=>[item.id,cloneScene(item)]));
+      lastSnapshot=JSON.stringify(plan);undoStates=[];redoStates=[];historyButtons();
       await loadCacheState();render();
       message('Editor visual pronto. Alterações aparecem também no JSON abaixo.');
     } catch (error) { message(error.message); }
   };
   const syncFromJson = () => {
     if (writing || !context) return;
-    try { plan = JSON.parse($('editorPlanText').value); selectedScene = Math.min(selectedScene, Math.max(0, plan.timeline.length - 1)); render(); }
+    try { plan = JSON.parse($('editorPlanText').value); selectedScene = Math.min(selectedScene, Math.max(0, plan.timeline.length - 1));
+      lastSnapshot=JSON.stringify(plan);undoStates=[];redoStates=[];historyButtons();render(); }
     catch (_) { message('Corrija o JSON para voltar a usar o editor visual.'); }
   };
+  $('visualUndo').addEventListener('click',()=>restoreSnapshot(undoStates,redoStates));
+  $('visualRedo').addEventListener('click',()=>restoreSnapshot(redoStates,undoStates));
+  $('panel-editor').addEventListener('keydown',event=>{
+    if(!(event.ctrlKey||event.metaKey)||event.key.toLowerCase()!=='z')return;
+    if(event.target.closest('input,textarea,select,[contenteditable]'))return;
+    event.preventDefault();
+    if(event.shiftKey)restoreSnapshot(redoStates,undoStates);
+    else restoreSnapshot(undoStates,redoStates);
+  });
   $('visualAddScene').addEventListener('click', () => {
     if (!plan || !context) return message('Abra ou crie um projeto primeiro.');
     const start=plan.timeline.length?Math.max(...plan.timeline.map(scene=>Number(scene.end))):0;
