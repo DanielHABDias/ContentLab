@@ -34,6 +34,15 @@ test('grid and default settings match current cinematic layout',()=>{
   assert.equal(compiled.elements[0].region[0],640);
   assert.equal(compiled.elements[0].transform.scale,1.2);
 });
+test('grid sizing and opacity with pixel offsets validate',()=>{
+  const p=example(),e=p.timeline[0].elements[0];
+  e.cells=[5,8];e.transform={scale:1.05,opacity:0.65,offsetX:-20,offsetY:35};
+  assert.deepEqual(validateShape(p),[]);
+  assert.deepEqual(region([5,8],1920,1080),[640,360,640,720]);
+  assert.equal(compileScene(p.timeline[0],p,{}).elements[0].transform.offsetY,35);
+  e.transform.opacity=1.1;
+  assert.ok(validateShape(p).length>0);
+});
 test('asset resolver rejects traversal',()=>{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'cl-assets-'));
   try{

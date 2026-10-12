@@ -198,7 +198,7 @@
   const primitive = (parent, node, value, path) => {
     const key = String(path.at(-1));
     const row = el('label', undefined, 'visual-field');
-    row.append(el('span', label(key)));
+    row.append(el('span', path.includes('transform') && key === 'offsetX' ? 'Mover horizontalmente (px; + direita)' : path.includes('transform') && key === 'offsetY' ? 'Mover verticalmente (px; + baixo)' : label(key)));
     if (node.const !== undefined) row.append(el('strong', String(node.const)));
     else if (node.enum) choices(row, node.enum, value, next => {
       update(path, next);

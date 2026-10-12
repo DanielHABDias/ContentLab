@@ -191,7 +191,7 @@ const Layer = ({item, props, time, absolute, camera}: {item: Element; props: Sce
   const width = props.width, height = props.height;
   const anchorX = 0.25 + (rx + rw / 2) / (2 * width);
   const anchorY = 0.25 + (ry + rh / 2) / (2 * height);
-  const state = stateAt({x: anchorX, y: anchorY, scale: 1, rotation: 0, opacity: 1, ...item.data.transform}, item.data.keyframes, time);
+  const state = stateAt({x: anchorX, y: anchorY, offsetX: 0, offsetY: 0, scale: 1, rotation: 0, opacity: 1, ...item.data.transform}, item.data.keyframes, time);
   const motion = item.data.animation ?? {};
   const elapsed = absolute - item.start, remaining = item.end - absolute, total = item.end - item.start;
   const enterDuration = Math.min(motion.enterDuration ?? 0.45, total);
@@ -229,8 +229,10 @@ const Layer = ({item, props, time, absolute, camera}: {item: Element; props: Sce
   const card = box.preset === 'floating_card' || box.background;
   const elementWidth = item.type === 'filter' ? width : item.data.cells ? rw : width * 0.8;
   const elementHeight = item.type === 'filter' ? height : item.data.cells ? rh : height * 0.8;
-  const x = (state.x - camera.x) * width * 2 * camera.scale + width / 2;
-  const y = (state.y - camera.y) * height * 2 * camera.scale + height / 2;
+  // Pixel nudges apply after 3x3 cell placement and camera projection.
+  // Positive X moves right and positive Y moves down.
+  const x = (state.x - camera.x) * width * 2 * camera.scale + width / 2 + state.offsetX;
+  const y = (state.y - camera.y) * height * 2 * camera.scale + height / 2 + state.offsetY;
   const half = centerVisibility * 50;
   const feather = Math.min(2.5, Math.max(0.6, half * 0.15));
   const leftEdge = 50 - half;

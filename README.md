@@ -138,3 +138,7 @@ O adaptador de transcrição usa o executável `whisper-cli` e um modelo `ggml-*
 5. Integrar a branch ao `main` após os testes de aceitação.
 
 [Direção Remotion/HyperFrames](MOTION_ENGINE_STRATEGY.md).
+
+### Grid e transparência de camadas
+
+`cells: [5,8]` já dimensiona automaticamente a caixa de um PNG nas duas células centrais inferiores. `fit: contain` preserva suas proporções, `transform.opacity: 0.65` controla transparência e `z` define qual camada fica acima. Os novos campos `transform.offsetX/offsetY` movem a camada em pixels depois do encaixe (+ direita/baixo), sem substituir o ajuste opcional por `transform.scale`.

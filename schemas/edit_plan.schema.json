@@ -405,6 +405,12 @@
           "minimum": 0,
           "maximum": 1
         },
+        "offsetX": {
+          "type": "number"
+        },
+        "offsetY": {
+          "type": "number"
+        },
         "scale": {
           "type": "number",
           "exclusiveMinimum": 0,

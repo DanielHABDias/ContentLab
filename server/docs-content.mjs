@@ -11,9 +11,9 @@ export const chapters=[
     'Para gameplay, preserve a proporção. contain mostra todo o quadro e é o padrão visual; cover recorta e stretch estica. Não amplie um clipe 1920×1080 quando a saída também é 1920×1080.'
   ]},
   {id:'grade',title:'Layouts, grade 3×3 e profundidade',diagram:'grid',paragraphs:[
-    'Na grade, 1/2/3 ocupam a primeira linha, 4/5/6 a linha central e 7/8/9 a inferior. cells [2,5,8] ocupa a coluna central; cells [5] somente o centro.',
-    'As camadas podem usar transform e keyframes para posição, escala, rotação e opacidade. O campo z estabelece a ordem visual de elementos sobrepostos.',
-    'PNG com transparência assimétrica pode parecer deslocado apesar de estar centralizado matematicamente. Corrija o asset ou os offsets em vez de ampliar a imagem sem necessidade.'
+    'Na grade, 1/2/3 ocupam a primeira linha, 4/5/6 a linha central e 7/8/9 a inferior. cells [2,5,8] ocupa a coluna central; cells [5,8] ocupa os dois quadrados centrais inferiores; cells [5] somente o centro. A mídia é encaixada automaticamente na caixa: contain preserva o PNG sem recorte e cover preenche com possível recorte.',
+    'As camadas podem usar transform e keyframes para posição, escala, rotação e opacidade. transform.opacity de 0 a 1 controla a transparência; keyframes[].opacity anima esse valor; z maior fica na frente. Use transform.scale somente para ajuste fino após definir cells.',
+    'PNG com transparência assimétrica pode parecer deslocado apesar de estar centralizado matematicamente. transform.offsetX/offsetY permitem corrigir a posição em pixels: positivo move para direita/baixo; negativo move para esquerda/cima. Os offsets não modificam a caixa do grid e margens transparentes internas continuam fazendo parte do PNG.'
   ]},
   {id:'camadas',title:'Camadas, animações, textos e efeitos',diagram:'layers',paragraphs:[
     'Tipos disponíveis: image e video para mídia, overlay para sobreposições, text para frase estática, kinetic_text para palavras em movimento, caption para legendas, filter para tratamento visual e sfx para som.',
