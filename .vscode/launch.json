@@ -1,17 +1,16 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "Content Lab: Flask",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "backend.app",
-            "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}",
-                "FLASK_DEBUG": "1"
-            }
-        }
-    ]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Content Lab: Node",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/server/http.mjs",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "env": {
+        "CONTENTLAB_REMOTION_CONCURRENCY": "1"
+      }
+    }
+  ]
 }
