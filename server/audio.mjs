@@ -43,8 +43,12 @@ export function silenceSourcePositions(inserts=[]){
 }
 
 
+export function narrationCuts(settings={}){
+  return settings.sourceCuts?.length ? settings.sourceCuts : settings.narrationTrim ? [settings.narrationTrim] : [];
+}
+
 export async function prepareNarration(input,output,settings,{ffmpeg='ffmpeg',signal,duration}={}){
-  const cuts=settings.sourceCuts||[],voice=settings.voice||{},filters=[];
+  const cuts=narrationCuts(settings),voice=settings.voice||{},filters=[];
   if(cuts.length){
     cuts.forEach((cut,i)=>filters.push('[0:a]atrim=start='+fmt(cut.start)+':end='+fmt(cut.end)+',asetpts=PTS-STARTPTS[c'+i+']'));
     filters.push(cuts.map((_,i)=>'[c'+i+']').join('')+'concat=n='+cuts.length+':v=0:a=1[cut]');
@@ -91,11 +95,21 @@ export async function prepareNarration(input,output,settings,{ffmpeg='ffmpeg',si
 }
 export async function mixAudio(visual,cleaned,plan,resolvedAssets,output,duration,{ffmpeg='ffmpeg',ffprobe='ffprobe',signal}={}){
   const args=['-hide_banner','-loglevel','error','-y','-i',visual,'-i',cleaned];
-  const graph=['[1:a]apad,atrim=end='+fmt(duration)+',asetpts=PTS-STARTPTS,volume='+Number(plan.audio.voice?.trimDb??0)+'dB[voice]'];
+  // Fade the actual narration ending, not trailing silence under a music-only outro.
+  const voiceSettings=plan.audio.voice||{};
+  const voiceFadeIn=Math.max(0,Number(voiceSettings.fadeIn??0));
+  const voiceFadeOut=Math.max(0,Number(voiceSettings.fadeOut??0));
+  const voicedDuration=voiceFadeOut>0 ? Math.min(duration,await probeAudioDuration(cleaned,{ffprobe,signal})) : duration;
+  const voiceFilters=['atrim=end='+fmt(duration),'asetpts=PTS-STARTPTS','volume='+Number(voiceSettings.trimDb??0)+'dB'];
+  if(voiceFadeIn>0)voiceFilters.push('afade=t=in:st=0:d='+fmt(Math.min(voicedDuration,voiceFadeIn)));
+  if(voiceFadeOut>0)voiceFilters.push('afade=t=out:st='+fmt(Math.max(0,voicedDuration-Math.min(voicedDuration,voiceFadeOut)))+
+    ':d='+fmt(Math.min(voicedDuration,voiceFadeOut)));
+  voiceFilters.push('apad=whole_dur='+fmt(duration));
+  const graph=['[1:a]'+voiceFilters.join(',')+'[voice]'];
   const musicLabels=[],effectLabels=[],layers=[];
   const queue=[];
   for(const m of plan.audio.music||[])queue.push({item:m,type:'music',start:m.start,end:m.end,
-    file:resolvedAssets[m.asset],loop:true});
+    file:resolvedAssets[m.asset],loop:m.loop!==false});
   for(const scene of plan.timeline){
     if(scene.background?.asset&&scene.background.muted===false&&/\.(mp4|mov|mkv|webm)$/i.test(scene.background.asset)){
       queue.push({item:scene.background,type:'background',start:scene.start,end:scene.end,
@@ -124,16 +138,36 @@ export async function mixAudio(visual,cleaned,plan,resolvedAssets,output,duratio
       if(edges.empty)continue;
     }
     const audibleLength=edges?Math.min(length,edges.end-edges.start):length;
-    if(loop)args.push('-stream_loop','-1');
+    const selectedMusic=type==='music'&&(item.sourceStart!==undefined||item.sourceEnd!==undefined);
+    let segmentStart=0,segmentEnd=0;
+    if(type==='music'&&(selectedMusic||!loop)){
+      if(!measured.has(file))measured.set(file,{duration:await probeAudioDuration(file,{ffprobe,signal})});
+      const sourceDuration=measured.get(file).duration;
+      segmentStart=item.sourceStart??0;
+      segmentEnd=item.sourceEnd??sourceDuration;
+      if(segmentStart>=sourceDuration-0.001||segmentEnd>sourceDuration+0.01||segmentEnd<=segmentStart)
+        throw Error('Trecho musical fora dos limites do arquivo: '+item.asset);
+      if(!loop&&segmentEnd-segmentStart+0.001<audibleLength)
+        throw Error('Música sem loop não cobre o intervalo da timeline: '+item.asset);
+    }
+    // The legacy loop still repeats the full file. A selected segment needs
+    // a filter loop instead, so the music never jumps outside its source window.
+    if(loop&&!selectedMusic)args.push('-stream_loop','-1');
     args.push('-i',file);
     const conf=item.config||{},preset=item.preset??conf.preset??'normal';
     const presetValues=type==='music'?musicPresets:mediaPresets;
     const gain=Number(item.trimDb??conf.trimDb??presetValues[preset]??presetValues.normal);
     const fadeIn=Math.min(audibleLength,Number(item.fadeIn??conf.fadeIn??0));
     const fadeOut=Math.min(audibleLength,Number(item.fadeOut??conf.fadeOut??0));
-    const filters=['atrim=start='+fmt(edges?.start??0)+':end='+fmt(edges?edges.start+audibleLength:audibleLength),'asetpts=PTS-STARTPTS',
-      'loudnorm=I=-16:TP=-1.5:LRA=11','aresample=48000',
-      'aformat=sample_rates=48000:channel_layouts=stereo','volume='+gain+'dB'];
+    const filters=selectedMusic?
+      ['atrim=start='+fmt(segmentStart)+':end='+fmt(segmentEnd),'asetpts=PTS-STARTPTS',
+        'aresample=48000','aformat=sample_rates=48000:channel_layouts=stereo',
+        ...(loop?['aloop=loop=-1:size='+Math.max(1,Math.round((segmentEnd-segmentStart)*48000))+':start=0']:[]),
+        'atrim=end='+fmt(audibleLength),'asetpts=PTS-STARTPTS',
+        'loudnorm=I=-16:TP=-1.5:LRA=11','volume='+gain+'dB']:
+      ['atrim=start='+fmt(edges?.start??0)+':end='+fmt(edges?edges.start+audibleLength:audibleLength),'asetpts=PTS-STARTPTS',
+        'loudnorm=I=-16:TP=-1.5:LRA=11','aresample=48000',
+        'aformat=sample_rates=48000:channel_layouts=stereo','volume='+gain+'dB'];
     if(fadeIn>0)filters.push('afade=t=in:st=0:d='+fmt(fadeIn));
     if(fadeOut>0)filters.push('afade=t=out:st='+fmt(audibleLength-fadeOut)+':d='+fmt(fadeOut));
     // Do not atrim after adelay: atrim's timestamp offset discards leading
@@ -144,7 +178,8 @@ export async function mixAudio(visual,cleaned,plan,resolvedAssets,output,duratio
     (type==='music'?musicLabels:effectLabels).push('['+label+']');
     layers.push({type,asset:item.asset,start,end:Math.min(start+audibleLength,duration),
       edgeTrim:edges?{start:edges.start,end:Math.max(0,edges.duration-edges.end)}:null,
-      trimDb:gain,preset,fadeIn,fadeOut,loop,normalized:true});
+      trimDb:gain,preset,fadeIn,fadeOut,loop,
+      ...(selectedMusic?{sourceStart:segmentStart,sourceEnd:segmentEnd}:{}),normalized:true});
     index++;
   }
   let mixLabels=['[voice]'];
