@@ -42,6 +42,14 @@
 - CLI e API usando o mesmo serviço.
 - Testes unitários, integração e fixtures golden.
 
+## Direção de evolução: motion design
+
+A estratégia futura é [Remotion como motor visual principal e HyperFrames
+como referência de técnicas, receitas e composições](MOTION_ENGINE_STRATEGY.md).
+O pipeline híbrido atual continua até que existam testes de paridade, uma
+biblioteca de presets em Remotion e um editor por cena com Player. O cache por
+ID e a mixagem FFmpeg permanecem necessários.
+
 ## Integração e riscos
 
 - Downloads, transcrição e cortes existentes não devem ser reescritos durante a
