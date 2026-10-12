@@ -13,6 +13,9 @@ test('every declared schema property is represented and documented meaningfully'
   assert.deepEqual(fields.filter(f=>!f.description).map(f=>f.path),[],
     'Every schema field requires a human explanation');
   assert.ok(fields.some(f=>f.path==='audio.silenceInserts[].duration'));
+  for(const key of ['audio.narrationTrim.start','audio.voice.fadeIn','audio.voice.fadeOut',
+    'audio.music[].sourceStart','audio.music[].sourceEnd','audio.music[].loop'])
+    assert.ok(fields.some(f=>f.path===key),'Missing documented audio field '+key);
   assert.ok(fields.some(f=>f.path==='timeline[].elements[].textStyle.shadow.blur'));
   assert.ok(fields.some(f=>f.path==='timeline[].camera.shake[].frequency'));
   assert.ok(fields.some(f=>f.path==='timeline[].elements[].keyframes[].easing'));
@@ -41,6 +44,8 @@ test('documents cover all main capabilities, include examples and all JS-generat
   assert.ok(!buildHtml({standalone:true}).includes('/api/skill/download'));
   assert.ok(md.includes('audio.silenceInserts'));
   assert.ok(md.includes('word_stream_horizontal'));
+  assert.ok(md.includes('crossfade de duas músicas'));
+  assert.ok(html.includes('crossfade de duas músicas'));
 });
 test('website exposes one docs tab, dedicated reader and exactly three doc download actions',()=>{
   const html=readFileSync(new URL('../frontend/templates/index.html',import.meta.url),'utf8');
