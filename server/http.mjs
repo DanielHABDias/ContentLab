@@ -8,10 +8,12 @@ import {APP_ROOT,projectFile,readJson,assetReport,validatePlan,PlanError} from '
 import {createProject,loadProject,saveProject,listAssets,registry,visualContext,installedAssets} from './project.mjs';
 import {renderProject} from './render.mjs';
 import {run} from './exec.mjs';
+import {SOURCE_CACHE,listSources,cachedSource,importLocalSource,removeSource,getYoutubeInfo,resolveSource,exportCut} from './source.mjs';
+import {transcribeAudio} from './transcribe.mjs';
 
 const PORT=Number(process.env.PORT||5000);
 const HOST='127.0.0.1';
-const app=express(),jobs=new Map(),transcriptions=new Map();
+const app=express(),jobs=new Map(),transcriptions=new Map(),sourceJobs=new Map(),previews=new Map();
 app.disable('x-powered-by');
 app.use(express.json({limit:'5mb'}));
 app.use('/static',express.static(path.join(APP_ROOT,'frontend','static'),{index:false}));
@@ -165,20 +167,135 @@ app.get('/api/catalog/download',api(async(req,res)=>{
 app.get('/api/skill/download',api(async(req,res)=>{
   res.status(501).json({error:'A skill antiga ainda requer atualização para o contrato único antes de ser redistribuída.'});
 }));
-// This route does not launch Python: a native whisper.cpp CLI can be connected here.
-app.post('/api/transcription/jobs',upload.single('file'),api(async(req,res)=>{
-  if(req.file&&fs.existsSync(req.file.path))fs.rmSync(req.file.path,{force:true});
-  res.status(501).json({error:'A transcrição nativa em Node/whisper.cpp ainda não foi concluída nesta branch de migração.'});
+const makeSourceJob=(task,details={})=>{
+  const id=crypto.randomUUID(),job={status:'running',percent:0,message:'Iniciando...',...details};
+  sourceJobs.set(id,job);
+  const update=(percent,message)=>Object.assign(job,{percent,message});
+  Promise.resolve().then(()=>task(job,update)).then(()=>{
+    job.status='done';job.percent=100;job.message='Concluído.';
+  }).catch(e=>{job.status='error';job.error=e.message;job.message='Falha no processamento.';console.error(e);});
+  return id;
+};
+app.get('/api/cache',api(async(req,res)=>res.json({videos:listSources()})));
+app.get('/api/cache-preview/:id',api(async(req,res)=>{
+  const item=cachedSource(req.params.id);res.sendFile(item.path,{acceptRanges:true});
 }));
-app.get('/api/transcription/jobs/:id',api(async(req,res)=>res.status(404).json({error:'Transcrição não iniciada.'})));
-app.post('/api/info',api(async(req,res)=>res.status(501).json({error:'Importação YouTube será migrada para um cliente JavaScript nativo.'})));
-for(const endpoint of ['/api/preview','/api/download','/api/batch-download','/api/local-source/import','/api/cache/open','/api/cache/delete']){
-  app.post(endpoint,api(async(req,res)=>res.status(501).json({error:'Ferramenta de vídeo em migração para Node.js.'})));
-}
-app.get('/api/cache',api(async(req,res)=>res.json({items:[]})));
-app.get('/api/cache-preview/:id',api(async(req,res)=>res.status(404).json({error:'Vídeo não encontrado.'})));
-app.get('/api/video-proxy/:id',api(async(req,res)=>res.status(404).json({error:'Prévia não encontrada.'})));
-app.post('/api/choose-video',api(async(req,res)=>res.status(501).json({error:'Seletor de mídia em migração.'})));
+app.post('/api/cache/open',api(async(req,res)=>{
+  const item=cachedSource(req.body.key);
+  try{await run(process.platform==='win32'?'explorer.exe':'xdg-open',[item.folder]);}catch{}
+  res.json({ok:true});
+}));
+app.post('/api/cache/delete',api(async(req,res)=>{removeSource(req.body.key);res.json({ok:true});}));
+app.post('/api/choose-video',api(async(req,res)=>{
+  let selected='';
+  try {
+    if(process.platform==='win32'){
+      const ps='Add-Type -AssemblyName System.Windows.Forms; $d=New-Object System.Windows.Forms.OpenFileDialog; $d.Filter="Vídeos|*.mp4;*.mkv;*.mov;*.webm;*.avi"; if($d.ShowDialog() -eq "OK"){$d.FileName}';
+      selected=(await run('powershell.exe',['-NoProfile','-Command',ps])).stdout.trim();
+    }else selected=(await run('zenity',['--file-selection','--file-filter=*.mp4 *.mkv *.mov *.webm *.avi'])).stdout.trim();
+  }catch{}
+  res.json({path:selected});
+}));
+app.post('/api/local-source/import',api(async(req,res)=>{
+  const filepath=req.body?.path;
+  if(typeof filepath!=='string')return forbidden(res,'Selecione um arquivo local.');
+  const id=makeSourceJob(async(job,update)=>{
+    const source=await importLocalSource(filepath,update);job.source=source;
+  });
+  res.status(202).json({job_id:id});
+}));
+app.post('/api/info',api(async(req,res)=>res.json(await getYoutubeInfo(req.body.url))));
+app.post('/api/preview',api(async(req,res)=>{
+  const source=await resolveSource(req.body.url);
+  const id=crypto.randomUUID();previews.set(id,source.key);
+  res.json({preview_id:id});
+}));
+app.get('/api/video-proxy/:id',api(async(req,res)=>{
+  const key=previews.get(req.params.id);
+  if(!key)return res.status(404).json({error:'Prévia não encontrada.'});
+  res.sendFile(cachedSource(key).path,{acceptRanges:true});
+}));
+app.post('/api/download',api(async(req,res)=>{
+  const options=req.body||{};
+  if(!['video','audio','transcript'].includes(options.mode))return forbidden(res,'Formato de saída inválido.');
+  if(!options.folder||!fs.existsSync(options.folder))return forbidden(res,'Pasta de saída inválida.');
+  const id=makeSourceJob(async(job,update)=>{
+    update(2,'Preparando fonte...');
+    const source=await resolveSource(options.url,update);
+    update(82,'Exportando trecho...');
+    const start=Number(options.start),end=Number(options.end);
+    if(options.mode!=='transcript')job.filepath=await exportCut(source,{
+      folder:options.folder,filename:options.filename,mode:options.mode,
+      full:options.full,start,end
+    });
+    else{
+      const tmp=await exportCut(source,{folder:options.folder,filename:options.filename||source.title,mode:'audio',
+        full:options.full,start,end});
+      await transcribeAudio(tmp,fs.realpathSync(options.folder),{
+        model:options.transcript_model||'base',language:'pt',update:message=>update(90,message)
+      });
+      job.filepath=path.join(fs.realpathSync(options.folder),'transcript.srt');
+    }
+    job.folder=fs.realpathSync(options.folder);
+  });
+  res.status(202).json({job_id:id});
+}));
+app.post('/api/batch-download',api(async(req,res)=>{
+  const input=String(req.body.batch_text||''),rows=input.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  const items=[],errors=[];
+  for(let i=0;i<rows.length;i++){
+    const parts=rows[i].split(/[;,\t]/).map(x=>x.trim());
+    const start=Number(parts[0]),end=Number(parts[1]);
+    if(parts.length<2||!Number.isFinite(start)||!Number.isFinite(end)||end<=start)errors.push('Linha '+(i+1)+': início/fim inválidos.');
+    else items.push({start,end,title:parts[2]||'trecho-'+(i+1),status:'waiting'});
+  }
+  if(errors.length||!items.length)return res.status(422).json({error:'Lote inválido.',validation_errors:errors.length?errors:['Nenhuma linha encontrada.']});
+  const id=makeSourceJob(async(job,update)=>{
+    job.items=items;job.filepaths=[];job.folder=req.body.folder;
+    const source=await resolveSource(req.body.url,update);
+    for(let i=0;i<items.length;i++){
+      const item=items[i];item.status='running';update(Math.round(100*i/items.length),'Exportando '+item.title);
+      try{const file=await exportCut(source,{folder:req.body.folder,filename:item.title,
+        mode:req.body.mode==='audio'?'audio':'video',full:false,start:item.start,end:item.end});
+        job.filepaths.push(file);item.status='done';
+      }catch(e){item.status='error';item.error=e.message;}
+    }
+    if(items.some(x=>x.status==='error'))job.status='done_with_errors';
+  },{items});
+  res.status(202).json({job_id:id});
+}));
+app.get('/api/progress/:id',api(async(req,res)=>{
+  const job=sourceJobs.get(req.params.id);
+  if(!job)return res.status(404).json({error:'Processamento não encontrado.'});
+  res.json(job);
+}));
+app.post('/api/transcription/jobs',upload.single('file'),api(async(req,res)=>{
+  if(!req.file)return forbidden(res,'Selecione um arquivo para transcrição.');
+  let root;
+  try{root=fs.realpathSync(req.body.projectRoot);}catch{fs.rmSync(req.file.path,{force:true});return forbidden(res,'Pasta de destino inválida.');}
+  if(!fs.statSync(root).isDirectory())return forbidden(res,'Destino não é uma pasta.');
+  const ext=path.extname(req.file.originalname).toLowerCase();
+  if(!['.wav','.mp3','.m4a','.aac','.flac','.ogg','.opus'].includes(ext)){fs.rmSync(req.file.path,{force:true});return forbidden(res,'Arquivo de áudio inválido.');}
+  const audioDir=path.join(root,'audio');fs.mkdirSync(audioDir,{recursive:true});
+  const file=path.join(audioDir,'narration-'+crypto.randomUUID()+ext);
+  fs.renameSync(req.file.path,file);
+  const id=crypto.randomUUID(),job={status:'running',message:'Preparando transcrição...',projectRoot:root,
+    narration:path.relative(root,file).split(path.sep).join('/'),result:null,error:null};
+  transcriptions.set(id,job);res.status(202).json({jobId:id});
+  transcribeAudio(file,root,{model:req.body.model||'base',language:req.body.language||'pt',
+    update:message=>{job.message=message;}}).then(result=>{
+      Object.assign(job,{status:'done',message:'Transcrição concluída.',result});
+    }).catch(e=>Object.assign(job,{status:'error',message:'Falha na transcrição.',error:e.message}));
+}));
+app.get('/api/transcription/jobs/:id',api(async(req,res)=>{
+  const job=transcriptions.get(req.params.id);
+  if(!job)return res.status(404).json({error:'Transcrição não encontrada.'});
+  res.json(job);
+}));
 app.get('/health',api(async(req,res)=>res.json({ok:true,backend:'node',renderer:'remotion'})));
 const server=app.listen(PORT,HOST,()=>console.log('Content Lab Node: http://'+HOST+':'+PORT));
-app.post('/api/shutdown',api(async(req,res)=>{res.json({ok:true});server.close();}));
+app.post('/api/shutdown',api(async(req,res)=>{
+  const active=[...sourceJobs.values(),...jobs.values(),...transcriptions.values()].filter(j=>j.status==='running').length;
+  if(active&&!req.body?.force)return res.status(409).json({requires_force:true,active_jobs:active});
+  res.json({ok:true});server.close();
+}));
