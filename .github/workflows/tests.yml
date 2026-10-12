@@ -23,6 +23,8 @@ jobs:
           for file in server/*.mjs; do node --check "$file"; done
           node --check frontend/static/app.js
           node --check frontend/static/visual_editor.js
+      - name: Verify generated docs and figures match the installed schema
+        run: node scripts/generate-docs.mjs --check
       - name: Run Node tests
         run: node --test server/*.test.mjs
 
