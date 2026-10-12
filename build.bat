@@ -1,44 +1,26 @@
 @echo off
+setlocal
 cd /d "%~dp0"
-where python >nul 2>&1
-if errorlevel 1 goto python_missing
-
-if not exist ".venv\Scripts\python.exe" (
-    echo Criando ambiente virtual...
-    python -m venv .venv
-    if errorlevel 1 goto failed
-)
-
-echo Instalando dependencias...
-".venv\Scripts\python.exe" -m pip install -r backend\requirements-desktop.txt --quiet --disable-pip-version-check
+where node >nul 2>&1
+if errorlevel 1 goto missing
+where npm >nul 2>&1
+if errorlevel 1 goto missing
+if not exist "node_modules" call npm install --no-audit --no-fund
 if errorlevel 1 goto failed
-".venv\Scripts\python.exe" -m pip install pyinstaller --quiet --disable-pip-version-check
+if not exist "backend\remotion\node_modules" call npm ci --prefix backend/remotion --no-audit --no-fund
 if errorlevel 1 goto failed
-
-echo.
-echo Compilando ContentLab.exe (pode levar 1-2 minutos)...
-".venv\Scripts\python.exe" -m PyInstaller --noconfirm ContentLab.spec
+if not exist "dist" mkdir "dist"
+echo Criando distribuicao Node.js (requer Node e FFmpeg no destino)...
+powershell.exe -NoProfile -Command "Compress-Archive -Path @('server','backend\remotion','frontend','schemas','builtin-assets','node_modules','package.json','README.md','iniciar.bat','iniciar.vbs','parar.bat') -DestinationPath 'dist\ContentLab-Node.zip' -Force"
 if errorlevel 1 goto failed
-
-echo.
-if exist dist\ContentLab.exe (
-    echo ============================================
-    echo Pronto! O executavel esta em: dist\ContentLab.exe
-    echo Copie esse arquivo para onde quiser - ele roda sozinho,
-    echo sem precisar de Python nem venv instalados.
-    echo ============================================
-) else (
-    goto failed
-)
-
+echo Pronto: dist\ContentLab-Node.zip
+echo Use iniciar.vbs para abrir sem terminal.
 pause
 exit /b 0
-
-:python_missing
-echo Python nao encontrado. Instale Python 3.9 ou superior.
+:missing
+echo Instale Node.js 22+ e npm.
 goto failed
-
 :failed
-echo Falha ao compilar ContentLab.exe. Veja a mensagem acima.
+echo Nao foi possivel gerar o pacote.
 pause
 exit /b 1
