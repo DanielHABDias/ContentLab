@@ -11,7 +11,9 @@
     "test": "node --test server/*.test.mjs",
     "check": "node --check server/http.mjs && node --test server/*.test.mjs",
     "render": "node server/cli.mjs",
-    "migrate:plan": "node server/migrate.mjs"
+    "migrate:plan": "node server/migrate.mjs",
+    "docs:generate": "node scripts/generate-docs.mjs",
+    "docs:check": "node scripts/generate-docs.mjs --check"
   },
   "dependencies": {
     "express": "^4.21.2",

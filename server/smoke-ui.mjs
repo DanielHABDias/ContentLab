@@ -82,6 +82,17 @@ try{
   await send('Page.navigate',{url:'http://127.0.0.1:'+appPort+'/'});
   await wait(()=>evaluate('document.readyState === "complete" && !!document.getElementById("editorLoad")'),'Document load');
   assert.equal(await evaluate('getComputedStyle(document.body).backgroundColor'),'rgb(245, 246, 248)');
+  await evaluate('document.getElementById("tab-docs").click()');
+  await wait(()=>evaluate('!!document.getElementById("docsManual").contentDocument?.getElementById("fieldSearch")'),'Documentation iframe');
+  const total=await evaluate('document.getElementById("docsManual").contentDocument.querySelectorAll("[data-field]").length');
+  assert.ok(total>=125,'Documentation iframe must list all canonical JSON fields');
+  const downloads=await evaluate('document.querySelectorAll("#panel-docs .docs-download-buttons a").length');
+  assert.equal(downloads,3);
+  await evaluate('const doc=document.getElementById("docsManual").contentDocument;const search=doc.getElementById("fieldSearch");search.value="silenceInserts";search.dispatchEvent(new Event("input"))');
+  const matches=await evaluate('document.getElementById("docsManual").contentDocument.querySelectorAll("[data-field]:not(.hidden-row)").length');
+  assert.ok(matches>0&&matches<total,'Searching documentation must filter fields');
+  const docsScreen=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
+  fs.writeFileSync(path.join(os.tmpdir(),'contentlab-docs-ui.png'),Buffer.from(docsScreen.data,'base64'));
   await evaluate('document.getElementById("tab-editor").click()');
   await evaluate('document.getElementById("editorProjectRoot").value='+JSON.stringify(root));
   await evaluate('document.getElementById("editorLoad").click()');

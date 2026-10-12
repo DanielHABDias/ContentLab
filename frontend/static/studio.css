@@ -244,3 +244,20 @@ code,.guide-card code {background:#F1F4FA;color:#3C6DAE;border-radius:5px;paddin
 .storyboard-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .storyboard-actions .btn{white-space:nowrap}
 @media(max-width:640px){.storyboard-actions{justify-content:flex-start}}
+
+/* Official documentation workspace */
+.docs-download-bar{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.docs-download-bar h3{font-size:21px;margin:7px 0}
+.docs-download-bar p{max-width:460px}
+.docs-download-buttons{display:flex;gap:9px;flex-wrap:wrap}
+.docs-download-buttons .btn{display:inline-flex;gap:8px;align-items:center;text-decoration:none;white-space:nowrap}
+.docs-viewer-block{background:#fff;border:1px solid #e5ebf3;border-radius:22px;overflow:hidden;
+  box-shadow:0 5px 28px rgba(34,47,69,.035);min-height:700px}
+#docsManual{display:block;width:100%;height:min(78vh,1050px);min-height:700px;border:none;background:#f5f7fb}
+@media(max-width:860px){.workspace-tabs{grid-template-columns:repeat(5,minmax(0,1fr))}
+ .docs-download-bar{align-items:stretch}
+ #docsManual{height:850px}}
+@media(max-width:640px){.docs-download-buttons{flex-direction:column;width:100%}
+ .docs-download-buttons .btn{justify-content:center}
+ .workspace-tab{font-size:9px}
+ #docsManual{min-height:680px;height:780px}}

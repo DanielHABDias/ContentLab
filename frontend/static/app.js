@@ -13,7 +13,7 @@ let sourceRequestId = 0;
 const $ = (id) => document.getElementById(id);
 
 // Areas de trabalho isoladas: trocar de aba preserva o trabalho em andamento.
-const workspaces = ["videos", "transcription", "editor", "guide"];
+const workspaces = ["videos", "transcription", "editor", "docs", "guide"];
 function showWorkspace(name) {
   for (const workspace of workspaces) {
     const active = workspace === name;
@@ -24,6 +24,10 @@ function showWorkspace(name) {
     tab.tabIndex = active ? 0 : -1;
     panel.hidden = !active;
     panel.classList.toggle("hidden", !active);
+  }
+  if(name === "docs") {
+    const manual = $("docsManual");
+    if(manual && !manual.hasAttribute("src")) manual.src = manual.dataset.src;
   }
   history.replaceState(null, "", `#${name}`);
 }
@@ -39,6 +43,7 @@ document.querySelectorAll(".workspace-tab").forEach((tab) => {
   });
 });
 showWorkspace(workspaces.includes(location.hash.slice(1)) ? location.hash.slice(1) : "videos");
+$("guideOpenDocs")?.addEventListener("click", () => {showWorkspace("docs");$("tab-docs").focus();});
 
 function fmt(sec) {
   sec = Math.max(0, Math.round(sec));

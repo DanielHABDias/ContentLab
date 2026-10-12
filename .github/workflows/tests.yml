@@ -2,7 +2,7 @@ name: tests
 
 on:
   push:
-    branches: ["main", "refactor/node-remotion-single-plan", "feat/studio-ui-scene-workspace"]
+    branches: ["main", "refactor/node-remotion-single-plan", "feat/studio-ui-scene-workspace", "feat/complete-docs-skill-site"]
   pull_request:
 
 concurrency:
@@ -23,6 +23,8 @@ jobs:
           for file in server/*.mjs; do node --check "$file"; done
           node --check frontend/static/app.js
           node --check frontend/static/visual_editor.js
+      - name: Verify generated docs and figures match the installed schema
+        run: node scripts/generate-docs.mjs --check
       - name: Run Node tests
         run: node --test server/*.test.mjs
 
@@ -57,7 +59,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: contentlab-studio-ui
-          path: /tmp/contentlab-studio-ui.png
+          path: |
+            /tmp/contentlab-studio-ui.png
+            /tmp/contentlab-docs-ui.png
           if-no-files-found: ignore
       - name: Test HTTP server startup
         run: |
