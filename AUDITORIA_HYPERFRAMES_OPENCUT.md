@@ -121,3 +121,15 @@ O HyperFrames dispõe de skills especializadas, rules/blueprints, catálogo de b
 2. Corrigir primeiro os problemas de assinatura do cache, políticas de inserção e handles de transição.
 3. Em seguida, estudar **um JSON de autoria mais curto** com `template`/preset, `params`, `overrides` e referências a templates pessoais, compilando para o mesmo contrato atual. **É somente proposta para discussão; nenhuma migração de schema foi feita.**
 4. Criar testes de snapshots/contato visual de receitas, independentemente de testes de render sintético.
+
+
+## Adendo — correções de validação
+
+Após a auditoria, a leitura de `transcript.json` revelou duplicação de legendas se o arquivo trouxesse simultaneamente `words` e `segments`. O leitor agora considera `words` como fonte primária e usa `segments` apenas quando aquela lista está ausente ou vazia. Foi acrescentado teste cobrindo ambos os formatos.
+
+A execução adicional da CI em `main` após publicar este relatório expôs uma falha intermitente: o navegador Chrome concluía os testes com sucesso, mas a limpeza imediata da pasta temporária podia retornar `ENOTEMPTY`. A limpeza agora tolera especificamente erros transitórios de perfil em uso, sem mascarar falhas dos testes de interação.
+
+Essas duas correções foram integradas em [PR #2](https://github.com/DanielHABDias/ContentLab/pull/2), depois que a CI do PR passou. O renderizador, os templates e o schema do JSON **não** foram modificados por essas correções.
+
+**Nota de transcrição:** o adaptador `whisper.cpp` pode distribuir as palavras aproximadamente dentro do intervalo de cada segmento; isso não equivale a alinhamento real palavra por palavra. Antes de prometer legendas precisamente sincronizadas, precisamos de teste com timestamps de um modelo real.
+
