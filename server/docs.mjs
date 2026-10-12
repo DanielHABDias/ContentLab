@@ -139,7 +139,7 @@ export function buildMarkdown(){
   '- config aceita opções livres, mas só as consumidas pelo renderer alteram o resultado.','');
  return out.join('\n')+'\n';
 }
-export function buildHtml(){
+export function buildHtml({standalone=false}={}){
  const model=documentationModel();
  const figures=name=>'<figure>'+diagramSvg(name)+'<figcaption>'+esc(figureAlt(name))+'</figcaption></figure>';
  const links=chapters.map(c=>'<a href="#'+c.id+'">'+esc(c.title)+'</a>').join('')+
@@ -147,9 +147,9 @@ export function buildHtml(){
  const intro='<section class="hero"><span class="tag">CONTENT LAB / DOCUMENTAÇÃO OFICIAL</span>'+
   '<h1>Crie. Ajuste.<br>Faça acontecer.</h1>'+
   '<p>Guia completo da ferramenta, recursos já implementados, exemplos de JSON e diagramas gerados com JavaScript.</p>'+
-  '<div class="download-actions"><a href="/api/docs/download?format=md">Documentação .md</a>'+
+  (standalone?'':'<div class="download-actions"><a href="/api/docs/download?format=md">Documentação .md</a>'+
   '<a href="/api/docs/download?format=html">Documentação .html</a>'+
-  '<a href="/api/skill/download">Skill .zip</a></div></section>';
+  '<a href="/api/skill/download">Skill .zip</a></div>')+'</section>';
  const sections=chapters.map(ch=>'<section id="'+ch.id+'"><h2>'+esc(ch.title)+'</h2>'+
   ch.paragraphs.map(p=>'<p>'+esc(p)+'</p>').join('')+figures(ch.diagram)+'</section>').join('');
  const catalog='<section id="catalogo"><h2>Catálogo de recursos</h2>'+
