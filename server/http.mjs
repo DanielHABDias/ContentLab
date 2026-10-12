@@ -18,6 +18,7 @@ const app=express(),jobs=new Map(),transcriptions=new Map(),sourceJobs=new Map()
 app.disable('x-powered-by');
 app.use(express.json({limit:'5mb'}));
 app.use('/static',express.static(path.join(APP_ROOT,'frontend','static'),{index:false}));
+const activeRender=root=>[...jobs.values()].some(job=>job.projectRoot===root&&job.status==='running');
 const upload=multer({dest:os.tmpdir(),limits:{fileSize:1024*1024*1024}});
 const smallUpload=multer({storage:multer.memoryStorage(),limits:{fileSize:5*1024*1024}});
 const api=(handler)=>async(req,res)=>{
@@ -48,7 +49,9 @@ app.post('/api/editor/validate',api(async(req,res)=>{
   res.status(validation.valid?200:422).json(validation);
 }));
 app.post('/api/editor/project/save',api(async(req,res)=>{
-  try{res.json(saveProject(req.body.projectRoot,req.body.planText,req.body.revision));}
+  const {root}=projectFile(req.body.projectRoot);
+  if(activeRender(root))return res.status(409).json({error:'Aguarde o render antes de salvar o plano.'});
+  try{res.json(saveProject(root,req.body.planText,req.body.revision));}
   catch(e){
     if(e.issues?.some(x=>x.path==='revision'))return res.status(409).json({error:e.message,errors:e.issues});
     throw e;
@@ -58,6 +61,7 @@ app.post('/api/editor/project/narration',upload.single('file'),api(async(req,res
   if(!req.file)return forbidden(res,'Selecione uma narração.');
   try{
     const {root}=projectFile(req.body.projectRoot),ext=path.extname(req.file.originalname||'').toLowerCase();
+    if(activeRender(root))return res.status(409).json({error:'Aguarde o render antes de importar narração.'});
     if(!['.wav','.mp3','.m4a','.aac','.flac','.ogg','.opus'].includes(ext))return forbidden(res,'Formato de áudio inválido.');
     const audioDir=path.join(root,'audio');
     if(fs.existsSync(audioDir)&&fs.lstatSync(audioDir).isSymbolicLink())return forbidden(res,'Pasta audio insegura.');
@@ -70,6 +74,7 @@ app.post('/api/editor/project/narration',upload.single('file'),api(async(req,res
 app.post('/api/editor/project/transcript',smallUpload.single('file'),api(async(req,res)=>{
   if(!req.file)return forbidden(res,'Selecione transcript.json.');
   const {root}=projectFile(req.body.projectRoot),doc=JSON.parse(req.file.buffer.toString('utf8'));
+  if(activeRender(root))return res.status(409).json({error:'Aguarde o render antes de atualizar a transcrição.'});
   if(!Array.isArray(doc.segments))return res.status(422).json({error:'Transcrição precisa de segmentos.'});
   for(const s of doc.segments){
     if(!s||!Number.isFinite(s.start)||!Number.isFinite(s.end)||s.end<s.start||typeof s.text!=='string')return res.status(422).json({error:'Segmentos inválidos.'});
@@ -88,7 +93,7 @@ app.post('/api/editor/render',api(async(req,res)=>{
   if(!project.validation.valid)return res.status(422).json({error:'Corrija os assets antes do render.',validation:project.validation});
   if(revision&&revision!==project.revision)return res.status(409).json({error:'O JSON mudou no disco. Recarregue.'});
   const root=project.projectRoot;
-  if([...jobs.values()].some(job=>job.projectRoot===root&&job.status==='running'))return res.status(409).json({error:'Já há um render deste projeto.'});
+  if(activeRender(root))return res.status(409).json({error:'Já há um render deste projeto.'});
   const id=crypto.randomUUID(),controller=new AbortController();
   const job={status:'running',stage:'prepare',percent:0,message:'Preparando render...',projectRoot:root,
     mode:'final',cacheMode,sceneId:null,error:null,filepath:null,controller,startedAt:Date.now()};
@@ -173,7 +178,7 @@ const makeSourceJob=(task,details={})=>{
   sourceJobs.set(id,job);
   const update=(percent,message)=>Object.assign(job,{percent,message});
   Promise.resolve().then(()=>task(job,update)).then(()=>{
-    job.status='done';job.percent=100;job.message='Concluído.';
+    if(job.status==='running')job.status='done';job.percent=100;job.message='Concluído.';
   }).catch(e=>{job.status='error';job.error=e.message;job.message='Falha no processamento.';console.error(e);});
   return id;
 };
