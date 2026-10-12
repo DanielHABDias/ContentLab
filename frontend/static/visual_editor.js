@@ -52,7 +52,7 @@
     writing = false;
     render();
   };
-  const schema = () => context?.schemas?.[plan?.version] || context?.schemas?.['0.2'];
+  const schema = () => context?.schema;
   const resolve = (node) => node?.$ref ? resolve(node.$ref.split('/').slice(1).reduce((item, key) => item[key], schema())) : (node || {});
   const defaultValue = (node, key) => {
     const s = resolve(node);
@@ -212,7 +212,7 @@
         if (key === 'elements') {
           const scene = pathValue(path.slice(0, -1));
           item = {type: 'image', asset: '', start: scene.start, end: scene.end};
-          if (plan.version === '0.2') item.id = `camada-${Date.now().toString(36)}`;
+          item.id = `camada-${Date.now().toString(36)}`;
         }
         if (key === 'music') item = {asset: '', start: 0, end: Math.max(1, plan.timeline.at(-1)?.end || 5)};
         if (key === 'keyframes') item = {t: list.length ? Number(list.at(-1).t) + 1 : 0};
@@ -290,11 +290,9 @@
   };
   $('visualAddScene').addEventListener('click', () => {
     if (!plan || !context) return message('Abra ou crie um projeto primeiro.');
-    const legacy = plan.version === '0.1' && plan.timeline.length > 0;
-    if (plan.version === '0.1' && !legacy) plan.version = '0.2';
     const start = plan.timeline.length ? Math.max(...plan.timeline.map(scene => Number(scene.end))) : 0;
     const id = `cena-${Date.now().toString(36)}`;
-    plan.timeline.push({id, start, end: start + 5, layout: legacy ? {grid: '3x3'} : '3x3', background: {color: '#000000'}, elements: [], transitionOut: 'cut'});
+    plan.timeline.push({id, start, end: start + 5, layout: '3x3', background: {color: '#000000'}, elements: [], transitionOut: 'cut'});
     selectedScene = plan.timeline.length - 1; changed();
   });
   $('visualRefresh').addEventListener('click', () => {

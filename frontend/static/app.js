@@ -1180,10 +1180,6 @@ $("motionAddScene").addEventListener("click", () => {
     if (!editorProject) throw new Error("Carregue um projeto antes de criar a cena.");
     const plan = JSON.parse($("editorPlanText").value);
     if (!Array.isArray(plan.timeline)) throw new Error("O JSON precisa ter uma timeline.");
-    if (plan.version === "0.1" && plan.timeline.length) {
-      throw new Error("Este projeto já tem cenas 0.1. Crie outro projeto para usar cenas motion 0.2 sem alterar as cenas existentes.");
-    }
-    if (!["0.1", "0.2"].includes(plan.version)) throw new Error("Versão do JSON não suportada.");
     const leftAsset = $("motionLeftAsset").value.trim();
     const rightAsset = $("motionRightAsset").value.trim();
     const backgroundSource = $("motionBackgroundSource").value;
@@ -1204,7 +1200,6 @@ $("motionAddScene").addEventListener("click", () => {
     while (plan.timeline.some(scene => scene.id === `motion-${idNumber}`)) idNumber += 1;
     const background = backgroundSource === "color" ? { color: backgroundValue } : { asset: backgroundValue, fit: "cover" };
     if (background.asset && /\.(mp4|mov|mkv|webm)$/i.test(backgroundValue)) background.loop = $("motionBackgroundLoop").checked;
-    plan.version = "0.2";
     plan.timeline.push({
       id: `motion-${idNumber}`, start, end, layout: "3x3", background,
       elements: [
