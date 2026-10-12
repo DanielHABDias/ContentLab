@@ -6,30 +6,26 @@
 <title>Content Lab — estúdio de conteúdo</title>
 
 <link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/studio.css">
 </head>
 <body>
 
 <div class="wrap">
-
-  <header class="topbar">
-    <div class="brand">
-      <span class="brand-mark"><span class="brand-logo"></span></span>
-      <div>
-        <h1>Content Lab</h1>
-        <p class="tagline">seu estúdio de cortes, transcrição e edição</p>
-      </div>
-    </div>
-    <button id="shutdownBtn" class="btn btn-danger btn-sm" type="button" title="Encerrar o Content Lab">Encerrar</button>
-  </header>
-
-  <main class="panel">
-    <nav class="workspace-tabs" role="tablist" aria-label="Áreas de trabalho">
+<header class="topbar">
+  <div class="brand"><span class="brand-mark"><img class="brand-logo" src="/static/contentlab-mark.svg" width="44" height="44" alt="Monograma CT do Content Lab"></span>
+    <div class="brand-type"><h1>Content Lab<span class="brand-period">.</span></h1><p class="tagline">Seu estúdio criativo</p></div></div>
+  <div class="topbar-right"><span class="system-status"><span aria-hidden="true"></span> Estúdio local</span>
+    <button id="shutdownBtn" class="btn btn-ghost btn-sm" type="button" title="Encerrar o Content Lab">Encerrar sessão</button></div>
+</header>
+<div class="studio-shell"><aside class="studio-sidebar">
+  <span class="sidebar-caption">WORKSPACE</span>
+  <nav class="workspace-tabs" role="tablist" aria-label="Áreas de trabalho">
       <button class="workspace-tab is-active" id="tab-videos" role="tab" aria-selected="true" aria-controls="panel-videos" type="button" data-workspace="videos"><span>01</span> Vídeos e cortes</button>
       <button class="workspace-tab" id="tab-transcription" role="tab" aria-selected="false" aria-controls="panel-transcription" type="button" data-workspace="transcription"><span>02</span> Transcrição</button>
       <button class="workspace-tab" id="tab-editor" role="tab" aria-selected="false" aria-controls="panel-editor" type="button" data-workspace="editor"><span>03</span> Editor automático</button>
       <button class="workspace-tab" id="tab-guide" role="tab" aria-selected="false" aria-controls="panel-guide" type="button" data-workspace="guide"><span>ⓘ</span> Guia do projeto</button>
-    </nav>
-
+  </nav><div class="sidebar-foot"><span class="sidebar-foot-icon">✦</span><strong>Faça a ideia ganhar movimento.</strong><small>Node.js · Remotion · Local</small></div></aside>
+  <main class="panel">
     <div id="panel-videos" class="workspace-panel" role="tabpanel" aria-labelledby="tab-videos">
       <div class="workspace-intro"><span class="eyebrow">BIBLIOTECA DE FONTE</span><h2>Vídeos e cortes</h2><p>Carregue um link, reutilize o cache ou importe um vídeo que já está no computador; depois escolha trechos e exporte vídeo, áudio ou legenda.</p></div>
 
@@ -261,10 +257,9 @@
     </div>
 
     <div id="panel-editor" class="workspace-panel hidden" role="tabpanel" aria-labelledby="tab-editor" hidden>
-    <div class="workspace-intro"><span class="eyebrow">COMPOSIÇÃO AUTOMÁTICA</span><h2>Editor automático</h2><p>Monte o plano JSON, valide os assets e gere diretamente o vídeo final.</p></div>
+    <div class="workspace-intro"><span class="eyebrow">STUDIO / EDITOR</span><h2>Crie cena por cena.<br><span class="heading-muted">Sem complicar.</span></h2><p>Explore os trechos, ajuste camadas e aproveite o cache. O render final continua sendo um único clique.</p></div>
     <section class="block editor-project" aria-labelledby="editorHeading">
-      <h3 id="editorHeading">Projeto de edição</h3>
-      <p class="helper-text">Abra a pasta de um projeto com <code>edit_plan.json</code>. O render final usa a resolução e o FPS definidos no plano.</p>
+      <div class="section-heading"><div><span class="eyebrow">01 / PROJETO</span><h3 id="editorHeading">Seu projeto</h3></div><p class="helper-text">Abra uma pasta com <code>edit_plan.json</code> para começar.</p></div>
       <label class="block-label" for="editorProjectRoot">Pasta do projeto</label>
       <div class="row">
         <input id="editorProjectRoot" type="text" placeholder="/caminho/para/meu-projeto" autocomplete="off">
@@ -277,9 +272,19 @@
       </div>
       <p id="editorError" class="error-text hidden" role="alert"></p>
       <div id="editorDetails" class="hidden">
-        <h3 id="editorProjectName"></h3>
-        <p id="editorSummary" class="helper-text"></p>
-        <ol id="editorScenes" class="editor-scenes"></ol>
+        <div class="project-overview"><div><span class="eyebrow">PROJETO ATIVO</span><h3 id="editorProjectName"></h3><p id="editorSummary" class="helper-text"></p></div><span class="project-overview-pill">Editável · JSON</span></div>
+        <ol id="editorScenes" class="editor-scenes hidden" aria-hidden="true"></ol>
+        <section class="render-console" aria-label="Exportação de vídeo">
+          <div><span class="eyebrow">EXPORTAR</span><h3>Seu filme, no seu tempo.</h3><p class="helper-text">Cenas renderizadas são reutilizadas automaticamente. O render completo só acontece quando você escolhe.</p></div>
+          <div class="render-buttons"><button id="editorReuse" class="btn btn-primary" type="button" disabled>Aproveitar cache <span aria-hidden="true">↗</span></button><button id="editorRebuild" class="btn btn-secondary" type="button" disabled>Refazer tudo</button></div>
+          <label class="editor-gpu"><input id="editorGpu" type="checkbox"> Usar GPU quando disponível</label>
+          <button id="editorCancel" class="btn btn-danger btn-sm hidden" type="button">Cancelar render</button>
+          <p id="editorStatus" class="helper-text" role="status" aria-live="polite"></p>
+          <div class="editor-progress" role="progressbar" aria-label="Progresso do render" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="editorProgressFill"></span></div>
+          <video id="editorVideo" class="editor-video hidden" controls playsinline preload="metadata"></video>
+          <p id="editorOutput" class="mono editor-output"></p><ul id="editorWarnings" class="editor-list"></ul>
+          <details id="editorReportDetails" class="hidden"><summary>Detalhes técnicos do render</summary><pre id="editorReport"></pre></details>
+        </section>
         <div class="editor-inputs">
           <button id="editorChooseNarration" class="btn btn-secondary btn-sm" type="button">Selecionar narração</button>
           <input id="editorNarrationFile" class="hidden" type="file" accept="audio/*,.wav,.mp3,.m4a,.aac,.flac,.ogg,.opus">
@@ -293,16 +298,33 @@
         </div>
         <ul id="editorAssetLibrary" class="editor-list"></ul>
         <section class="visual-builder" aria-labelledby="visualBuilderHeading">
-          <div class="visual-builder-head"><div><span class="eyebrow">EDIÇÃO SEM ESCREVER JSON</span><h3 id="visualBuilderHeading">Montagem visual do plano</h3><p class="helper-text">Adicione cenas e camadas; os campos abaixo geram o mesmo edit_plan.json usado pela IA. Intervalos sem cena ficam pretos, com a narração mantida.</p></div><button id="visualRefresh" class="btn btn-ghost btn-sm" type="button">Atualizar assets e transcrição</button></div>
-          <p id="visualMessage" class="helper-text" role="status"></p>
-          <div class="visual-layout">
-            <div class="visual-main">
-              <details class="visual-global"><summary>Configurações do projeto, narração e música</summary><div id="visualGlobalFields"></div></details>
-              <div class="visual-scenes-head"><h4>Cenas</h4><button id="visualAddScene" class="btn btn-primary btn-sm" type="button">+ Nova cena</button></div>
-              <div id="visualSceneList" class="visual-scene-list"></div>
-              <div id="visualSceneFields"></div>
+          <div class="visual-builder-head"><div><span class="eyebrow">02 / STORYBOARD</span><h3 id="visualBuilderHeading">Sua linha do tempo</h3>
+            <p class="helper-text">Selecione uma cena para editar. Assista diretamente aos MP4s salvos em cache.</p></div>
+            <button id="visualRefresh" class="btn btn-ghost btn-sm" type="button">↻ Atualizar mídias</button></div>
+          <p id="visualMessage" class="helper-text" role="status" aria-live="polite"></p>
+          <div class="scene-workspace">
+            <div class="scene-rail">
+              <div class="visual-scenes-head"><h4>Cenas <span id="visualSceneCount" class="scene-count"></span></h4><button id="visualAddScene" class="btn btn-primary btn-sm" type="button">+ Nova cena</button></div>
+              <label class="scene-search-label" for="visualSceneSearch">Encontrar cena</label>
+              <input id="visualSceneSearch" class="scene-search" type="search" autocomplete="off" placeholder="Buscar por ID, texto, tempo...">
+              <div id="visualSceneList" class="visual-scene-list" role="list" aria-label="Cenas do projeto"></div>
+              <p class="scene-rail-tip">Duplicar mantém os elementos, mas cria um novo ID. Apenas cenas alteradas são reprocessadas.</p>
             </div>
-            <aside class="visual-transcript" aria-label="Transcrição de referência"><h4>Transcrição</h4><p class="helper-text">Use os tempos das frases para marcar início e fim da cena selecionada. Se já estiver na pasta como transcript.json, ela aparece automaticamente.</p><button id="visualImportTranscript" class="btn btn-secondary btn-sm" type="button">Carregar transcript.json</button><input id="visualTranscriptFile" class="hidden" type="file" accept=".json,application/json"><div id="visualTranscriptRows"></div></aside>
+            <div class="scene-inspector">
+              <div class="scene-preview-card">
+                <div class="scene-preview-top"><div><span class="eyebrow">CENA SELECIONADA</span><strong id="visualSelectedSceneTitle">Selecione uma cena</strong></div><span id="visualSelectedSceneCache" class="cache-pill">Sem cache</span></div>
+                <div class="scene-preview-screen"><video id="visualSceneVideo" class="hidden" controls playsinline preload="metadata" aria-label="Vídeo da cena em cache"></video>
+                  <div id="visualSceneEmpty" class="scene-preview-empty"><span aria-hidden="true">▷</span><strong>Seu trecho aparece aqui</strong><small>Depois do primeiro render, cada cena terá sua reprodução.</small></div></div>
+                <div class="scene-preview-meta"><span id="visualSceneTime">—</span><span id="visualSceneLayerCount">—</span></div>
+              </div>
+              <div id="visualSceneFields" class="scene-fields"></div>
+              <details class="visual-global"><summary>Configurações gerais do vídeo e áudio</summary><div id="visualGlobalFields"></div></details>
+              <details class="visual-transcript" aria-label="Transcrição de referência"><summary>Transcrição e marcação de tempos</summary>
+                <p class="helper-text">Use os tempos da narração para definir o início e o fim da cena.</p>
+                <button id="visualImportTranscript" class="btn btn-secondary btn-sm" type="button">Importar transcript.json</button>
+                <input id="visualTranscriptFile" class="hidden" type="file" accept=".json,application/json"><div id="visualTranscriptRows"></div>
+              </details>
+            </div>
           </div>
         </section>
         <details class="editor-plan">
@@ -345,22 +367,6 @@
         <details class="editor-inspection">
           <summary>Plugins disponíveis</summary>
           <ul id="editorPlugins" class="editor-list"></ul>
-        </details>
-        <div class="editor-actions">
-          <button id="editorReuse" class="btn btn-primary" type="button" disabled>Aproveitar cache</button>
-          <button id="editorRebuild" class="btn btn-secondary" type="button" disabled>Refazer tudo</button>
-        </div>
-        <p class="helper-text">Aproveitar cache: renderiza só as cenas alteradas e remonta o vídeo final. Refazer tudo: apaga a pasta output deste projeto e gera tudo novamente.</p>
-        <label class="editor-gpu"><input id="editorGpu" type="checkbox"> Tentar aceleração NVIDIA (NVENC); usa CPU se indisponível</label>
-        <button id="editorCancel" class="btn btn-danger btn-sm hidden" type="button">Cancelar render</button>
-        <p id="editorStatus" class="helper-text" role="status" aria-live="polite"></p>
-        <div class="editor-progress" role="progressbar" aria-label="Progresso do render" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="editorProgressFill"></span></div>
-        <video id="editorVideo" class="editor-video hidden" controls playsinline preload="metadata"></video>
-        <p id="editorOutput" class="mono editor-output"></p>
-        <ul id="editorWarnings" class="editor-list"></ul>
-        <details id="editorReportDetails" class="hidden">
-          <summary>Relatório do render</summary>
-          <pre id="editorReport"></pre>
         </details>
       </div>
     </section>
@@ -427,7 +433,7 @@
         <p>Arquivos que acompanham o aplicativo usam <code>builtin://</code>. Arquivos seus usam <code>project://</code>. Caminhos que saem da pasta do projeto são bloqueados.</p>
       </section>
     </div>
-  </main>
+  </main></div>
 </div>
 
 <div id="shutdownScreen" class="shutdown-screen hidden" role="status" aria-live="polite">

@@ -11,6 +11,7 @@ import {run} from './exec.mjs';
 import {SOURCE_CACHE,listSources,cachedSource,importLocalSource,removeSource,getYoutubeInfo,resolveSource,exportCut} from './source.mjs';
 import {transcribeAudio} from './transcribe.mjs';
 import {streamSkillZip} from './skill.mjs';
+import {sceneCacheOverview,savedSceneFile} from './scene-browser.mjs';
 
 const PORT=Number(process.env.PORT||5000);
 const HOST='127.0.0.1';
@@ -41,6 +42,16 @@ app.get('/api/editor/plugins',api(async(req,res)=>res.json(registry())));
 app.get('/api/editor/backgrounds',api(async(req,res)=>res.json({backgrounds:installedAssets().backgrounds})));
 app.post('/api/editor/visual-context',api(async(req,res)=>res.json(visualContext(req.body.projectRoot))));
 app.post('/api/editor/project',api(async(req,res)=>res.json(loadProject(req.body.projectRoot))));
+app.get('/api/editor/scenes',api(async(req,res)=>{
+  if(typeof req.query.projectRoot!=='string')return forbidden(res,'Informe a pasta do projeto.');
+  res.json(sceneCacheOverview(req.query.projectRoot));
+}));
+app.get('/api/editor/scenes/:id/media',api(async(req,res)=>{
+  if(typeof req.query.projectRoot!=='string')return forbidden(res,'Informe a pasta do projeto.');
+  const file=savedSceneFile(req.query.projectRoot,req.params.id);
+  if(!file)return res.status(404).json({error:'Não existe MP4 válido em cache para esta cena.'});
+  res.type('video/mp4').sendFile(file,{acceptRanges:true});
+}));
 app.post('/api/editor/project/create',api(async(req,res)=>res.status(201).json(createProject(req.body.parentRoot,req.body.name))));
 app.post('/api/editor/project/assets',api(async(req,res)=>res.json(listAssets(req.body.projectRoot,req.body.folder))));
 app.post('/api/editor/validate',api(async(req,res)=>{

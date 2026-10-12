@@ -31,6 +31,57 @@
   let plan = null;
   let selectedScene = 0;
   let writing = false;
+  let projectRoot = '';
+  let initialScenes = new Map();
+  let sceneCache = new Map();
+  let searchQuery = '';
+  const fmtTime = seconds => Number(seconds || 0).toFixed(2).replace(/\.00$/, '') + 's';
+  const uniqueSceneId = prefix => {
+    const existing = new Set((plan?.timeline || []).map(item => item.id));
+    const safe = String(prefix || 'cena').replace(/[^\w-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'cena';
+    let next = safe, suffix = 2;
+    while (existing.has(next)) next = safe + '-' + suffix++;
+    return next;
+  };
+  const shiftScene = (scene, offset) => {
+    scene.start = Number((scene.start + offset).toFixed(6));
+    scene.end = Number((scene.end + offset).toFixed(6));
+    for (const item of scene.elements || []) {
+      if (typeof item.start === 'number') item.start = Number((item.start + offset).toFixed(6));
+      if (typeof item.end === 'number') item.end = Number((item.end + offset).toFixed(6));
+      if (typeof item.at === 'number') item.at = Number((item.at + offset).toFixed(6));
+    }
+  };
+  const insertScene = (at, scene) => {
+    const duration = scene.end - scene.start;
+    const start = at > 0 ? plan.timeline[at - 1].end : 0;
+    shiftScene(scene, start - scene.start);
+    for (let i = at; i < plan.timeline.length; i++) shiftScene(plan.timeline[i], duration);
+    plan.timeline.splice(at, 0, scene);
+    selectedScene = at;
+    changed();
+  };
+  const cloneScene = scene => JSON.parse(JSON.stringify(scene));
+  const cacheStatus = scene => {
+    const cached = sceneCache.get(scene.id) || {status:'missing'};
+    const originally = initialScenes.get(scene.id);
+    if (originally && JSON.stringify(originally) !== JSON.stringify(scene))
+      return {status:'changed',hasVideo:cached.status!=='missing'};
+    return {status:cached.status,hasVideo:cached.status!=='missing'};
+  };
+  const cacheLabel = status => ({
+    ready:'Em cache',changed:'Alterada',missing:'Sem render'
+  }[status] || 'Sem render');
+  const loadCacheState = async () => {
+    sceneCache = new Map();
+    if (!projectRoot) return;
+    try {
+      const response = await fetch('/api/editor/scenes?projectRoot=' + encodeURIComponent(projectRoot));
+      if (!response.ok) return;
+      const data = await response.json();
+      sceneCache = new Map((data.scenes || []).map(item => [item.id,item]));
+    } catch (_) { /* Trabalhar offline não depende dos MP4s existentes. */ }
+  };
   let listId = 0;
   const message = (value) => { $('visualMessage').textContent = value; };
   const label = (key) => labels[key] || key;
@@ -43,6 +94,7 @@
     $('editorPlanText').value = JSON.stringify(plan, null, 2);
     $('editorPlanText').dispatchEvent(new Event('input'));
     writing = false;
+    render();
     message('Rascunho atualizado. Valide e salve o plano antes do render final.');
   };
   const changed = () => {
@@ -248,29 +300,141 @@
     }
     if (plan.sources === undefined) global.append(button('+ Fontes e transcrição', () => { plan.sources = {}; changed(); }));
     const list = $('visualSceneList'); list.replaceChildren();
-    plan.timeline.forEach((scene, index) => {
-      const card = button(`${index + 1}. ${scene.id || 'Sem nome'} · ${scene.start}s–${scene.end}s · ${scene.elements?.length || 0} camada(s)`, () => { selectedScene = index; render(); }, index === selectedScene ? 'visual-scene selected' : 'visual-scene');
+    $('visualSceneCount').textContent = '(' + plan.timeline.length + ')';
+    let visible = 0;
+    plan.timeline.forEach((scene,index) => {
+      const brief = (scene.elements || []).map(item => item.text || item.asset || '').filter(Boolean).join(' ');
+      if (searchQuery && ![scene.id,String(index + 1),brief,String(scene.start),String(scene.end)]
+        .some(value => value.toLowerCase().includes(searchQuery))) return;
+      visible++;
+      const status = cacheStatus(scene);
+      const card = button('', () => { selectedScene = index; render(); },
+        index === selectedScene ? 'visual-scene selected' : 'visual-scene');
+      card.setAttribute('role','listitem');
+      card.setAttribute('aria-label','Cena ' + (index + 1) + ': ' + scene.id);
+      card.setAttribute('aria-current',index === selectedScene ? 'true' : 'false');
+      const heading = el('span',undefined,'scene-card-heading');
+      heading.append(el('span',String(index + 1).padStart(2,'0'),'scene-number'),
+        el('strong',scene.id || 'Sem ID'));
+      const pill=el('span',cacheLabel(status.status),'scene-status status-' + status.status);
+      card.append(heading,el('small',fmtTime(scene.start) + ' → ' + fmtTime(scene.end) + ' · ' +
+        (scene.elements?.length || 0) + ' camada(s)'),pill);
+      if (brief)card.append(el('span',brief.slice(0,90),'scene-card-brief'));
       list.append(card);
     });
-    const fields = $('visualSceneFields'); fields.replaceChildren();
+    if (!visible) list.append(el('p','Nenhuma cena corresponde à busca.','helper-text'));
+    const fields = $('visualSceneFields');
+    const openDetails=[...fields.querySelectorAll('details')].map(node=>node.open);
+    fields.replaceChildren();
     const scene = plan.timeline[selectedScene];
+    const player = $('visualSceneVideo'),empty = $('visualSceneEmpty');
     if (scene) {
-      const heading = el('div', undefined, 'visual-scenes-head');
-      heading.append(el('h4', `Cena ${selectedScene + 1}`), button('Remover cena', () => {
-        if (!window.confirm('Remover esta cena do rascunho?')) return;
-        plan.timeline.splice(selectedScene, 1); selectedScene = Math.max(0, selectedScene - 1); changed();
-      }, 'btn btn-danger btn-sm'));
-      fields.append(heading);
-      const sceneSchema = resolve(schema().$defs.scene);
-      for (const field of Object.keys(scene)) renderNode(fields, sceneSchema.properties[field] || {}, scene[field], ['timeline', selectedScene, field]);
-      const available = Object.keys(sceneSchema.properties).filter(field => !(field in scene));
-      if (available.length) {
-        const add = el('div', undefined, 'visual-add');
-        const picker = choices(add, available, available[0], () => {});
-        add.append(button('+ Opção da cena', () => { scene[picker.value] = defaultValue(sceneSchema.properties[picker.value], picker.value); changed(); }));
-        fields.append(add);
+      const state = cacheStatus(scene);
+      $('visualSelectedSceneTitle').textContent = scene.id;
+      $('visualSelectedSceneCache').textContent = state.status === 'changed' && state.hasVideo ?
+        'Versão anterior' : cacheLabel(state.status);
+      $('visualSelectedSceneCache').className='cache-pill status-' + state.status;
+      $('visualSceneTime').textContent = fmtTime(scene.start) + ' — ' + fmtTime(scene.end) +
+        ' · ' + fmtTime(scene.end-scene.start);
+      $('visualSceneLayerCount').textContent = (scene.elements?.length || 0) + ' camadas';
+      const previewKey=projectRoot + '::' + scene.id;
+      if(state.hasVideo){
+        if(player.dataset.previewKey !== previewKey){
+          player.pause();
+          player.src='/api/editor/scenes/' + encodeURIComponent(scene.id) +
+            '/media?projectRoot=' + encodeURIComponent(projectRoot);
+          player.dataset.previewKey = previewKey;
+          player.load();
+        }
+        player.classList.remove('hidden');empty.classList.add('hidden');
+      }else{
+        player.pause();player.removeAttribute('src');player.dataset.previewKey='';
+        player.classList.add('hidden');empty.classList.remove('hidden');
+        empty.querySelector('strong').textContent='Cena ainda não renderizada';
+        empty.querySelector('small').textContent='Use Aproveitar cache para gerar o primeiro MP4 desta cena.';
       }
-    } else fields.append(el('p', 'Clique em “+ Nova cena” para começar. Você também pode deixar intervalos sem cena: eles serão exibidos em preto.', 'helper-text'));
+      const quick = el('section',undefined,'scene-quick');
+      const heading = el('div',undefined,'scene-detail-heading');
+      heading.append(el('div',undefined,'scene-detail-title'));
+      heading.firstChild.append(el('span','PROPRIEDADES DA CENA','eyebrow'),el('h4','Ajustes rápidos'));
+      const actions=el('div',undefined,'scene-action-row');
+      actions.append(button('Inserir após',() => {
+        const fresh={id:uniqueSceneId('cena'),start:0,end:5,layout:'3x3',
+          background:{color:'#000000'},elements:[],transitionOut:'cut'};
+        insertScene(selectedScene + 1,fresh);
+      },'btn btn-secondary btn-sm'),button('Duplicar',()=>{
+        const clone=cloneScene(scene);clone.id=uniqueSceneId(scene.id + '-copia');
+        for(const item of clone.elements||[])if(item.id) item.id=item.id+'-copia';
+        insertScene(selectedScene + 1,clone);
+      },'btn btn-secondary btn-sm'),button('Excluir',()=>{
+        if(!window.confirm('Excluir a cena ' + scene.id + '? Um intervalo vazio continuará na timeline.'))return;
+        plan.timeline.splice(selectedScene,1);
+        selectedScene=Math.max(0,Math.min(selectedScene,plan.timeline.length-1));changed();
+      },'btn btn-danger btn-sm'));
+      heading.append(actions);quick.append(heading);
+      const quickGrid=el('div',undefined,'scene-quick-grid');
+      for(const [key,title,step] of [['id','ID da cena',null],['start','Início (segundos)','0.01'],
+        ['end','Fim (segundos)','0.01']]){
+        const labelNode=el('label',undefined,'visual-field');labelNode.append(el('span',title));
+        const input=el('input');input.type=step?'number':'text';
+        if(step){input.min='0';input.step=step;}
+        input.value=scene[key];input.addEventListener('change',()=>{
+          const value=step?Number(input.value):input.value.trim();
+          if(key==='id' && (!value || plan.timeline.some((other,i)=>i!==selectedScene&&other.id===value))){
+            message('Escolha um ID novo e não vazio.');input.value=scene.id;return;
+          }
+          if(step && (value<0 || (key==='end'&&value<=scene.start) ||
+            (key==='start'&&value>=scene.end))){message('Verifique o início e o fim da cena.');input.value=scene[key];return;}
+          update(['timeline',selectedScene,key],value);
+        });
+        labelNode.append(input);quickGrid.append(labelNode);
+      }
+      quick.append(quickGrid);
+      const layerTools=el('div',undefined,'scene-layer-tools');
+      layerTools.append(el('strong','Camadas da cena'));
+      const picker=el('select');picker.setAttribute('aria-label','Tipo da nova camada');
+      for(const [value,title] of [['image','Imagem / PNG'],['video','Vídeo'],['text','Texto'],
+        ['caption','Legenda'],['overlay','Sobreposição'],['sfx','Efeito sonoro']]){
+        const option=el('option',title);option.value=value;picker.append(option);
+      }
+      layerTools.append(picker,button('+ Adicionar camada',()=>{
+        const type=picker.value;
+        const element={id:'camada-'+Date.now().toString(36),type,
+          start:scene.start,end:scene.end};
+        if(['image','video','overlay','sfx'].includes(type))element.asset='';
+        if(type==='image')element.cells=[2,5,8];
+        if(type==='text')element.text='Novo texto';
+        if(type==='sfx'){delete element.start;delete element.end;element.at=scene.start;}
+        scene.elements=scene.elements||[];scene.elements.push(element);changed();
+      },'btn btn-secondary btn-sm'));
+      quick.append(layerTools);
+      const advanced=el('details',undefined,'scene-advanced');
+      advanced.append(el('summary','Editar propriedades avançadas (fundo, câmera, elementos, animações)'));
+      const advancedBody=el('div',undefined,'scene-advanced-body');
+      const sceneSchema=resolve(schema().$defs.scene);
+      for(const field of Object.keys(scene)){
+        if(['id','start','end'].includes(field))continue;
+        renderNode(advancedBody,sceneSchema.properties[field]||{},scene[field],['timeline',selectedScene,field]);
+      }
+      const available=Object.keys(sceneSchema.properties).filter(field=>!(field in scene));
+      if(available.length){
+        const add=el('div',undefined,'visual-add');const picker=choices(add,available,available[0],()=>{});
+        add.append(button('+ Propriedade',()=>{
+          scene[picker.value]=defaultValue(sceneSchema.properties[picker.value],picker.value);changed();
+        }));advancedBody.append(add);
+      }
+      advanced.append(advancedBody);quick.append(advanced);fields.append(quick);
+    }else{
+      $('visualSelectedSceneTitle').textContent='Nenhuma cena';
+      $('visualSelectedSceneCache').textContent='Sem cache';
+      $('visualSceneTime').textContent='—';$('visualSceneLayerCount').textContent='—';
+      player.pause();player.removeAttribute('src');player.classList.add('hidden');
+      empty.classList.remove('hidden');
+      fields.append(el('p','Clique em + Nova cena para começar seu storyboard.','helper-text'));
+    }
+    [...fields.querySelectorAll('details')].forEach((node,i)=>{
+      if(i < openDetails.length) node.open=openDetails[i];
+    });
     renderTranscript();
   };
   const load = async (project) => {
@@ -279,7 +443,13 @@
       const response = await fetch('/api/editor/visual-context', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({projectRoot: project.projectRoot})});
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Não foi possível carregar o editor visual.');
-      context = data; plan = JSON.parse($('editorPlanText').value); selectedScene = 0; render();
+      const previouslySelected = projectRoot === project.projectRoot ?
+        plan?.timeline?.[selectedScene]?.id : null;
+      context = data; plan = JSON.parse($('editorPlanText').value);
+      selectedScene = Math.max(0,plan.timeline.findIndex(scene=>scene.id===previouslySelected));
+      projectRoot = project.projectRoot;
+      initialScenes = new Map((plan.timeline||[]).map(item=>[item.id,cloneScene(item)]));
+      await loadCacheState();render();
       message('Editor visual pronto. Alterações aparecem também no JSON abaixo.');
     } catch (error) { message(error.message); }
   };
@@ -290,10 +460,13 @@
   };
   $('visualAddScene').addEventListener('click', () => {
     if (!plan || !context) return message('Abra ou crie um projeto primeiro.');
-    const start = plan.timeline.length ? Math.max(...plan.timeline.map(scene => Number(scene.end))) : 0;
-    const id = `cena-${Date.now().toString(36)}`;
-    plan.timeline.push({id, start, end: start + 5, layout: '3x3', background: {color: '#000000'}, elements: [], transitionOut: 'cut'});
-    selectedScene = plan.timeline.length - 1; changed();
+    const start=plan.timeline.length?Math.max(...plan.timeline.map(scene=>Number(scene.end))):0;
+    plan.timeline.push({id:uniqueSceneId('cena'),start,end:start+5,layout:'3x3',
+      background:{color:'#000000'},elements:[],transitionOut:'cut'});
+    selectedScene=plan.timeline.length-1;changed();
+  });
+  $('visualSceneSearch').addEventListener('input',event=>{
+    searchQuery=event.target.value.trim().toLowerCase();render();
   });
   $('visualRefresh').addEventListener('click', () => {
     const root = $('editorProjectRoot').value.trim();
