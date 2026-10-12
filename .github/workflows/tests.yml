@@ -2,7 +2,7 @@ name: tests
 
 on:
   push:
-    branches: ["main", "refactor/node-remotion-single-plan"]
+    branches: ["main", "refactor/node-remotion-single-plan", "feat/studio-ui-scene-workspace"]
   pull_request:
 
 jobs:
