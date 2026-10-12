@@ -9,9 +9,9 @@ Editor automático e utilitários de vídeo para o canal Diazverso. **A migraç�
 - **Remotion**: renderizador visual das cenas, com keyframes, textos, PNGs, vídeo e câmera.
 - **FFmpeg/FFprobe**: cortes, concatenação, transições, normalização, mixagem e verificação do MP4.
 - **YouTube.js (`youtubei.js`)**: cliente JavaScript para fontes do YouTube.
-- **whisper.cpp**: mecanismo externo de transcrição sem runtime Python.
+- **whisper.cpp**: ferramenta local de transcrição executada diretamente pelo servidor Node.
 
-Remotion pode ser o motor de motion design sem que o FFmpeg deixe de existir. O Python ainda existe **apenas como implementação antiga nesta branch de transição**, e precisa ser excluído depois da paridade. Não iniciar o novo aplicativo com Flask.
+Remotion concentra a renderização visual; o FFmpeg continua responsável por áudio, cortes e composição final. O código de servidor utiliza exclusivamente Node.js.
 
 ## Instalação
 
@@ -32,7 +32,7 @@ Para converter um `edit_plan.json` existente, preservando cópia de segurança:
 npm run migrate:plan -- "/caminho/para/VD_0005"
 ```
 
-O script remove o campo de versão antigo somente quando a estrutura restante é compatível com o schema atual. Em caso de erro, não sobrescreve o arquivo.
+O script adapta planos existentes ao contrato único, valida todos os campos e preserva um backup. Em caso de erro, não sobrescreve o arquivo.
 
 ### Comandos
 
@@ -93,15 +93,15 @@ O adaptador de transcrição usa o executável `whisper-cli` e um modelo `ggml-*
 - Render de ponta a ponta com Remotion + FFmpeg: smoke test na CI da branch.
 - Downloads, corte, transcrição, CLI e HTTP: adaptadores Node implementados; ainda precisam de testes reais de compatibilidade.
 - Empacotamento Windows, efeitos chroma/overlay, importação e recursos de interface: **paridade ainda não confirmada**.
-- A biblioteca de plugins, a skill antiga de edição e a documentação histórica serão consolidadas depois da migração.
-- Não apagar o Python do `main` antes de confirmar que todos os fluxos importantes são atendidos.
+- A skill do editor é gerada dinamicamente a partir do schema e dos guias atuais pela rota de download do aplicativo.
+- O código legado foi excluído desta branch; a integração no `main` depende da aceitação completa para não perder funcionalidades.
 
 ## Próximos passos
 
 1. Validar render do VD_0005 com assets reais e comparar frames, áudio e transições.
 2. Concluir testes de downloads e transcrição nativa, revisar limites de APIs externas.
 3. Corrigir diferenças visuais e testes, atualizar skill e instalador Windows.
-4. Excluir código legado Python e antigas dependências, consolidar a documentação.
+4. Verificar os instaladores e os testes manuais com vídeos reais, então integrar a branch ao `main`.
 5. Integrar a branch ao `main` após os testes de aceitação.
 
 [Direção Remotion/HyperFrames](MOTION_ENGINE_STRATEGY.md).
