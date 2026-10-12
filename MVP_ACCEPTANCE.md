@@ -1,53 +1,24 @@
-# Fase 10 — aceite do MVP
+# Aceitação do Content Lab Node/Remotion
 
-Este checklist separa a implementação da comprovação em ambiente real. O teste
-integrado usa mídias **sintéticas** e não substitui a inspeção com a voz, o
-apresentador e os assets finais de cada projeto.
-
-## Resultado técnico no Linux
-
-Execute na raiz do repositório, com FFmpeg e FFprobe disponíveis:
+## Validação automatizada
 
 ```bash
-python -m unittest discover -s tests -q
-python -m tests.mvp_acceptance
+npm test
+node server/smoke.mjs
+node server/smoke-transitions.mjs
 ```
 
-O segundo comando gera um projeto temporário de 60 segundos, faz render final e rough cut, verifica H.264/AAC, duração dos streams de vídeo e
-áudio, quadros-chave das cenas e reutilização do cache. O arquivo
-`output/rough_cut.mp4` e os relatórios ficam no diretório temporário impresso
-ao fim do teste. `render_report.json` registra `cacheHit`, `videoEncoder`,
-`renderRealtimeFactor`, `outputProbe` e `outputBytes`.
+Os testes verificam contrato único, IDs, caminhos de assets, segurança do rebuild, cache, HTTP, render real Remotion/FFmpeg, transições, música e efeitos sonoros.
 
-## Critérios de aceite do roadmap
+## Aceitação manual pendente
 
-| Critério | Estado e evidência |
-| --- | --- |
-| Abrir a interface no Windows | **Pendente de execução no Windows.** `iniciar.bat` e `build.bat` foram revisados, mas não executados neste Linux. |
-| Criar e abrir um projeto | **Verificado por teste de API e interface Linux.** O painel cria `edit_plan.json`, `audio/` e `assets/`; a UI abriu o projeto sintético. |
-| Selecionar narração | **Verificado por teste de API.** O arquivo selecionado é copiado para `audio/`; seleção pelo diálogo nativo exige verificação manual. |
-| Apontar para pasta de assets | **Verificado na UI Linux.** A listagem do projeto sintético identificou sete arquivos. |
-| Carregar `edit_plan.json` | **Verificado na UI Linux.** Quatro cenas foram exibidas. |
-| Validar o plano | **Verificado na UI Linux e em testes.** Todos os assets sintéticos foram resolvidos. |
-| Gerar e reproduzir o render final | **Render e arquivo verificados por teste integrado; reprodução visual no navegador deve ser conferida manualmente.** |
-| Render final com 2+ clipes, texto de impacto, frase cinética, apresentador com karaoke, grid 3×3 com 3 imagens, card com padding/radius/shadow, overlay/chroma, música e SFX | **Verificado com fixture sintética e quadros-chave.** São dois clipes base, um apresentador substituto, três imagens, CTA com chroma, narração, música e SFX. A identidade visual e o apresentador reais ainda precisam de inspeção. |
-| Render final | **Verificado por teste integrado.** Vídeo e áudio têm 60 segundos; H.264/AAC. |
-| `rough_cut.mp4` e relatório | **Verificado por teste integrado.** Ambos são produzidos. |
-| Abrir o MP4 no CapCut | **Pendente de execução no CapCut.** O arquivo é H.264/AAC, mas compatibilidade de importação não foi atestada nesta máquina. |
+- Iniciar o Zorin pelo atalho de aplicativo sem manter terminal aberto; encerrar pelo botão da interface.
+- Inicializar o Windows com `iniciar.vbs` e verificar fechamento, abertura do navegador e logs.
+- Abrir o VD_0005: comparar frames-chave, personagens PNG, câmeras e textos, sem recorte ou ampliação não solicitada.
+- Render com cache: editar apenas Batman; verificar que os demais MP4s mantêm as assinaturas.
+- Testar narrador com `sourceCuts`, normalização, níveis de música, ducking, SFX e transições.
+- Validar vídeos locais e vídeos do YouTube na área de fontes.
+- Testar transcrição `whisper.cpp` com modelo local instalado e conferir precisão de palavra.
+- Conferir distribuição no Windows e comportamento de erro quando falta FFmpeg.
 
-## Fechamento manual no Windows
-
-1. Em uma máquina Windows com FFmpeg disponível, execute `iniciar.bat`; se
-   precisar do executável, execute `build.bat` e abra `dist\ContentLab.exe`.
-2. Crie um projeto pela interface. Selecione uma narração real, a pasta de
-   assets, carregue/salve um `edit_plan.json` representativo e valide o plano.
-3. Gere e reproduza o render final, conferindo cada item visual e audível da tabela
-   com os assets reais do canal. Gere o render final e confirme áudio, vídeo,
-   duração e relatório.
-4. Abra `output\rough_cut.mp4` (ou `output\final\final.mp4`) no CapCut e
-   confira reprodução e sincronia. Registre eventuais divergências antes de
-   considerar o MVP integralmente aceito.
-
-NVENC é opcional: se não houver encoder NVIDIA funcional, o render usa
-`libx264` e registra um aviso. O cache só vale quando plano, arquivos,
-renderer e saída persistida continuam compatíveis.
+**Não considerar aprovado apenas pelos smoke tests.** Dados e assets reais, e execução no Windows, precisam de aceitação.
