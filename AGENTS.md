@@ -9,8 +9,9 @@ and `SCENE_CACHE.md` before changing the automatic editor.
 - FFmpeg is retained for audio, source cuts, transitions and final assembly.
 - There is **one JSON schema**, `schemas/edit_plan.schema.json`, and no top-level version field.
 - Treat scene IDs as stable keys for persistent caches.
-- The migration branch is not production-ready; do not remove the current stable backend
-  or merge before checking media downloads, audio, overlays, editor and packaging parity.
+- The backend is Node-only. Protect the currently working project API, scene cache,
+  renderer and media workflows. Review real media downloads, audio, overlays, the editor
+  and distribution whenever making release changes.
 - Use official Remotion documentation and HyperFrames composition/animation skills as
   references. Avoid introducing a second mandatory visual renderer.
 - Do not reintroduce the obsolete full-encode Preview.
