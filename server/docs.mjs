@@ -26,7 +26,8 @@ const example=(path,node)=>{
   'timeline[].background.fit':'"contain"','timeline[].elements[].id':'"personagem"',
   'timeline[].elements[].type':'"image"','timeline[].elements[].asset':'"project://assets/heroi.png"',
   'timeline[].elements[].cells':'[2,5,8]','timeline[].elements[].fit':'"contain"',
-  'timeline[].elements[].at':'1.25','timeline[].elements[].transform.scale':'1.25',
+  'timeline[].elements[].at':'1.25','timeline[].elements[].transform.offsetX':'0',
+  'timeline[].elements[].transform.offsetY':'24','timeline[].elements[].transform.scale':'1.25',
   'timeline[].transitionOut':'"fade"','timeline[].transitionDuration':'0.35'
  };
  if(values[path])return values[path];
