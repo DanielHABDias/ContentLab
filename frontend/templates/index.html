@@ -271,9 +271,19 @@
       </div>
       <p id="editorError" class="error-text hidden" role="alert"></p>
       <div id="editorDetails" class="hidden">
-        <h3 id="editorProjectName"></h3>
-        <p id="editorSummary" class="helper-text"></p>
-        <ol id="editorScenes" class="editor-scenes"></ol>
+        <div class="project-overview"><div><span class="eyebrow">PROJETO ATIVO</span><h3 id="editorProjectName"></h3><p id="editorSummary" class="helper-text"></p></div><span class="project-overview-pill">Editável · JSON</span></div>
+        <ol id="editorScenes" class="editor-scenes hidden" aria-hidden="true"></ol>
+        <section class="render-console" aria-label="Exportação de vídeo">
+          <div><span class="eyebrow">EXPORTAR</span><h3>Seu filme, no seu tempo.</h3><p class="helper-text">Cenas renderizadas são reutilizadas automaticamente. O render completo só acontece quando você escolhe.</p></div>
+          <div class="render-buttons"><button id="editorReuse" class="btn btn-primary" type="button" disabled>Aproveitar cache <span aria-hidden="true">↗</span></button><button id="editorRebuild" class="btn btn-secondary" type="button" disabled>Refazer tudo</button></div>
+          <label class="editor-gpu"><input id="editorGpu" type="checkbox"> Usar GPU quando disponível</label>
+          <button id="editorCancel" class="btn btn-danger btn-sm hidden" type="button">Cancelar render</button>
+          <p id="editorStatus" class="helper-text" role="status" aria-live="polite"></p>
+          <div class="editor-progress" role="progressbar" aria-label="Progresso do render" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="editorProgressFill"></span></div>
+          <video id="editorVideo" class="editor-video hidden" controls playsinline preload="metadata"></video>
+          <p id="editorOutput" class="mono editor-output"></p><ul id="editorWarnings" class="editor-list"></ul>
+          <details id="editorReportDetails" class="hidden"><summary>Detalhes técnicos do render</summary><pre id="editorReport"></pre></details>
+        </section>
         <div class="editor-inputs">
           <button id="editorChooseNarration" class="btn btn-secondary btn-sm" type="button">Selecionar narração</button>
           <input id="editorNarrationFile" class="hidden" type="file" accept="audio/*,.wav,.mp3,.m4a,.aac,.flac,.ogg,.opus">
@@ -339,22 +349,6 @@
         <details class="editor-inspection">
           <summary>Plugins disponíveis</summary>
           <ul id="editorPlugins" class="editor-list"></ul>
-        </details>
-        <div class="editor-actions">
-          <button id="editorReuse" class="btn btn-primary" type="button" disabled>Aproveitar cache</button>
-          <button id="editorRebuild" class="btn btn-secondary" type="button" disabled>Refazer tudo</button>
-        </div>
-        <p class="helper-text">Aproveitar cache: renderiza só as cenas alteradas e remonta o vídeo final. Refazer tudo: apaga a pasta output deste projeto e gera tudo novamente.</p>
-        <label class="editor-gpu"><input id="editorGpu" type="checkbox"> Tentar aceleração NVIDIA (NVENC); usa CPU se indisponível</label>
-        <button id="editorCancel" class="btn btn-danger btn-sm hidden" type="button">Cancelar render</button>
-        <p id="editorStatus" class="helper-text" role="status" aria-live="polite"></p>
-        <div class="editor-progress" role="progressbar" aria-label="Progresso do render" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="editorProgressFill"></span></div>
-        <video id="editorVideo" class="editor-video hidden" controls playsinline preload="metadata"></video>
-        <p id="editorOutput" class="mono editor-output"></p>
-        <ul id="editorWarnings" class="editor-list"></ul>
-        <details id="editorReportDetails" class="hidden">
-          <summary>Relatório do render</summary>
-          <pre id="editorReport"></pre>
         </details>
       </div>
     </section>
