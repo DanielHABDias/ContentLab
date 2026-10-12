@@ -15,8 +15,7 @@ jobs:
           node-version: '22'
       - name: Check JavaScript syntax
         run: |
-          node --check server/plan.mjs
-          node --check server/cache.mjs
+          for file in server/*.mjs; do node --check "$file"; done
           node --check frontend/static/app.js
           node --check frontend/static/visual_editor.js
       - name: Test canonical JSON and cache
