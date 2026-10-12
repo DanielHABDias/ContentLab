@@ -2,7 +2,7 @@ name: tests
 
 on:
   push:
-    branches: ["main", "refactor/node-remotion-single-plan", "feat/studio-ui-scene-workspace"]
+    branches: ["main", "refactor/node-remotion-single-plan", "feat/studio-ui-scene-workspace", "fix/cache-audio-sync-transitions"]
   pull_request:
 
 jobs:
@@ -68,6 +68,8 @@ jobs:
         run: node server/smoke-source.mjs
       - name: Verify native whisper.cpp adapter
         run: node server/smoke-transcription.mjs
+      - name: Verify edge-trimmed sound cues and ripple narration
+        run: node server/smoke-audio-sync.mjs
       - name: End-to-end Remotion render and cache
         run: node server/smoke.mjs
       - name: Two scenes, transitions, music, SFX and reuse
