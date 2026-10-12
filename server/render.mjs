@@ -109,6 +109,7 @@ export async function renderProject(directory,{
       cacheKey:signature,cacheHit:false,sceneCache:{enabled:true,reused,rendered,
         reusedCount:reused.length,renderedCount:rendered.length},
       transitions:composed.transitions||[],audioLayers:layers,outputProbe:verified,
+      warnings:validation.warnings||[],
       elapsedSeconds:Math.round((Date.now()-started)/10)/100,
     };
     fs.writeFileSync(reportFile,JSON.stringify(report,null,2)+'\n');
