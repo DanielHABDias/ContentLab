@@ -1,4 +1,5 @@
 Set shell = CreateObject("WScript.Shell")
 Set fs = CreateObject("Scripting.FileSystemObject")
-folder = fs.GetParentFolderName(WScript.ScriptFullName)
-shell.Run "cmd.exe /c """" & folder & "\iniciar.bat""", 0, False
+scriptPath = fs.BuildPath(fs.GetParentFolderName(WScript.ScriptFullName), "iniciar.bat")
+command = "cmd.exe /c """ & scriptPath & """"
+shell.Run command, 0, False
