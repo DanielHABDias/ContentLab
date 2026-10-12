@@ -79,3 +79,7 @@ O grid 3×3 é organizado com células `1,2,3 / 4,5,6 / 7,8,9`. `[2,5,8]` define
 - Conferir transições, efeitos cromáticos, temporização e áudio em render real antes de considerar a cena aprovada.
 
 A biblioteca futura seguirá padrões de Remotion e referências de animação seekable do HyperFrames: `MOTION_ENGINE_STRATEGY.md`. Campos novos precisam ser introduzidos no schema e testados antes de serem emitidos pela IA.
+
+## Grid, deslocamento e opacidade
+
+Camadas de PNG podem usar `cells:[5,8]` para encaixe automático nas duas células centrais inferiores, `fit:"contain"` para evitar recorte, `transform.scale` para ajuste opcional, `transform.offsetX` e `offsetY` em pixels (positivo = direita/baixo) para reposicionamento e `transform.opacity` entre 0 e 1 para transparência. `keyframes[].opacity` anima fades. `z` define a ordem de sobreposição.
