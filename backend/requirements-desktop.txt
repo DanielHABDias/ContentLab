@@ -1,3 +1,0 @@
--r requirements.txt
-pystray>=0.19
-pillow>=10.0
