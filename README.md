@@ -94,6 +94,8 @@ A interface foi reformulada com uma identidade própria, monograma **CT**, naveg
 
 Os detalhes de câmera, fundo, animações e elementos permanecem acessíveis em uma área avançada. Alterações ficam como rascunho até você **Validar JSON → Salvar plano**.
 
+Para criar motion design no editor, use **Sua linha do tempo → + Nova cena**, escolha quantas camadas quiser e ajuste grid 3×3, câmera, fundo e animações em **Editar propriedades avançadas**. O editor não impõe mais um formulário paralelo de duas imagens (esquerda/direita). O layout público `center_column` substitui a nomenclatura específica de um projeto antigo, preservada somente para compatibilidade interna de planos legados.
+
 Veja [STUDIO_UI.md](STUDIO_UI.md) para o funcionamento do novo storyboard, cache e navegação.
 
 ## Sincronização, SFX e transições
