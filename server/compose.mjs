@@ -80,7 +80,7 @@ export async function composeVisual(scenes,segments,output,settings,work,{ffmpeg
           const eased='(P*P*P*(P*(P*6-15)+10))';
           graph=outgoing+incoming+
             '[tail][first]xfade=transition=custom:duration='+D(seconds)+
-            ':offset=0:expr=\\'A*(1-'+eased+')+B*'+eased+'\\',format=yuv420p[out]';
+            ":offset=0:expr='A*(1-"+eased+")+B*"+eased+"',format=yuv420p[out]";
         }else{
           let moveOld='x=0:y=0',moveNew='x=0:y=0';
           if(['slide_left','blur_left'].includes(type)){
