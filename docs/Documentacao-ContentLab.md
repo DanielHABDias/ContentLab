@@ -60,9 +60,9 @@ O validador produz avisos para duas camadas de texto sobrepostas em tempo e regi
 
 Narração é exigida no fluxo atual. narrationTrim mantém um intervalo start/end da gravação original, enquanto sourceCuts une vários trechos (não usar ambos); silenceInserts cria pausas para sincronizar inserções de cenas. Em voice, fadeIn e fadeOut controlam a entrada e a saída da fala, inclusive antes de uma cauda musical.
 
-SFX usa at como início audível. O FFmpeg detecta aproximadamente -50 dBFS de silêncio contínuo nas bordas, com duração mínima de 40 ms, e corta somente início e final. Pausas internas não são removidas.
+O mesmo trim automático dos SFX agora se aplica por padrão às bordas da narração e de cada trecho musical. O FFmpeg usa detecção aproximada de silêncio abaixo de -50 dBFS por pelo menos 40 ms, preserva pausas internas e corrige o relógio das palavras da narração para as legendas. Para respeitar uma abertura silenciosa intencional, use voice.autoTrimSilence: false ou music[].autoTrimSilence: false.
 
-A música tem start/end na timeline e pode escolher um trecho do arquivo usando sourceStart/sourceEnd; loop repete somente esse trecho quando necessário. Duas músicas podem se cruzar: a primeira termina em 20 s com fadeOut de 3 s; a próxima começa em 17 s com fadeIn de 3 s. A sobreposição de 17 a 20 s produz o crossfade no mixer. Ducking reduz o volume durante a voz. Mudanças só de som não invalidam clipes visuais.
+A música tem start/end na timeline e pode escolher um trecho do arquivo usando sourceStart/sourceEnd; o trim automático tira silêncio das bordas do trecho selecionado antes de aplicar loop e fades, e loop repete somente a parte audível quando necessário. Duas músicas podem se cruzar: a primeira termina em 20 s com fadeOut de 3 s; a próxima começa em 17 s com fadeIn de 3 s. A sobreposição de 17 a 20 s produz o crossfade no mixer. Ducking reduz o volume durante a voz. Mudanças só de som não invalidam clipes visuais.
 
 ![Trim de silêncio nas bordas dos SFX](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/docs/figures/audio.svg)
 
@@ -201,6 +201,7 @@ Obrigatório significa exigido dentro do objeto pai. Um bloco opcional pode ter 
 | `audio.voice.highpassHz` | number | Não | mín. 0; máx. 300 | `0` | Frequência de filtro passa-altas, normalmente 70 Hz; zero desliga. |
 | `audio.voice.fadeIn` | number | Não | mín. 0 | `0.4` | Fade-in da narração em segundos, aplicado no começo audível da voz. |
 | `audio.voice.fadeOut` | number | Não | mín. 0 | `0.8` | Fade-out da narração em segundos, aplicado no fim audível da voz mesmo com música após a fala. |
+| `audio.voice.autoTrimSilence` | boolean | Não | — | `true` | Trim automático do silêncio apenas no começo/fim da narração; padrão ligado. Não remove pausas internas. |
 | `audio.ducking` | object | Não | — | `{}` | Redução da música quando a narração está ativa. |
 | `audio.ducking.enabled` | boolean | Não | — | `true` | Ativa o compressor sidechain comandado pela voz. |
 | `audio.ducking.threshold` | number | Não | maior que 0; máx. 1 | `1` | Limiar linear do compressor, padrão aproximado 0,02. |
@@ -218,6 +219,7 @@ Obrigatório significa exigido dentro do objeto pai. Um bloco opcional pode ter 
 | `audio.music[].sourceStart` | number | Não | mín. 0 | `12` | Ponto inicial da música dentro do arquivo de origem, em segundos (padrão 0). |
 | `audio.music[].sourceEnd` | number | Não | maior que 0 | `32` | Ponto final da música dentro do arquivo de origem, em segundos; ausente significa fim do arquivo. |
 | `audio.music[].loop` | boolean | Não | — | `true` | Repete apenas o trecho musical selecionado até preencher start/end; padrão true. |
+| `audio.music[].autoTrimSilence` | boolean | Não | — | `true` | Trim automático do silêncio nas bordas do trecho musical, antes de loop e fades; padrão ligado, não corta pausas internas. |
 | `audio.silenceInserts` | array | Não | — | `[]` | Pausas adicionadas à narração para preservar sincronização quando cenas são inseridas. |
 | `audio.silenceInserts[].at` | number | Sim | mín. 0 | `5` | Posição absoluta da pausa na timeline resultante. |
 | `audio.silenceInserts[].duration` | number | Sim | maior que 0 | `2` | Duração positiva da pausa adicionada à voz. |
@@ -548,6 +550,7 @@ Recortar trechos da fonte e sobrepor fades em segundos absolutos. Narração com
         "end": 20,
         "sourceStart": 12,
         "sourceEnd": 32,
+        "autoTrimSilence": true,
         "fadeOut": 3
       },
       {
