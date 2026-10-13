@@ -82,8 +82,20 @@ try{
   await send('Page.navigate',{url:'http://127.0.0.1:'+appPort+'/'});
   await wait(()=>evaluate('document.readyState === "complete" && !!document.getElementById("editorLoad")'),'Document load');
   assert.equal(await evaluate('getComputedStyle(document.body).backgroundColor'),'rgb(245, 246, 248)');
+  assert.equal(await evaluate('document.querySelectorAll(".workspace-tab").length'),4,
+    'Exactly four tabs must remain');
+  assert.equal(await evaluate('document.querySelectorAll("#tab-guide, #panel-guide").length'),0,
+    'Obsolete project guide must not be rendered');
+  await send('Page.navigate',{url:'http://127.0.0.1:'+appPort+'/#guide'});
+  await wait(()=>evaluate('document.readyState === "complete" && location.hash==="#docs"'),
+    'Legacy guide deep links redirect to documentation');
+  assert.equal(await evaluate('document.getElementById("tab-docs").getAttribute("aria-selected")'),'true');
+
   await evaluate('document.getElementById("tab-docs").click()');
   await wait(()=>evaluate('!!document.getElementById("docsManual").contentDocument?.getElementById("fieldSearch")'),'Documentation iframe');
+  assert.equal(await evaluate('document.getElementById("docsManual").contentDocument.body.textContent.includes("narration.prepared.wav")'),true,
+    'Consolidated project setup must be present in the manual');
+
   const total=await evaluate('document.getElementById("docsManual").contentDocument.querySelectorAll("[data-field]").length');
   assert.ok(total>=125,'Documentation iframe must list all canonical JSON fields');
   const downloads=await evaluate('document.querySelectorAll("#panel-docs .docs-download-buttons a").length');
