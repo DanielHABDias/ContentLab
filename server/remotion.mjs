@@ -7,6 +7,22 @@ import {stageCustomScene} from './custom-scenes.mjs';
 
 const REMOTION_DIR=path.join(APP_ROOT,'backend','remotion');
 const GREEN_SCREEN_STYLES=new Set(['green_screen','green_screen_default','green_screen_soft']);
+/**
+ * Remotion's parallel encoding pipes frames to an encoder while Chromium
+ * continues producing them. A closed encoder pipe can surface as an unhandled
+ * write EPIPE near the end of an otherwise valid custom TSX scene.
+ *
+ * Prefer the sequential frame-render -> encode path for reliable local jobs.
+ * Users who have verified parallel encoding on their machine may opt in.
+ * https://www.remotion.dev/docs/options/disallow-parallel-encoding
+ */
+export function remotionCliRenderOptions(env=process.env){
+  return [
+    '--log',env.CONTENTLAB_REMOTION_DEBUG==='1'?'verbose':'info',
+    ...(env.CONTENTLAB_REMOTION_PARALLEL_ENCODING==='1'?[]:['--disallow-parallel-encoding']),
+  ];
+}
+
 export function transcriptWords(transcript){
   if(!transcript)return [];
   const words=[];
@@ -139,7 +155,7 @@ export async function renderRemotionScene(scene,settings,words,output,{signal,ha
     '--props',propsFile,'--public-dir',publicDir,'--codec','h264',
     '--timeout',String(Math.max(30000,Number(process.env.CONTENTLAB_REMOTION_TIMEOUT_MS||90000))),
     '--concurrency',String(Math.max(1,Number(process.env.CONTENTLAB_REMOTION_CONCURRENCY||1))),
-    '--log','info','--overwrite'];
+    ...remotionCliRenderOptions(),'--overwrite'];
   if(hardwareAccel)command.push('--hardware-acceleration=if-possible');
   try{
     await run(process.execPath,command,{cwd:REMOTION_DIR,signal});
