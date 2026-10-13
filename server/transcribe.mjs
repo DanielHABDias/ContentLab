@@ -38,23 +38,38 @@ export async function transcribeAudio(file,projectRoot,{model='base',language='p
     update('Convertendo áudio para 16 kHz...');
     await run('ffmpeg',['-hide_banner','-loglevel','error','-y','-i',file,'-ar','16000','-ac','1','-c:a','pcm_s16le',converted],{signal});
     update('Executando transcrição pelo whisper.cpp...');
-    await run(bin,['-m',modelFile,'-f',converted,'-l',language||'pt','-oj','-of',prefix],{signal});
+    await run(bin,['-m',modelFile,'-f',converted,'-l',language||'pt','-ml','1','-sow','-oj','-of',prefix],{signal});
     const nativeJson=prefix+'.json';
     if(!fs.existsSync(nativeJson))throw Error('Whisper.cpp não produziu arquivo JSON.');
     const segments=normalizeNative(JSON.parse(fs.readFileSync(nativeJson,'utf8')));
     if(!segments.length)throw Error('Não foi possível reconhecer falas na gravação.');
-    const words=[];
-    for(const segment of segments){
+    // -ml 1 + -sow make whisper.cpp emit word-sized timestamped
+    // segments instead of spreading sentence durations evenly across tokens.
+    const words=segments.flatMap(segment=>{
       const tokens=segment.text.split(/\s+/).filter(Boolean);
       const step=(segment.end-segment.start)/tokens.length;
-      tokens.forEach((word,i)=>words.push({word,start:segment.start+i*step,end:segment.start+(i+1)*step}));
+      return tokens.map((word,i)=>({word,
+        start:Number((segment.start+i*step).toFixed(3)),
+        end:Number((segment.start+(i+1)*step).toFixed(3))}));
+    });
+    // Readable segments remain separate from word-level timing. Audio gaps
+    // between individual words remain present in the timestamp sequence.
+    const grouped=[];let current=null;
+    for(const word of words){
+      if(!current||word.start-current.end>.65||current.end-current.start>5||
+        /[.!?]$/.test(current.text)){
+        current={start:word.start,end:word.end,text:word.word};grouped.push(current);
+      }else{
+        current.end=word.end;
+        current.text+=(/^[,.;!?]/.test(word.word)?'':' ')+word.word;
+      }
     }
-    const doc={language,segments,words};
+    const doc={language,segments:grouped,words,wordTiming:'whisper-word-segments'};
     fs.writeFileSync(path.join(projectRoot,'transcript.json'),JSON.stringify(doc,null,2)+'\n');
-    fs.writeFileSync(path.join(projectRoot,'transcript.txt'),segments.map(s=>'['+s.start.toFixed(2)+' → '+s.end.toFixed(2)+'] '+s.text).join('\n')+'\n');
-    const srt=segments.map((s,i)=>(i+1)+'\n'+formatTime(s.start)+' --> '+formatTime(s.end)+'\n'+s.text+'\n').join('\n');
+    fs.writeFileSync(path.join(projectRoot,'transcript.txt'),grouped.map(s=>'['+s.start.toFixed(2)+' → '+s.end.toFixed(2)+'] '+s.text).join('\n')+'\n');
+    const srt=grouped.map((s,i)=>(i+1)+'\n'+formatTime(s.start)+' --> '+formatTime(s.end)+'\n'+s.text+'\n').join('\n');
     fs.writeFileSync(path.join(projectRoot,'transcript.srt'),srt);
     update('Transcrição concluída.');
-    return {segmentCount:segments.length,wordCount:words.length,language,preview:segments.map(s=>s.text).join('\n').slice(0,4500)};
+    return {segmentCount:grouped.length,wordCount:words.length,language,preview:grouped.map(s=>s.text).join('\n').slice(0,4500)};
   }finally{fs.rmSync(work,{recursive:true,force:true});}
 }
