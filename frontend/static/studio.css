@@ -274,3 +274,112 @@ code {background:#F1F4FA;color:#3C6DAE;border-radius:5px;padding:2px 5px}
 .voice-studio-audio{display:block;width:100%;margin:14px 0 15px}
 .voice-editor-link{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
 .voice-editor-link .helper-text{max-width:650px}
+
+
+/* Studio motion system: ergonomic transitions, not Remotion (which renders video). */
+:root {
+  --studio-ease:cubic-bezier(.22,1,.36,1);
+  --studio-ease-press:cubic-bezier(.2,.75,.25,1);
+  --studio-duration-fast:170ms;
+  --studio-duration-base:340ms;
+}
+@keyframes studio-panel-appear {
+  from {opacity:0;transform:translate3d(0,13px,0);filter:blur(2px)}
+  to {opacity:1;transform:translate3d(0,0,0);filter:blur(0)}
+}
+@keyframes studio-section-arrive {
+  from {opacity:0;transform:translate3d(0,19px,0)}
+  to {opacity:1;transform:translate3d(0,0,0)}
+}
+@keyframes studio-sheen {
+  from {transform:translateX(-145%) skewX(-14deg)}
+  to {transform:translateX(240%) skewX(-14deg)}
+}
+@keyframes studio-progress-breath {
+  0%,100% {filter:brightness(1)}
+  50% {filter:brightness(1.13)}
+}
+.workspace-panel:not(.hidden):not([hidden]) {
+  animation:studio-panel-appear 390ms var(--studio-ease) both;
+}
+.workspace-intro {
+  position:relative;isolation:isolate;
+}
+.workspace-intro::before {
+  content:"";position:absolute;z-index:-1;pointer-events:none;
+  top:-65px;left:-100px;width:min(700px,105%);height:240px;
+  background:radial-gradient(ellipse at 30% 30%,rgba(77,132,230,.105),transparent 68%);
+}
+.workspace-intro h2 {
+  background:linear-gradient(130deg,#141B27 7%,#334763 87%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.workspace-tab {position:relative;isolation:isolate;overflow:hidden;
+  transition:background 220ms ease,color 220ms ease,box-shadow 270ms ease,border-color 220ms ease,transform 190ms var(--studio-ease-press);}
+.workspace-tab::before {
+  content:"";position:absolute;left:0;top:25%;bottom:25%;width:3px;
+  background:linear-gradient(#6CA9FF,#1769E0);border-radius:0 4px 4px 0;
+  transform:scaleY(.2);opacity:0;transition:transform 260ms var(--studio-ease),opacity 170ms ease;
+}
+.workspace-tab.is-active::before {transform:scaleY(1);opacity:1}
+.workspace-tab:hover:not(:disabled) {transform:translateX(3px)}
+.workspace-tab:active:not(:disabled) {transform:translateX(1px) scale(.986)}
+.workspace-tab.is-active {box-shadow:0 10px 27px rgba(22,58,104,.072)}
+.workspace-tab span {transition:transform 250ms var(--studio-ease),background 220ms ease}
+.workspace-tab:hover span {transform:scale(1.065)}
+.btn {position:relative;isolation:isolate;overflow:hidden;touch-action:manipulation;
+  transition:transform 220ms var(--studio-ease-press),box-shadow 250ms var(--studio-ease),
+  color 190ms ease,background 190ms ease,border-color 190ms ease;}
+.btn::after {
+  content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(ellipse 160px 95px at var(--press-x,50%) var(--press-y,50%),
+   rgba(255,255,255,.3),transparent 75%);
+  opacity:0;transition:opacity 190ms ease;
+}
+.btn:hover:not(:disabled)::after {opacity:.23}
+.btn:active:not(:disabled) {transform:translateY(2px) scale(.985) !important;box-shadow:0 1px 4px rgba(30,56,100,.08) !important}
+.btn:active:not(:disabled)::after {opacity:.52}
+.btn-primary:hover:not(:disabled),.btn-gradient:hover:not(:disabled) {transform:translateY(-2px);box-shadow:0 8px 24px rgba(27,94,213,.24) !important}
+.block,.editor-project,.transcription-card {
+  transition:box-shadow 310ms var(--studio-ease),border-color 240ms ease,transform 310ms var(--studio-ease);
+}
+.block:hover,.editor-project:hover,.transcription-card:hover {
+  border-color:#DEE6F2;box-shadow:0 12px 32px rgba(38,59,93,.06);
+}
+@media (hover:hover) and (pointer:fine) {
+  .radio-card,.source-tab,.scene-item,.visual-scene-card {
+    transition:background 220ms ease,border-color 220ms ease,box-shadow 250ms ease,
+      transform 240ms var(--studio-ease);
+  }
+  .radio-card:hover,.source-tab:hover,.scene-item:hover,.visual-scene-card:hover {transform:translateY(-2px)}
+}
+details[open] > :not(summary) {animation:studio-section-arrive 270ms var(--studio-ease) both}
+details > summary {transition:color 200ms ease,background 200ms ease}
+details > summary:hover {color:#1769E0}
+input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea {
+ transition:border-color 220ms ease,box-shadow 220ms ease,background 220ms ease;
+}
+.progress-fill,#progressFill,#editorProgressFill {
+  animation:studio-progress-breath 1900ms ease-in-out infinite;
+}
+.studio-reveal:not(.is-revealed) {opacity:0;transform:translate3d(0,17px,0)}
+.studio-reveal.is-revealed {
+  animation:studio-section-arrive 460ms var(--studio-ease) both;
+  animation-delay:var(--reveal-delay,0ms);
+}
+@media(max-width:860px) {
+ .workspace-panel:not(.hidden):not([hidden]) {animation-duration:300ms}
+ .workspace-tab:hover:not(:disabled) {transform:none}
+}
+@media(prefers-reduced-motion:reduce) {
+ .workspace-panel:not(.hidden):not([hidden]),details[open] > :not(summary),
+ .studio-reveal.is-revealed,.progress-fill,#progressFill,#editorProgressFill {
+   animation:none !important;filter:none!important;
+ }
+ .studio-reveal:not(.is-revealed) {opacity:1!important;transform:none!important}
+ .workspace-intro::before {display:none}
+ .workspace-tab,.workspace-tab span,.btn,.block,.editor-project,.transcription-card,
+ input,select,textarea {transition:none !important}
+ .workspace-tab:hover:not(:disabled),.btn:active:not(:disabled),
+ .radio-card:hover,.source-tab:hover {transform:none!important}
+}
