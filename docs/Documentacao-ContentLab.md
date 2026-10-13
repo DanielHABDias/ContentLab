@@ -79,6 +79,8 @@ PNG com transparência assimétrica pode parecer deslocado apesar de estar centr
 
 Tipos disponíveis: image e video para mídia, overlay para sobreposições, text para frase estática, kinetic_text para palavras em movimento, caption para legendas, filter para tratamento visual e sfx para som.
 
+Para overlay de vídeo com style green_screen, green_screen_default ou green_screen_soft, o render visual remove a cor config.keyColor (padrão #00FF00) usando config.similarity e config.blend e preserva a transparência sobre as camadas inferiores. O arquivo original continua sendo a fonte de áudio quando muted:false; trimDb e fades controlam esse som separadamente. Confira o resultado no MP4: a validação do JSON sozinha não verifica o recorte do chroma.
+
 Os presets de entrada, movimento contínuo e saída ficam em animation. Os keyframes usam segundos relativos ao início da cena; já start/end/at usam tempo absoluto.
 
 Suavidade não significa lentidão: o motor usa interpolação contínua de ordem C2 (smootherstep) por padrão em keyframes de elementos e câmera, entradas, saídas e carrosséis. Uma duração de 0.1 segundo continua tendo exatamente 0.1 segundo. animation.enterDuration/exitDuration e config.transitionDuration controlam TEMPO, independentemente da curva. easing:linear continua disponível para movimento intencionalmente linear; ease_in/out aceleram/desaceleram. Não adicionar segundos automaticamente em nome da fluidez.
@@ -125,7 +127,7 @@ Em props, forneça valores JSON reutilizáveis como títulos, cores e dados, sem
 
 No TSX, importações suportadas são React, Remotion e módulos locais de custom-scenes, respeitadas as dependências realmente instaladas. Use useCurrentFrame e useVideoConfig para calcular qualquer quadro por tempo; use SVG, interpolate, spring e cálculos determinísticos conforme a necessidade. Não use setInterval, relógio real, CSS animations/transitions, URLs externas não verificadas nem aleatoriedade sem semente, pois os quadros devem renderizar corretamente em qualquer ordem.
 
-Por segurança, código TSX é código executável e só deve vir de projeto local inspecionado. Para habilitar, inicie o processo com CONTENTLAB_TRUST_CUSTOM_TSX=1 (Linux: export CONTENTLAB_TRUST_CUSTOM_TSX=1; PowerShell: $env:CONTENTLAB_TRUST_CUSTOM_TSX='1'). A opção não deve ser ligada para projetos ou código de terceiros não confiáveis. O Content Lab não executa esse TSX a partir do texto do JSON nem oferece sandbox completo.
+Cenas TSX dentro de custom-scenes/ são renderizadas sem configuração adicional. TSX é código executável e não possui sandbox completo: abra somente projetos e componentes cuja origem você conhece e revisou. O Content Lab exige caminho project://custom-scenes/...tsx local, rejeita links simbólicos e não executa código inserido diretamente no JSON; essas restrições de caminho não tornam seguro um TSX desconhecido.
 
 Depois de copiar TSX e atualizar o JSON, clique Validar JSON, salve, renderize e confira o MP4. A validação do JSON não comprova que o TSX compilou: importações, fonte, layout, clipping e comportamento de frames exigem render. O cache da cena identifica mudanças nos arquivos da pasta custom-scenes; mantenha IDs estáveis e repita a inspeção de quadros após modificar o TSX.
 
@@ -312,7 +314,7 @@ Obrigatório significa exigido dentro do objeto pai. Um bloco opcional pode ter 
 | `timeline[].transitionOut` | string | Não | — | `"fade"` | Transição: cut, fade, blur_left, blur_right, blur_up ou slide_left. |
 | `timeline[].transitionDuration` | number | Não | maior que 0 | `0.35` | Duração temporal da transição que introduz a próxima cena. |
 | `timeline[].customComponent` | object | Não | — | `{}` | Composição programável Remotion/TSX; código local confiável sob custom-scenes/. |
-| `timeline[].customComponent.module` | string | Sim | — | `"exemplo"` | URI project://custom-scenes/...tsx; o código só executa com CONTENTLAB_TRUST_CUSTOM_TSX=1. |
+| `timeline[].customComponent.module` | string | Sim | — | `"exemplo"` | URI project://custom-scenes/...tsx; o componente local renderiza sem configuração extra, mas deve ser confiável. |
 | `timeline[].customComponent.mode` | enum | Não | opções: replace, overlay | `"replace"` | replace substitui a parte visual por TSX; overlay sobrepõe TSX às camadas normais. |
 | `timeline[].customComponent.props` | object | Não | — | `{}` | Parâmetros JSON fornecidos ao componente TSX como propriedades React. |
 | `timeline[].customComponent.assets` | object | Não | — | `{}` | Mapa de nomes para URIs existentes; arquivos expostos ao TSX pelo prop assets. |
@@ -429,7 +431,7 @@ Alguns exemplos abaixo são fragmentos de cena ou áudio. Complete o projeto pri
 
 ### Cena programável TSX (câmera, SVG e movimento)
 
-Copie examples/custom-scenes/FollowDot.tsx para custom-scenes/FollowDot.tsx na pasta do projeto, confirme narração existente e habilite CONTENTLAB_TRUST_CUSTOM_TSX=1 somente para código local confiável. É uma única cena contínua; sem importar JavaScript no JSON.
+Copie examples/custom-scenes/FollowDot.tsx para custom-scenes/FollowDot.tsx na pasta do projeto e confirme narração existente. O TSX local é renderizado sem variável de ambiente; use apenas código confiável. É uma única cena contínua; sem importar JavaScript no JSON.
 
 ```json
 {

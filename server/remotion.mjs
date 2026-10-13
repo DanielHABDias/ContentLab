@@ -6,6 +6,7 @@ import {run} from './exec.mjs';
 import {stageCustomScene} from './custom-scenes.mjs';
 
 const REMOTION_DIR=path.join(APP_ROOT,'backend','remotion');
+const GREEN_SCREEN_STYLES=new Set(['green_screen','green_screen_default','green_screen_soft']);
 export function transcriptWords(transcript){
   if(!transcript)return [];
   const words=[];
@@ -87,13 +88,38 @@ export async function renderRemotionScene(scene,settings,words,output,{signal,ha
     files.set(source,name);
     return name;
   };
+  // The Remotion video layer does not interpret the green_screen style itself.
+  // Prepare an alpha WebM for the VISUAL layer; audio is mixed separately from
+  // the original asset by the Node/FFmpeg audio pipeline.
+  const keyedOverlays=new Map();
+  try{
+    for(const element of scene.elements){
+      if(element.type!=='overlay'||!GREEN_SCREEN_STYLES.has(element.style)||!element.asset_path)continue;
+      const config=element.config||{};
+      const color=String(config.keyColor||'#00FF00');
+      const similarity=Number(config.similarity??0.28);
+      const blend=Number(config.blend??0.08);
+      if(!/^#[0-9a-fA-F]{6}$/.test(color)||!Number.isFinite(similarity)||similarity<0.01||similarity>1||
+         !Number.isFinite(blend)||blend<0||blend>1)
+        throw Error('Parâmetros de chroma key inválidos na camada '+element.id+'.');
+      const output=path.join(work,'chroma-'+keyedOverlays.size+'.webm');
+      const filter='format=rgba,colorkey=0x'+color.slice(1)+':'+similarity+':'+blend+',format=yuva420p';
+      await run(process.env.FFMPEG_PATH||'ffmpeg',[
+        '-nostdin','-hide_banner','-loglevel','error','-i',element.asset_path,
+        '-vf',filter,'-an','-c:v','libvpx-vp9','-b:v','0','-crf','28',
+        '-auto-alt-ref','0','-y',output,
+      ],{signal});
+      if(!fs.existsSync(output)||fs.statSync(output).size===0)throw Error('Chroma key não gerou vídeo com transparência.');
+      keyedOverlays.set(element,output);
+    }
+  }catch(error){fs.rmSync(work,{recursive:true,force:true});throw error;}
   const elements=scene.elements.filter(e=>e.type!=='sfx').map((e,i)=>{
     const data={...e};
     for(const key of ['asset_path','font_path','region','z'])delete data[key];
     if(e.type==='kinetic_text')data.phraseWords=phraseWords(e.text,e.start,e.end,words);
     const fontPath=e.font_path||bundledFont(e);
     return {id:e.id,type:e.type,start:e.start,end:e.end,z:e.z,region:e.region,
-      src:linked(e.asset_path),fontSrc:linked(fontPath),fontFamily:'contentlab-font-'+i,data};
+      src:linked(keyedOverlays.get(e)||e.asset_path),fontSrc:linked(fontPath),fontFamily:'contentlab-font-'+i,data};
   });
   const customAssets={};
   for(const [name,uri] of Object.entries(scene.customComponent?.assets||{}))

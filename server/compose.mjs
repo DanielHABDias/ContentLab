@@ -8,7 +8,7 @@ const fileLine=file=>"file '"+path.resolve(file).replace(/\\/g,'/').replace(/'/g
 const encoding=['-c:v','libx264','-preset','veryfast','-crf','18','-threads',String(Math.max(1,Number(process.env.CONTENTLAB_COMPOSE_THREADS||2)))];
 const D=n=>Number(n).toFixed(6);
 const durationOf=scene=>scene.end-scene.start;
-const identity=(sources,params)=>sha({sources:sources.map(statIdentity),params,code:'composer-3-smooth-motion'});
+const identity=(sources,params)=>sha({sources:sources.map(statIdentity),params,code:'composer-4-readable-blur'});
 async function ffconcat(files,output,work,ffmpeg,signal,copy=false){
   const manifest=path.join(work,'segments-'+Math.random().toString(16).slice(2)+'.ffconcat');
   fs.writeFileSync(manifest,'ffconcat version 1.0\n'+files.map(fileLine).join(''));
@@ -57,9 +57,17 @@ export async function composeVisual(scenes,segments,output,settings,work,{ffmpeg
       let piece=pieceCache?.lookup(id,key);
       if(!piece){
         const frame=path.join(work,'out-last-'+i+'.png');
+        // Scene durations are authored in decimal seconds, but the encoded clip
+        // ends on a frame boundary. Seeking to duration - 1/fps can land after
+        // its final PTS; ffmpeg then exits successfully without writing a PNG.
         await run(ffmpeg,['-hide_banner','-loglevel','error','-y',
-          '-ss',D(Math.max(0,durationOf(previousScene)-1/fps)),'-i',previous,
-          '-frames:v','1',frame],{signal});
+          '-sseof','-0.07','-i',previous,'-frames:v','1',frame],{signal});
+        if(!fs.existsSync(frame)||fs.statSync(frame).size===0){
+          await run(ffmpeg,['-hide_banner','-loglevel','error','-y',
+            '-i',previous,'-frames:v','1',frame],{signal});
+        }
+        if(!fs.existsSync(frame)||fs.statSync(frame).size===0)
+          throw Error('Não foi possível extrair um quadro para a transição: '+previousScene.id);
         const temp=path.join(work,'transition-'+i+'.mp4');
         const incoming='[1:v]fps='+fps+',scale='+w+':'+h+',trim=duration='+D(seconds)+
           ',setpts=PTS-STARTPTS,format=yuv420p[first];';
@@ -107,10 +115,10 @@ export async function composeVisual(scenes,segments,output,settings,work,{ffmpeg
             // Blur is strongest halfway through the motion but ZERO on
             // the first and last frame. Prevents a blurry/sharp hard cut.
             const weight=frames>1
-              ? '(0.85*sin(PI*min(1,max(0,T/'+D(travel)+')))^2)'
+              ? '(0.96*sin(PI*min(1,max(0,T/'+D(travel)+')))^2)'
               : '0';
             graph=moving+
-              ';[moving]split[sharp][blurSrc];[blurSrc]gblur=sigma=2[blurry];'+
+              ';[moving]split[sharp][blurSrc];[blurSrc]gblur=sigma=12[blurry];'+
               "[sharp][blurry]blend=all_expr='A*(1-"+weight+")+B*"+weight+"'[out]";
           }else{
             graph=moving+';[moving]null[out]';

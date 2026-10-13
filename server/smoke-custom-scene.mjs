@@ -6,13 +6,11 @@ import {APP_ROOT} from './plan.mjs';
 import {renderRemotionScene} from './remotion.mjs';
 
 const root=fs.mkdtempSync(path.join(os.tmpdir(),'contentlab-programmable-smoke-'));
-const previous=process.env.CONTENTLAB_TRUST_CUSTOM_TSX;
 try{
   const scenes=path.join(root,'custom-scenes');
   fs.mkdirSync(scenes,{recursive:true});
   const module_path=path.join(scenes,'FollowDot.tsx');
   fs.copyFileSync(path.join(APP_ROOT,'examples/custom-scenes/FollowDot.tsx'),module_path);
-  process.env.CONTENTLAB_TRUST_CUSTOM_TSX='1';
   const scene={
     id:'follow-dot',start:0,end:17.7,background:{color:'#090a0e'},camera:{keyframes:[]},
     elements:[],customComponent:{module_path,mode:'replace',
@@ -37,7 +35,5 @@ try{
   }
   console.log('Custom TSX scene rendered, duration='+duration+'s, six valid frame checkpoints.');
 }finally{
-  if(previous===undefined)delete process.env.CONTENTLAB_TRUST_CUSTOM_TSX;
-  else process.env.CONTENTLAB_TRUST_CUSTOM_TSX=previous;
   fs.rmSync(root,{recursive:true,force:true});
 }

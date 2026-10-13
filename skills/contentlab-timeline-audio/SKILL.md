@@ -31,6 +31,7 @@ O Studio agora oferece comparação **A/B** da voz limpa contra a final. Não af
 - Música tem auto-trim nas bordas da seleção antes de loop/fades, salvo `autoTrimSilence:false`.
 - Crossfades exigem sobreposição real dos intervalos e fades complementares; não confundir transição sonora com visual.
 - O início do SFX é seu `at` audível depois da limpeza das bordas. Não remover silenciosamente pausas internas.
+- O compositor visual atual coloca a transição `blur_*` no **início da cena entrante**, durante `transitionDuration`; não antecipe o whoosh para o fim da cena anterior. Para centralizar um SFX curto: `at = cena_entrante.start + (duração_visual - duração_audível_após_trim)/2`. Faça arredondamento em frames e confirme num preview curto com áudio. O `at` é absoluto mesmo quando o SFX está listado na cena entrante.
 - Priorize a inteligibilidade da voz, variação funcional de SFX, ausência de whoosh repetitivo e silêncio quando melhor servir à cena.
 
 ## Alteração editorial

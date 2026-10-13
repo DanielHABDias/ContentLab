@@ -49,6 +49,8 @@
 - `audio.narration` informa um arquivo dentro do projeto. `sourceCuts` lista trechos `{start,end}` da narração original, aplicados antes da mixagem.
 - `audio.music[]` aceita `asset`, `start`, `end`, `trimDb`, `fadeIn`, `fadeOut`, `preset`. A voz pode usar `normalize`, `targetLufs`, `truePeakDb`, `highpassHz` e `trimDb`. Também há configuração `ducking`; confirme o comportamento audiovisual final nos testes.
 - `timeline[].transitionOut`: `cut`, `fade`, `slide_left`, `blur_left`, `blur_right`, `blur_up` com `transitionDuration`. Transições dependem das cenas adjacentes.
+
+As transições não encurtam cenas: os quadros misturados/deslizados ocupam o **começo da cena seguinte**. Para um whoosh centralizado em `blur_*`, posicione `sfx.at` na cena entrante, em segundos absolutos, aproximadamente em `cena_entrante.start + (duração_visual - duração_audível_do_whoosh)/2`. O mixer remove silêncio nas bordas do SFX antes de posicioná-lo, então meça a duração audível e confirme uma prévia curta com áudio.
 - `background` recebe `color` ou `asset`; `fit: contain` preserva conteúdo inteiro, `cover` só quando o recorte for intencional; `loop` repete vídeo curto. Vídeo 16:9 já no formato final não deve ser ampliado implicitamente.
 - `elements[]` permite `image`, `video`, `text`, `kinetic_text`, `caption`, `overlay`, `filter` e `sfx`. Áudio de `sfx` usa `at` e `config`.
 - Textos: `text`, `style`, `textStyle` (família, cor, contorno e sombra), `fontAsset`, `fontScale`, `reveal` e `emphasis`. `caption` pode consultar `sources.transcript`.

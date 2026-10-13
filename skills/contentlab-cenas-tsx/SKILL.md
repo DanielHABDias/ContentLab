@@ -48,7 +48,7 @@ A composição deve parecer um vídeo editorial sofisticado, não uma gravação
 - Respeite 9:16 e 16:9 por layout/reflow ou componentes apropriados; não dependa de crop automático.
 
 ## Ativar e validar
-Código TSX é executável e **não está em sandbox**. Exigir revisão de origem e opt-in local `CONTENTLAB_TRUST_CUSTOM_TSX=1`. Não sugerir ativação irrestrita para código desconhecido. A verificação do JSON não compila o TSX: renderizar, olhar checkpoints de frames, conferir clipping/timing e ouvir áudio final.
+Código TSX é executável e **não está em sandbox**. O Content Lab renderiza componentes locais em `custom-scenes/` sem configuração extra; por isso, exigir revisão de origem antes de abrir um projeto de terceiros. A verificação do JSON não compila o TSX: renderizar, olhar checkpoints de frames, conferir clipping/timing e ouvir áudio final.
 O cache por cena deve perceber alterações das fontes dentro de `custom-scenes/`; preservar IDs estáveis e nunca concluir paridade pixel-perfect com a referência sem comparação de frames.
 
 ## Exemplo oficial

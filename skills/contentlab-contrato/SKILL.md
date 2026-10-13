@@ -40,7 +40,7 @@ O projeto pode conter `custom-scenes/MinhaCena.tsx` e uma cena declarativa com `
 - `props`: objeto JSON de conteúdo reutilizável. `assets`: mapa de nomes para URIs locais `project://` ou `builtin://`; os URLs resolvidos ficam em `assets` do componente.
 - O TSX exporta **default** de um componente React e usa `useCurrentFrame/useVideoConfig` para quadros determinísticos.
 - **Destino canônico obrigatório:** criar cada TSX na subpasta `custom-scenes/` da pasta específica do vídeo (Drive: `Guia de Edições/Vídeos Longos/VD_XXXX/custom-scenes/` ou `Shorts/SH_XXXX/custom-scenes/`; computador: `<pasta-do-vídeo>/custom-scenes/`). O `edit_plan.json` permanece na raiz do mesmo vídeo e referencia `project://custom-scenes/Nome.tsx`. Se o Drive estiver conectado com escrita, publicar ali imediatamente e verificar; se o projeto local estiver acessível e autorizado, copiar para a mesma estrutura local. Não deixar os arquivos apenas em ZIP, conversa ou pasta temporária, nem afirmar instalação inexistente. O site não instala código do chat automaticamente.
-- Código executável exige `CONTENTLAB_TRUST_CUSTOM_TSX=1` somente em ambiente local confiável. JSON válido não garante compilação TSX: inspecionar MP4.
+- Componentes TSX em `custom-scenes/` renderizam sem configuração extra, mas são código executável sem sandbox: usar somente projetos confiáveis. JSON válido não garante compilação TSX: inspecionar MP4.
 - Exemplo versionado: `examples/custom-scenes/FollowDot.tsx` + `examples/programmatic-motion-edit-plan.json`. Para montagem em um plano existente pedir só o fragmento, economizando tokens.
 
 Para planejamento de uma cena complexa, carregar `skills/contentlab-cenas-tsx/SKILL.md` antes de gerar o componente.

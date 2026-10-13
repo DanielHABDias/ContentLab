@@ -45,18 +45,16 @@ test('custom TSX scene passes schema and tracks source+named assets',()=>{
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
 
-test('custom modules are limited to project custom-scenes and require explicit opt-in',()=>{
+test('custom modules work without environment configuration and stay under custom-scenes',()=>{
   const {dir,plan}=setup();
   const renderer=path.resolve('backend/remotion');
+  const previous=process.env.CONTENTLAB_TRUST_CUSTOM_TSX;
+  delete process.env.CONTENTLAB_TRUST_CUSTOM_TSX;
   try{
     plan.timeline[0].customComponent.module='project://assets/test.tsx';
     assert.ok(validatePlan(plan).some(x=>x.path.includes('customComponent.module')));
     plan.timeline[0].customComponent.module='project://custom-scenes/Motion.tsx';
     const module_path=path.join(dir,'custom-scenes','Motion.tsx');
-    const old=process.env.CONTENTLAB_TRUST_CUSTOM_TSX;
-    delete process.env.CONTENTLAB_TRUST_CUSTOM_TSX;
-    assert.throws(()=>stageCustomScene({module_path},renderer),/desativado/);
-    process.env.CONTENTLAB_TRUST_CUSTOM_TSX='1';
     let staged;
     try{
       staged=stageCustomScene({module_path},renderer);
@@ -67,11 +65,13 @@ test('custom modules are limited to project custom-scenes and require explicit o
       assert.match(root,/config.mode==='overlay'/);
     }finally{
       if(staged)fs.rmSync(staged.directory,{recursive:true,force:true});
-      if(old===undefined)delete process.env.CONTENTLAB_TRUST_CUSTOM_TSX;
-      else process.env.CONTENTLAB_TRUST_CUSTOM_TSX=old;
     }
     assert.ok(customSceneSourceFingerprint(module_path).length>=1);
-  }finally{fs.rmSync(dir,{recursive:true,force:true});}
+  }finally{
+    if(previous===undefined)delete process.env.CONTENTLAB_TRUST_CUSTOM_TSX;
+    else process.env.CONTENTLAB_TRUST_CUSTOM_TSX=previous;
+    fs.rmSync(dir,{recursive:true,force:true});
+  }
 });
 
 test('custom source tree rejects symlinks, even when main TSX is safe',(t)=>{

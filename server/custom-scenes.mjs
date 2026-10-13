@@ -3,8 +3,8 @@ import path from 'node:path';
 import os from 'node:os';
 import crypto from 'node:crypto';
 
-// Custom TSX is executable application code. Only render it from a deliberately
-// trusted LOCAL project, never from a URL, JSON string or untrusted upload.
+// Custom TSX is executable application code. Load it only from a LOCAL project's
+// custom-scenes directory, never from a URL, JSON string or untrusted upload.
 const allowed=/\.(tsx?|jsx?|json|css|svg)$/i;
 const maxFiles=240, maxBytes=8*1024*1024;
 
@@ -46,8 +46,6 @@ export function customSceneSourceFingerprint(modulePath){
 }
 
 export function stageCustomScene(config,remotionDirectory){
-  if(process.env.CONTENTLAB_TRUST_CUSTOM_TSX!=='1')
-    throw Error('Código Remotion personalizado está desativado. Habilite somente projetos revisados usando CONTENTLAB_TRUST_CUSTOM_TSX=1.');
   const {files,moduleRelative}=sourcesFor(config.module_path);
   const directory=fs.mkdtempSync(path.join(remotionDirectory,'.contentlab-custom-'));
   try{

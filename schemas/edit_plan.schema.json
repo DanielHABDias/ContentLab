@@ -817,7 +817,7 @@
         "module": {
           "type": "string",
           "pattern": "^project://custom-scenes/.+\\.tsx$",
-          "description": "Trusted local TSX module inside project/custom-scenes. Requires CONTENTLAB_TRUST_CUSTOM_TSX=1 to render."
+          "description": "Local TSX module inside project/custom-scenes; renders without environment configuration. Use only code from trusted projects."
         },
         "mode": {
           "enum": [
