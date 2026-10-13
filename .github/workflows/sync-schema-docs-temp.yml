@@ -1,0 +1,24 @@
+name: Sync schema-generated docs (temporary)
+on:
+  push:
+    branches: ["feat/programmable-remotion-scenes"]
+permissions:
+  contents: write
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Regenerate canonical docs
+        run: |
+          node scripts/generate-docs.mjs
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add docs/Documentacao-ContentLab.md docs/Documentacao-ContentLab.html
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(docs): sync generated schema reference"
+            git push origin HEAD:feat/programmable-remotion-scenes
+          fi
