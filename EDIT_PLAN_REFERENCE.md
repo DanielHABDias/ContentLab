@@ -88,7 +88,7 @@ Veja `MOTION_DESIGN_JSON.md`, `SCENE_CACHE.md`, exemplos em `examples/` e o sche
 `cells: [5,8]` dimensiona a caixa das duas células centrais inferiores. `fit: contain` preserva a proporção do PNG, inclusive margens transparentes; `cover` pode recortar. Use `transform.scale` somente para ajuste adicional e `transform.offsetX`/`offsetY` para deslocamentos em pixels após encaixar no grid (positivo = direita/baixo; negativo = esquerda/cima). `transform.opacity` já controla a transparência entre 0 e 1; `keyframes[].opacity` permite animá-la. `z` maior desenha na frente. Exemplo de elemento:
 
 ```json
-{"id":"nox","type":"image","asset":"project://assets/nox.png","cells":[5,8],"fit":"contain","z":3,"transform":{"scale":1.05,"offsetY":35,"opacity":0.65}}
+{"id":"personagem","type":"image","asset":"project://assets/personagem.png","cells":[5,8],"fit":"contain","z":3,"transform":{"scale":1.05,"offsetY":35,"opacity":0.65}}
 ```
 
 ## Cortes e fades de narração e música, com crossfade (FFmpeg)
