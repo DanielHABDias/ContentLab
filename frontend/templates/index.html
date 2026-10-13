@@ -21,7 +21,7 @@
   <span class="sidebar-caption">WORKSPACE</span>
   <nav class="workspace-tabs" role="tablist" aria-label="Áreas de trabalho">
       <button class="workspace-tab is-active" id="tab-videos" role="tab" aria-selected="true" aria-controls="panel-videos" type="button" data-workspace="videos"><span>01</span> Vídeos e cortes</button>
-      <button class="workspace-tab" id="tab-transcription" role="tab" aria-selected="false" aria-controls="panel-transcription" type="button" data-workspace="transcription"><span>02</span> Transcrição</button>
+      <button class="workspace-tab" id="tab-transcription" role="tab" aria-selected="false" aria-controls="panel-transcription" type="button" data-workspace="transcription"><span>02</span> Narração</button>
       <button class="workspace-tab" id="tab-editor" role="tab" aria-selected="false" aria-controls="panel-editor" type="button" data-workspace="editor"><span>03</span> Editor automático</button>
       <button class="workspace-tab" id="tab-docs" role="tab" aria-selected="false" aria-controls="panel-docs" type="button" data-workspace="docs"><span>04</span> Documentação</button>
   </nav><div class="sidebar-foot"><span class="sidebar-foot-icon">✦</span><strong>Faça a ideia ganhar movimento.</strong><small>Node.js · Remotion · Local</small></div></aside>
@@ -238,21 +238,37 @@
     </div>
 
     <div id="panel-transcription" class="workspace-panel hidden" role="tabpanel" aria-labelledby="tab-transcription" hidden>
-      <div class="workspace-intro"><span class="eyebrow">DA VOZ AO PLANO</span><h2>Transcrição da narração</h2><p>Comece pela sua voz: escolha uma pasta, selecione o áudio e gere a transcrição com tempos. Você só precisa criar <code>edit_plan.json</code> depois de preparar o plano com a IA.</p></div>
+      <div class="workspace-intro"><span class="eyebrow">02 / VOZ</span><h2>Sua narração, pronta.</h2><p>Importe, remova silêncios longos, escolha o tom da voz e transcreva. Tudo antes de criar <code>edit_plan.json</code>. Pausas editoriais adicionadas depois ficam no Editor.</p></div>
       <section class="block transcription-card">
-        <label class="block-label" for="transcriptionProjectRoot">Pasta onde salvar a transcrição</label>
+        <label class="block-label" for="transcriptionProjectRoot">Pasta do vídeo (sem precisar de edit_plan.json)</label>
         <div class="row transcription-folder-row"><input id="transcriptionProjectRoot" type="text" placeholder="Escolha uma pasta existente" autocomplete="off"><button id="transcriptionChooseFolder" class="btn btn-secondary" type="button">Escolher pasta</button><button id="transcriptionUseEditorProject" class="btn btn-ghost" type="button">Usar pasta do editor</button></div>
-        <p class="helper-text">Pode ser uma pasta vazia. Não precisa conter <code>edit_plan.json</code>. O áudio será copiado para <code>audio/</code> e os arquivos de transcrição ficarão nesta pasta.</p>
+        <p class="helper-text">Pode ser uma pasta vazia. O áudio final fica em <code>audio/narration.wav</code>; a gravação original é preservada. Novos preparos sobrescrevem apenas a narração processada e a transcrição da mesma pasta.</p>
         <div class="transcription-grid">
-          <div><label class="block-label" for="transcriptionFile">Arquivo da narração</label><input id="transcriptionFile" type="file" accept="audio/*,.wav,.mp3,.m4a,.aac,.flac,.ogg,.opus"><p class="helper-text">Selecione o áudio melhorado no seu computador.</p></div>
+          <div><label class="block-label" for="transcriptionFile">Arquivo da narração</label><input id="transcriptionFile" type="file" accept="audio/*,.wav,.mp3,.m4a,.aac,.flac,.ogg,.opus"><p class="helper-text">Escolha a gravação original. Para refazer efeitos de um projeto já preparado, deixe vazio e reutilize o original salvo.</p></div>
           <div><label class="block-label" for="transcriptionModel">Qualidade do reconhecimento</label><select id="transcriptionModel"><option value="tiny">Muito rápido · tiny</option><option value="base">Rápido · base</option><option value="small" selected>Equilibrado · small</option><option value="medium">Mais preciso · medium</option></select><p class="helper-text">Modelos maiores podem demorar mais. O processamento é local.</p></div>
           <div><label class="block-label" for="transcriptionDetail">Tempos no texto</label><select id="transcriptionDetail"><option value="words" selected>Por palavra</option><option value="segments">Por trecho</option></select><p class="helper-text">O JSON sempre guarda tempos por palavra para o editor.</p></div>
           <div><label class="block-label" for="transcriptionLanguage">Idioma</label><select id="transcriptionLanguage"><option value="pt" selected>Português</option><option value="">Detectar automaticamente</option><option value="en">Inglês</option><option value="es">Espanhol</option></select></div>
         </div>
-        <button id="transcriptionStart" class="btn btn-primary" type="button">Transcrever narração</button>
+        <div class="voice-studio-options">
+  <div class="voice-studio-options-title"><span class="eyebrow">LIMPEZA DE ÁUDIO</span><strong>Cortes automáticos seguros</strong><p class="helper-text">Sempre remove silêncio no começo e fim. Silêncios internos longos são reduzidos, mantendo uma pausa natural curta. Ouça o resultado para conferir cortes.</p></div>
+  <label class="voice-toggle"><input id="transcriptionRemoveMiddle" type="checkbox" checked> Reduzir silêncios longos no meio</label>
+  <div class="transcription-grid">
+    <label class="visual-field" for="transcriptionMinSilence">Intervalo interno mínimo
+      <select id="transcriptionMinSilence"><option value="0.5">0,5s — mais cortes</option><option value="0.7" selected>0,7s — equilibrado</option><option value="1">1s — conservador</option><option value="1.4">1,4s — apenas longos</option></select>
+    </label>
+    <label class="visual-field" for="transcriptionThreshold">Sensibilidade
+      <select id="transcriptionThreshold"><option value="-48">Conservadora (−48 dB)</option><option value="-42" selected>Normal (−42 dB)</option><option value="-36">Mais agressiva (−36 dB)</option></select>
+    </label>
+  </div>
+  <div class="voice-studio-options-title"><span class="eyebrow">ESTILO DA VOZ</span><strong>Efeito opcional</strong><p class="helper-text">Grave suave preservando a duração e, quando possível, os formantes. Exige FFmpeg com rubberband. O reconhecimento das palavras usa a versão limpa anterior ao pitch.</p></div>
+  <label class="visual-field" for="transcriptionPitch">Tom da voz
+    <select id="transcriptionPitch"><option value="0" selected>Original — sem efeito</option><option value="-0.5">Grave suave — −0,5 semitom</option><option value="-1">Grave natural — −1 semitom</option><option value="-1.5">Grave profundo — −1,5 semitom</option><option value="-2">Grave forte — −2 semitons</option></select>
+  </label>
+</div>
+<button id="transcriptionStart" class="btn btn-primary" type="button">Preparar narração e gerar transcrição</button>
         <p id="transcriptionError" class="error-text hidden" role="alert"></p>
         <p id="transcriptionStatus" class="helper-text" role="status" aria-live="polite"></p>
-        <div id="transcriptionResult" class="hidden"><div class="transcription-result-head"><strong>Transcrição pronta</strong><span id="transcriptionStats"></span></div><p class="helper-text">Arquivos salvos na pasta escolhida: <code>transcript.json</code>, <code>transcript.txt</code> e <code>transcript.srt</code>.</p><textarea id="transcriptionPreview" rows="12" readonly aria-label="Prévia da transcrição com tempos"></textarea><div class="transcription-result-actions"><button id="transcriptionOpenFolder" class="btn btn-secondary btn-sm" type="button">Abrir pasta dos arquivos</button><p id="transcriptionPlanHint" class="helper-text"></p></div></div>
+        <div id="transcriptionResult" class="hidden"><div class="transcription-result-head"><strong>Transcrição pronta</strong><span id="transcriptionStats"></span></div><p class="helper-text">Arquivos salvos: <code>audio/narration.wav</code> (efeito opcional), <code>audio/narration.prepared.wav</code>, <code>transcript.json</code>, <code>transcript.txt</code> e <code>transcript.srt</code>.</p><audio id="transcriptionAudio" class="voice-studio-audio" controls preload="none" aria-label="Ouvir narração preparada"></audio><textarea id="transcriptionPreview" rows="12" readonly aria-label="Prévia da transcrição com tempos"></textarea><div class="transcription-result-actions"><button id="transcriptionOpenFolder" class="btn btn-secondary btn-sm" type="button">Abrir pasta dos arquivos</button><p id="transcriptionPlanHint" class="helper-text"></p></div></div>
       </section>
     </div>
 
@@ -285,11 +301,9 @@
           <p id="editorOutput" class="mono editor-output"></p><ul id="editorWarnings" class="editor-list"></ul>
           <details id="editorReportDetails" class="hidden"><summary>Detalhes técnicos do render</summary><pre id="editorReport"></pre></details>
         </section>
-        <div class="editor-inputs">
-          <button id="editorChooseNarration" class="btn btn-secondary btn-sm" type="button">Selecionar narração e gerar transcrição</button>
-           <button id="editorRetranscribe" class="btn btn-secondary btn-sm" type="button">Atualizar transcrição</button>
-          <input id="editorNarrationFile" class="hidden" type="file" accept="audio/*,.wav,.mp3,.m4a,.aac,.flac,.ogg,.opus">
-          <span class="helper-text">A narração será preparada (trim e pausas) antes de gerar <code>transcript.json</code> automaticamente. Requer whisper.cpp instalado.</span>
+        <div class="editor-inputs voice-editor-link">
+          <button id="editorGoNarration" class="btn btn-secondary btn-sm" type="button">Preparar ou revisar narração ↗</button>
+          <span class="helper-text">A narração é preparada na aba Narração, antes do JSON. O Editor reaproveita os tempos; cortes e pausas deliberadas continuam no plano.</span>
         </div>
         <p id="editorTranscriptState" class="helper-text" role="status" aria-live="polite"></p>
          <label class="block-label" for="editorAssetFolder">Pasta de assets dentro do projeto</label>

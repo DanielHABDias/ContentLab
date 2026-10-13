@@ -6,7 +6,7 @@ description: Planeja sincronismo com narração, transcript, SFX, música, corte
 # Content Lab — Timeline, voz e áudio
 
 ## Fonte temporal
-A narração **preparada** é a referência para sincronizar legendas, palavras e beats. Ao importar a narração, o Content Lab pode aplicar auto-trim de bordas, `narrationTrim` ou `sourceCuts`, `silenceInserts`, gerar `audio/narration.prepared.wav` e transcrever com Whisper. A transcrição gerada já usa a linha temporal preparada: não remapeie os tempos novamente.
+A narração **preparada** é a referência para sincronizar palavras, legendas e beats. O fluxo preferido agora começa na aba **Narração**, sem `edit_plan.json`: o Content Lab remove silêncio das bordas e reduz pausas internas longas (configurável), preserva `audio/narration.original.*`, salva `audio/narration.prepared.wav` e gera o áudio final `audio/narration.wav` com grave opcional. O `transcript.json` é produzido sobre a versão limpa, **antes do pitch**. Depois o ChatGPT cria `edit_plan.json` com `audio.narration: "audio/narration.wav"` e `sources.transcript: "transcript.json"`. `silenceInserts` é etapa de edição posterior: aplique as pausas pelo JSON e deixe o renderer remapear apenas essas inserções. Não duplicar `sourceCuts` de cortes que a aba Narração já realizou.
 
 ## Regras de relógio
 - `scene.start/end` e `element.start/end`: segundos **absolutos** no vídeo.
@@ -16,7 +16,7 @@ A narração **preparada** é a referência para sincronizar legendas, palavras 
 - Em narrações com timestamps de palavras, ancore revelações nos beats semânticos relevantes; o tempo de leitura pode exigir manter a informação após o enunciado.
 
 ## Tratamento de voz
-- O auto-trim remove **apenas silêncio inicial e terminal**, preservando pausas internas e respirações. Use `audio.voice.autoTrimSilence:false` quando o silêncio de borda for intencional.
+- O fluxo novo na aba Narração reduz silêncio de início/fim e, opcionalmente, pausas internas longas. O auto-trim antigo do plano ainda remove **apenas silêncio inicial e terminal**. Use `audio.voice.autoTrimSilence:false` quando o silêncio de borda for intencional.
 - Para um único intervalo de corte da voz use `audio.narrationTrim`; para múltiplos intervalos use `sourceCuts`; não use os dois juntos.
 - Após mudar cortes, pausas ou o áudio, a transcrição preparada pode ser regenerada; preserve backup de correções manuais.
 - Correções ortográficas no texto da transcrição não autorizam deslocar arbitrariamente timestamps.

@@ -9,7 +9,7 @@ Esta é a skill central para qualquer trabalho de edição automatizada no Conte
 
 ## Antes de iniciar
 1. Identifique a intenção: planejar, criar JSON, aprimorar movimento, revisar cena, adaptar formato, sincronizar áudio ou diagnosticar render.
-2. Leia o projeto e seus materiais efetivamente disponíveis: narração preparada, transcript, assets, plano anterior e formato. Não invente arquivos, tempos, transcrições ou resultados.
+2. **Antes de gerar edit_plan.json**, verifique se a aba Narração já produziu audio/narration.wav e transcript.json na mesma pasta. O áudio é cortado e opcionalmente estilizado sem depender de JSON; o transcript vem da voz limpa antes do pitch. Não invente arquivos, tempos ou resultados.
 3. Quando existir perfil de marca, carregue sua skill antes de planejar a aparência: `skills/diazverso-video/SKILL.md` para Diazverso; `skills/gsb-contentlab/SKILL.md` para GSB.
 4. Consulte a documentação oficial empacotada: `docs/Documentacao-ContentLab.md`, `schemas/edit_plan.schema.json`, `EDIT_PLAN_REFERENCE.md` e exemplos. O contrato único não contém campo `version`.
 5. Acione **somente os módulos relevantes**, lendo seus arquivos completos antes de trabalhar:

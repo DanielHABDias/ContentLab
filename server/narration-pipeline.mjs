@@ -31,6 +31,22 @@ export function narrationStamp(root,plan){
   };
   return crypto.createHash('sha256').update(JSON.stringify(timing)).digest('hex');
 }
+export function renderVoiceSettings(root,plan){
+  const audio=plan.audio||{};
+  try{
+    const meta=readJson(path.join(root,'narration.build.json'));
+    if(meta.mode!=='voice-studio'||audio.narration!==meta.output)return audio;
+    const file=path.join(root,meta.output);
+    if(!fs.existsSync(file))return audio;
+    const stat=fs.statSync(file);
+    if(stat.size!==meta.outputIdentity?.size||
+      Math.abs(stat.mtimeMs-meta.outputIdentity?.mtimeMs)>=1)return audio;
+    // This audio was already cut, normalized and optionally pitch-shifted
+    // BEFORE the edit plan existed. Preserve later editorial sourceCuts and
+    // silenceInserts, but never process the source a second time.
+    return {...audio,voice:{...audio.voice,autoTrimSilence:false,highpassHz:0,normalize:false}};
+  }catch{return audio;}
+}
 export function transcriptStatus(root,plan){
   if(plan.sources?.transcript!==TRANSCRIPT_FILE)return {status:'external'};
   const file=path.join(root,TRANSCRIPT_FILE),metadata=path.join(root,TRANSCRIPT_BUILD);
@@ -38,6 +54,15 @@ export function transcriptStatus(root,plan){
   if(!fs.existsSync(metadata))return {status:'external'};
   try{
     const meta=readJson(metadata);
+    if(meta.mode==='voice-studio'){
+      if(meta.output!==plan.audio?.narration)return {status:'external'};
+      const output=path.join(root,meta.output);
+      const stat=fs.existsSync(output)?fs.statSync(output):null;
+      const intact=stat&&stat.size===meta.outputIdentity?.size&&
+        Math.abs(stat.mtimeMs-meta.outputIdentity?.mtimeMs)<1;
+      return {status:intact?'external':'stale',kind:'voice-studio',prepared:meta.output,
+        generatedAt:meta.generatedAt};
+    }
     const stamp=narrationStamp(root,plan);
     return {status:stamp&&meta.narrationStamp===stamp?'ready':'stale',
       prepared:meta.prepared,language:meta.language,generatedAt:meta.generatedAt};

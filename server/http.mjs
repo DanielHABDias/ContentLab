@@ -10,6 +10,7 @@ import {renderProject} from './render.mjs';
 import {run} from './exec.mjs';
 import {SOURCE_CACHE,listSources,cachedSource,importLocalSource,removeSource,getYoutubeInfo,resolveSource,exportCut} from './source.mjs';
 import {transcribeAudio} from './transcribe.mjs';
+import {voiceStudioFolder,voiceStudioState,prepareStandaloneNarration} from './voice-studio.mjs';
 import {prepareAndTranscribeProject,narrationStamp,transcriptStatus} from './narration-pipeline.mjs';
 import {streamSkillZip} from './skill.mjs';
 import {buildMarkdown,buildHtml} from './docs.mjs';
@@ -62,13 +63,7 @@ app.get('/api/editor/backgrounds',api(async(req,res)=>res.json({backgrounds:inst
 app.post('/api/editor/visual-context',api(async(req,res)=>res.json(visualContext(req.body.projectRoot))));
 app.post('/api/editor/project',api(async(req,res)=>{
   const project=loadProject(req.body.projectRoot);
-  const plan=JSON.parse(project.planText),narration=project.validation.narration;
-  const needsTranscript=['missing','stale'].includes(project.transcription?.status);
-  const failedEarlier=[...transcriptions.values()].some(j=>j.projectRoot===project.projectRoot&&j.status==='error'&&
-    j.narrationStamp===narrationStamp(project.projectRoot,plan));
-  const transcriptionJobId=narration&&fs.existsSync(narration)&&needsTranscript&&!failedEarlier&&!activeRender(project.projectRoot)?
-    startPreparedTranscript(project.projectRoot):null;
-  res.json({...project,transcriptionJobId});
+  res.json(project);
 }));
 app.get('/api/editor/scenes',api(async(req,res)=>{
   if(typeof req.query.projectRoot!=='string')return forbidden(res,'Informe a pasta do projeto.');
@@ -91,12 +86,8 @@ app.post('/api/editor/project/save',api(async(req,res)=>{
   const {root}=projectFile(req.body.projectRoot);
   if(activeRender(root))return res.status(409).json({error:'Aguarde o render antes de salvar o plano.'});
   try{
-    const before=readJson(projectFile(root).file),previous=narrationStamp(root,before);
     const updated=saveProject(root,req.body.planText,req.body.revision);
-    const after=JSON.parse(updated.planText),current=narrationStamp(root,after);
-    const transcriptionJobId=current&&current!==previous&&after.sources?.transcript==='transcript.json'&&!activeRender(root)?
-      startPreparedTranscript(root):null;
-    res.json({...updated,transcriptionJobId});
+    res.json(updated);
   }
   catch(e){
     if(e.issues?.some(x=>x.path==='revision'))return res.status(409).json({error:e.message,errors:e.issues});
@@ -134,6 +125,7 @@ app.post('/api/editor/project/transcribe',api(async(req,res)=>{
   let project=loadProject(req.body.projectRoot);
   if(activeRender(project.projectRoot))return res.status(409).json({error:'Aguarde o render atual.'});
   if(!fs.existsSync(project.validation.narration||''))return forbidden(res,'Importe uma narração antes da transcrição.');
+  if(project.transcription?.kind==='voice-studio')return forbidden(res,'Esta narração foi preparada na aba Narração. Faça ajustes nessa aba.');
   const plan=JSON.parse(project.planText);
   if(plan.sources?.transcript!=='transcript.json'){
     plan.sources={...(plan.sources||{}),transcript:'transcript.json'};
@@ -370,23 +362,48 @@ app.get('/api/progress/:id',api(async(req,res)=>{
   if(!job)return res.status(404).json({error:'Processamento não encontrado.'});
   res.json(job);
 }));
+app.get('/api/transcription/state',api(async(req,res)=>{
+  res.json(voiceStudioState(String(req.query.projectRoot||'')));
+}));
 app.post('/api/transcription/jobs',upload.single('file'),api(async(req,res)=>{
-  if(!req.file)return forbidden(res,'Selecione um arquivo para transcrição.');
   let root;
-  try{root=fs.realpathSync(req.body.projectRoot);}catch{fs.rmSync(req.file.path,{force:true});return forbidden(res,'Pasta de destino inválida.');}
-  if(!fs.statSync(root).isDirectory())return forbidden(res,'Destino não é uma pasta.');
-  const ext=path.extname(req.file.originalname).toLowerCase();
-  if(!['.wav','.mp3','.m4a','.aac','.flac','.ogg','.opus'].includes(ext)){fs.rmSync(req.file.path,{force:true});return forbidden(res,'Arquivo de áudio inválido.');}
-  const audioDir=path.join(root,'audio');fs.mkdirSync(audioDir,{recursive:true});
-  const file=path.join(audioDir,'narration-'+crypto.randomUUID()+ext);
-  fs.renameSync(req.file.path,file);
-  const id=crypto.randomUUID(),job={status:'running',message:'Preparando transcrição...',projectRoot:root,
-    narration:path.relative(root,file).split(path.sep).join('/'),result:null,error:null};
-  transcriptions.set(id,job);res.status(202).json({jobId:id});
-  transcribeAudio(file,root,{model:req.body.model||'base',language:req.body.language||'pt',
-    update:message=>{job.message=message;}}).then(result=>{
-      Object.assign(job,{status:'done',message:'Transcrição concluída.',result});
-    }).catch(e=>Object.assign(job,{status:'error',message:'Falha na transcrição.',error:e.message}));
+  try{root=voiceStudioFolder(req.body.projectRoot);}
+  catch(e){if(req.file)fs.rmSync(req.file.path,{force:true});return forbidden(res,e.message);}
+  if(activeRender(root)||runningTranscription(root)){
+    if(req.file)fs.rmSync(req.file.path,{force:true});
+    return res.status(409).json({error:'Já há processamento de áudio neste projeto.'});
+  }
+  const ext=req.file?path.extname(req.file.originalname||'').toLowerCase():null;
+  if(req.file&&!['.wav','.mp3','.m4a','.aac','.flac','.ogg','.opus'].includes(ext)){
+    fs.rmSync(req.file.path,{force:true});return forbidden(res,'Formato de áudio inválido.');
+  }
+  const state=voiceStudioState(root);
+  if(!req.file&&!state.ready)return forbidden(res,'Selecione o áudio ou prepare primeiro uma narração.');
+  const sourceFile=req.file?req.file.path+ext:path.join(root,state.source);
+  if(req.file)fs.renameSync(req.file.path,sourceFile);
+  const id=crypto.randomUUID();
+  const job={id,status:'running',message:'Preparando narração...',projectRoot:root,result:null,error:null};
+  transcriptions.set(id,job);
+  res.status(202).json({jobId:id});
+  prepareStandaloneNarration(root,{
+    sourceFile,model:req.body.model||'small',language:req.body.language||'pt',
+    options:{
+      removeMiddleSilence:req.body.removeMiddleSilence!=='false',
+      minSilence:Number(req.body.minSilence||.7),
+      thresholdDb:Number(req.body.thresholdDb||-42),
+      pitchSemitones:Number(req.body.pitchSemitones||0)
+    },update:message=>{job.message=message;}
+  }).then(result=>Object.assign(job,{status:'done',message:'Narração e transcrição prontas.',result}))
+    .catch(e=>Object.assign(job,{status:'error',message:'Falha no preparo da narração.',error:e.message}))
+    .finally(()=>{if(req.file)fs.rmSync(sourceFile,{force:true});});
+}));
+app.get('/api/transcription/jobs/:id/audio',api(async(req,res)=>{
+  const job=transcriptions.get(req.params.id);
+  if(!job||job.status!=='done'||!job.result?.narration)
+    return res.status(404).json({error:'Narração processada ainda não disponível.'});
+  const audio=path.join(job.projectRoot,'audio','narration.wav');
+  if(!fs.existsSync(audio))return res.status(404).json({error:'Áudio não encontrado.'});
+  res.type('audio/wav').sendFile(audio);
 }));
 app.get('/api/transcription/jobs/:id',api(async(req,res)=>{
   const job=transcriptions.get(req.params.id);
