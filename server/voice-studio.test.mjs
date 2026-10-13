@@ -75,6 +75,17 @@ test('standalone narration generates final WAV and transcript without edit_plan.
     assert.equal(effective.voice.autoTrimSilence,false);
     assert.equal(effective.voice.normalize,false);
     assert.deepEqual(effective.silenceInserts,plan.audio.silenceInserts);
+    const corrected=JSON.parse(fs.readFileSync(path.join(root,'transcript.json'),'utf8'));
+    corrected.words[0].word='CORRIGIDO';
+    fs.writeFileSync(path.join(root,'transcript.json'),JSON.stringify(corrected));
+    await prepareStandaloneNarration(root,{
+      sourceFile:path.join(root,processed.source),
+      options:{removeMiddleSilence:true,minSilence:.7},transcriber
+    });
+    const backups=fs.readdirSync(root).filter(name=>name.startsWith('transcript.backup-'));
+    assert.ok(backups.length>=1,'Manual transcript correction must be backed up');
+    assert.equal(JSON.parse(fs.readFileSync(path.join(root,backups[0]),'utf8')).words[0].word,'CORRIGIDO');
+
   }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
 
