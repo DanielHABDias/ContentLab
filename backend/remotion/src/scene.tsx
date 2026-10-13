@@ -3,15 +3,10 @@ import {AbsoluteFill, cancelRender, continueRender, delayRender, Img, Sequence, 
 import {Video} from '@remotion/media';
 import {loadFont} from '@remotion/fonts';
 import type {Element, Keyframe, SceneProps, Word} from './types';
+import {clamp01, smoothstep5, easeMotion, motionDuration, motionProgress, motionEnvelope, interpolate} from './motion.mjs';
 
-const clamp = (n: number) => Math.max(0, Math.min(1, n));
-const ease = (n: number, name?: string) => {
-  const x = clamp(n);
-  if (name === 'ease_in') return x * x;
-  if (name === 'ease_out') return 1 - (1 - x) ** 2;
-  if (name === 'ease_in_out') return x * x * (3 - 2 * x);
-  return x;
-};
+const clamp = clamp01;
+const ease = easeMotion;
 const stateAt = (initial: Record<string, number>, frames: Keyframe[] = [], time: number) => {
   let previous = 0;
   let state = {...initial};
@@ -73,9 +68,8 @@ const wordStackState = (item: Element, absolute: number, words: Word[]) => {
   }
   const active = candidates[activeIndex];
   const configured = Number(item.data.config?.transitionDuration ?? 0.18);
-  const duration = Math.max(0.05, Math.min(configured, Math.max(0.05, (active.end - active.start) * 0.45)));
-  const raw = activeIndex === 0 ? 1 : clamp((absolute - active.start) / duration);
-  const progress = ease(raw, 'ease_out');
+  const duration = motionDuration(configured, active.end - active.start);
+  const progress = activeIndex === 0 ? 1 : motionProgress(absolute - active.start, duration);
   return {
     previous: activeIndex > 0 ? candidates[activeIndex - 1] : null,
     active,
@@ -197,37 +191,40 @@ const Layer = ({item, props, time, absolute, camera}: {item: Element; props: Sce
   const state = stateAt({x: anchorX, y: anchorY, offsetX: 0, offsetY: 0, scale: 1, rotation: 0, opacity: 1, ...item.data.transform}, item.data.keyframes, time);
   const motion = item.data.animation ?? {};
   const elapsed = absolute - item.start, remaining = item.end - absolute, total = item.end - item.start;
-  const enterDuration = Math.min(motion.enterDuration ?? 0.45, total);
-  const exitDuration = Math.min(motion.exitDuration ?? 0.35, total);
+  const enterDuration = motionDuration(motion.enterDuration ?? 0.45, total);
+  const exitDuration = motionDuration(motion.exitDuration ?? 0.35, total);
   let centerVisibility = 1;
   if (enterDuration && elapsed < enterDuration) {
-    const p = ease(elapsed / enterDuration, 'ease_out');
+    const p = motionProgress(elapsed, enterDuration, 'ease_out');
     if (motion.enter === 'slide_from_left') state.x = 0.08 + (state.x - 0.08) * p;
     if (motion.enter === 'slide_from_right') state.x = 0.92 + (state.x - 0.92) * p;
     if (motion.enter === 'slide_up') state.y = 0.92 + (state.y - 0.92) * p;
     if (motion.enter === 'slide_down') state.y = 0.08 + (state.y - 0.08) * p;
     if (motion.enter === 'fade' || motion.enter === 'pop_in') state.opacity *= p;
-    if (motion.enter === 'pop_in') state.scale *= 0.65 + 0.35 * p + 0.13 * Math.sin(Math.PI * p);
+    if (motion.enter === 'pop_in') state.scale *= 0.65 + 0.35 * p + 0.13 * Math.sin(Math.PI * p) ** 2;
     if (motion.enter === 'center_reveal') centerVisibility = p;
   }
   if (exitDuration && remaining < exitDuration) {
-    const p = ease(1 - remaining / exitDuration, 'ease_in');
+    const p = motionProgress(exitDuration - remaining, exitDuration, 'ease_in');
     if (motion.exit === 'slide_to_left') state.x += (0.08 - state.x) * p;
     if (motion.exit === 'slide_to_right') state.x += (0.92 - state.x) * p;
     if (motion.exit === 'slide_to_bottom') state.y += (0.92 - state.y) * p;
     if (motion.exit === 'fade' || motion.exit === 'fade_out') state.opacity *= 1 - p;
     if (motion.exit === 'center_close') centerVisibility = 1 - p;
   }
-  if (motion.idle === 'float_soft') state.y += 0.005 * Math.sin(elapsed * 2);
+  // Looping idles ramp in/out without snapping at a layer's start or end.
+  const idleWeight = motionEnvelope(elapsed, total);
+  if (motion.idle === 'float_soft') state.y += idleWeight * 0.005 * Math.sin(elapsed * 2);
   if (motion.idle === 'wiggle_soft') {
-    state.x += 0.0025 * Math.sin(elapsed * 2.4);
-    state.y += 0.0018 * Math.sin(elapsed * 3.1 + 0.7);
-    state.rotation += 0.35 * Math.sin(elapsed * 2.1);
+    state.x += idleWeight * 0.0025 * Math.sin(elapsed * 2.4);
+    state.y += idleWeight * 0.0018 * Math.sin(elapsed * 3.1 + 0.7);
+    state.rotation += idleWeight * 0.35 * Math.sin(elapsed * 2.1);
   }
-  if (motion.idle === 'pulse_soft') state.scale *= 1 + 0.025 * Math.sin(elapsed * 3);
-  if (motion.idle === 'slow_zoom_in') state.scale *= 1 + 0.06 * elapsed / Math.max(total, 0.01);
-  if (motion.idle === 'slow_zoom_out') state.scale *= 1.06 - 0.06 * elapsed / Math.max(total, 0.01);
-  if (motion.idle === 'pan') state.x += 0.015 * elapsed / Math.max(total, 0.01);
+  if (motion.idle === 'pulse_soft') state.scale *= 1 + idleWeight * 0.025 * Math.sin(elapsed * 3);
+  const travel = motionProgress(elapsed, total);
+  if (motion.idle === 'slow_zoom_in') state.scale *= interpolate(1, 1.06, travel);
+  if (motion.idle === 'slow_zoom_out') state.scale *= interpolate(1.06, 1, travel);
+  if (motion.idle === 'pan') state.x += interpolate(0, 0.015, travel);
   const box = item.data.box && typeof item.data.box === 'object' ? item.data.box : {};
   const card = box.preset === 'floating_card' || box.background;
   const elementWidth = item.type === 'filter' || isWordStack ? width : item.data.cells ? rw : width * 0.8;
@@ -293,8 +290,8 @@ const Layer = ({item, props, time, absolute, camera}: {item: Element; props: Sce
     const active = candidates[activeIndex];
     const previous = activeIndex > 0 ? candidates[activeIndex - 1] : null;
     const configured = Number(item.data.config?.transitionDuration ?? 0.16);
-    const duration = Math.max(0.06, Math.min(configured, Math.max(0.06, (active.end - active.start) * 0.55)));
-    const p = ease(clamp((absolute - active.start) / duration), 'ease_out');
+    const duration = motionDuration(configured, active.end - active.start);
+    const p = motionProgress(absolute - active.start, duration);
     const appearance = item.data.textStyle ?? {};
     const look = styles.word_stream_horizontal;
     const uppercase = appearance.uppercase ?? true;
@@ -367,7 +364,7 @@ const Layer = ({item, props, time, absolute, camera}: {item: Element; props: Sce
     const upperBottom = elementHeight * (0.5 - gapFraction);
     const lowerTop = elementHeight * (0.5 + gapFraction);
     const progress = stack.progress;
-    const lerp = (start: number, finish: number) => start + (finish - start) * progress;
+    const lerp = (start: number, finish: number) => interpolate(start, finish, progress);
     // For each item, animate both its position and vertical anchoring:
     // incoming top row is BOTTOM aligned, outgoing bottom row is TOP aligned.
     const slots = [
@@ -512,7 +509,9 @@ export const Scene = (props: SceneProps) => {
   const camera = stateAt({x: 0.5, y: 0.5, scale: 1}, props.scene.camera.keyframes, time);
   for (const shake of props.scene.camera.shake ?? []) {
     if (shake.start <= time && time < shake.end) {
-      const fade = Math.max(0, Math.min(1, (time - shake.start) / 0.15, (shake.end - time) / 0.15));
+      const edge = Math.min(0.15, (shake.end - shake.start) / 2);
+      const fade = edge > 0 ? smoothstep5((time - shake.start) / edge) *
+        smoothstep5((shake.end - time) / edge) : 0;
       const amplitude = (shake.amplitude ?? 0.003) * fade, frequency = shake.frequency ?? 2.5;
       camera.x += amplitude * Math.sin(2 * Math.PI * frequency * time);
       camera.y += amplitude * Math.sin(2 * Math.PI * frequency * 1.37 * time);
