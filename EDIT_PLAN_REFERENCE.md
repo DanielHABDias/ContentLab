@@ -125,3 +125,13 @@ O Content Lab aplica por padrão aos arquivos de **narração** e **música** a 
 - O trim é **automático e não requer preencher `sourceStart`, `sourceEnd`, `narrationTrim` ou `sourceCuts`**: esses campos continuam opcionais para recortes editoriais específicos. `trimDb` é volume em dB e não tem relação com remoção de silêncio.
 - Crossfade de duas músicas continua funcionando por sobreposição de `start/end` e combinações `fadeOut/fadeIn`. Silêncio no meio dos arquivos continua intocado.
 - A timeline de cenas permanece absoluta; a remoção do silêncio inicial desloca a fala para mais cedo. O renderizador remapeia os tempos das palavras para captions/kinetic text, mas **entradas manuais de cenas e SFX que tenham sido marcadas usando a gravação não limpa precisam ser revisadas** no Preview.
+
+## Fluxo canônico da transcrição: áudio preparado primeiro
+
+No Editor, **Criar projeto → Selecionar narração** já inicia a preparação e a transcrição. O Content Lab copia a narração original para `audio/`, registra seu caminho em `audio.narration` e mantém `sources.transcript: "transcript.json"`. **Não é necessário fornecer transcript.json** no momento de criar o projeto.
+
+O motor faz o trim de silêncio apenas nas bordas e aplica `narrationTrim` ou `sourceCuts` (quando declarados), depois `silenceInserts` na timeline da voz. Salva uma cópia do áudio resultante como `audio/narration.prepared.wav` e usa `whisper-cli -ml 1 -sow` para produzir palavras com timestamps; gera `transcript.json`, `transcript.txt` e `transcript.srt`. Sem `whisper-cli` e modelo local o projeto mantém a importação mas mostra falha de transcrição — nunca inventa tempos.
+
+O sistema registra `transcript.build.json` para identificar qual narração/cortes/pausas geraram o JSON. Ao salvar alterações que afetam o relógio, dispara novo processamento. A transcrição gerada já usa os **tempos da narração preparada**, portanto o render não desloca as palavras uma segunda vez. Correções de ortografia/nome podem alterar `words[].word` e `segments[].text` sem modificar `start/end`. Antes de regenerar, correções humanas divergentes são preservadas em `transcript.manual-backup-*.json`. Consulte o estado no editor e use **Atualizar transcrição** para tentar novamente, se necessário.
+
+**Importante:** timestamps de reconhecimento de fala são estimativas; para legendas críticas inspecione o preview e faça ajustes finos. Pausas/respirações internas são preservadas. Mesmo gerando a transcrição automaticamente, tempos **manuais** de cortes visuais e SFX que se basearam no arquivo de voz original precisam ser conferidos após correções.
