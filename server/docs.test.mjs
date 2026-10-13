@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {fieldCatalogue,documentationModel,buildMarkdown,buildHtml,figureAssets} from './docs.mjs';
+import {validatePlan} from './plan.mjs';
 import {diagramNames,diagramSvg} from './docs-diagrams.mjs';
 import {descriptions} from './docs-fields.mjs';
 
@@ -55,11 +56,27 @@ test('documents cover all main capabilities, include examples and all JS-generat
   assert.ok(md.includes('highlightTransitionDuration'));
   assert.ok(html.includes('bangers_highlight_block'));
   assert.ok(md.includes('Movimento suave em 0,1 segundo'));
+  assert.ok(md.includes('### Estrutura sugerida do projeto'));
+  assert.ok(html.includes('Estrutura sugerida do projeto'));
+  assert.ok(md.includes('transcript.build.json'));
+  assert.ok(html.includes('transcript.build.json'));
+  assert.ok(md.includes('narration.prepared.wav'));
+  assert.ok(md.includes('Criar cena motion com grid 3×3'));
+  assert.ok(md.includes('fontes') || md.includes('project://'));
+  const fullProject=model.exampleCases.find(c=>c.title==='Projeto completo com pastas e URIs');
+  assert.ok(fullProject,'Quick-start JSON must be integrated in documentation');
+  assert.deepEqual(validatePlan(fullProject.data),[],
+    'Complete starter example must validate against canonical schema');
+
   assert.ok(html.includes('0.1 segundo'));
   assert.ok(md.includes('uma transição de 0.1 s em 30 fps tem apenas 3 frames'));
 });
 test('website exposes one docs tab, dedicated reader and exactly three doc download actions',()=>{
   const html=readFileSync(new URL('../frontend/templates/index.html',import.meta.url),'utf8');
+  assert.ok(!html.includes('id="tab-guide"'));
+  assert.ok(!html.includes('id="panel-guide"'));
+  assert.ok(!html.includes('id="guideOpenDocs"'));
+  assert.equal((html.match(/class="workspace-tab/g)||[]).length,4);
   assert.ok(html.includes('id="tab-docs"'));
   assert.ok(html.includes('id="panel-docs"'));
   assert.ok(html.includes('id="docsManual"'));
