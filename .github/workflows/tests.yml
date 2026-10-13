@@ -82,6 +82,10 @@ jobs:
         run: node server/smoke-transcription.mjs
       - name: End-to-end Remotion render and cache
         run: node server/smoke.mjs
+      - name: Render programmable TSX motion example (531 frames)
+        env:
+          CONTENTLAB_TRUST_CUSTOM_TSX: "1"
+        run: node server/smoke-custom-scene.mjs
       - name: Test vertical word carousel layout and transitions with real Remotion frames
         run: node server/smoke-word-stack.mjs
       - name: Smooth 100ms animations retain timeline and render all transition directions

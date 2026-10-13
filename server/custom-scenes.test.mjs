@@ -74,11 +74,12 @@ test('custom modules are limited to project custom-scenes and require explicit o
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
 
-test('custom source tree rejects symlinks, even when main TSX is safe',()=>{
+test('custom source tree rejects symlinks, even when main TSX is safe',(t)=>{
   const {dir}=setup();
   try{
     const target=path.join(dir,'custom-scenes','Motion.tsx');
-    fs.symlinkSync(target,path.join(dir,'custom-scenes','shortcut.tsx'));
+    try{fs.symlinkSync(target,path.join(dir,'custom-scenes','shortcut.tsx'));}
+    catch(e){if(['EPERM','EACCES'].includes(e.code)){t.skip('Symlinks need privileges on this OS');return;}throw e;}
     assert.throws(()=>customSceneSourceFingerprint(target),/Links simbólicos/);
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
