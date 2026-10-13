@@ -24,7 +24,6 @@
       <button class="workspace-tab" id="tab-transcription" role="tab" aria-selected="false" aria-controls="panel-transcription" type="button" data-workspace="transcription"><span>02</span> Transcrição</button>
       <button class="workspace-tab" id="tab-editor" role="tab" aria-selected="false" aria-controls="panel-editor" type="button" data-workspace="editor"><span>03</span> Editor automático</button>
       <button class="workspace-tab" id="tab-docs" role="tab" aria-selected="false" aria-controls="panel-docs" type="button" data-workspace="docs"><span>04</span> Documentação</button>
-      <button class="workspace-tab" id="tab-guide" role="tab" aria-selected="false" aria-controls="panel-guide" type="button" data-workspace="guide"><span>ⓘ</span> Guia do projeto</button>
   </nav><div class="sidebar-foot"><span class="sidebar-foot-icon">✦</span><strong>Faça a ideia ganhar movimento.</strong><small>Node.js · Remotion · Local</small></div></aside>
   <main class="panel">
     <div id="panel-videos" class="workspace-panel" role="tabpanel" aria-labelledby="tab-videos">
@@ -392,63 +391,6 @@
       </section>
       <section class="docs-viewer-block" aria-label="Manual do Content Lab">
         <iframe id="docsManual" title="Manual completo do Content Lab" data-src="/api/docs/view" loading="lazy"></iframe>
-      </section>
-    </div>
-    <div id="panel-guide" class="workspace-panel hidden" role="tabpanel" aria-labelledby="tab-guide" hidden>
-      <div class="workspace-intro"><span class="eyebrow">COMECE POR AQUI</span><h2>Como organizar seu projeto</h2><p>Estrutura recomendada para o editor encontrar narração, transcrição e arquivos de mídia.</p></div>
-      <section class="block guide-skill">
-        <div><span class="eyebrow">MANUAL E SKILL</span><h3>Uma referência para tudo.</h3>
-          <p>O guia completo está na aba Documentação, com pesquisa de campos, exemplos, diagramas e os três downloads oficiais. A skill ZIP já traz a documentação e os recursos necessários para criar JSON com IA.</p></div>
-        <button id="guideOpenDocs" class="btn btn-primary" type="button">Abrir documentação</button>
-      </section>
-      <section class="block guide-card">
-        <h3>Motion design: cenas contínuas</h3>
-        <p>O <code>edit_plan.json</code> permite manter o mesmo fundo (cor, imagem ou vídeo), animar PNGs, vídeos e textos em camadas e mover uma câmera virtual. O grid 3×3 define a posição-base: <code>[1,4,7]</code> é a coluna esquerda e <code>[3,6,9]</code> a direita. <code>scale: 1.2</code> aumenta 20% além das células.</p>
-        <p>No editor, use <strong>Criar cena motion com grid 3×3</strong> para montar o caso comum sem escrever keyframes. Você pode escolher uma cor hexadecimal, selecionar um fundo já instalado ou informar o URI de um arquivo próprio. Para controle preciso, consulte <code>MOTION_DESIGN_JSON.md</code> e <code>examples/motion-storyboard.json</code> no repositório. Vídeos curtos podem ser repetidos até o fim da cena com <code>background.loop: true</code>.</p>
-      </section>
-      <section class="block guide-card">
-        <h3>1. Organize uma pasta por vídeo</h3>
-        <p>Você pode começar com uma pasta vazia: transcreva a narração primeiro e crie <code>edit_plan.json</code> depois, com a IA. Se preferir preparar a base antecipadamente, use <strong>Editor automático → Criar</strong>. A estrutura final fica assim:</p>
-        <pre class="guide-tree">meu-video/
-├── edit_plan.json              plano de edição
-├── audio/
-│   ├── narracao.wav            voz
-│   ├── musica.mp3              música opcional
-│   └── impacto.wav             efeito opcional
-├── assets/
-│   ├── abertura.mp4            vídeo ou imagem
-│   ├── personagem.png
-│   └── personagens/
-│       └── heroi.png           subpastas funcionam
-├── transcript.json             tempos por palavra
-├── transcript.txt              leitura humana
-├── transcript.srt              legendas
-└── output/                     gerado após render</pre>
-        <p class="helper-text">Os nomes são exemplos; escolha os seus. O JSON deve usar exatamente o caminho do arquivo real.</p>
-      </section>
-      <section class="block guide-card">
-        <h3>2. Referencie os arquivos no JSON</h3>
-        <p><code>audio.narration</code> usa caminho relativo ao projeto. Imagens, vídeos, músicas e efeitos usam <code>project://</code> seguido do caminho desde a raiz do projeto.</p>
-        <pre class="guide-code">{
-  "sources": {"assets": "assets", "transcript": "transcript.json"},
-  "audio": {
-    "narration": "audio/narracao.wav",
-    "music": [{"asset": "project://audio/musica.mp3", "start": 0, "end": 30}]
-  },
-  "timeline": [{
-    "id": "intro", "start": 0, "end": 5,
-    "elements": [
-      {"type": "video", "asset": "project://assets/abertura.mp4"},
-      {"type": "image", "asset": "project://assets/personagens/heroi.png"}
-    ]
-  }]
-}</pre>
-        <p>O nome e a extensão precisam corresponder ao arquivo, inclusive maiúsculas/minúsculas no Linux. Use <code>/</code> nos caminhos também no Windows. <code>sources.assets</code> não completa automaticamente os caminhos dos elementos.</p>
-      </section>
-      <section class="block guide-card">
-        <h3>3. Confira antes do render</h3>
-        <p>No Editor automático, use <strong>Listar</strong> para ver os URIs e <strong>Validar JSON</strong> para identificar arquivos ausentes. A transcrição é opcional para um corte comum, mas necessária para karaoke e útil para texto cinético sincronizado.</p>
-        <p>Arquivos que acompanham o aplicativo usam <code>builtin://</code>. Arquivos seus usam <code>project://</code>. Caminhos que saem da pasta do projeto são bloqueados.</p>
       </section>
     </div>
   </main></div>
