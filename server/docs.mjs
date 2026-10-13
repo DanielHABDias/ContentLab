@@ -1,6 +1,6 @@
 import {schema} from './plan.mjs';
 import {registry} from './project.mjs';
-import {chapters,exampleCases} from './docs-content.mjs';
+import {chapters,exampleCases,projectFolderTree} from './docs-content.mjs';
 import {descriptions} from './docs-fields.mjs';
 import {documentationCss} from './docs-theme.mjs';
 import {diagramNames,diagramSvg} from './docs-diagrams.mjs';
@@ -114,8 +114,10 @@ export function buildMarkdown(){
   '- Exemplos de uso','- Regras de validação',''
  ];
  for(const chapter of chapters){
-  out.push('## '+chapter.title,'',...chapter.paragraphs.flatMap(p=>[p,'']),
-   '!['+figureAlt(chapter.diagram)+']('+figureUrl(chapter.diagram)+')','');
+  out.push('## '+chapter.title,'',...chapter.paragraphs.flatMap(p=>[p,'']));
+  if(chapter.id==='arquivos')out.push('### Estrutura sugerida do projeto','',
+    code(projectFolderTree,'text'),'');
+  out.push('!['+figureAlt(chapter.diagram)+']('+figureUrl(chapter.diagram)+')','');
  }
  out.push('## Catálogo de recursos implementados','');
  for(const section of model.resources){
@@ -156,7 +158,10 @@ export function buildHtml({standalone=false}={}){
   '<a href="/api/docs/download?format=html">Documentação .html</a>'+
   '<a href="/api/skill/download">Skill .zip</a></div>')+'</section>';
  const sections=chapters.map(ch=>'<section id="'+ch.id+'"><h2>'+esc(ch.title)+'</h2>'+
-  ch.paragraphs.map(p=>'<p>'+esc(p)+'</p>').join('')+figures(ch.diagram)+'</section>').join('');
+  ch.paragraphs.map(p=>'<p>'+esc(p)+'</p>').join('')+
+  (ch.id==='arquivos'?'<h3>Estrutura sugerida do projeto</h3><pre><code>'+
+    esc(projectFolderTree)+'</code></pre>':'')+
+  figures(ch.diagram)+'</section>').join('');
  const catalog='<section id="catalogo"><h2>Catálogo de recursos</h2>'+
  model.resources.map(r=>'<h3>'+esc(r.name)+'</h3><div class="tokens">'+
  r.items.map(value=>'<span class="token">'+esc(value)+'</span>').join('')+'</div>').join('')+'</section>';
