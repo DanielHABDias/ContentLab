@@ -301,7 +301,7 @@
         <ul id="editorAssetLibrary" class="editor-list"></ul>
         <section class="visual-builder" aria-labelledby="visualBuilderHeading">
           <div class="visual-builder-head"><div><span class="eyebrow">02 / STORYBOARD</span><h3 id="visualBuilderHeading">Sua linha do tempo</h3>
-            <p class="helper-text">Selecione uma cena para editar. Assista diretamente aos MP4s salvos em cache.</p></div>
+            <p class="helper-text">Crie cenas livres com o grid 3×3, adicione quantas camadas quiser e ajuste fundo, câmera, posições e animações em Propriedades avançadas. Os MP4s em cache aparecem na cena selecionada.</p></div>
             <div class="storyboard-actions"><button id="visualUndo" class="btn btn-ghost btn-sm" type="button" disabled title="Desfazer última alteração visual">↶ Desfazer</button><button id="visualRedo" class="btn btn-ghost btn-sm" type="button" disabled title="Refazer alteração visual">↷ Refazer</button><button id="visualRefresh" class="btn btn-ghost btn-sm" type="button">↻ Atualizar mídias</button></div></div>
           <p id="visualMessage" class="helper-text" role="status" aria-live="polite"></p>
           <div class="scene-workspace">
@@ -329,29 +329,6 @@
             </div>
           </div>
         </section>
-        <details class="editor-plan">
-          <summary>Criar cena motion com grid 3×3</summary>
-          <p class="helper-text">Gera no JSON uma cena contínua com dois assets, entrada deslizante e escala acima da célula. Use URIs como <code>project://assets/personagem.png</code>. O segundo aparece depois do atraso informado. Para sugerir seus arquivos de fundo, escolha a pasta de assets e clique em <strong>Listar</strong>.</p>
-          <div class="motion-form">
-            <label>Origem do fundo
-              <select id="motionBackgroundSource">
-                <option value="color">Cor sólida</option>
-                <option value="builtin">Background padrão do aplicativo</option>
-                <option value="project">Arquivo deste projeto</option>
-              </select>
-            </label>
-            <label id="motionColorField">Cor hexadecimal <input id="motionBackground" type="text" value="#182238" placeholder="#182238"></label>
-            <label id="motionBuiltinField" class="hidden">Background padrão <select id="motionBuiltinBackground"><option value="">Carregando…</option></select></label>
-            <label id="motionProjectField" class="hidden">URI do seu background <input id="motionProjectBackground" type="text" list="motionProjectBackgroundOptions" placeholder="project://assets/fundo.mp4"><datalist id="motionProjectBackgroundOptions"></datalist></label>
-            <label id="motionLoopField" class="motion-loop hidden"><input id="motionBackgroundLoop" type="checkbox" checked> Repetir vídeo até o fim da cena</label>
-            <label>Imagem da esquerda <input id="motionLeftAsset" type="text" placeholder="project://assets/esquerda.png"></label>
-            <label>Imagem da direita <input id="motionRightAsset" type="text" placeholder="project://assets/direita.png"></label>
-            <label>Duração (segundos) <input id="motionDuration" type="number" min="1" step="0.1" value="6"></label>
-            <label>Atraso do segundo (segundos) <input id="motionDelay" type="number" min="0" step="0.1" value="1"></label>
-            <label>Tamanho em relação ao grid (%) <input id="motionScale" type="number" min="10" max="800" step="1" value="120"></label>
-            <button id="motionAddScene" class="btn btn-secondary" type="button">Adicionar cena ao JSON</button>
-          </div>
-        </details>
         <details class="editor-plan">
           <summary>edit_plan.json — edição direta e conferência</summary>
           <textarea id="editorPlanText" rows="16" spellcheck="false" aria-label="Conteúdo JSON do plano"></textarea>

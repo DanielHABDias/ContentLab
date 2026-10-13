@@ -21,6 +21,8 @@ Ao abrir um projeto, o storyboard fica dividido em duas áreas:
 
 Uma edição simples não exige editar JSON manualmente. Os campos do editor visual continuam produzindo `edit_plan.json`, que é a fonte única da verdade. O usuário precisa **Validar JSON → Salvar plano** para renderizar.
 
+**Motion design:** o fluxo é sempre **Sua linha do tempo → + Nova cena → Adicionar camada → Editar propriedades avançadas**. No painel da cena é possível compor qualquer quantidade de PNGs, vídeos, textos ou efeitos, escolher posições no grid 3×3, configurar fundos de cor/imagem/vídeo (incluindo `background.loop`), câmera, transições e keyframes. Não há mais um formulário duplicado restringindo a cena a apenas duas imagens laterais.
+
 ### Ações e linha do tempo
 
 O storyboard possui **Desfazer** e **Refazer** para edições visuais, inclusive criação, exclusão, inserção e duplicação. Inserir/duplicar agora escreve uma pausa na narração (`audio.silenceInserts`) e desloca eventos posteriores; editar manualmente o JSON reinicia o histórico visual. Veja [guia de sincronização](CORRECOES_CACHE_AUDIO_TRANSICOES.md).

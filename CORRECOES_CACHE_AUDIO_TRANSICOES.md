@@ -74,7 +74,7 @@ node server/smoke-transitions.mjs
 node server/smoke-ui.mjs
 ```
 
-Os testes combinam verificação unitária de assinaturas/intervalos, síntese de arquivos reais com FFmpeg, renderização real de transições e interação com o navegador. O VD_0005 completo permanece fora dos testes, conforme solicitado.
+Os testes combinam verificação unitária de assinaturas/intervalos, síntese de arquivos reais com FFmpeg, renderização real de transições e interação com o navegador. O projeto piloto completo permanece fora dos testes, conforme solicitado.
 
 ## Próxima etapa
 

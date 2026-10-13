@@ -91,6 +91,8 @@ try{
     'Legacy guide deep links redirect to documentation');
   assert.equal(await evaluate('document.getElementById("tab-docs").getAttribute("aria-selected")'),'true');
 
+  assert.equal(await evaluate('document.querySelectorAll("#motionAddScene,#motionLeftAsset,#motionRightAsset").length'),0,
+    'Fixed left/right motion wizard must not exist');
   await evaluate('document.getElementById("tab-docs").click()');
   await wait(()=>evaluate('!!document.getElementById("docsManual").contentDocument?.getElementById("fieldSearch")'),'Documentation iframe');
   assert.equal(await evaluate('document.getElementById("docsManual").contentDocument.body.textContent.includes("narration.prepared.wav")'),true,
@@ -119,6 +121,11 @@ try{
   await evaluate('document.getElementById("visualSceneSearch").value=""; document.getElementById("visualSceneSearch").dispatchEvent(new Event("input"))');
   await evaluate('document.getElementById("visualAddScene").click()');
   assert.equal(await evaluate('JSON.parse(document.getElementById("editorPlanText").value).timeline.length'),3);
+  assert.equal(await evaluate('JSON.parse(document.getElementById("editorPlanText").value).timeline.at(-1).elements.length'),0,
+    'Timeline creates unrestricted empty scene instead of forced two-image layout');
+  assert.equal(await evaluate('document.getElementById("visualSceneFields").textContent.includes("Editar propriedades avançadas")'),true,
+    'Timeline keeps advanced background, grid, camera and animation controls');
+
   await evaluate('document.querySelector(".scene-action-row button:nth-child(2)").click()');
   assert.equal(await evaluate('JSON.parse(document.getElementById("editorPlanText").value).timeline.length'),4);
   await evaluate('document.getElementById("visualUndo").click()');
