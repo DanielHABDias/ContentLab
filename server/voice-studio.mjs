@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import {run} from './exec.mjs';
+import {mediaToolExecutable,ffmpegFilterAvailable} from './runtime-tools.mjs';
 import {prepareNarration,probeAudioDuration} from './audio.mjs';
 import {transcribeAudio} from './transcribe.mjs';
 
@@ -108,8 +109,9 @@ async function applyVoiceStyle(input,output,options,{ffmpeg='ffmpeg',ffprobe='ff
   const filters=[];
   if(pitchSemitones!==0){
     const {stdout}=await run(ffmpeg,['-hide_banner','-filters'],{signal});
-    if(!/\\brubberband\\b/.test(stdout))throw Error(
-      'O FFmpeg instalado não inclui rubberband. Escolha Corpo natural (sem pitch) ou instale FFmpeg com librubberband.');
+    if(!ffmpegFilterAvailable(stdout,'rubberband'))throw Error(
+      'O executável FFmpeg usado pelo servidor ('+mediaToolExecutable(ffmpeg)+
+      ') não oferece o filtro rubberband. Feche o Content Lab, atualize e abra pelo run.sh ou iniciar.bat para preparar o FFmpeg correto automaticamente.');
     const pitch=Math.pow(2,pitchSemitones/12);
     // Longer analysis window and smoothing reduce warbling on spoken vowels,
     // while formants are kept stable. Small pitch changes matter: do not
