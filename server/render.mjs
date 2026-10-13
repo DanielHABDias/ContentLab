@@ -92,7 +92,17 @@ export async function renderProject(directory,{
       if(video){reused.push(scene.id);}
       else{
         const temp=path.join(work,'scene-'+i+'.mp4');
-        await renderScene(scene,cfg,words,temp,{signal,hardwareAccel});
+        // Announce the scene BEFORE invoking Remotion, so a failed first
+        // subprocess is not reported misleadingly as merely "prepare".
+        emit('scene_start',i+1,scenes.length,scene.id);
+        try{
+          await renderScene(scene,cfg,words,temp,{signal,hardwareAccel});
+        }catch(error){
+          const name=raws[i].customComponent?.module;
+          const label=name?' | TSX: '+name:'';
+          throw new Error('Falha na cena '+(i+1)+'/'+scenes.length+' ['+scene.id+']'+label+
+            ': '+error.message,{cause:error});
+        }
         video=cache.save(scene.id,fingerprint,temp);
         rendered.push(scene.id);
       }
