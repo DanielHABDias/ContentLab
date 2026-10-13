@@ -9,6 +9,6 @@ O Content Lab usa uma **única** estrutura `edit_plan.json`, interpretada pelo R
 3. Concluir paridade de áudio, transições, chroma key, assets, legendas e UI no Zorin e Windows.
 4. Extrair componentes ReMotion reutilizáveis: `CharacterSpotlight`, `ImpactTitle`, `ComicPanelReveal`, `ParallaxDepth`, `SplitScreenCompare`.
 5. Criar editor visual por ID de cena, com Player sincronizado ao mesmo código do render final.
-6. Medir desempenho em cenas reais do VD_0005.
+6. Medir desempenho em cenas reais do projetos reais de validação.
 
 Os itens de migração são detalhados em `CURRENT_ARCHITECTURE.md`. Os componentes novos são propostas, não recursos disponíveis no schema ainda.
