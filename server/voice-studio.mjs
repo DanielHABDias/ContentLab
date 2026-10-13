@@ -61,8 +61,10 @@ export function keepRanges(duration,detected,options={}){
     const edgeStart=begin<=.10,edgeEnd=end>=duration-.10;
     const cut=edgeStart||edgeEnd||(config.removeMiddleSilence&&end-begin>=config.minSilence);
     if(!cut)continue;
-    const trimStart=edgeStart?0:begin+.085;
-    const trimEnd=edgeEnd?duration:end-.085;
+    // Boundary silence must be removed almost entirely; the small 20ms
+    // guard keeps a natural seam without leaving audible dead air.
+    const trimStart=edgeStart?0:edgeEnd?begin+.020:begin+.085;
+    const trimEnd=edgeEnd?duration:edgeStart?end-.020:end-.085;
     if(trimEnd-trimStart<=.035)continue;
     if(trimStart>cursor+.005)keep.push({start:cursor,end:trimStart});
     removed.push({start:trimStart,end:trimEnd});
