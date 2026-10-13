@@ -32,6 +32,9 @@ Esta é a skill central para qualquer trabalho de edição automatizada no Conte
 ## Cenas programáveis quando o JSON padrão não basta
 Para coreografia complexa num único plano (câmera virtual, grade SVG, partículas, objetos persistentes e tipografia detalhada), **encaminhar à skill `skills/contentlab-cenas-tsx/SKILL.md`**. O caminho econômico é pedir ao ChatGPT **um `.tsx` completo para uma cena**, salvar/baixar e copiar manualmente em `custom-scenes/` na raiz do projeto e devolver apenas `customComponent` no JSON (ou o fragmento mínimo de cena). Não duplicar o TSX no JSON nem regenerar um plano completo por cada ajuste. `replace` é cena toda TSX; `overlay` adiciona TSX sobre a montagem declarativa. A execução exige opt-in `CONTENTLAB_TRUST_CUSTOM_TSX=1` e código de origem confiável; validação do JSON não substitui render e inspeção. O site não instala o TSX automaticamente.
 
+## Roteamento do estilo visual
+Quando o usuário citar **visual moderno, estilo Apple, minimalismo premium, cards suaves, fundos variados, tipografia refinada ou o design do próprio site**, direcione as escolhas de layout/fundo/cores à `contentlab-composicao` e o ritmo à `contentlab-motion`. Use `contentlab-cenas-tsx` só se houver animação composicional complexa. Carregar o perfil editorial Diazverso quando for para esse canal; a estética de site é uma referência opcional, **não padrão obrigatório para outras marcas**. Se fonte não estiver disponível no renderer, escolher fonte licenciada instalada ou asset fornecido e registrar a diferença, jamais alegar que SF Pro está embutida.
+
 ## Encaminhamento por tarefa
 | Solicitação | Carregue |
 | --- | --- |

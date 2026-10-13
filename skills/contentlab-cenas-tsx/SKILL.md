@@ -20,6 +20,16 @@ O arquivo TSX precisa **exportar um componente React como default**. Recebe prop
 4. Forneça um **fragmento JSON mínimo** para `customComponent` ou uma cena completa apenas se o usuário pedir; nunca reimprimir todo o `edit_plan.json` sem necessidade.
 5. Se estiver revisando uma cena existente, altere o menor trecho de código possível, preserve os demais arquivos/IDs e evite retransmitir TSX ou JSON inalterado.
 
+## Biblioteca visual recomendada para TSX — Modern Editorial UI
+Quando o briefing pedir o acabamento refinado do Studio do Content Lab, criar no próprio componente **primitivas React/SVG reutilizáveis** (`Card`, `SectionTitle`, `AccentPill`, `SoftPanel`, `TimelineNode`) sem depender de downloads para cada forma. Evitar pacote NPM extra se SVG/CSS bastar.
+- Tokens de referência *adaptáveis*: `#F5F6F8` (canvas claro), `#FFFFFF` (card), `#171A22` (texto), `#8B93A0` (secundário), `#E3E6EB` (borda), `#1769E0` (acento); variante dark `#0D111B` com painel `#19263D`/gradiente azul e detalhes de marca somente quando significativos.
+- Tipografia de UI: `Inter` quando fornecida com licença e asset resolvido, ou sans-serif disponível no render; no Studio há uma pilha CSS com fontes Apple como fallback, **não um arquivo SF Pro distribuído**. Anton/Bangers continuam possíveis para títulos de impacto.
+- Desenhar cantos arredondados, linhas finas, sombras difusas, hierarquia título/subtítulo com contraste e respiro proporcional à resolução, não importar screenshots do site como assets.
+- Animar por frame: card sobe poucos pixels com opacidade, vira/funde entre estados, foco troca suavemente e depois faz hold; não duplicar padrões de hover CSS. `interpolate/spring` com limites para não provocar overshoot inútil.
+- Aplicar os princípios à informação narrada: comparações, linhas do tempo, rankings, relações, mapas, cards de contexto. Para matéria real, usar o asset verificado como mídia principal e cards como apoio.
+- Gerar **um arquivo TSX completo + JSON mínimo** e revisar pequenos patches para economizar tokens. Não converter cada card em um novo arquivo.
+A composição deve parecer um vídeo editorial sofisticado, não uma gravação de interface ou uma imitação de marca comercial.
+
 ## Implementação recomendada
 - `useCurrentFrame()`, `useVideoConfig()`, `interpolate()`, `spring()` e SVG/React para movimento determinístico; calcule cada instante sem `setInterval`, `Date.now`, CSS keyframes/transition ou estado dependente da ordem dos frames.
 - Agrupe objetos e movimento de câmera em um sistema de coordenadas consistente; mantenha HUD/legendas fixas fora do grupo transformado pela câmera.
