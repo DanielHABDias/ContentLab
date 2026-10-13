@@ -31,10 +31,12 @@ cl_release_hash(){
 }
 cl_has_node(){
   command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1 &&
-    [[ "$(node -p 'Number(process.versions.node.split(".")[0])' 2>/dev/null || echo 0)" -ge 22 ]]
+    [[ "$(node -p 'Number(process.versions.node.split(".")[0])' 2>/dev/null || echo 0)" -eq 22 ]]
 }
 cl_install_node(){
-  if cl_has_node; then cl_log "Node.js $(node -v) e npm encontrados."; return; fi
+  # Match the Node 22 LTS major used by the Remotion CI matrix.
+  # Newer system Node releases can change media subprocess behavior; keep them untouched.
+  if cl_has_node; then cl_log "Node.js $(node -v) LTS 22 e npm encontrados."; return; fi
   if [[ -x "$CL_TOOLS/node/bin/node" ]]; then export PATH="$CL_TOOLS/node/bin:$PATH"; fi
   if cl_has_node; then cl_log "Node.js local reutilizado."; return; fi
   local arch filename base dir
