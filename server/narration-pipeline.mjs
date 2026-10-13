@@ -37,7 +37,10 @@ export function renderVoiceSettings(root,plan){
     const meta=readJson(path.join(root,'narration.build.json'));
     if(meta.mode!=='voice-studio'||audio.narration!==meta.output)return audio;
     const file=path.join(root,meta.output);
-    if(!fs.existsSync(file)||fs.statSync(file).size!==meta.outputIdentity?.size)return audio;
+    if(!fs.existsSync(file))return audio;
+    const stat=fs.statSync(file);
+    if(stat.size!==meta.outputIdentity?.size||
+      Math.abs(stat.mtimeMs-meta.outputIdentity?.mtimeMs)>=1)return audio;
     // This audio was already cut, normalized and optionally pitch-shifted
     // BEFORE the edit plan existed. Preserve later editorial sourceCuts and
     // silenceInserts, but never process the source a second time.
@@ -54,7 +57,9 @@ export function transcriptStatus(root,plan){
     if(meta.mode==='voice-studio'){
       if(meta.output!==plan.audio?.narration)return {status:'external'};
       const output=path.join(root,meta.output);
-      const intact=fs.existsSync(output)&&fs.statSync(output).size===meta.outputIdentity?.size;
+      const stat=fs.existsSync(output)?fs.statSync(output):null;
+      const intact=stat&&stat.size===meta.outputIdentity?.size&&
+        Math.abs(stat.mtimeMs-meta.outputIdentity?.mtimeMs)<1;
       return {status:intact?'external':'stale',kind:'voice-studio',prepared:meta.output,
         generatedAt:meta.generatedAt};
     }
