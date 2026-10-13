@@ -138,7 +138,7 @@ export function buildMarkdown(){
   '- IDs de cena devem ser exclusivos e estáveis, e camadas visuais exigem ID único dentro da cena.',
   '- Cenas são sequenciais, com fim posterior ao início; keyframes são ordenados e relativos ao começo da cena.',
   '- Assets são obrigatórios para image, video, overlay e sfx. Use project:// ou builtin:// para mídias existentes.',
-  '- Narração é obrigatória e a transcrição é necessária quando o componente de legenda a exige.',
+  '- Narração é obrigatória; depois da importação o Content Lab prepara a voz e cria o transcript.json automaticamente com whisper.cpp, quando instalado.',
   '- Sobreposições de texto podem gerar avisos, sem bloquear composições intencionais.',
   '- Pausas internas de SFX são preservadas; somente silêncio inicial/final é removido antes do disparo em at.',
   '- config aceita opções livres, mas só as consumidas pelo renderer alteram o resultado.','');
