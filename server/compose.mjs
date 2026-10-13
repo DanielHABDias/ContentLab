@@ -8,7 +8,17 @@ const fileLine=file=>"file '"+path.resolve(file).replace(/\\/g,'/').replace(/'/g
 const encoding=['-c:v','libx264','-preset','veryfast','-crf','18','-threads',String(Math.max(1,Number(process.env.CONTENTLAB_COMPOSE_THREADS||2)))];
 const D=n=>Number(n).toFixed(6);
 const durationOf=scene=>scene.end-scene.start;
-const identity=(sources,params)=>sha({sources:sources.map(statIdentity),params,code:'composer-2'});
+export function easedTransitionExpression(seconds,fps,variable='t'){
+  const frames=Math.max(1,Math.round(seconds*fps));
+  // Finish exactly on the LAST transition frame, so the following body frame
+  // never snaps the last few pixels into place (especially at 0.1s/30fps).
+  if(frames===1)return '1';
+  const raw=variable==='P'
+    ? 'min(1,max(0,(1-P)*'+frames+'/'+(frames-1)+'))'
+    : 'min(1,max(0,t/'+D((frames-1)/fps)+'))';
+  return '('+raw+')*('+raw+')*(3-2*('+raw+'))';
+}
+const identity=(sources,params)=>sha({sources:sources.map(statIdentity),params,code:'composer-3-smooth-motion'});
 async function ffconcat(files,output,work,ffmpeg,signal,copy=false){
   const manifest=path.join(work,'segments-'+Math.random().toString(16).slice(2)+'.ffconcat');
   fs.writeFileSync(manifest,'ffconcat version 1.0\n'+files.map(fileLine).join(''));
@@ -49,7 +59,7 @@ export async function composeVisual(scenes,segments,output,settings,work,{ffmpeg
     if(i>0&&boundary.type!=='cut'&&seconds>0){
       const previous=segments[i-1],previousScene=scenes[i-1];
       const type=boundary.type;
-      const params={kind:'transition',type,seconds,fps,w,h,encoding,mode:'incoming-realtime'};
+      const params={kind:'transition',type,seconds,fps,w,h,encoding,mode:'incoming-realtime-smooth'};
       const id='transition:'+previousScene.id+':'+scene.id+':'+type+':'+D(seconds);
       const key=identity([previous,segment],params);
       let piece=pieceCache?.lookup(id,key);
@@ -65,20 +75,23 @@ export async function composeVisual(scenes,segments,output,settings,work,{ffmpeg
           ',trim=duration='+D(seconds)+',setpts=PTS-STARTPTS,format=yuv420p[tail];';
         let graph;
         if(type==='fade'){
+          const progress=easedTransitionExpression(seconds,fps,'P');
+          const mix='A*(1-('+progress+'))+B*('+progress+')';
           graph=outgoing+incoming+
-            '[tail][first]xfade=transition=fade:duration='+D(seconds)+':offset=0,format=yuv420p[out]';
+            "[tail][first]xfade=transition=custom:duration="+D(seconds)+
+            ":offset=0:expr='"+mix+"',format=yuv420p[out]";
         }else{
           let moveOld='x=0:y=0',moveNew='x=0:y=0';
-          const d=D(seconds);
+          const p=easedTransitionExpression(seconds,fps);
           if(['slide_left','blur_left'].includes(type)){
-            moveOld="x='-"+w+"*t/"+d+"':y=0";
-            moveNew="x='"+w+"-"+w+"*t/"+d+"':y=0";
+            moveOld="x='-"+w+"*("+p+")':y=0";
+            moveNew="x='"+w+"*(1-("+p+"))':y=0";
           }else if(type==='blur_right'){
-            moveOld="x='"+w+"*t/"+d+"':y=0";
-            moveNew="x='-"+w+"+"+w+"*t/"+d+"':y=0";
+            moveOld="x='"+w+"*("+p+")':y=0";
+            moveNew="x='-"+w+"*(1-("+p+"))':y=0";
           }else if(type==='blur_up'){
-            moveOld="x=0:y='-"+h+"*t/"+d+"'";
-            moveNew="x=0:y='"+h+"-"+h+"*t/"+d+"'";
+            moveOld="x=0:y='-"+h+"*("+p+")'";
+            moveNew="x=0:y='"+h+"*(1-("+p+"))'";
           }
           const blur=type.startsWith('blur_')?',gblur=sigma=2':'';
           graph=outgoing+incoming+
