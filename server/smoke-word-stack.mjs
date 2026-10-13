@@ -65,7 +65,8 @@ try{
     // Band only in the middle row, but from left to right edge of the
     // entire 640px canvas, NOT cut off at x=426 (two selected columns).
     for(const x of [3,420,636]){
-      const sample=rgb(image,x,180);
+      // Sample near the upper edge of the middle band, away from glyphs.
+      const sample=rgb(image,x,123);
       assert.ok(Math.abs(brightness(sample)-112)<19,
         'Full width band failed at x='+x+': '+sample+' t='+time);
     }
