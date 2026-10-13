@@ -77,7 +77,13 @@ export async function composeVisual(scenes,segments,output,settings,work,{ffmpeg
         if(type==='fade'){
           // Custom smootherstep fade keeps velocity/acceleration at zero
           // on both ends of the blend, without changing its frame count.
-          const eased='(P*P*P*(P*(P*6-15)+10))';
+          // FFmpeg xfade's P starts at 1 (outgoing) and decreases to 0
+          // (incoming). Invert it AND settle by the last sampled frame.
+          const fadePhase=frames>1
+            ? 'min(1,max(0,(1-P)*'+frames+'/'+(frames-1)+'))'
+            : '1';
+          const eased='('+fadePhase+')*('+fadePhase+')*('+fadePhase+')*('+
+            fadePhase+'*('+fadePhase+'*6-15)+10)' ;
           graph=outgoing+incoming+
             '[tail][first]xfade=transition=custom:duration='+D(seconds)+
             ":offset=0:expr='A*(1-"+eased+")+B*"+eased+"',format=yuv420p[out]";
