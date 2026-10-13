@@ -3,6 +3,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import os from 'node:os';
 import {APP_ROOT,projectFile,assetReport,validatePlan,readJson,schema,PlanError,sha} from './plan.mjs';
+import {transcriptStatus} from './narration-pipeline.mjs';
 
 const MAX_PLAN=5*1024*1024;
 const projectSummary=(p)=>({name:p.project.name,scenes:(p.timeline||[]).map(s=>({id:s.id,start:s.start,end:s.end,elements:s.elements?.length||0}))});
@@ -17,7 +18,8 @@ export function loadProject(directory){
     const validation=assetReport(plan,root);
     return {projectRoot:root,planPath:file,planText,revision,
       name:plan.project?.name||path.basename(root),
-      scenes:(plan.timeline||[]).map(s=>({id:s.id,start:s.start,end:s.end,elements:s.elements?.length||0})),validation};
+      scenes:(plan.timeline||[]).map(s=>({id:s.id,start:s.start,end:s.end,elements:s.elements?.length||0})),validation,
+       transcription:transcriptStatus(root,plan)};
   }catch(e){
     return {projectRoot:root,planPath:file,planText,revision,name:path.basename(root),scenes:[],
       validation:{valid:false,errors:[{path:'edit_plan.json',message:e.message}],missingAssets:[],resolvedAssets:{}}};
@@ -44,7 +46,7 @@ export function createProject(parentDirectory,name){
   fs.mkdirSync(root);
   fs.mkdirSync(path.join(root,'audio'));
   fs.mkdirSync(path.join(root,'assets'));
-  const initial={project:{name,format:'youtube_long',profile:'generic'},sources:{assets:'assets'},
+  const initial={project:{name,format:'youtube_long',profile:'generic'},sources:{assets:'assets',transcript:'transcript.json'},
     audio:{narration:'audio/narration.wav'},timeline:[]};
   fs.writeFileSync(path.join(root,'edit_plan.json'),JSON.stringify(initial,null,2)+'\n');
   return loadProject(root);
