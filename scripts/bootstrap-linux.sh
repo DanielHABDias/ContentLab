@@ -107,7 +107,7 @@ cl_install_whisper(){
   dir="$(mktemp -d)"
   cl_download "https://github.com/ggml-org/whisper.cpp/archive/refs/tags/v1.9.4.tar.gz" "$dir/whisper.tar.gz"
   tar -xzf "$dir/whisper.tar.gz" -C "$dir"
-  cmake -S "$dir/whisper.cpp-1.9.4" -B "$dir/build" -DWHISPER_SDL2=OFF -DGGML_NATIVE=OFF -DCMAKE_BUILD_TYPE=Release
+  cmake -S "$dir/whisper.cpp-1.9.4" -B "$dir/build" -DWHISPER_SDL2=OFF -DGGML_NATIVE=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release
   cmake --build "$dir/build" --config Release -j 2
   local found
   found="$(find "$dir/build" -type f -name whisper-cli -print -quit)"
