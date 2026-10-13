@@ -42,3 +42,9 @@ Uma cena TSX ainda possui `timeline[].start/end` absolutos; internamente o `useC
 
 ## Saída para outras skills
 Produza mapa de beats (tempo → informação → ação visual → hold → possível SFX) e restrições temporais. O motion é construído sobre esse mapa, não o contrário.
+
+## Âncora de chegada visual — extensão obrigatória do mapa de beats
+
+Entregar a composição/motion estes tempos do `transcript.json` no áudio preparado: `scene.start`, `word.start`, `word.end`, `localWordStart = word.start - scene.start`, `localWordEnd = word.end - scene.start`, `visualReadyBy`, hold e saída. O visual da palavra/ideia falada precisa **estar completamente legível até localWordEnd**, idealmente em localWordStart. O movimento de câmera para o elemento e a entrada de imagens/vídeos obedecem ao mesmo limite. Não usar o início da palavra como ordem para COMEÇAR uma animação longa; preferir chegar a tempo.
+
+Referência observada em `VD_0005/PerguntaAbertura.tsx`: a entrada do personagem termina por volta de +2,91 s e a palavra “Batman” começa por volta de +2,93 s no relógio local. Esses números não são presets, e sim demonstração da relação desejada. Se não for possível dar preroll por ser frame 0, usar o estado legível desde o primeiro frame. Conferir timestamps de fala e o MP4 final antes de afirmar sincronização.

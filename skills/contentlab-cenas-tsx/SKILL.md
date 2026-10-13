@@ -53,3 +53,17 @@ O cache por cena deve perceber alterações das fontes dentro de `custom-scenes/
 
 ## Exemplo oficial
 `examples/custom-scenes/FollowDot.tsx` + `examples/programmatic-motion-edit-plan.json`. É uma demonstração procedural validada no CI, não cópia do vídeo fonte. Para trabalhar com um roteiro real, usar a narração preparada e assets próprios.
+
+## Evolução da linguagem TSX: direção espacial e variedade
+
+Em vídeos explicativos autorais do Diazverso, **considerar TSX como primeira opção criativa** quando a composição envolver elementos e câmera no mesmo espaço, vídeos em perspectiva, tipografia percorrida pela câmera, relações entre personagens ou divisão/recomposição de camadas. TSX não é só último recurso para JSON muito complexo; ele permite motion autoral coeso. Isso não obriga cada cena a usar código: imagem/clipe original pertinente e corte simples continuam importantes.
+
+**Regra temporal obrigatória:** localizar os tempos `start/end` da palavra-chave no áudio preparado. Converter para o relógio local (`localStart=word.start-scene.start`, `localEnd=word.end-scene.start`). A entrada do objeto visual (texto, personagem, imagem ou vídeo) deve **estar concluída no máximo em `localEnd`**, idealmente já completamente legível em `localStart`. A câmera também precisa chegar ao destino focal quando a narração o nomeia. Não começar a animação apenas no primeiro fonema e terminá-la depois da palavra. Para falas rápidas, antecipar preparação sem spoiler, encurtar entrada ou agrupar pensamentos. Se a cena começa exatamente na palavra, mostrar estado legível no frame zero. Manter hold real durante a pronúncia.
+
+**Ideias para explorar e variar:** câmera em palco horizontal/diagonal maior que o viewport; palavra em diagonal superior direita e próximo foco abaixo; vídeo em placa inclinada com perspectiva 2.5D; painéis de HQ que mudam de plano; galeria de mídias em ângulos distintos; grafo de personagens com zoom de detalhe até visão geral; fundo/meio/primeiro plano com parallax; desmembrar camadas e recompô-las; máscaras desenhadas; trilha SVG que conecta revelações; texto que se redistribui como espaço físico. Escolher o movimento com base na tese e variar a linguagem entre beats, não apenas trocar a cor do mesmo card.
+
+**Camadas separadas:** usar recortes PNG com transparência, máscaras verificadas ou objetos SVG/DOM independentes para profundidade/oclusão reais no projeto. Uma única imagem achatada não tem, por si só, planos independentes. Se não existirem recortes, preferir split de cartões/painéis visivelmente estilizado ou preparar os assets antes. CSS `perspective`/`translateZ` cria ilusão **2.5D**, não reconstrução tridimensional automática. Evitar deformar rostos, texto e mídias.
+
+**Exemplos verificados na pasta VD_0005 (não são templates fixos):** `PerguntaAbertura.tsx` usa câmera por palco horizontal e conclui o PNG antes da fala “Batman”; `OutraRazao.tsx` espalha palavras num caminho e conclui as entradas antes dos termos; `ConflitoCentral.tsx` move o foco por nós de um argumento; `LegadoEmRede.tsx` aproxima partes da rede e depois apresenta o conjunto; `ArgumentosEmConflito.tsx` coordena vários beats sem cortar a cena. O `edit_plan.json` desse vídeo tem 101 cenas, com dez usos de TSX. Aprender a mecânica, sem copiar textos, cores ou segundos em outros vídeos.
+
+Ver `references/REPERTORIO_MOTION_TSX.md` para catálogo, anchors temporais, perspectiva, camadas e checkpoints de render. Não inventar novos campos do JSON ou dependências.

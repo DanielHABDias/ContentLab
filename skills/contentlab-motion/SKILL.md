@@ -55,3 +55,11 @@ Para uma trajetória animada única com vários beats, usar `contentlab-cenas-ts
 
 ## Implementação e inspeção
 Produção baseada em frames determinísticos e estado calculável para qualquer instante; sem relógio do sistema ou aleatoriedade sem seed. Compare frames antes, durante e depois do movimento, verificando trajetória, clipping e hold. Se o contrato atual não expuser alguma interpolação avançada, mantenha a intenção registrada como requisito de engenharia — não invente propriedades JSON.
+
+## Sincronismo de conclusão e linguagem de espaço (aprendizado de produção)
+
+A narração preparada define **quando cada objeto já está plenamente visível**, não simplesmente quando a animação inicia. Para cada palavra focal, anotar início/fim da fala, início da entrada, conclusão da entrada, hold e saída. **Invariante:** entrada concluída até o fim da palavra, preferencialmente até o começo; imagem/vídeo/diagrama seguem a mesma regra. Se a entrada levar mais tempo que a fala, diminuir duração ou começar antes sem revelar indevidamente a informação. Se a palavra ocorre no frame zero, o visual já deve estar no estado de leitura. O movimento entre dois destinos termina quando a voz nomeia o segundo destino.
+
+Para TSX, considerar: texto distribuído em X/Y numa cena maior que a tela; câmera indo de uma palavra diagonal a outra abaixo; vídeo em perspectiva com `rotateY`/`rotateX` discretos; camadas de profundidade com parallax e oclusão; explosão e remontagem de painéis; zoom detalhe → relação geral; movimento de caminho SVG entre conceitos. Separar geometria do mundo da interface fixa; o mesmo driver temporal deve coordenar as camadas. Não presumir Three.js nem processamento 3D verdadeiro.
+
+Usar `useCurrentFrame`, `useVideoConfig`, `interpolate` com clamp e `spring` moderado testado; nunca CSS animations/transitions nem relógio externo. Um efeito dominante por beat, com hold de leitura, e descanso após cenas densas. Conferir frames antes, durante e depois da palavra. Repertório: `contentlab-cenas-tsx/references/REPERTORIO_MOTION_TSX.md`.
