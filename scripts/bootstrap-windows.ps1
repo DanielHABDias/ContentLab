@@ -149,6 +149,16 @@ function Save-Stamp([string]$dir,[string]$manifest) {
   $stamp = Join-Path $dir "node_modules\.contentlab-package.sha256"
   (Get-FileHash -Algorithm SHA256 -LiteralPath $manifest).Hash | Set-Content -LiteralPath $stamp -NoNewline
 }
+function Ensure-Browser {
+  if ($env:CONTENTLAB_BOOTSTRAP_SKIP_BROWSER -eq "1") {
+    Log "Chromium Remotion ignorado por CONTENTLAB_BOOTSTRAP_SKIP_BROWSER=1."; return
+  }
+  Log "Conferindo Chrome Headless Shell necessário ao Remotion..."
+  $cli = Join-Path $root "backend\\remotion\\node_modules\\@remotion\\cli\\remotion-cli.js"
+  Push-Location (Join-Path $root "backend\\remotion")
+  try { & node $cli browser ensure; if ($LASTEXITCODE -ne 0) { Fail "Falha ao preparar navegador do Remotion." } }
+  finally { Pop-Location }
+}
 function Ensure-Npm {
   if (Need-Install $root "express\package.json" (Join-Path $root "package.json")) {
     Log "Instalando/verificando dependências Node..."
@@ -174,6 +184,7 @@ try {
     Ensure-Model
   } else { Log "Whisper ignorado por CONTENTLAB_BOOTSTRAP_SKIP_WHISPER=1." }
   Ensure-Npm
+  Ensure-Browser
   Log "Dependências prontas."
 } catch {
   Write-Error $_.Exception.Message
