@@ -10,7 +10,8 @@ export async function run(bin,args,{cwd,signal,onOutput}={}){
     child.on('error',reject);
     child.on('close',(code,signalled)=>{
       if(code===0){resolve({stdout,stderr});return;}
-      const output=(stderr||stdout).slice(-16000);
+      // Preserve both CLI stdout (often bundler diagnostics) and stderr (uncaught failures).
+      const output=[stdout,stderr].filter(Boolean).join('\n').slice(-16000);
       // EPIPE is a symptom: a downstream pipe (often a media subprocess)
       // closed, not proof that the scene's JSON is malformed.
       const hint=/\bEPIPE\b/.test(output)&&String(args[0]||'').includes('remotion-cli')
