@@ -37,3 +37,9 @@ O repertório **Modern Editorial UI** deriva do CSS existente do Studio: interfa
 Em cenas explicativas autorais, TSX virou opção prioritária quando melhora a compreensão: câmera sobre um palco maior que a tela, palavras em posições diagonais, mídia em perspectiva 2.5D, parallax em planos separados, mapas de relações, split e recomposição de camadas. **A entrada do elemento deve estar concluída até o fim da palavra citada** (idealmente antes do início), com hold legível durante a fala. Para material real pertinente, um corte simples ainda pode ser a melhor decisão.
 
 Exemplos de referência na pasta VD_0005: `PerguntaAbertura`, `ConflitoCentral`, `OutraRazao`, `LegadoEmRede`, `ArgumentosEmConflito`, `ConstelacaoFamilia`. Consultar `contentlab-cenas-tsx/references/REPERTORIO_MOTION_TSX.md` antes de projetar movimentos novos. Não confundir TSX custom da pasta do vídeo com presets globais do motor.
+
+## Revisão obrigatória de som e edição automática (2026-10)
+
+Cada movimento/animação editorial recebe cobertura sonora com início audível **durante** a animação. SFX pode durar menos/mais que a ação visual, com tail natural; se estiver excessivamente longo, encurtar com `config.duration` e `fadeOut`, não cortar seco. Variar família de sons, não repetir sempre o mesmo whoosh, nem duplicar efeitos existentes em CTA/Nox. Ver `contentlab-timeline-audio`, `contentlab-motion`, `contentlab-revisao` e `contentlab-revisao/references/AUDITORIA_COMPLETA_PRE_E_POS_RENDER.md`.
+
+A skill já existente `contentlab-revisao` passa a ser gate obrigatório pré-render (para liberar edição automática) e pós-render (para aprovar o vídeo final). No Diazverso, `diazverso-revisao-edicao`, mantida nas skills específicas do Drive, acrescenta QA de identidade autoral.

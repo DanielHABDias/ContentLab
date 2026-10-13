@@ -54,3 +54,9 @@ Quando a engenharia introduzir campo real: atualizar schema, validação, render
 ## Tempos e camadas internas ao TSX, não ao schema
 
 Ao converter mapa de narração em TSX, subtrair `timeline[].start` dos timestamps absolutos e passar tempos derivados como números em `customComponent.props` (se necessário) ou constantes no componente. Não inventar propriedades de contrato como `visualReadyBy`, `layerDepth`, `cameraTarget` no `edit_plan.json`: registrar no guia, no briefing ou em `props` existentes. O `customComponent` continua com `module`/`mode`/`props`/`assets`; vídeos e imagens devem vir de assets locais verificados. Ao pronunciar uma palavra, seu objeto visual deve estar reconhecível e a entrada estar concluída até o final da palavra.
+
+## Registro de SFX e QA de movimentos no contrato instalado
+
+Para cada `element.type="sfx"` usar `element.at` (início audível absoluto), `element.asset` existente, `element.config.duration` opcional e `element.fadeOut` opcional, campos presentes no schema/código do ContentLab. O mixer remove silêncio nas bordas do SFX, calcula `audibleLength` e aplica `fadeOut` **no final do trecho efetivamente usado**. Não colocar `fadeOut` dentro de `config`; não presumir `audio.sfx` ou timestamps relativos para `at`. Um corte em `config.duration` só é aceitável se seu `fadeOut` evitar truncamento audível.
+
+Validar no guia/mapeamento de eventos que cada animação editorial (inclusive câmera e TSX) tenha som correspondente ou áudio original verificado; o início audível deve ocorrer dentro do evento visual, a duração do áudio pode divergir, e a cauda pode continuar suavemente. Schema válido não prova cobertura, coerência, variedade, presença audível ou sincronização: executar `contentlab-revisao` antes de exportar para edição automática e depois do render.

@@ -32,7 +32,7 @@ O Studio agora oferece comparação **A/B** da voz limpa contra a final. Não af
 - Crossfades exigem sobreposição real dos intervalos e fades complementares; não confundir transição sonora com visual.
 - O início do SFX é seu `at` audível depois da limpeza das bordas. Não remover silenciosamente pausas internas.
 - O compositor visual atual coloca a transição `blur_*` no **início da cena entrante**, durante `transitionDuration`; não antecipe o whoosh para o fim da cena anterior. Para centralizar um SFX curto: `at = cena_entrante.start + (duração_visual - duração_audível_após_trim)/2`. Faça arredondamento em frames e confirme num preview curto com áudio. O `at` é absoluto mesmo quando o SFX está listado na cena entrante.
-- Priorize a inteligibilidade da voz, variação funcional de SFX, ausência de whoosh repetitivo e silêncio quando melhor servir à cena.
+- Priorize a voz e variedade funcional de SFX. Movimentos/animações editoriais requerem cobertura sonora; silêncio é válido em quadros estáticos ou exceções narrativas explicitadas, nunca por omissão.
 
 ## Alteração editorial
 Ao inserir ou duplicar cenas, mantenha alinhamento dos tempos posteriores e da voz por `silenceInserts` quando adequado; verifique música, SFX e legendas. Não reconfigure automaticamente tempos aprovados só para suavizar movimentos. A renderização final exige ouvir o áudio, além de inspecionar imagens.
@@ -48,3 +48,15 @@ Produza mapa de beats (tempo → informação → ação visual → hold → pos
 Entregar a composição/motion estes tempos do `transcript.json` no áudio preparado: `scene.start`, `word.start`, `word.end`, `localWordStart = word.start - scene.start`, `localWordEnd = word.end - scene.start`, `visualReadyBy`, hold e saída. O visual da palavra/ideia falada precisa **estar completamente legível até localWordEnd**, idealmente em localWordStart. O movimento de câmera para o elemento e a entrada de imagens/vídeos obedecem ao mesmo limite. Não usar o início da palavra como ordem para COMEÇAR uma animação longa; preferir chegar a tempo.
 
 Referência observada em `VD_0005/PerguntaAbertura.tsx`: a entrada do personagem termina por volta de +2,91 s e a palavra “Batman” começa por volta de +2,93 s no relógio local. Esses números não são presets, e sim demonstração da relação desejada. Se não for possível dar preroll por ser frame 0, usar o estado legível desde o primeiro frame. Conferir timestamps de fala e o MP4 final antes de afirmar sincronização.
+
+## Regra de SFX por animação/movimento — implementação do relógio
+
+Toda animação/movimento editorial possui **evento sonoro correspondente** (ou áudio embutido existente e verificado). Para cada `scene.id`, mapear `motionStartAbs`, `motionEndAbs` e `sfxAudibleStartAbs`; exigir `motionStartAbs <= sfxAudibleStartAbs < motionEndAbs`. Se a janela de animação for de um frame, sincronizar no próprio frame quando tecnicamente possível e conferir escuta; não fingir garantia subframe. O pico/ataque útil deve cair durante a ação, não apenas uma cauda distante. `element.at` é tempo absoluto **audível após auto-trim das bordas do SFX**, não relativa à cena e não deslocamento arbitrário a partir da palavra. Em cena TSX, derivar tempos locais de `useCurrentFrame/useVideoConfig` e somar `scene.start`. Eventos distintos dentro da mesma composição podem usar SFX distintos, enquanto uma textura contínua pode cobrir uma movimentação única longa sem cortes desnecessários.
+
+É aceitável SFX com duração diferente da animação, mais curto ou mais longo, desde que comece e marque o movimento; cauda fora da janela visual pode soar naturalmente. Se o arquivo for **muito maior** ou invadir a fala/beat seguinte, limitar `elements[].config.duration` (duração máxima de SFX no mixer) e aplicar `elements[].fadeOut` em segundos no final do trecho audível. O mixer instalado suporta `fadeIn` e `fadeOut` na raiz do elemento, enquanto `config.duration` é da configuração do SFX; nunca inventar `audio.sfx`, `config.fadeOut` nem recortar o arquivo original. `fadeOut` não deve exceder a duração audível escolhida. Não alterar velocidade da imagem/voz para igualar SFX. Preservar `trimDb` para volume sob narração e não aplicar duplo efeito quando vídeo/CTA já tem áudio.
+
+Exemplo estrutural (ajustar duração e instante aos eventos reais; asset deve existir):
+```json
+{"id":"fx_painel_entrada","type":"sfx","asset":"builtin://sfx/Whoosh 01.mp3","at":12.24,"fadeOut":0.08,"config":{"duration":0.32,"preset":"subtle","trimDb":-18}}
+```
+Esse exemplo não prova que existe animação em 12,24 s; primeiro localizar seu intervalo. A verificação automática inspeciona janelas e paths; a verificação perceptual exige preview com áudio, pois `at` exato no JSON não prova que o SFX é ouvido no movimento. Variar categorias de SFX ao longo do vídeo; não usar whoosh indiscriminadamente. Silêncio deve ser escolha justificada, não esquecimento de uma animação.
