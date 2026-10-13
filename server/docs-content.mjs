@@ -48,7 +48,7 @@ export const chapters=[
     "Fluxo econômico de tokens: descreva o objetivo e os tempos e peça ao ChatGPT um ÚNICO arquivo .tsx completo, export default, pronto para o Remotion do Content Lab. Solicite alterações futuras como patches ao mesmo arquivo, preservando os nomes e a estrutura, em vez de reescrever o código todo. Peça também apenas o fragmento JSON da cena, não o plano completo quando já existir.",
     "Baixe ou salve o arquivo TSX gerado pelo ChatGPT em seu computador e coloque-o dentro da pasta do projeto: custom-scenes/MinhaCena.tsx. A interface atual não baixa nem instala automaticamente o código produzido no chat; essa cópia é manual. Use project://custom-scenes/MinhaCena.tsx em timeline[].customComponent.module. A geração e o download do arquivo dependem das ferramentas que estiverem disponíveis no ChatGPT.",
     "No edit_plan.json existente, use customComponent: {module: 'project://custom-scenes/MinhaCena.tsx', mode: 'replace', props: {...}, assets: {...}}. mode replace entrega toda a composição visual ao componente; mode overlay desenha o TSX sobre as camadas tradicionais. O JSX deve ter export default. Não cole código TSX dentro do JSON: o contrato só contém referência, parâmetros e URIs de assets.",
-    "Em props, forneça valores JSON reutilizáveis como títulos, cores e dados, sem repetir a estrutura de cada elemento. Em assets, dê nomes a URIs locais como project://assets/logo.svg, project://assets/nox.png ou builtin://...; o componente recebe os URLs pelo objeto assets. Retículas, curvas, linhas, diagramas e cards normalmente devem ser desenhados com React/SVG/CSS por código, sem downloads desnecessários. Não suponha que arquivos citados existem antes de conferir.",
+    "Em props, forneça valores JSON reutilizáveis como títulos, cores e dados, sem repetir a estrutura de cada elemento. Em assets, dê nomes a URIs locais como project://assets/logo.svg, project://assets/mascote.png ou builtin://...; o componente recebe os URLs pelo objeto assets. Retículas, curvas, linhas, diagramas e cards normalmente devem ser desenhados com React/SVG/CSS por código, sem downloads desnecessários. Não suponha que arquivos citados existem antes de conferir.",
     "No TSX, importações suportadas são React, Remotion e módulos locais de custom-scenes, respeitadas as dependências realmente instaladas. Use useCurrentFrame e useVideoConfig para calcular qualquer quadro por tempo; use SVG, interpolate, spring e cálculos determinísticos conforme a necessidade. Não use setInterval, relógio real, CSS animations/transitions, URLs externas não verificadas nem aleatoriedade sem semente, pois os quadros devem renderizar corretamente em qualquer ordem.",
     "Por segurança, código TSX é código executável e só deve vir de projeto local inspecionado. Para habilitar, inicie o processo com CONTENTLAB_TRUST_CUSTOM_TSX=1 (Linux: export CONTENTLAB_TRUST_CUSTOM_TSX=1; PowerShell: $env:CONTENTLAB_TRUST_CUSTOM_TSX='1'). A opção não deve ser ligada para projetos ou código de terceiros não confiáveis. O Content Lab não executa esse TSX a partir do texto do JSON nem oferece sandbox completo.",
     "Depois de copiar TSX e atualizar o JSON, clique Validar JSON, salve, renderize e confira o MP4. A validação do JSON não comprova que o TSX compilou: importações, fonte, layout, clipping e comportamento de frames exigem render. O cache da cena identifica mudanças nos arquivos da pasta custom-scenes; mantenha IDs estáveis e repita a inspeção de quadros após modificar o TSX.",
@@ -92,7 +92,7 @@ export const exampleCases=[
     "project": {
       "name": "Exemplo TSX",
       "format": "custom",
-      "profile": "diazverso",
+      "profile": "generic",
       "resolution": {
         "width": 576,
         "height": 1024
@@ -115,7 +115,7 @@ export const exampleCases=[
           "module": "project://custom-scenes/FollowDot.tsx",
           "mode": "replace",
           "props": {
-            "title": "DIAZVERSO",
+            "title": "MOTION LAB",
             "accent": "#fa4245"
           },
           "assets": {}
