@@ -40,3 +40,9 @@ Os testes gerais do repo incluem `node --test server/*.test.mjs`, `node server/s
 
 ## Entrega
 Registrar achados específicos por tempo/cena, gravidade, causa provável e recomendação; só elevar hipótese estética a padrão permanente após observação repetida.
+
+## QA de sincronismo, profundidade e repetição
+
+Checar os instantes reais de `word.start` e `word.end` contra os frames: a entrada do texto, personagem, vídeo ou conceito deve estar **finalizada até o fim da palavra** e preferencialmente já legível no primeiro fonema. Falha de QA: a voz termina a palavra enquanto a animação ainda resolve o objeto. Conferir também se câmera já chegou ao destino, se houve hold, se o visual saiu cedo e se uma entrada prévia entregou spoiler.
+
+Em TSX espaciais, inspecionar o frame 0, os destinos de câmera, clipping, máscaras, primeiro e último plano, oclusão, skew/perspectiva de vídeos, nitidez tipográfica e estabilidade de frame. Na divisão de camadas, conferir se há recortes reais e se não aparecem buracos/halos. Evitar repetição de uma única composição de card ou do mesmo travelling durante capítulos inteiros. Reunir evidência de render real, não só validação de JSON.

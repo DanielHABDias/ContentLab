@@ -57,3 +57,11 @@ Forneça uma intenção clara por elemento: estado inicial, estado focal, duraç
 
 ## Regras de consistência
 A identidade gráfica vem do perfil (Diazverso/GSB), não desta skill. Evite poluição visual, tipografia espremida, interfaces pseudorreais sem função e elementos de impacto que roubam atenção da explicação.
+
+## Composição espacial e profundidade por camadas
+
+Pense a cena como um palco 2D/2.5D maior que o viewport: palavras, clipes, fotos e gráficos têm coordenadas, profundidades aparentes e relações; a câmera leva o foco de um destino para outro **chegando antes ou durante a palavra que o nomeia**, nunca só depois da enunciação. Texto em diagonal superior direita seguido de assunto abaixo pode ser uma rota contínua, não dois cartões genéricos.
+
+Para efeito de separar camadas, identificar planos independentes **de verdade**: fundo, recorte transparente de sujeito, primeiro plano, grafismo/HUD. Animar parallax, z-order, oclusão e perspectiva de forma coordenada; não prometer que uma foto achatada vira volumetria 3D sem segmentação. Quando não houver recortes, usar painéis geométricos explicitamente estilizados. Cuidado com clipping, deformação de personagens, texto em ângulo ilegível e proporção de vídeo.
+
+O Diazverso deve experimentar mais TSX em ideias abstratas autorais (mapas, dilemas, relações, espaço, tipografia e mídia em perspectiva), alternando com filmes/jogos/quadrinhos pertinentes e cortes que deem respiro. Variar conceito espacial antes de variar enfeites.

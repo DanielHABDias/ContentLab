@@ -31,3 +31,9 @@ O repertório **Modern Editorial UI** deriva do CSS existente do Studio: interfa
 - Manter `AGENTS.md`, schema, documentação gerada e testes como referências para compatibilidade.
 - A skill de Diazverso usa o Master Context privado/projeto quando disponível, não o copia automaticamente para este repositório público.
 - Se houver uma skill anterior do Diazverso ou do GSB fora do repositório, fazer comparação e migração antes de apagá-la.
+
+## Aprendizado de motion TSX no Diazverso
+
+Em cenas explicativas autorais, TSX virou opção prioritária quando melhora a compreensão: câmera sobre um palco maior que a tela, palavras em posições diagonais, mídia em perspectiva 2.5D, parallax em planos separados, mapas de relações, split e recomposição de camadas. **A entrada do elemento deve estar concluída até o fim da palavra citada** (idealmente antes do início), com hold legível durante a fala. Para material real pertinente, um corte simples ainda pode ser a melhor decisão.
+
+Exemplos de referência na pasta VD_0005: `PerguntaAbertura`, `ConflitoCentral`, `OutraRazao`, `LegadoEmRede`, `ArgumentosEmConflito`, `ConstelacaoFamilia`. Consultar `contentlab-cenas-tsx/references/REPERTORIO_MOTION_TSX.md` antes de projetar movimentos novos. Não confundir TSX custom da pasta do vídeo com presets globais do motor.

@@ -57,3 +57,13 @@ Carregue `skills/contentlab-direcao/SKILL.md` como entrada geral e os módulos d
 
 ## Não confundir
 Este perfil não é, por definição, a skill de GSB. Mantenha os dois perfis independentes salvo se o usuário documentar explicitamente que se referem à mesma configuração.
+
+## Preferência atual de produção — mais motion autoral TSX, sem perder o Diazverso
+
+A experiência do VD_0005 mostrou grande valor nas cenas próprias de Remotion/TSX. Nos próximos vídeos, **avaliar TSX com prioridade em explicações originais**: palavras como lugares no espaço; câmera saindo de uma expressão na diagonal direita para outra embaixo; vídeo como painel deslocado/inclinado em perspectiva; camadas de fundo/assunto/primeiro plano com parallax; divisão e remontagem de placas; mapa de personagens e argumentos expandindo de um detalhe à rede. Variação é editorial: não reutilizar sempre o mesmo card, eixo, zoom ou animação de texto.
+
+**Sincronismo obrigatório:** palavra, imagem ou vídeo precisam estar prontos no momento em que a fala os alcança. O movimento deve terminar idealmente antes de começar a palavra e, no limite, até seu final; manter hold durante a enunciação. Se a fala for muito curta, entrada rápida, corte seco ou grupo de pensamento. Não mostrar a revelação antes de seu momento narrativo; pode preparar fundo neutro antes. Esse princípio também vale para o foco da câmera.
+
+**Exemplos reais do VD_0005, sem copiar estética ou tempos:** `PerguntaAbertura` — caminho horizontal e Batman já aparecendo antes de a palavra ser falada; `OutraRazao` — tipografia distribuída em X/Y; `ConflitoCentral` — câmera e nós seguindo uma tese; `LegadoEmRede` — navegação local e depois visão geral; `ConstelacaoFamilia` — relações com assets verificados; `ArgumentosEmConflito` — várias falas na mesma cena. O plano contém 101 cenas e 10 ocorrências TSX, não uma meta de quantidade. O efeito de “dividir a tela em camadas” requer planos separados, máscaras/recortes ou painéis deliberadamente estilizados — não alegar segmentação de um MP4 por simples CSS.
+
+**Prioridade editorial:** material real quando prova/representa a fala; TSX quando organiza interpretação e acrescenta linguagem autoral. O padrão de baixa interferência define intencionalidade, **não proibição de motion design sofisticado**. Ver `contentlab-cenas-tsx/references/REPERTORIO_MOTION_TSX.md`.

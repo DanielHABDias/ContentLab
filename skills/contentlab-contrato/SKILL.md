@@ -50,3 +50,7 @@ Antes de entregar: validar schema, regras semânticas, existência de assets, fo
 
 ## Alterações de schema
 Quando a engenharia introduzir campo real: atualizar schema, validação, renderer, `server/docs-fields.mjs` e `server/docs-content.mjs`; regenerar documentos com `npm run docs:generate`, validar com `npm run docs:check` e testes. Nunca criar schema alternativo.
+
+## Tempos e camadas internas ao TSX, não ao schema
+
+Ao converter mapa de narração em TSX, subtrair `timeline[].start` dos timestamps absolutos e passar tempos derivados como números em `customComponent.props` (se necessário) ou constantes no componente. Não inventar propriedades de contrato como `visualReadyBy`, `layerDepth`, `cameraTarget` no `edit_plan.json`: registrar no guia, no briefing ou em `props` existentes. O `customComponent` continua com `module`/`mode`/`props`/`assets`; vídeos e imagens devem vir de assets locais verificados. Ao pronunciar uma palavra, seu objeto visual deve estar reconhecível e a entrada estar concluída até o final da palavra.

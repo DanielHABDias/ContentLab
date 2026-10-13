@@ -49,3 +49,11 @@ Quando o usuário citar **visual moderno, estilo Apple, minimalismo premium, car
 
 ## Hierarquia e entrega
 Pedido explícito > contexto de marca fornecido pelo usuário > skill de perfil > diretrizes gerais do Content Lab. O schema e o renderer real determinam a **validade técnica** do JSON; o objetivo criativo não autoriza campos inventados. Caso uma capacidade pedida ainda não tenha implementação, identifique a lacuna para a etapa de engenharia em vez de disfarçá-la com configurações sem efeito. Não afirmar renderização, paridade ou validação sem executar os testes. Preserve decisões aprovadas e não recomece do zero sem necessidade.
+
+## Nova prioridade criativa — TSX na edição autoral
+
+Para edições do Diazverso, a experiência do VD_0005 validou o valor de **considerar TSX primeiro para motion de explicação original** com cenário contínuo, texto espacial, câmera, mídia em perspectiva e separação de camadas. Isso não transforma o vídeo inteiro em UI nem invalida a baixa interferência: footage real relevante, pausas, cortes secos e Nox com função continuam fundamentais.
+
+Encaminhar à `contentlab-cenas-tsx` quando a cena exige autoria espacial, ainda que seja relativamente curta; consultar `contentlab-composicao` e `contentlab-motion` para direção. Exigir âncoras de narração preparada: conteúdo focal completamente pronto preferencialmente no começo da palavra, **obrigatoriamente até o final da palavra**, com hold real. A câmera deve estar no alvo quando o nome/ideia é pronunciado. Não criar tempos estimados como se fossem transcrição verificada.
+
+Para variar, experimentar deslocamento da câmera por palavras em diagonal, vídeo como placa inclinada, explosão de camadas, parallax de fundo/meio/frente, galerias em profundidade, nó para rede e painéis de HQ no espaço. CSS/React/SVG geram 2.5D e parallax; sem recortes reais não existe separação semântica de um clipe plano. Ver catálogo na referência da skill TSX.
