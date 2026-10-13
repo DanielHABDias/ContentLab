@@ -54,6 +54,7 @@ test('Linux dependency checks reuse valid installs and reinstall only when manif
    const env={...process.env,CL_MOCK_ROOT:temp,
      CL_MOCK_INSTALL_LOG:path.join(temp,'installs.log'),
      CONTENTLAB_WHISPER_MODEL:path.join(temp,'fake-model.bin'),
+     CONTENTLAB_BOOTSTRAP_SKIP_BROWSER:'1',
      PATH:path.join(temp,'mockbin')+path.delimiter+process.env.PATH};
    let result=spawnSync('bash',['-c',script],{cwd:root,env,encoding:'utf8',timeout:30000});
    assert.equal(result.status,0,result.stdout+'\n'+result.stderr);
