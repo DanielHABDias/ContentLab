@@ -71,6 +71,7 @@ export function rendererIdentity(appRoot){
   walk(path.join(appRoot,'backend/remotion/src'));
   walk(path.join(appRoot,'builtin-assets/fonts'));
   include(path.join(appRoot,'server/remotion.mjs'));
+  include(path.join(appRoot,'server/custom-scenes.mjs'));
   include(path.join(appRoot,'server/plan.mjs'));
   include(path.join(appRoot,'backend/remotion/package-lock.json'));
   return hash({visualEngine:'remotion-visual-2',files:files.sort((a,b)=>a[0].localeCompare(b[0]))});
