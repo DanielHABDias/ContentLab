@@ -1,24 +1,17 @@
 @echo off
+setlocal
 cd /d "%~dp0"
-where node >nul 2>&1
-if errorlevel 1 goto missing
-where npm >nul 2>&1
-if errorlevel 1 goto missing
-where ffmpeg >nul 2>&1
-if errorlevel 1 goto ffmpeg_missing
-if not exist "node_modules" call npm install --no-audit --no-fund
+echo [Content Lab] Verificando dependencias...
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\bootstrap-windows.ps1"
 if errorlevel 1 goto failed
-if not exist "backend\remotion\node_modules" call npm ci --prefix backend/remotion --no-audit --no-fund
-if errorlevel 1 goto failed
+set "PATH=%~dp0.tools\node;%~dp0.tools\ffmpeg;%~dp0.tools\whisper;%PATH%"
+if not defined CONTENTLAB_WHISPER_MODEL (
+  if exist "%~dp0.tools\models\ggml-base.bin" set "CONTENTLAB_WHISPER_MODEL=%~dp0.tools\models\ggml-base.bin"
+)
 node server/launcher.mjs
 if errorlevel 1 goto failed
 exit /b 0
-:missing
-echo Instale Node.js 22+ e npm.
-goto failed
-:ffmpeg_missing
-echo Instale FFmpeg e adicione ao PATH.
-goto failed
 :failed
+echo [Content Lab] A inicializacao falhou. Verifique os erros acima.
 pause
 exit /b 1
