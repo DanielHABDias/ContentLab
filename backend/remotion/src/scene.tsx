@@ -201,7 +201,7 @@ const Layer = ({item, props, time, absolute, camera}: {item: Element; props: Sce
     if (motion.enter === 'slide_up') state.y = 0.92 + (state.y - 0.92) * p;
     if (motion.enter === 'slide_down') state.y = 0.08 + (state.y - 0.08) * p;
     if (motion.enter === 'fade' || motion.enter === 'pop_in') state.opacity *= p;
-    if (motion.enter === 'pop_in') state.scale *= 0.65 + 0.35 * p + 0.13 * Math.sin(Math.PI * p);
+    if (motion.enter === 'pop_in') state.scale *= 0.65 + 0.35 * p + 0.13 * Math.sin(Math.PI * p) ** 2;
     if (motion.enter === 'center_reveal') centerVisibility = p;
   }
   if (exitDuration && remaining < exitDuration) {
@@ -465,21 +465,44 @@ const Layer = ({item, props, time, absolute, camera}: {item: Element; props: Sce
     const configuredColors = Array.isArray(item.data.config?.highlightColors) ? item.data.config.highlightColors.filter((color: unknown) => typeof color === 'string') : [];
     const colors = configuredColors.length ? configuredColors : ['#2563EB', '#E53935', '#111111'];
     const activeColor = colors[caption.globalActive % colors.length];
+    const activeWord = caption.words[caption.active];
+    const highlightDuration = intervalSeconds(
+      Number(item.data.config?.highlightTransitionDuration ?? 0.10),
+      activeWord.end - activeWord.start, 0.10
+    );
+    // Retain the prior background while fading up the current one.
+    // Text stays perfectly stationary; no flashing during word gaps.
+    const highlightProgress = caption.active === 0 ? 1 :
+      progress(absolute - activeWord.start, highlightDuration);
+
     const padX = Number(item.data.config?.highlightPaddingX ?? Math.max(7, fontSize * 0.13));
     const padY = Number(item.data.config?.highlightPaddingY ?? Math.max(3, fontSize * 0.07));
     const radius = Number(item.data.config?.highlightRadius ?? Math.max(8, fontSize * 0.18));
     return <div style={{...common, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5%', boxSizing: 'border-box'}}>
       <div style={{display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: Math.max(4, fontSize * 0.12), lineHeight: 1.14, maxWidth: '100%'}}>
-        {labels.map((label, index) => <span key={index + '-' + label} style={{
-          display: 'inline-block', boxSizing: 'border-box', whiteSpace: 'nowrap',
-          padding: padY + 'px ' + padX + 'px', borderRadius: radius,
-          backgroundColor: index === caption.active ? activeColor : 'transparent',
-          fontFamily: item.fontSrc ? item.fontFamily + ', Arial, sans-serif' : 'Arial, sans-serif',
-          fontWeight: item.fontSrc ? 400 : 900, fontSize, color: appearance.color ?? look.color,
-          WebkitTextStroke: (appearance.outlineWidth ?? look.strokeWidth) + 'px ' + (appearance.outlineColor ?? look.stroke),
-          paintOrder: 'stroke fill',
-          textShadow: (shadow.offsetX ?? 3) + 'px ' + (shadow.offsetY ?? 4) + 'px ' + (shadow.blur ?? 8) + 'px ' + (shadow.color ?? '#00000099'),
-        }}>{label}</span>)}
+        {labels.map((label, index) => {
+          const current = index === caption.active;
+          const previous = index === caption.active - 1 && highlightProgress < 1;
+          const highlightAlpha = current ? highlightProgress : previous ? 1 - highlightProgress : 0;
+          const highlightColor = current ? activeColor :
+            colors[(caption.globalActive - 1 + colors.length) % colors.length];
+          return <span key={index + '-' + label} style={{
+            position: 'relative', display: 'inline-block', boxSizing: 'border-box',
+            whiteSpace: 'nowrap', padding: padY + 'px ' + padX + 'px',
+            fontFamily: item.fontSrc ? item.fontFamily + ', Arial, sans-serif' : 'Arial, sans-serif',
+            fontWeight: item.fontSrc ? 400 : 900, fontSize,
+            color: appearance.color ?? look.color,
+            WebkitTextStroke: (appearance.outlineWidth ?? look.strokeWidth) + 'px ' + (appearance.outlineColor ?? look.stroke),
+            paintOrder: 'stroke fill',
+            textShadow: (shadow.offsetX ?? 3) + 'px ' + (shadow.offsetY ?? 4) + 'px ' + (shadow.blur ?? 8) + 'px ' + (shadow.color ?? '#00000099'),
+          }}>
+            {highlightAlpha > 0 && <span aria-hidden="true" style={{
+              position: 'absolute', inset: 0, borderRadius: radius,
+              backgroundColor: highlightColor, opacity: highlightAlpha,
+            }}/>}
+            <span style={{position: 'relative'}}>{label}</span>
+          </span>;
+        })}
       </div>
     </div>;
   }

@@ -155,3 +155,5 @@ A composição possui três faixas na vertical. **A linha central ativa ocupa 10
 - `panelColor`, `panelOpacity` e `panelRadius` controlam opcionalmente o destaque do terço central (ex.: painel cinza com `panelOpacity:0.12` e `panelRadius:0`).
 
 Exemplo pronto: `examples/word-stack.json`, que ocupa duas colunas em `cells:[1,2,4,5,7,8]` **mas renderiza a faixa do carrossel na largura completa do quadro**. O teste `node server/smoke-word-stack.mjs` renderiza frames reais no Remotion e confere a faixa central inteira, opacidade das vizinhas e presença de texto nos três slots.
+
+**Correção do highlight de captions:** `bangers_highlight_block` agora suaviza a troca do background entre palavras, sem alterar o texto nem os timestamps. `config.highlightTransitionDuration:0.1` define 100 ms de crossfade; a passagem fica limitada ao intervalo real da palavra. Fade de cenas foi corrigido para misturar da cena anterior para a próxima, finalizando no último frame da transição.

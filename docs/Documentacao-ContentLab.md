@@ -54,6 +54,8 @@ O pan e slow_zoom_in/out usam início e fim assentados; float_soft, wiggle_soft,
 
 Limitação física: uma transição de 0.1 s em 30 fps tem apenas 3 frames; em 60 fps tem 6. O software não inventa quadros nem transforma 0.1 s em 0.4 s: caso queira mais amostras de movimento, aumente project.fps conscientemente. cut continua instantâneo por definição, e texto digitado/reveal continua discreto por caractere; suavizar não deve mudar sua cadência semântica.
 
+Legenda bangers_highlight_block: o fundo colorido da palavra anterior desaparece enquanto o da próxima cresce suavemente, sem mover ou apagar as letras. O tempo padrão é 0.10 segundo e pode ser ajustado via config.highlightTransitionDuration:0.1 (sem mudança dos timestamps nem da duração da fala). Para transições de cena, o fade agora preserva corretamente a direção: cena anterior no início, próxima cena no final, inclusive quando restam somente três frames.
+
 O motor possui estilos impact, impact_yellow, paper_word, versus_big, word_pop, anton, bangers, word_stack_vertical e word_stream_horizontal, além de estilos de legendas anton_karaoke e bangers_highlight_block.
 
 O carrossel word_stack_vertical usa três faixas horizontais: a frase ativa ocupa a linha CENTRAL em toda a largura do vídeo, mesmo que cells indique somente duas colunas. A frase seguinte fica acima, menor, com transparência reduzida e alinhada à borda inferior do slot superior; a anterior fica abaixo, menor, semitransparente e alinhada ao topo do slot inferior. A transição padrão direction:down faz o texto de cima assumir o centro enquanto o centro desce. Todo o texto fica à esquerda por padrão, com quebras de linha automáticas para frases longas.

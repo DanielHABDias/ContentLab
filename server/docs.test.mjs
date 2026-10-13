@@ -52,6 +52,8 @@ test('documents cover all main capabilities, include examples and all JS-generat
   assert.ok(md.includes('faixa horizontal central'));
   assert.ok(md.includes('largura integral da tela'));
   assert.ok(md.includes('smootherstep'));
+  assert.ok(md.includes('highlightTransitionDuration'));
+  assert.ok(html.includes('bangers_highlight_block'));
   assert.ok(md.includes('Movimento suave em 0,1 segundo'));
   assert.ok(html.includes('0.1 segundo'));
   assert.ok(md.includes('uma transição de 0.1 s em 30 fps tem apenas 3 frames'));
