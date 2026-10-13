@@ -120,7 +120,7 @@ Baixe ou salve o arquivo TSX gerado pelo ChatGPT em seu computador e coloque-o d
 
 No edit_plan.json existente, use customComponent: {module: 'project://custom-scenes/MinhaCena.tsx', mode: 'replace', props: {...}, assets: {...}}. mode replace entrega toda a composição visual ao componente; mode overlay desenha o TSX sobre as camadas tradicionais. O JSX deve ter export default. Não cole código TSX dentro do JSON: o contrato só contém referência, parâmetros e URIs de assets.
 
-Em props, forneça valores JSON reutilizáveis como títulos, cores e dados, sem repetir a estrutura de cada elemento. Em assets, dê nomes a URIs locais como project://assets/logo.svg, project://assets/nox.png ou builtin://...; o componente recebe os URLs pelo objeto assets. Retículas, curvas, linhas, diagramas e cards normalmente devem ser desenhados com React/SVG/CSS por código, sem downloads desnecessários. Não suponha que arquivos citados existem antes de conferir.
+Em props, forneça valores JSON reutilizáveis como títulos, cores e dados, sem repetir a estrutura de cada elemento. Em assets, dê nomes a URIs locais como project://assets/logo.svg, project://assets/mascote.png ou builtin://...; o componente recebe os URLs pelo objeto assets. Retículas, curvas, linhas, diagramas e cards normalmente devem ser desenhados com React/SVG/CSS por código, sem downloads desnecessários. Não suponha que arquivos citados existem antes de conferir.
 
 No TSX, importações suportadas são React, Remotion e módulos locais de custom-scenes, respeitadas as dependências realmente instaladas. Use useCurrentFrame e useVideoConfig para calcular qualquer quadro por tempo; use SVG, interpolate, spring e cálculos determinísticos conforme a necessidade. Não use setInterval, relógio real, CSS animations/transitions, URLs externas não verificadas nem aleatoriedade sem semente, pois os quadros devem renderizar corretamente em qualquer ordem.
 
@@ -435,7 +435,7 @@ Copie examples/custom-scenes/FollowDot.tsx para custom-scenes/FollowDot.tsx na p
   "project": {
     "name": "Exemplo TSX",
     "format": "custom",
-    "profile": "diazverso",
+    "profile": "generic",
     "resolution": {
       "width": 576,
       "height": 1024
@@ -458,7 +458,7 @@ Copie examples/custom-scenes/FollowDot.tsx para custom-scenes/FollowDot.tsx na p
         "module": "project://custom-scenes/FollowDot.tsx",
         "mode": "replace",
         "props": {
-          "title": "DIAZVERSO",
+          "title": "MOTION LAB",
           "accent": "#fa4245"
         },
         "assets": {}
