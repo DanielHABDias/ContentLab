@@ -141,6 +141,15 @@ cl_install_model(){
   fi
   export CONTENTLAB_WHISPER_MODEL="$target"
 }
+cl_ensure_browser(){
+  if [[ "${CONTENTLAB_BOOTSTRAP_SKIP_BROWSER:-0}" == 1 ]]; then
+    cl_log "Chromium Remotion ignorado por CONTENTLAB_BOOTSTRAP_SKIP_BROWSER=1."
+    return
+  fi
+  cl_log "Conferindo Chrome Headless Shell necessário ao Remotion..."
+  (cd "$CL_ROOT/backend/remotion" &&
+    node node_modules/@remotion/cli/remotion-cli.js browser ensure)
+}
 cl_install_npm(){
   local root="$CL_ROOT" fingerprint stamp
   fingerprint="$(sha256sum "$root/package.json" | awk '{print $1}')"
@@ -168,5 +177,6 @@ contentlab_bootstrap(){
     cl_install_model
   else cl_log "Whisper ignorado por CONTENTLAB_BOOTSTRAP_SKIP_WHISPER=1."; fi
   cl_install_npm
+  cl_ensure_browser
   cl_log "Dependências prontas."
 }
