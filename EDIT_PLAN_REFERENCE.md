@@ -149,3 +149,15 @@ A composição possui três faixas na vertical. **A linha central ativa ocupa 10
 - `panelColor`, `panelOpacity` e `panelRadius` controlam opcionalmente o destaque do terço central (ex.: painel cinza com `panelOpacity:0.12` e `panelRadius:0`).
 
 Exemplo pronto: `examples/word-stack.json`, que ocupa duas colunas em `cells:[1,2,4,5,7,8]` **mas renderiza a faixa do carrossel na largura completa do quadro**. O teste `node server/smoke-word-stack.mjs` renderiza frames reais no Remotion e confere a faixa central inteira, opacidade das vizinhas e presença de texto nos três slots.
+
+## Motion design suave com duração exata
+
+**Suavidade e velocidade são distintas.** Um campo animation.enterDuration:0.1 mantém a duração de **100 ms**; interpolar com curva suave não deve criar segundos extras. A mesma regra vale para exitDuration, config.transitionDuration (word_stack_vertical/word_stream_horizontal) e transitionDuration entre cenas, com arredondamento apenas aos frames disponíveis. Se uma palavra dura menos que a transição pedida, a transição usa a janela existente sem deslocar a narração.
+
+- Keyframes e camera.keyframes agora usam ease_in_out por padrão. Para velocidade uniforme intencional, declarar easing:linear. ease_in/ease_out permanecem opções assimétricas.
+- Entrada/saída de camadas, pop_in, center_reveal/close e idles (float_soft, wiggle_soft, pulse_soft, slow_zoom_in/out, pan) interpolam sem tranco de velocidade na borda, preservando duração.
+- word_stack_vertical/word_stream_horizontal usam config.transitionDuration sem mínimo artificial. bangers_highlight_block aceita config.highlightTransitionDuration:0.1 para crossfade do bloco de fundo da palavra ativa; o texto permanece parado.
+- Fade, blur_left/right/up e slide_left chegam à posição final no ÚLTIMO frame da transição, evitando o antigo salto para o corpo da cena seguinte; cut mantém comportamento de corte.
+- Em 30 fps, 100 ms tem três frames disponíveis. Para seis amostras sem desacelerar, usar project.fps:60 quando necessário. Não elevar FPS automaticamente.
+
+Testes: node --test server/motion*.test.mjs. A CI executa também os smoke tests Remotion/FFmpeg, inclusive 100 ms e o carrossel.
