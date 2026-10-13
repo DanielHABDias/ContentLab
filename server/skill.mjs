@@ -28,6 +28,7 @@ const instruction=[
   '- O motor visual é Remotion; o FFmpeg compõe áudio e transições.',
   '- O modo padrão contain preserva o vídeo inteiro; só use cover para recorte intencional.',
   '- Para personagem centralizado numa grade 3x3, cells [2,5,8] é uma opção; escala em transform.scale.',
+  '- Use Sua linha do tempo → + Nova cena → Propriedades avançadas para compor motion design livre: qualquer quantidade de camadas, cells arbitrárias, fundo, câmera e keyframes. Não limitar novas cenas a imagem esquerda + imagem direita.',
   '- start/end de cenas e camadas são segundos ABSOLUTOS. t dos keyframes é RELATIVO ao início da cena.',
   '- Suavidade visual não altera velocidade: defina enterDuration, exitDuration, config.transitionDuration e keyframe t com a duração editorial exata (inclusive 0.1 s). Nunca aumente tempos automaticamente para parecer mais fluido.',
   '- O renderer aplica smootherstep C2 por padrão em keyframes, câmera, entradas, saídas e carrosséis; easing:linear mantém trajetória explicitamente linear. A interpolação melhora aceleração/desaceleração, não o tempo total.',
