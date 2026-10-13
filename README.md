@@ -1,6 +1,6 @@
 # Content Lab — Node.js + Remotion
 
-Editor automático e utilitários de vídeo para o Diazverso, com servidor Node.js, interface JavaScript, Remotion e FFmpeg. A migração do backend foi executada e os testes automatizados de Linux e Windows estão disponíveis no GitHub Actions. A validação estética com todos os assets reais do VD_0005 ainda precisa ser realizada.
+Editor automático e utilitários de vídeo para projetos de conteúdo e motion design, com servidor Node.js, interface JavaScript, Remotion e FFmpeg. Os testes automatizados Linux e Windows estão disponíveis no GitHub Actions. A validação estética final continua dependendo dos arquivos e objetivos de cada projeto real.
 
 ## Tecnologias
 
@@ -45,7 +45,7 @@ Existe **um único** schema: [`schemas/edit_plan.schema.json`](schemas/edit_plan
 Para converter um `edit_plan.json` existente, preservando cópia de segurança:
 
 ```bash
-npm run migrate:plan -- "/caminho/para/VD_0005"
+npm run migrate:plan -- "/caminho/para/meu-video"
 ```
 
 O script adapta planos existentes ao contrato único, valida todos os campos e preserva um backup. Em caso de erro, não sobrescreve o arquivo.
@@ -54,9 +54,9 @@ O script adapta planos existentes ao contrato único, valida todos os campos e p
 
 ```bash
 npm test
-npm run render -- "/caminho/para/VD_0005"
-npm run render -- "/caminho/para/VD_0005" --rebuild
-node server/cli.mjs validate "/caminho/para/VD_0005"
+npm run render -- "/caminho/para/meu-video"
+npm run render -- "/caminho/para/meu-video" --rebuild
+node server/cli.mjs validate "/caminho/para/meu-video"
 node server/smoke.mjs
 ```
 
@@ -147,7 +147,7 @@ O adaptador de transcrição usa o executável `whisper-cli` e um modelo `ggml-*
 
 ## Próximos passos de qualidade
 
-1. Validar render do VD_0005 com assets reais e comparar frames, áudio e transições.
+1. Validar a renderização de um projeto real com assets disponíveis e comparar frames, áudio e transições.
 2. Concluir testes de downloads e transcrição nativa, revisar limites de APIs externas.
 3. Corrigir diferenças visuais e testes, atualizar skill e instalador Windows.
 4. Medir desempenho de render e aprimorar os componentes de motion design Remotion/HyperFrames.
