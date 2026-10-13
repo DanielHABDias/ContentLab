@@ -58,9 +58,9 @@ O validador produz avisos para duas camadas de texto sobrepostas em tempo e regi
 
 ## Áudio, narração, música e SFX
 
-Narração é exigida no fluxo atual. narrationTrim mantém um intervalo start/end da gravação original, enquanto sourceCuts une vários trechos (não usar ambos); silenceInserts cria pausas para sincronizar inserções de cenas. Em voice, fadeIn e fadeOut controlam a entrada e a saída da fala, inclusive antes de uma cauda musical.
+Narração é exigida no fluxo atual, mas a transcrição não precisa ser importada: ela é criada automaticamente depois da preparação do áudio, não antes. O JSON gerado tem timestamps no relógio da narração limpa (inclusive silenceInserts) e não deve ser remapeado novamente no render. narrationTrim mantém um intervalo start/end da gravação original, enquanto sourceCuts une vários trechos (não usar ambos); silenceInserts cria pausas para sincronizar inserções de cenas. Em voice, fadeIn e fadeOut controlam a entrada e a saída da fala, inclusive antes de uma cauda musical.
 
-O mesmo trim automático dos SFX agora se aplica por padrão às bordas da narração e de cada trecho musical. O FFmpeg usa detecção aproximada de silêncio abaixo de -50 dBFS por pelo menos 40 ms, preserva pausas internas e corrige o relógio das palavras da narração para as legendas. Para respeitar uma abertura silenciosa intencional, use voice.autoTrimSilence: false ou music[].autoTrimSilence: false.
+O mesmo trim automático dos SFX agora se aplica por padrão às bordas da narração e de cada trecho musical. O transcript.json é regenerado quando o áudio importado ou seus recortes/pausas mudarem; corrigir somente texto de palavras não deve alterar os tempos. O FFmpeg usa detecção aproximada de silêncio abaixo de -50 dBFS por pelo menos 40 ms, preserva pausas internas e corrige o relógio das palavras da narração para as legendas. Para respeitar uma abertura silenciosa intencional, use voice.autoTrimSilence: false ou music[].autoTrimSilence: false.
 
 A música tem start/end na timeline e pode escolher um trecho do arquivo usando sourceStart/sourceEnd; o trim automático tira silêncio das bordas do trecho selecionado antes de aplicar loop e fades, e loop repete somente a parte audível quando necessário. Duas músicas podem se cruzar: a primeira termina em 20 s com fadeOut de 3 s; a próxima começa em 17 s com fadeIn de 3 s. A sobreposição de 17 a 20 s produz o crossfade no mixer. Ducking reduz o volume durante a voz. Mudanças só de som não invalidam clipes visuais.
 
@@ -100,7 +100,7 @@ Os clipes individuais não incluem obrigatoriamente toda a mixagem. Conferir o v
 
 Vídeos e cortes: carregamento de fonte YouTube, importação local, lista de arquivos em cache, marcação e exportação de trechos de vídeo e áudio.
 
-Transcrição: integração local com whisper.cpp, que gera transcript.json, transcript.srt e transcript.txt quando um modelo compatível está instalado.
+Transcrição: ao escolher a narração no projeto, o Content Lab executa primeiro auto-trim e cortes explícitos, insere os silêncios planejados, salva audio/narration.prepared.wav e só então usa whisper.cpp para gerar transcript.json, transcript.txt e transcript.srt. Não é necessário enviar uma transcrição. Uma alteração posterior nos cortes/pausas dispara nova transcrição e preserva cópias de correções manuais quando necessário. Requer whisper-cli e modelo instalados.
 
 Editor automático: abrir/criar projeto, conferir assets, buscar e selecionar cenas, criar, inserir, duplicar e excluir, ajustar tempos, editar camadas, importar transcrição, validar e salvar o JSON, visualizar clipes em cache e exportar o MP4.
 
@@ -711,7 +711,7 @@ Efeito CRT e transição para a cena seguinte.
 - IDs de cena devem ser exclusivos e estáveis, e camadas visuais exigem ID único dentro da cena.
 - Cenas são sequenciais, com fim posterior ao início; keyframes são ordenados e relativos ao começo da cena.
 - Assets são obrigatórios para image, video, overlay e sfx. Use project:// ou builtin:// para mídias existentes.
-- Narração é obrigatória e a transcrição é necessária quando o componente de legenda a exige.
+- Narração é obrigatória; depois da importação o Content Lab prepara a voz e cria o transcript.json automaticamente com whisper.cpp, quando instalado.
 - Sobreposições de texto podem gerar avisos, sem bloquear composições intencionais.
 - Pausas internas de SFX são preservadas; somente silêncio inicial/final é removido antes do disparo em at.
 - config aceita opções livres, mas só as consumidas pelo renderer alteram o resultado.

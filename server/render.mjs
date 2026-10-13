@@ -5,6 +5,7 @@ import {APP_ROOT,readJson,assetReport,settings,compileScene,sha,projectFile,Plan
 import {statIdentity,SegmentCache,rendererIdentity,sceneFingerprint,cleanOutput} from './cache.mjs';
 import {transcriptWords,remapTranscriptWords,applyNarrationSilence,renderRemotionScene} from './remotion.mjs';
 import {prepareNarration,mixAudio,probeOutput,narrationCuts,analyzeNarrationEdges} from './audio.mjs';
+import {transcriptStatus} from './narration-pipeline.mjs';
 import {composeVisual} from './compose.mjs';
 
 function hashRender(plan,validation,identity){
@@ -57,9 +58,14 @@ export async function renderProject(directory,{
   const narrationEdges=prepareVoice===prepareNarration
     ? await analyzeNarrationEdges(validation.narration,plan.audio,{ffmpeg,ffprobe,signal})
     : {cuts:narrationCuts(plan.audio),headSeconds:0,tailSeconds:0};
-  const words=applyNarrationSilence(
-    remapTranscriptWords(transcriptWords(transcript),narrationEdges.cuts),
-    plan.audio.silenceInserts);
+  const transcription=transcriptStatus(root,plan);
+  if(transcription.status==='stale')
+    throw Error('Transcrição desatualizada para os cortes/pausas atuais. Gere novamente a transcrição do áudio preparado.');
+  // Generated transcript timestamps already reference the final prepared WAV.
+  // Never trim/remap that transcript a second time on render.
+  const words=transcription.status==='ready'?transcriptWords(transcript):
+    applyNarrationSilence(remapTranscriptWords(transcriptWords(transcript),narrationEdges.cuts),
+      plan.audio.silenceInserts);
   const identity=rendererIdentity(APP_ROOT);
   const signature=hashRender(plan,validation,identity),reportFile=path.join(finalDir,'render_report.json');
   const fingerprints=raws.map((raw,i)=>sceneFingerprint(raw,scenes[i],cfg,validation.resolvedAssets,words,identity));

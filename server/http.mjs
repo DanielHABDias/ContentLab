@@ -10,6 +10,7 @@ import {renderProject} from './render.mjs';
 import {run} from './exec.mjs';
 import {SOURCE_CACHE,listSources,cachedSource,importLocalSource,removeSource,getYoutubeInfo,resolveSource,exportCut} from './source.mjs';
 import {transcribeAudio} from './transcribe.mjs';
+import {prepareAndTranscribeProject,narrationStamp,transcriptStatus} from './narration-pipeline.mjs';
 import {streamSkillZip} from './skill.mjs';
 import {buildMarkdown,buildHtml} from './docs.mjs';
 import {diagramNames,diagramSvg} from './docs-diagrams.mjs';
@@ -22,6 +23,22 @@ app.disable('x-powered-by');
 app.use(express.json({limit:'5mb'}));
 app.use('/static',express.static(path.join(APP_ROOT,'frontend','static'),{index:false}));
 const activeRender=root=>[...jobs.values()].some(job=>job.projectRoot===root&&job.status==='running');
+const runningTranscription=root=>[...transcriptions.values()].find(job=>job.projectRoot===root&&job.status==='running');
+function startPreparedTranscript(root,options={}){
+  const running=runningTranscription(root);
+  if(running)return running.id;
+  const id=crypto.randomUUID(),job={id,status:'running',projectRoot:root,
+    message:'Preparando narração e transcrição...',result:null,error:null,
+    narrationStamp:narrationStamp(root,readJson(projectFile(root).file))};
+  transcriptions.set(id,job);
+  prepareAndTranscribeProject(root,{
+    model:options.model||'base',language:options.language||'pt',
+    update:message=>{job.message=message;}
+  }).then(result=>Object.assign(job,{
+    status:'done',message:'Transcrição pronta para captions e kinetic text.',result
+  })).catch(err=>Object.assign(job,{status:'error',message:'Falha ao preparar transcrição.',error:err.message}));
+  return id;
+}
 const upload=multer({dest:os.tmpdir(),limits:{fileSize:1024*1024*1024}});
 const smallUpload=multer({storage:multer.memoryStorage(),limits:{fileSize:5*1024*1024}});
 const api=(handler)=>async(req,res)=>{
@@ -43,7 +60,16 @@ app.get('/',(req,res)=>{
 app.get('/api/editor/plugins',api(async(req,res)=>res.json(registry())));
 app.get('/api/editor/backgrounds',api(async(req,res)=>res.json({backgrounds:installedAssets().backgrounds})));
 app.post('/api/editor/visual-context',api(async(req,res)=>res.json(visualContext(req.body.projectRoot))));
-app.post('/api/editor/project',api(async(req,res)=>res.json(loadProject(req.body.projectRoot))));
+app.post('/api/editor/project',api(async(req,res)=>{
+  const project=loadProject(req.body.projectRoot);
+  const plan=JSON.parse(project.planText),narration=project.validation.narration;
+  const needsTranscript=['missing','stale'].includes(project.transcription?.status);
+  const failedEarlier=[...transcriptions.values()].some(j=>j.projectRoot===project.projectRoot&&j.status==='error'&&
+    j.narrationStamp===narrationStamp(project.projectRoot,plan));
+  const transcriptionJobId=narration&&fs.existsSync(narration)&&needsTranscript&&!failedEarlier&&!activeRender(project.projectRoot)?
+    startPreparedTranscript(project.projectRoot):null;
+  res.json({...project,transcriptionJobId});
+}));
 app.get('/api/editor/scenes',api(async(req,res)=>{
   if(typeof req.query.projectRoot!=='string')return forbidden(res,'Informe a pasta do projeto.');
   res.json(sceneCacheOverview(req.query.projectRoot));
@@ -64,7 +90,14 @@ app.post('/api/editor/validate',api(async(req,res)=>{
 app.post('/api/editor/project/save',api(async(req,res)=>{
   const {root}=projectFile(req.body.projectRoot);
   if(activeRender(root))return res.status(409).json({error:'Aguarde o render antes de salvar o plano.'});
-  try{res.json(saveProject(root,req.body.planText,req.body.revision));}
+  try{
+    const before=readJson(projectFile(root).file),previous=narrationStamp(root,before);
+    const updated=saveProject(root,req.body.planText,req.body.revision);
+    const after=JSON.parse(updated.planText),current=narrationStamp(root,after);
+    const transcriptionJobId=current&&current!==previous&&after.sources?.transcript==='transcript.json'&&!activeRender(root)?
+      startPreparedTranscript(root):null;
+    res.json({...updated,transcriptionJobId});
+  }
   catch(e){
     if(e.issues?.some(x=>x.path==='revision'))return res.status(409).json({error:e.message,errors:e.issues});
     throw e;
@@ -79,10 +112,35 @@ app.post('/api/editor/project/narration',upload.single('file'),api(async(req,res
     const audioDir=path.join(root,'audio');
     if(fs.existsSync(audioDir)&&fs.lstatSync(audioDir).isSymbolicLink())return forbidden(res,'Pasta audio insegura.');
     fs.mkdirSync(audioDir,{recursive:true});
+    if(runningTranscription(root))return res.status(409).json({error:'Aguarde a transcrição em andamento.'});
+    const current=loadProject(root);
+    if(req.body.revision&&req.body.revision!==current.revision)
+      return res.status(409).json({error:'Plano alterado. Recarregue antes de importar a narração.'});
     const dest=path.join(audioDir,'narration-'+crypto.randomUUID()+ext);
     fs.renameSync(req.file.path,dest);
-    res.status(201).json({path:dest,relative:path.relative(root,dest).split(path.sep).join('/')});
+    const relative=path.relative(root,dest).split(path.sep).join('/');
+    const plan=JSON.parse(current.planText);
+    plan.audio.narration=relative;
+    plan.sources={...(plan.sources||{}),transcript:'transcript.json'};
+    try{
+      const saved=saveProject(root,JSON.stringify(plan,null,2)+'\n',current.revision);
+      const jobId=startPreparedTranscript(root);
+      res.status(201).json({path:dest,relative,jobId,project:saved});
+    }catch(error){fs.rmSync(dest,{force:true});throw error;}
+
   }finally{if(fs.existsSync(req.file.path))fs.rmSync(req.file.path,{force:true});}
+}));
+app.post('/api/editor/project/transcribe',api(async(req,res)=>{
+  let project=loadProject(req.body.projectRoot);
+  if(activeRender(project.projectRoot))return res.status(409).json({error:'Aguarde o render atual.'});
+  if(!fs.existsSync(project.validation.narration||''))return forbidden(res,'Importe uma narração antes da transcrição.');
+  const plan=JSON.parse(project.planText);
+  if(plan.sources?.transcript!=='transcript.json'){
+    plan.sources={...(plan.sources||{}),transcript:'transcript.json'};
+    project=saveProject(project.projectRoot,JSON.stringify(plan,null,2)+'\n',project.revision);
+  }
+  const id=startPreparedTranscript(project.projectRoot,{model:req.body.model,language:req.body.language});
+  res.status(202).json({jobId:id});
 }));
 app.post('/api/editor/project/transcript',smallUpload.single('file'),api(async(req,res)=>{
   if(!req.file)return forbidden(res,'Selecione transcript.json.');
@@ -106,6 +164,9 @@ app.post('/api/editor/render',api(async(req,res)=>{
   if(!project.validation.valid)return res.status(422).json({error:'Corrija os assets antes do render.',validation:project.validation});
   if(revision&&revision!==project.revision)return res.status(409).json({error:'O JSON mudou no disco. Recarregue.'});
   const root=project.projectRoot;
+  if(runningTranscription(root))return res.status(409).json({error:'A transcrição ainda está sendo preparada. Aguarde o resultado antes de renderizar.'});
+  if(transcriptStatus(root,JSON.parse(project.planText)).status==='stale')
+    return res.status(409).json({error:'Transcrição desatualizada. Regenere a partir da narração processada.'});
   if(activeRender(root))return res.status(409).json({error:'Já há um render deste projeto.'});
   const id=crypto.randomUUID(),controller=new AbortController();
   const job={status:'running',stage:'prepare',percent:0,message:'Preparando render...',projectRoot:root,
