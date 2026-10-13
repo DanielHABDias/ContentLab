@@ -42,6 +42,33 @@ document.querySelectorAll(".workspace-tab").forEach((tab) => {
     $(`tab-${workspaces[next]}`).focus();
   });
 });
+// Lightweight DOM motion: Remotion remains dedicated to rendered video, not UI clicks.
+// Observe visible cards once, then leave the content accessible and interactive.
+const studioReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+if (!studioReducedMotion.matches && "IntersectionObserver" in window) {
+  const studioObserver = new IntersectionObserver((entries, observer) => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      entry.target.classList.add("is-revealed");
+      observer.unobserve(entry.target);
+    }
+  }, { threshold: 0.045, rootMargin: "0px 0px -18px 0px" });
+  document.querySelectorAll(".workspace-panel .workspace-intro, .workspace-panel .block, .workspace-panel .editor-project, .workspace-panel .docs-viewer-block").forEach((section, index) => {
+    section.classList.add("studio-reveal");
+    section.style.setProperty("--reveal-delay", String(Math.min(index % 4, 3) * 45) + "ms");
+    studioObserver.observe(section);
+  });
+}
+// Pointer-follow highlights give buttons a tactile press without extra markup.
+document.addEventListener("pointerdown", (event) => {
+  if (studioReducedMotion.matches) return;
+  const button = event.target.closest(".btn");
+  if (!button || button.disabled) return;
+  const rect = button.getBoundingClientRect();
+  button.style.setProperty("--press-x", (event.clientX - rect.left) + "px");
+  button.style.setProperty("--press-y", (event.clientY - rect.top) + "px");
+});
+
 // Old #guide links now lead directly to the single official reference workspace.
 const requestedWorkspace = location.hash.slice(1);
 showWorkspace(requestedWorkspace === "guide" ? "docs" :
