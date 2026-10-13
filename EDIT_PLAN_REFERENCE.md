@@ -135,3 +135,17 @@ O motor faz o trim de silêncio apenas nas bordas e aplica `narrationTrim` ou `s
 O sistema registra `transcript.build.json` para identificar qual narração/cortes/pausas geraram o JSON. Ao salvar alterações que afetam o relógio, dispara novo processamento. A transcrição gerada já usa os **tempos da narração preparada**, portanto o render não desloca as palavras uma segunda vez. Correções de ortografia/nome podem alterar `words[].word` e `segments[].text` sem modificar `start/end`. Antes de regenerar, correções humanas divergentes são preservadas em `transcript.manual-backup-*.json`. Consulte o estado no editor e use **Atualizar transcrição** para tentar novamente, se necessário.
 
 **Importante:** timestamps de reconhecimento de fala são estimativas; para legendas críticas inspecione o preview e faça ajustes finos. Pausas/respirações internas são preservadas. Mesmo gerando a transcrição automaticamente, tempos **manuais** de cortes visuais e SFX que se basearam no arquivo de voz original precisam ser conferidos após correções.
+
+## Carrossel de palavras e frases: `word_stack_vertical`
+
+Usar um único elemento `kinetic_text` com `style:"word_stack_vertical"`. Para **frases inteiras**, declarar `config.items` com `text/start/end` por frase; não criar três elementos `text` independentes. Para palavras individuais da narração, também é possível seguir o transcript.
+
+A composição possui três faixas na vertical. **A linha central ativa ocupa 100% da largura do vídeo**, não apenas as duas colunas eventualmente selecionadas por `cells`. O `cells` ainda pode posicionar a pilha verticalmente, mas nunca limitar a largura da faixa horizontal. O painel cinza, quando ativado, cobre somente o TERÇO central, em toda a largura do frame; o padrão `panelOpacity:0` deixa o fundo transparente. Evitar um cartão cinza atrás de toda a pilha.
+
+- `config.direction:"down"`: a próxima frase entra por CIMA e cresce até assumir a faixa central; a central anterior encolhe e desce ao terço inferior. `direction:"up"` é alternativa legada explícita.
+- `config.align:"left"` é o padrão moderno: todas as três linhas se alinham à esquerda; `center` continua possível mediante configuração explícita.
+- Frase atual: maior, opacidade total e centralização vertical. Próxima frase no alto: menor, opacidade reduzida, alinhada à BASE de seu slot. Frase anterior abaixo: menor, opacidade reduzida e alinhada ao TOPO do seu slot.
+- `activeScale`, `inactiveScale`, `inactiveOpacity`, `transitionDuration`, `slotGap` e `fontScale` controlam o tamanho/tempo. Frases grandes quebram em linhas dentro de sua faixa; não devem ser cortadas em uma caixa de duas colunas.
+- `panelColor`, `panelOpacity` e `panelRadius` controlam opcionalmente o destaque do terço central (ex.: painel cinza com `panelOpacity:0.12` e `panelRadius:0`).
+
+Exemplo pronto: `examples/word-stack.json`, que ocupa duas colunas em `cells:[1,2,4,5,7,8]` **mas renderiza a faixa do carrossel na largura completa do quadro**. O teste `node server/smoke-word-stack.mjs` renderiza frames reais no Remotion e confere a faixa central inteira, opacidade das vizinhas e presença de texto nos três slots.

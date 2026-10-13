@@ -83,3 +83,9 @@ A biblioteca futura seguirá padrões de Remotion e referências de animação s
 ## Grid, deslocamento e opacidade
 
 Camadas de PNG podem usar `cells:[5,8]` para encaixe automático nas duas células centrais inferiores, `fit:"contain"` para evitar recorte, `transform.scale` para ajuste opcional, `transform.offsetX` e `offsetY` em pixels (positivo = direita/baixo) para reposicionamento e `transform.opacity` entre 0 e 1 para transparência. `keyframes[].opacity` anima fades. `z` define a ordem de sobreposição.
+
+## Carrossel vertical moderno de frases
+
+O preset `kinetic_text` com `style:"word_stack_vertical"` ocupa três faixas. O destaque central (e seu painel, quando `panelOpacity>0`) **se estende horizontalmente por todo o quadro**, mesmo que `cells` inclua somente duas colunas. A frase ativa é maior e plenamente opaca no centro. A próxima, acima, é menor e semitransparente e se ancora pela borda de BAIXO de sua faixa; a anterior, abaixo, é menor e semitransparente e se ancora pela borda de CIMA. As três ficam alinhadas à esquerda por padrão. `direction:"down"` gera o movimento superior→central→inferior.
+
+Para frases completas, usar `config.items:[{"text":"BATMAN NÃO É JUIZ","start":0,"end":1.2},...]`; não simular a pilha com camadas independentes. A linha central aceita quebras responsivas; não usar `whiteSpace:nowrap` nem limitar o painel a duas colunas. O novo padrão visual é transparente (`panelOpacity:0`), com destaque cinza opcional restrito ao terço central e em largura total. O exemplo `examples/word-stack.json` e `server/smoke-word-stack.mjs` demonstram a composição.
