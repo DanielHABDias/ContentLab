@@ -8,6 +8,7 @@ import {APP_ROOT,projectFile,readJson,assetReport,validatePlan,PlanError} from '
 import {createProject,loadProject,saveProject,listAssets,registry,visualContext,installedAssets} from './project.mjs';
 import {renderProject} from './render.mjs';
 import {run} from './exec.mjs';
+import {instanceIdentity} from './instance-identity.mjs';
 import {SOURCE_CACHE,listSources,cachedSource,importLocalSource,removeSource,getYoutubeInfo,resolveSource,exportCut} from './source.mjs';
 import {transcribeAudio} from './transcribe.mjs';
 import {voiceStudioFolder,voiceStudioState,prepareStandaloneNarration} from './voice-studio.mjs';
@@ -415,7 +416,10 @@ app.get('/api/transcription/jobs/:id',api(async(req,res)=>{
   if(!job)return res.status(404).json({error:'Transcrição não encontrada.'});
   res.json(job);
 }));
-app.get('/health',api(async(req,res)=>res.json({ok:true,backend:'node',renderer:'remotion'})));
+const runningIdentity=instanceIdentity();
+app.get('/health',api(async(req,res)=>res.json({
+  ok:true,backend:'node',renderer:'remotion',...runningIdentity
+})));
 const server=app.listen(PORT,HOST,()=>console.log('Content Lab Node: http://'+HOST+':'+PORT));
 app.post('/api/shutdown',api(async(req,res)=>{
   const active=[...sourceJobs.values(),...jobs.values(),...transcriptions.values()].filter(j=>j.status==='running').length;
