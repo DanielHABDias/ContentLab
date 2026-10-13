@@ -14,7 +14,7 @@ Os testes verificam contrato único, IDs, caminhos de assets, segurança do rebu
 
 - Iniciar o Zorin pelo atalho de aplicativo sem manter terminal aberto; encerrar pelo botão da interface.
 - Inicializar o Windows com `iniciar.vbs` e verificar fechamento, abertura do navegador e logs.
-- Abrir o VD_0005: comparar frames-chave, personagens PNG, câmeras e textos, sem recorte ou ampliação não solicitada.
+- Abrir o projeto piloto com múltiplas cenas: comparar frames-chave, personagens PNG, câmeras e textos, sem recorte ou ampliação não solicitada.
 - Render com cache: editar apenas Batman; verificar que os demais MP4s mantêm as assinaturas.
 - Testar narrador com `sourceCuts`, normalização, níveis de música, ducking, SFX e transições.
 - Validar vídeos locais e vídeos do YouTube na área de fontes.
