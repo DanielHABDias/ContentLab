@@ -29,6 +29,51 @@ export async function measureSfxEdges(file,{ffmpeg='ffmpeg',ffprobe='ffprobe',si
     '-vn','-af','silencedetect=noise=-50dB:d=0.04','-f','null','-'],{signal});
   return {...edgeSilenceBounds(stderr,duration),duration};
 }
+
+/**
+ * Detect silence only at the *edges* of a selected interval. Interior gaps
+ * and speech pauses are never removed. Times are local to this interval.
+ */
+export async function measureAudioSliceEdges(file,{start=0,end,ffmpeg='ffmpeg',ffprobe='ffprobe',signal}={}){
+  const sourceDuration=await probeAudioDuration(file,{ffprobe,signal});
+  const actualEnd=end??sourceDuration;
+  if(start<0||actualEnd>sourceDuration+0.02||actualEnd<=start)
+    throw Error('Trecho de áudio fora dos limites do arquivo: '+file);
+  const length=Math.min(sourceDuration,actualEnd)-start;
+  const {stderr}=await run(ffmpeg,['-hide_banner','-nostats','-loglevel','info',
+    '-ss',fmt(start),'-t',fmt(length),'-i',file,'-vn',
+    '-af','silencedetect=noise=-50dB:d=0.04','-f','null','-'],{signal});
+  return {...edgeSilenceBounds(stderr,length),duration:length};
+}
+/**
+ * Auto-trim first and last retained sections, including explicit narration
+ * sourceCuts. Return effective cuts so text timestamps and audio use the same
+ * clock. The existing interior sourceCuts and silenceInserts remain intact.
+ */
+export async function analyzeNarrationEdges(input,settings={},opts={}){
+  const original=narrationCuts(settings);
+  if(settings.voice?.autoTrimSilence===false)return {cuts:original,headSeconds:0,tailSeconds:0};
+  const sourceDuration=await probeAudioDuration(input,opts);
+  const cuts=original.length?original.map(c=>({...c})):[{start:0,end:sourceDuration}];
+  for(const cut of cuts)if(cut.end>sourceDuration+0.02)
+    throw Error('Recorte da narração excede o arquivo original.');
+  const first=await measureAudioSliceEdges(input,{...opts,start:cuts[0].start,end:cuts[0].end});
+  const last=cuts.length===1?first:await measureAudioSliceEdges(input,{
+    ...opts,start:cuts.at(-1).start,end:cuts.at(-1).end});
+  // When a selected boundary contains only silence, preserve it rather than
+  // guessing how much to skip across unrelated edits.
+  const headSeconds=first.empty?0:first.start;
+  const tailSeconds=last.empty?0:Math.max(0,last.duration-last.end);
+  if(headSeconds+tailSeconds>=cuts.reduce((sum,c)=>sum+c.end-c.start,0)-.005)
+    return {cuts:original,headSeconds:0,tailSeconds:0};
+  cuts[0].start=Number((cuts[0].start+headSeconds).toFixed(6));
+  cuts.at(-1).end=Number((cuts.at(-1).end-tailSeconds).toFixed(6));
+  if(cuts.some(c=>c.end<=c.start))
+    return {cuts:original,headSeconds:0,tailSeconds:0};
+  return {cuts:headSeconds>.001||tailSeconds>.001?cuts:original,
+    headSeconds,tailSeconds};
+}
+
 // Each insertion is at an absolute position on the *resulting* narration timeline.
 export function silenceSourcePositions(inserts=[]){
   let accumulated=0,lastAt=-1;
@@ -47,8 +92,9 @@ export function narrationCuts(settings={}){
   return settings.sourceCuts?.length ? settings.sourceCuts : settings.narrationTrim ? [settings.narrationTrim] : [];
 }
 
-export async function prepareNarration(input,output,settings,{ffmpeg='ffmpeg',signal,duration}={}){
-  const cuts=narrationCuts(settings),voice=settings.voice||{},filters=[];
+export async function prepareNarration(input,output,settings,{ffmpeg='ffmpeg',ffprobe='ffprobe',signal,duration,autoTrimCuts}={}){
+  const cuts=autoTrimCuts??(await analyzeNarrationEdges(input,settings,{ffmpeg,ffprobe,signal})).cuts;
+  const voice=settings.voice||{},filters=[];
   if(cuts.length){
     cuts.forEach((cut,i)=>filters.push('[0:a]atrim=start='+fmt(cut.start)+':end='+fmt(cut.end)+',asetpts=PTS-STARTPTS[c'+i+']'));
     filters.push(cuts.map((_,i)=>'[c'+i+']').join('')+'concat=n='+cuts.length+':v=0:a=1[cut]');
@@ -138,18 +184,31 @@ export async function mixAudio(visual,cleaned,plan,resolvedAssets,output,duratio
       if(edges.empty)continue;
     }
     const audibleLength=edges?Math.min(length,edges.end-edges.start):length;
-    const selectedMusic=type==='music'&&(item.sourceStart!==undefined||item.sourceEnd!==undefined);
-    let segmentStart=0,segmentEnd=0;
-    if(type==='music'&&(selectedMusic||!loop)){
-      if(!measured.has(file))measured.set(file,{duration:await probeAudioDuration(file,{ffprobe,signal})});
-      const sourceDuration=measured.get(file).duration;
+    const manuallySelected=type==='music'&&(item.sourceStart!==undefined||item.sourceEnd!==undefined);
+    let segmentStart=0,segmentEnd=0,autoSilenceTrim=null;
+    if(type==='music'){
+      const sourceDuration=await probeAudioDuration(file,{ffprobe,signal});
       segmentStart=item.sourceStart??0;
       segmentEnd=item.sourceEnd??sourceDuration;
-      if(segmentStart>=sourceDuration-0.001||segmentEnd>sourceDuration+0.01||segmentEnd<=segmentStart)
+      if(segmentStart>=sourceDuration-0.001||segmentEnd>sourceDuration+0.02||segmentEnd<=segmentStart)
         throw Error('Trecho musical fora dos limites do arquivo: '+item.asset);
+      if(item.autoTrimSilence!==false){
+        const key='music:'+file+':'+segmentStart+':'+segmentEnd;
+        if(!measured.has(key))measured.set(key,await measureAudioSliceEdges(file,{
+          start:segmentStart,end:segmentEnd,ffmpeg,ffprobe,signal}));
+        const detected=measured.get(key);
+        if(detected.empty)continue;
+        const front=detected.start,back=Math.max(0,detected.duration-detected.end);
+        if(front>.001||back>.001){
+          segmentStart=Number((segmentStart+front).toFixed(6));
+          segmentEnd=Number((segmentEnd-back).toFixed(6));
+          autoSilenceTrim={start:front,end:back};
+        }
+      }
       if(!loop&&segmentEnd-segmentStart+0.001<audibleLength)
-        throw Error('Música sem loop não cobre o intervalo da timeline: '+item.asset);
+        throw Error('Música sem loop não cobre a duração da timeline após o trim automático: '+item.asset);
     }
+    const selectedMusic=manuallySelected||!!autoSilenceTrim;
     // The legacy loop still repeats the full file. A selected segment needs
     // a filter loop instead, so the music never jumps outside its source window.
     if(loop&&!selectedMusic)args.push('-stream_loop','-1');
@@ -179,7 +238,8 @@ export async function mixAudio(visual,cleaned,plan,resolvedAssets,output,duratio
     layers.push({type,asset:item.asset,start,end:Math.min(start+audibleLength,duration),
       edgeTrim:edges?{start:edges.start,end:Math.max(0,edges.duration-edges.end)}:null,
       trimDb:gain,preset,fadeIn,fadeOut,loop,
-      ...(selectedMusic?{sourceStart:segmentStart,sourceEnd:segmentEnd}:{}),normalized:true});
+      ...(selectedMusic?{sourceStart:segmentStart,sourceEnd:segmentEnd}:{}),
+      ...(autoSilenceTrim?{autoSilenceTrim}:{}),normalized:true});
     index++;
   }
   let mixLabels=['[voice]'];
