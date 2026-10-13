@@ -76,7 +76,7 @@ test('website exposes one docs tab, dedicated reader and exactly three doc downl
   assert.ok(!html.includes('id="tab-guide"'));
   assert.ok(!html.includes('id="panel-guide"'));
   assert.ok(!html.includes('id="guideOpenDocs"'));
-  assert.equal((html.match(/class="workspace-tab/g)||[]).length,4);
+  assert.equal((html.match(/class="workspace-tab /g)||[]).length,4);
   assert.ok(html.includes('id="tab-docs"'));
   assert.ok(html.includes('id="panel-docs"'));
   assert.ok(html.includes('id="docsManual"'));
