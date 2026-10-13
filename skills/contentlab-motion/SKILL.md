@@ -26,6 +26,15 @@ A cena tem estado de entrada → estabelecimento do foco → desenvolvimento →
 - Evite overshoot excessivo, saltos, efeitos de quique repetidos e movimentos muito curtos para serem percebidos.
 - FPS não altera duração editorial. Em 30 fps, 0,1 s fornece aproximadamente 3 quadros; em 60 fps, 6. Aumentar duração para mascarar pouca suavidade é erro.
 
+## Motion refinado de interface, adaptado ao vídeo
+Usar a fluidez observada no Studio como referência de acabamento, mas **renderizar por frame** no Content Lab/Remotion; a duração da fala e o tempo de leitura têm prioridade sobre o CSS do site.
+- **Microinterações:** opacidade e deslocamento sutil, expansão de highlight, revelação por máscara, entrada de card com leve escala + elevação. Usar easing não linear controlado (`ease_out` no assentamento, `ease_in_out` nas transformações) ou spring bem amortecido **quando implementado em TSX**. Evitar bounce repetitivo, overshoot grande, jitter e zoom brusco.
+- **Cadência de referência, não preset fixo:** aproximadamente 0,15–0,3 s para detalhe curto e 0,3–0,55 s para entrada/reorganização com foco; ajustar ao FPS, quantidade de informações, beats de voz e hold de leitura. Não alongar arbitrariamente 0,1 s para “parecer suave”.
+- **Card premium em movimento:** entra junto à informação, acomoda sem tremor, permanece legível, depois se transforma ou sai por relação com o próximo foco. Se o texto secundário é cinza, ainda deve oferecer contraste suficiente no vídeo vertical.
+- **Câmera:** movimentos suaves e pontuais que revelam relações, com trajetória e parada previsíveis. Camadas do mundo acompanham câmera, HUD/legenda fixos não; evitar parallax e depth decorativos.
+- **Hierarquia de movimento:** apenas um foco principal em movimento por vez; staggering leve nos suportes e silêncio visual deliberado depois de picos. Uma interface premium não significa animar cada elemento.
+- **Técnica:** presets declarativos só nos limites do renderer; para transformações sofisticadas usar `contentlab-cenas-tsx` com `useCurrentFrame`, `interpolate`, `spring` e inspeção de frames. Não usar CSS transition ou relógio real para determinar os frames do MP4.
+
 ## Stagger e dependências
 - Planeje uma janela compartilhada: título estabelece contexto, painel aparece, conteúdo se revela, destaque assume protagonismo.
 - O início de B pode ser relativo ao início ou ao término de A; sobreposições são legítimas, desde que mantenham legibilidade.

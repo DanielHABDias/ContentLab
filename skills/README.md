@@ -23,6 +23,9 @@ Para movimento contínuo complexo, solicitar ao ChatGPT **um arquivo TSX complet
 
 `props` contém dados JSON; `assets` contém URIs locais nomeadas. `mode: "replace"` usa a composição TSX inteira; `mode: "overlay"` mantém as camadas normais atrás. O código **não** é instalado automaticamente pelo site e exige `CONTENTLAB_TRUST_CUSTOM_TSX=1` em ambiente local revisado. Validar JSON, renderizar, inspecionar frames e áudio. Exemplo: `examples/custom-scenes/FollowDot.tsx`.
 
+## Direção de arte contemporânea
+O repertório **Modern Editorial UI** deriva do CSS existente do Studio: interfaces limpas, fundos branco-gelo/grafite, cinzas, cards com raio e sombra sutis, acentos discretos e tipografia de sistema. `contentlab-composicao` define visual/organização; `contentlab-motion` define suavidade, timing e coreografia; `contentlab-cenas-tsx` materializa composições complexas. `diazverso-video` adapta isso à marca. Fonte Apple no CSS significa fallback do sistema, **não fonte SF Pro distribuída**.
+
 ## Manutenção
 - Mudar conteúdo das skills aqui; não voltar a embutir orientações extensas em `server/skill.mjs`.
 - Manter `AGENTS.md`, schema, documentação gerada e testes como referências para compatibilidade.

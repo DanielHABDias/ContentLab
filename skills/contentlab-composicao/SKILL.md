@@ -18,6 +18,17 @@ Antes de especificar componentes, registrar de forma concisa:
 - **Relação com cenas adjacentes:** continuidade de elemento, corte ou transformação.
 - **Tratamento por formato:** soluções específicas para 16:9 e 9:16.
 
+## Design editorial contemporâneo — repertório do Studio
+Quando o projeto pedir estética moderna, elegante ou `premium`, use os princípios observados no próprio Content Lab Studio (`frontend/static/studio.css`): **hierarquia de informação, espaço negativo, contraste controlado e materialidade sutil**. Referência de acabamento associada a interfaces Apple, **sem copiar telas, marcas nem depender de fontes proprietárias**.
+
+- **Sistema visual:** base clara em branco-gelo (`#F5F6F8`), superfície branca (`#FFFFFF`), cinzas (`#F4F5F7`, `#8B93A0`), texto carvão (`#171A22`); versão escura em carvão (`#0D111B`), grafite e azul profundo. Usar cor saturada apenas como acento significativo, conforme o perfil de marca.
+- **Fundos não monótonos:** alternar conscientemente papel branco/off-white, cinza suave, cinza-azulado, carvão, degradê azul profundo e superfície ligeiramente texturizada. Fundo deve apoiar legibilidade e tema do beat; não variar só para parecer agitado. Gradiente sutil e glow localizado podem sugerir profundidade.
+- **Cards e painéis:** retângulos com cantos arredondados proporcionais ao quadro, contorno fino e claro, sombras difusas de baixa opacidade, preenchimento distinto do fundo, espaçamento interno generoso e hierarquia título → conteúdo → detalhe. Em fundo escuro, usar painel grafite e borda iluminada discreta; evitar vidro desfocado excessivo.
+- **Tipografia:** sans-serif contemporânea, preferencialmente **Inter** ou outra fonte legível que esteja *realmente disponível e licenciada no projeto*, para títulos, frases editoriais e interface; contraste com **Anton** e **Bangers** nos impactos seletivos. O site usa fallback CSS `-apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", sans-serif`, não uma fonte Apple embutida. Não inventar disponibilidade ou distribuir SF Pro sem direitos.
+- **Título principal + secundário:** copiar o princípio, não o layout literal, de “Crie cena por cena.” em destaque e “Sem complicar.” em cinza secundário: tamanho e peso hierarquizados, segunda mensagem em menor contraste, boa entrelinha e espaçamento levemente fechado, sem sacrificar legibilidade.
+- **Composição primeiro:** numa comparação, uma lista ou uma linha do tempo, alinhar pela grade, estabelecer foco e respiro e depois animar. Evitar transformar todo vídeo em mockup de aplicativo; os cards são uma linguagem de explicação, não obrigação estética.
+- **Identidade do projeto:** esse é um repertório **opcional** do Content Lab; a skill de marca define onde usá-lo. No Diazverso, compatibilizar com preto/azul/vermelho/amarelo e com B-roll de filmes/jogos, sem trocar cena literal útil por card decorativo.
+
 ## Layout e tipografia
 - Use o grid e as células apenas quando ajudarem o enquadramento. Em 3x3, a coluna central é [2,5,8], e a célula central é [5].
 - Evite blocos uniformes de texto. Destaque palavras essenciais por tamanho, peso, contraste, cor e timing; preservando leitura contínua.
