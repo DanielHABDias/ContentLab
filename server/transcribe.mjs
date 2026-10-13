@@ -27,7 +27,19 @@ const formatTime=seconds=>{
     s=Math.floor(t/1000)%60,ms=t%1000;
   return [h,m,s].map(x=>String(x).padStart(2,'0')).join(':')+','+String(ms).padStart(3,'0');
 };
-export async function transcribeAudio(file,projectRoot,{model='base',language='pt',signal,update=()=>{}}={}){
+// The JSON always contains both summaries (segments) and exact word entries.
+// This choice controls only the human-readable TXT and the interface preview.
+export function transcriptTextLines(doc,detail='segments'){
+  if(!['words','segments'].includes(detail))
+    throw Error('Detalhamento da transcrição inválido: use words ou segments.');
+  const entries=detail==='words'?doc.words:doc.segments;
+  if(!Array.isArray(entries))throw Error('Transcrição sem dados para '+detail+'.');
+  return entries.map(item=>'['+Number(item.start).toFixed(2)+' → '+Number(item.end).toFixed(2)+'] '+
+    String(detail==='words'?item.word:item.text));
+}
+export async function transcribeAudio(file,projectRoot,{model='base',language='pt',detail='segments',signal,update=()=>{}}={}){
+  if(!['words','segments'].includes(detail))
+    throw Error('Detalhamento da transcrição inválido: use words ou segments.');
   const bin=process.env.CONTENTLAB_WHISPER_CLI||'whisper-cli';
   const models=process.env.CONTENTLAB_WHISPER_MODEL_DIR||path.join(os.homedir(),'.cache','whisper.cpp');
   const modelFile=process.env.CONTENTLAB_WHISPER_MODEL||path.join(models,'ggml-'+model+'.bin');
@@ -66,10 +78,10 @@ export async function transcribeAudio(file,projectRoot,{model='base',language='p
     }
     const doc={language,segments:grouped,words,wordTiming:'whisper-word-segments'};
     fs.writeFileSync(path.join(projectRoot,'transcript.json'),JSON.stringify(doc,null,2)+'\n');
-    fs.writeFileSync(path.join(projectRoot,'transcript.txt'),grouped.map(s=>'['+s.start.toFixed(2)+' → '+s.end.toFixed(2)+'] '+s.text).join('\n')+'\n');
+    fs.writeFileSync(path.join(projectRoot,'transcript.txt'),transcriptTextLines(doc,detail).join('\n')+'\n');
     const srt=grouped.map((s,i)=>(i+1)+'\n'+formatTime(s.start)+' --> '+formatTime(s.end)+'\n'+s.text+'\n').join('\n');
     fs.writeFileSync(path.join(projectRoot,'transcript.srt'),srt);
     update('Transcrição concluída.');
-    return {segmentCount:grouped.length,wordCount:words.length,language,preview:grouped.map(s=>s.text).join('\n').slice(0,4500)};
+    return {segmentCount:grouped.length,wordCount:words.length,language,detail,preview:transcriptTextLines(doc,detail).join('\n').slice(0,4500)};
   }finally{fs.rmSync(work,{recursive:true,force:true});}
 }
