@@ -28,7 +28,8 @@ function startPreparedTranscript(root,options={}){
   const running=runningTranscription(root);
   if(running)return running.id;
   const id=crypto.randomUUID(),job={id,status:'running',projectRoot:root,
-    message:'Preparando narração e transcrição...',result:null,error:null};
+    message:'Preparando narração e transcrição...',result:null,error:null,
+    narrationStamp:narrationStamp(root,readJson(projectFile(root).file))};
   transcriptions.set(id,job);
   prepareAndTranscribeProject(root,{
     model:options.model||'base',language:options.language||'pt',
@@ -59,7 +60,16 @@ app.get('/',(req,res)=>{
 app.get('/api/editor/plugins',api(async(req,res)=>res.json(registry())));
 app.get('/api/editor/backgrounds',api(async(req,res)=>res.json({backgrounds:installedAssets().backgrounds})));
 app.post('/api/editor/visual-context',api(async(req,res)=>res.json(visualContext(req.body.projectRoot))));
-app.post('/api/editor/project',api(async(req,res)=>res.json(loadProject(req.body.projectRoot))));
+app.post('/api/editor/project',api(async(req,res)=>{
+  const project=loadProject(req.body.projectRoot);
+  const plan=JSON.parse(project.planText),narration=project.validation.narration;
+  const needsTranscript=['missing','stale'].includes(project.transcription?.status);
+  const failedEarlier=[...transcriptions.values()].some(j=>j.projectRoot===project.projectRoot&&j.status==='error'&&
+    j.narrationStamp===narrationStamp(project.projectRoot,plan));
+  const transcriptionJobId=narration&&fs.existsSync(narration)&&needsTranscript&&!failedEarlier&&!activeRender(project.projectRoot)?
+    startPreparedTranscript(project.projectRoot):null;
+  res.json({...project,transcriptionJobId});
+}));
 app.get('/api/editor/scenes',api(async(req,res)=>{
   if(typeof req.query.projectRoot!=='string')return forbidden(res,'Informe a pasta do projeto.');
   res.json(sceneCacheOverview(req.query.projectRoot));
@@ -84,7 +94,7 @@ app.post('/api/editor/project/save',api(async(req,res)=>{
     const before=readJson(projectFile(root).file),previous=narrationStamp(root,before);
     const updated=saveProject(root,req.body.planText,req.body.revision);
     const after=JSON.parse(updated.planText),current=narrationStamp(root,after);
-    const transcriptionJobId=current&&current!==previous&&!activeRender(root)?
+    const transcriptionJobId=current&&current!==previous&&after.sources?.transcript==='transcript.json'&&!activeRender(root)?
       startPreparedTranscript(root):null;
     res.json({...updated,transcriptionJobId});
   }
