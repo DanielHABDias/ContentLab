@@ -15,7 +15,8 @@ const AUTO_CELLS = {
   three_columns:[[1,4,7],[2,5,8],[3,6,9]],
   character_vs:[[1,4,7],[3,6,9]],
   left_right:[[1,4,7],[3,6,9]],
-  nox:[[2,5,8]],
+  center_column:[[2,5,8]],
+  nox:[[2,5,8]], // Historical preset: old edit_plan.json files remain renderable.
 };
 export class PlanError extends Error {
   constructor(errors) {super('Plano de edição inválido.');this.name='PlanError';this.issues=errors;}
