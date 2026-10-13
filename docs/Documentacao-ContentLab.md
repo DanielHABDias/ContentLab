@@ -32,7 +32,7 @@ Na aba Editor automático, use Criar para começar um vídeo, Selecionar narraç
 
 Use / como separador nos caminhos tanto no Windows quanto no Linux. Nomes, subpastas e extensões precisam corresponder exatamente aos arquivos: no Linux, Narracao.wav não é igual a narracao.wav. Caminhos que saem da pasta do projeto, inclusive por links simbólicos, são bloqueados.
 
-Para criar uma composição sem escrever keyframes, no Editor automático abra Criar cena motion com grid 3×3: escolha cor hexadecimal, fundo builtin instalado ou URI project:// de mídia própria. Em fundos de vídeo, background.loop:true permite repetir o clipe até o fim da cena.
+Para criar cenas de motion design, vá à seção Sua linha do tempo no Editor automático, clique em + Nova cena e abra Editar propriedades avançadas (fundo, câmera, elementos, animações). Use background.color para cor, background.asset com URI builtin:// ou project:// para mídia própria e background.loop:true para repetir um fundo de vídeo. Adicione quantas camadas quiser e defina cells livremente no grid 3×3, sem obrigatoriedade de duas imagens ou de uma composição esquerda/direita.
 
 Se o projeto já tem edit_plan.json e mídia organizada, abra essa pasta em vez de criar outra. Os arquivos transcript.json, transcript.txt e transcript.srt normalmente são GERADOS após a narração ser preparada; não é necessário inseri-los antes da criação. A aba Transcrição separada serve para outras fontes de vídeo/áudio.
 
@@ -148,6 +148,8 @@ Instalação automática: no Linux, execute bash run.sh ou use o atalho criado p
 
 Editor automático: abrir/criar projeto, conferir assets, buscar e selecionar cenas, criar, inserir, duplicar e excluir, ajustar tempos, editar camadas, importar transcrição, validar e salvar o JSON, visualizar clipes em cache e exportar o MP4.
 
+Na seção Sua linha do tempo, + Nova cena cria uma cena editável; + Adicionar camada inclui imagem, vídeo, texto, legenda, overlay ou efeito sonoro; e Propriedades avançadas contém background, grid/cells, câmera, animações, transformações e keyframes. Não há um formulário paralelo limitado a esquerda/direita: toda a composição usa o mesmo editor visual e um único edit_plan.json.
+
 Documentação: referência pesquisável de campos e exemplos, disponível no próprio site e como arquivo Markdown ou HTML. A skill ZIP inclui os documentos e diagramas.
 
 ![Estrutura do edit_plan.json](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/docs/figures/structure.svg)
@@ -166,7 +168,7 @@ Primeiro render após atualizar o motor pode recalcular assinaturas do cache. N�
 
 ### Layouts
 
-`fullscreen` · `3x3` · `custom_grid` · `three_columns` · `left_right` · `character_vs` · `nox`
+`fullscreen` · `3x3` · `custom_grid` · `three_columns` · `left_right` · `character_vs` · `center_column`
 
 ### Transições
 
