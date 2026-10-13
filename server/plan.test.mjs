@@ -34,6 +34,18 @@ test('grid and default settings match current cinematic layout',()=>{
   assert.equal(compiled.elements[0].region[0],640);
   assert.equal(compiled.elements[0].transform.scale,1.2);
 });
+test('generic center_column layout works and older stored plans keep rendering',()=>{
+  const p=example(),element=p.timeline[0].elements[0];
+  delete element.cells;
+  p.timeline[0].layout='center_column';
+  assert.deepEqual(validatePlan(p),[]);
+  assert.deepEqual(compileScene(p.timeline[0],p,{}).elements[0].region,[640,0,640,1080]);
+  // Accept historical projects without exposing the old name in the public catalog.
+  p.timeline[0].layout='nox';
+  assert.deepEqual(validatePlan(p),[]);
+  assert.deepEqual(compileScene(p.timeline[0],p,{}).elements[0].region,[640,0,640,1080]);
+});
+
 test('grid sizing and opacity with pixel offsets validate',()=>{
   const p=example(),e=p.timeline[0].elements[0];
   e.cells=[5,8];e.transform={scale:1.05,opacity:0.65,offsetX:-20,offsetY:35};
