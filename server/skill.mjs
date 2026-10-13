@@ -4,67 +4,8 @@ import archiver from 'archiver';
 import {APP_ROOT} from './plan.mjs';
 import {buildMarkdown,buildHtml,figureAssets} from './docs.mjs';
 
-const instruction=[
-  '---','name: contentlab-edicao',
-  'description: Cria edit_plan.json validado para o editor Content Lab, com Remotion, timeline, narração e cache.',
-  '---','',
-  '# Content Lab — skill de autoria',
-  '',
-  '## Fontes obrigatórias',
-  '- Leia docs/Documentacao-ContentLab.md antes de construir cenas.',
-  '- Confira schemas/edit_plan.schema.json: é o contrato único; não adicione um campo version.',
-  '- Consulte os exemplos em examples/ e os diagramas docs/figures/ quando útil.',
-  '',
-  '## Fluxo recomendado',
-  '1. Conheça narração, arquivos reais e formato de saída.',
-  '2. Escolha cenas coerentes com a fala e IDs únicos estáveis.',
-  '3. Gere edit_plan.json com project, audio e timeline; sources é opcional.',
-  '4. Valide limites de tempo, tipos, URIs e propriedades com o schema.',
-  '5. Preserve IDs de cenas e elementos ao ajustar um vídeo existente para aproveitar o cache.',
-  '6. Não afirme ter renderizado ou validado imagens sem testes correspondentes.',
-  '',
-  '## Regras essenciais',
-  '- Use project://assets/arquivo.ext e builtin://categoria/arquivo.ext para mídia existente; não invente arquivos.',
-  '- O motor visual é Remotion; o FFmpeg compõe áudio e transições.',
-  '- O modo padrão contain preserva o vídeo inteiro; só use cover para recorte intencional.',
-  '- Para personagem centralizado numa grade 3x3, cells [2,5,8] é uma opção; escala em transform.scale.',
-  '- Use Sua linha do tempo → + Nova cena → Propriedades avançadas para compor motion design livre: qualquer quantidade de camadas, cells arbitrárias, fundo, câmera e keyframes. Não limitar novas cenas a imagem esquerda + imagem direita.',
-  '- start/end de cenas e camadas são segundos ABSOLUTOS. t dos keyframes é RELATIVO ao início da cena.',
-  '- Suavidade visual não altera velocidade: defina enterDuration, exitDuration, config.transitionDuration e keyframe t com a duração editorial exata (inclusive 0.1 s). Nunca aumente tempos automaticamente para parecer mais fluido.',
-  '- O renderer aplica smootherstep C2 por padrão em keyframes, câmera, entradas, saídas e carrosséis; easing:linear mantém trajetória explicitamente linear. A interpolação melhora aceleração/desaceleração, não o tempo total.',
-  '- Pan/zoom e idles evitam saltos nas bordas. fade/slide/blur são suavizados até o último frame da transição e preservam a duração total do vídeo. cut permanece corte seco intencional.',
-  '- bangers_highlight_block suaviza a passagem do fundo colorido entre palavras sem deslocar o texto, usando config.highlightTransitionDuration (padrão 0.1 s). A mudança ainda ocorre no timestamp da palavra e respeita o ritmo da fala.',
-  '- FPS limita a amostragem: 0.1 s tem 3 frames em 30 fps e 6 em 60 fps; para mais fluidez temporal, escolher FPS maior sem esticar a duração. Nunca prometer quadros que não existem.',
-  '- O campo at do SFX define o início audível. O sistema remove somente silêncio das bordas, não pausas internas.',
-  '- Ao inserir uma cena no meio, ajuste música e eventos posteriores e preserve o alinhamento da narração via silenceInserts.',
-  '- Para cortar um único trecho da narração use audio.narrationTrim {start,end}; para unir vários trechos use sourceCuts. Não use os dois juntos.',
-  '- O Content Lab remove automaticamente somente silêncio do INÍCIO e FIM da narração e da música, igual aos SFX; preserva pausas internas. Por padrão está ligado.',
-  '- Para manter uma introdução/cauda silenciosa intencional, marque audio.voice.autoTrimSilence:false ou audio.music[].autoTrimSilence:false.',
-  '- O auto-trim é aplicado à música antes de loop/fades. Na narração, ajuste os timestamps de palavras após a remoção inicial; não use trimDb como corte de tempo.',
-  '- audio.voice.fadeIn/fadeOut aplicam fades à voz, inclusive no fim real da fala antes de uma cauda musical.',
-  '- Música: start/end posicionam o clipe na timeline; sourceStart/sourceEnd escolhem o trecho da fonte; loop repete apenas esse trecho por padrão.',
-  '- Crossfade musical: sobreponha as duas faixas; por exemplo, primeira termina em 20 com fadeOut 3, segunda começa em 17 com fadeIn 3.',
-  '- word_stack_vertical: a faixa CENTRAL do carrossel ocupa 100% da largura do quadro, mesmo se cells contiver duas colunas; nunca criar card cinza curto.',
-  '- Carrossel de frases: usar config.items com texto/start/end por frase. align:left e direction:down deixam a próxima menor e semitransparente em cima, a ativa grande no meio e a anterior menor embaixo.',
-  '- A linha superior é ancorada embaixo no seu slot, a inferior ancorada em cima; a ativa é centralizada verticalmente. panelOpacity:0 desliga o painel; se ativo, cobre apenas a faixa CENTRAL inteira.',
-  '- Evite textos que se sobreponham sem intenção; confirme intervalos e cells.',
-  '- Use animações e estilos que constam no catálogo instalado. config admite campos arbitrários no schema, mas apenas os usados pelo renderer têm efeito.',
-  '- Nunca adicione código JS executável ao edit_plan.json; ele é estritamente declarativo.',
-  '- O storyboard reproduz vídeos por cena em cache, mas não é um render novo. A saída final deve ser conferida separadamente.',
-  '',
-  '## Checklist final',
-  '- Cada cena tem id único, start < end e elementos válidos.',
-  '- Cada camada visual possui id único dentro da cena.',
-  '- Caminhos existem no projeto; fundos 16:9 não são ampliados sem pedido.',
-  '- Ao importar a narração no projeto, o Content Lab prepara primeiro o áudio (auto-trim, sourceCuts, silenceInserts) e transcreve a versão preparada com Whisper; não é necessário enviar transcript.json manualmente.',
-  '- O transcript.json gerado já contém tempos do áudio final preparado: nunca remapear duas vezes. Mudanças nos cortes/pausas acionam nova transcrição. Corrigir nomes e ortografia sem alterar timestamps.',
-  '- Se a versão do transcript foi corrigida manualmente, o Content Lab preserva backup antes de qualquer regeneração.',
-  '- Legendas e eventos sonoros seguem os tempos absolutos, sourceCuts e silenceInserts.',
-  '- O plano satisfaz schemas/edit_plan.schema.json e as regras adicionais de validação.',
-  '',
-  'A referência completa de cada campo, exemplos e diagramas está na documentação dentro deste ZIP.',
-  ''
-].join('\n');
+// Single canonical entry skill; specialized capabilities are kept in skills/.
+const instruction=fs.readFileSync(path.join(APP_ROOT,'skills/contentlab-direcao/SKILL.md'),'utf8');
 export function streamSkillZip(response){
   response.setHeader('Content-Type','application/zip');
   response.setHeader('Content-Disposition','attachment; filename="ContentLab-Skill.zip"');
@@ -72,6 +13,14 @@ export function streamSkillZip(response){
   zip.on('error',err=>response.destroy(err));
   zip.pipe(response);
   zip.append(instruction,{name:'SKILL.md'});
+  for(const skill of [
+    'contentlab-composicao','contentlab-motion','contentlab-timeline-audio',
+    'contentlab-contrato','contentlab-revisao','diazverso-video','gsb-contentlab'
+  ]){
+    const relative=`skills/${skill}/SKILL.md`;
+    zip.file(path.join(APP_ROOT,relative),{name:relative});
+  }
+  zip.file(path.join(APP_ROOT,'skills/README.md'),{name:'skills/README.md'});
   zip.append(buildMarkdown(),{name:'docs/Documentacao-ContentLab.md'});
   zip.append(buildHtml({standalone:true}),{name:'docs/Documentacao-ContentLab.html'});
   for(const figure of figureAssets())
