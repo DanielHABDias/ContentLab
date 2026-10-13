@@ -1184,6 +1184,7 @@ $("editorLoad").addEventListener("click", async () => {
     if (!res.ok) throw new Error(data.errors?.map(item => item.message).join("; ") || data.error || "Projeto inválido.");
     await editorShowProject(data);
     $("editorStatus").textContent = "";
+    if(data.transcriptionJobId)await editorFollowTranscription(data.transcriptionJobId);
     editorSetProgress(0);
     $("editorVideo").classList.add("hidden");
     $("editorVideo").removeAttribute("src");
