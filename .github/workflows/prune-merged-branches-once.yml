@@ -1,0 +1,71 @@
+name: One-time cleanup of fully merged remote branches
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/prune-merged-branches-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: github.repository == 'DanielHABDias/ContentLab'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full git history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Remove only verified merged and unchanged branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin '+refs/heads/*:refs/remotes/origin/*'
+          deleted=0
+          skipped=0
+          while read -r branch expected; do
+            [[ -z "$branch" ]] && continue
+            [[ "$branch" == "main" ]] && { echo "ERROR: main in cleanup list"; exit 1; }
+            current="$(git ls-remote origin "refs/heads/$branch" | awk '{print $1}')"
+            if [[ -z "$current" ]]; then
+              echo "ALREADY GONE $branch"
+              continue
+            fi
+            if [[ "$current" != "$expected" ]]; then
+              echo "SKIP CHANGED $branch current=$current expected=$expected"
+              skipped=$((skipped+1))
+              continue
+            fi
+            if ! git merge-base --is-ancestor "$current" "$GITHUB_SHA"; then
+              echo "SKIP NOT MERGED $branch"
+              skipped=$((skipped+1))
+              continue
+            fi
+            gh api --method DELETE "repos/$REPOSITORY/git/refs/heads/$branch"
+            echo "DELETED $branch"
+            deleted=$((deleted+1))
+          done <<'BRANCHES'
+          archive/flask-before-node-migration 4de8510ed4e3f3047c7078218ded67f0b6a10d67
+          feat/audio-trims-voice-fades-music-crossfade 720b24104d83f38bf276c731c55ab9c5cc9400e9
+          feat/automatic-audio-edge-trim 83e94858239d1db68c426745d83d7186e42aac30
+          feat/automatic-dependency-bootstrap f8ccf1890e0f8dfa0d9173452e9152f008e2f9c7
+          feat/complete-docs-skill-site 789564a28c6d4307c21b915e988a6caaea8e1d4a
+          feat/grid-pixel-offsets-opacity-guide d6f743fa9011691f2c187f23dcb5103f7cb06323
+          feat/processed-narration-auto-transcription 7a89be4f4ce95d73f0b796ecbed93c605ff6e014
+          feat/studio-ui-scene-workspace 70802fc639c7a7bc3d143c72cd05f494a89ca366
+          fix/audit-stability-transcript-words 90d2652f8288807be48ed09a181dec95b75922f7
+          fix/cache-audio-sync-transitions 02b34f485ae404f0827ecc805e5708a920ba97eb
+          fix/motion-smoothness-timing-preserved fb8095ef55b5035ad6ec3dea6b314c0b7fb76f0d
+          fix/smooth-motion-final-polish acb1fcf5689e8b6bf4c1a4e9f0b2648152775d89
+          fix/word-stack-full-width-vertical-carousel 0c31cc30108a3b00a27439d109b25a5f37fabcf1
+          refactor/node-remotion-single-plan 70f405fd0892cc230f946e931bd6ba481710d365
+          test/require-ffmpeg-motion-pixel-check 8110db923e12aeebe65bb363a9a47500ca348287
+          BRANCHES
+          echo "Merged branches deleted: $deleted" >> "$GITHUB_STEP_SUMMARY"
+          echo "Branches preserved due to change/unmerged: $skipped" >> "$GITHUB_STEP_SUMMARY"
+          echo "Cleanup: deleted=$deleted skipped=$skipped"
