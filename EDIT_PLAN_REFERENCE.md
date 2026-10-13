@@ -136,6 +136,12 @@ O sistema registra `transcript.build.json` para identificar qual narração/cort
 
 **Importante:** timestamps de reconhecimento de fala são estimativas; para legendas críticas inspecione o preview e faça ajustes finos. Pausas/respirações internas são preservadas. Mesmo gerando a transcrição automaticamente, tempos **manuais** de cortes visuais e SFX que se basearam no arquivo de voz original precisam ser conferidos após correções.
 
+## Interpolação suave sem mudar velocidade (Content Lab)
+
+A curva de movimento e a duração são conceitos diferentes. A implementação suaviza `keyframes` de camadas e câmera, `animation.enter/exit`, `word_stack_vertical`, `word_stream_horizontal`, `pan`, zoom e idle sem alterar os segundos declarados no JSON. A curva padrão é **smootherstep C2**, que começa e termina com velocidade e aceleração zero; `easing:"linear"` é respeitado caso seja escolha explícita. `fade`, `slide_left`, `blur_left/right/up` chegam ao fim da transição no último frame, e o blur deixa de aparecer ou sumir abruptamente. `cut` permanece instantâneo.
+
+Exemplo: `animation:{"enter":"slide_up","enterDuration":0.1}` continua com **100 ms**; `{ "config": {"transitionDuration":0.1} }` faz carrossel em **100 ms**. Nunca alongar o tempo automaticamente em nome da fluidez. O limite visual é o FPS: a 30 fps, 0.1s = 3 frames, a 60 fps = 6 frames. Teste `node --test server/motion.test.mjs` valida matematicamente as curvas e `node server/smoke-motion.mjs` renderiza cada transição FFmpeg com 100 ms e verifica 24 frames para duas cenas de 0.4 s.
+
 ## Carrossel de palavras e frases: `word_stack_vertical`
 
 Usar um único elemento `kinetic_text` com `style:"word_stack_vertical"`. Para **frases inteiras**, declarar `config.items` com `text/start/end` por frase; não criar três elementos `text` independentes. Para palavras individuais da narração, também é possível seguir o transcript.

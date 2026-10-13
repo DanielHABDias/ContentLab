@@ -8,7 +8,7 @@ const fileLine=file=>"file '"+path.resolve(file).replace(/\\/g,'/').replace(/'/g
 const encoding=['-c:v','libx264','-preset','veryfast','-crf','18','-threads',String(Math.max(1,Number(process.env.CONTENTLAB_COMPOSE_THREADS||2)))];
 const D=n=>Number(n).toFixed(6);
 const durationOf=scene=>scene.end-scene.start;
-const identity=(sources,params)=>sha({sources:sources.map(statIdentity),params,code:'composer-2'});
+const identity=(sources,params)=>sha({sources:sources.map(statIdentity),params,code:'composer-3-smooth-motion'});
 async function ffconcat(files,output,work,ffmpeg,signal,copy=false){
   const manifest=path.join(work,'segments-'+Math.random().toString(16).slice(2)+'.ffconcat');
   fs.writeFileSync(manifest,'ffconcat version 1.0\n'+files.map(fileLine).join(''));
@@ -31,6 +31,8 @@ export async function composeVisual(scenes,segments,output,settings,work,{ffmpeg
   const pieceCache=cacheDirectory?new SegmentCache(cacheDirectory):null;
   const boundaries=segments.slice(0,-1).map((_,i)=>{
     const boundary=normalizedTransition(scenes[i],scenes[i+1]);
+    // Video is discrete; 0.1 seconds at 30 fps is exactly three frames.
+    // Never add a minimum duration or stretch the authored transition.
     return {...boundary,seconds:boundary.type==='cut'?0:Math.round(boundary.seconds*fps)/fps};
   });
   if(boundaries.every(t=>t.type==='cut'||t.seconds<=0)){
@@ -64,27 +66,49 @@ export async function composeVisual(scenes,segments,output,settings,work,{ffmpeg
         const outgoing='[0:v]fps='+fps+',scale='+w+':'+h+
           ',trim=duration='+D(seconds)+',setpts=PTS-STARTPTS,format=yuv420p[tail];';
         let graph;
+        // The last transition frame must ALREADY be at its final position.
+        // Using t/seconds stops one frame short and causes a visible jump when
+        // the unmodified incoming body starts. Easing affects shape, not time.
+        const frames=Math.round(seconds*fps);
+        const travel=Math.max(1/fps/100, (frames-1)/fps);
+        const phase=frames>1
+          ? '(0.5-0.5*cos(PI*min(1,max(0,t/'+D(travel)+'))))'
+          : '1';
         if(type==='fade'){
+          // Custom smootherstep fade keeps velocity/acceleration at zero
+          // on both ends of the blend, without changing its frame count.
+          const eased='(P*P*P*(P*(P*6-15)+10))';
           graph=outgoing+incoming+
-            '[tail][first]xfade=transition=fade:duration='+D(seconds)+':offset=0,format=yuv420p[out]';
+            '[tail][first]xfade=transition=custom:duration='+D(seconds)+
+            ":offset=0:expr='A*(1-"+eased+")+B*"+eased+"',format=yuv420p[out]";
         }else{
           let moveOld='x=0:y=0',moveNew='x=0:y=0';
-          const d=D(seconds);
           if(['slide_left','blur_left'].includes(type)){
-            moveOld="x='-"+w+"*t/"+d+"':y=0";
-            moveNew="x='"+w+"-"+w+"*t/"+d+"':y=0";
+            moveOld="x='-"+w+"*"+phase+"':y=0";
+            moveNew="x='"+w+"-"+w+"*"+phase+"':y=0";
           }else if(type==='blur_right'){
-            moveOld="x='"+w+"*t/"+d+"':y=0";
-            moveNew="x='-"+w+"+"+w+"*t/"+d+"':y=0";
+            moveOld="x='"+w+"*"+phase+"':y=0";
+            moveNew="x='-"+w+"+"+w+"*"+phase+"':y=0";
           }else if(type==='blur_up'){
-            moveOld="x=0:y='-"+h+"*t/"+d+"'";
-            moveNew="x=0:y='"+h+"-"+h+"*t/"+d+"'";
+            moveOld="x=0:y='-"+h+"*"+phase+"'";
+            moveNew="x=0:y='"+h+"-"+h+"*"+phase+"'";
           }
-          const blur=type.startsWith('blur_')?',gblur=sigma=2':'';
-          graph=outgoing+incoming+
+          const moving=outgoing+incoming+
             'color=c=black:s='+w+'x'+h+':r='+fps+':d='+D(seconds)+'[base];'+
             '[base][tail]overlay='+moveOld+':eval=frame[tmp];'+
-            '[tmp][first]overlay='+moveNew+':eval=frame'+blur+',format=yuv420p[out]';
+            '[tmp][first]overlay='+moveNew+':eval=frame,format=yuv420p[moving]';
+          if(type.startsWith('blur_')){
+            // Blur is strongest halfway through the motion but ZERO on
+            // the first and last frame. Prevents a blurry/sharp hard cut.
+            const weight=frames>1
+              ? '(0.85*sin(PI*min(1,max(0,T/'+D(travel)+')))^2)'
+              : '0';
+            graph=moving+
+              ';[moving]split[sharp][blurSrc];[blurSrc]gblur=sigma=2[blurry];'+
+              "[sharp][blurry]blend=all_expr='A*(1-"+weight+")+B*"+weight+"'[out]";
+          }else{
+            graph=moving+';[moving]null[out]';
+          }
         }
         await run(ffmpeg,['-hide_banner','-loglevel','error','-y',
           '-loop','1','-framerate',String(fps),'-t',D(seconds),'-i',frame,
