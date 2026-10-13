@@ -168,8 +168,12 @@ app.post('/api/editor/render',api(async(req,res)=>{
   res.status(202).json({jobId:id});
   const progress=(stage,current,total,sceneId)=>{
     if(controller.signal.aborted)throw Error('Render cancelado.');
-    Object.assign(job,{stage,current,total,sceneId:stage==='scene'?String(sceneId).replace(/ \(cache\)$/,''):null});
-    if(stage==='scene'){
+    Object.assign(job,{stage:stage==='scene_start'?'scene':stage,current,total,
+      sceneId:['scene','scene_start'].includes(stage)?String(sceneId).replace(/ \(cache\)$/,''):null});
+    if(stage==='scene_start'){
+      job.percent=Math.min(85,Math.round(Math.max(0,current-1)/Math.max(1,total)*85));
+      job.message='Renderizando cena '+current+'/'+total+': '+job.sceneId;
+    }else if(stage==='scene'){
       const cached=String(sceneId).endsWith(' (cache)');
       job.percent=Math.min(85,Math.round(current/Math.max(1,total)*85));
       job.message=(cached?'Reaproveitando':'Renderizando')+' cena '+current+'/'+total+': '+job.sceneId;
