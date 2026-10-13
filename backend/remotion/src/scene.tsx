@@ -341,6 +341,8 @@ const Layer = ({item, props, time, absolute, camera}: {item: Element; props: Sce
     const inactiveScale = Math.min(Number(config.inactiveScale ?? 0.72), activeScale * 0.72);
     const fadedOpacity = clamp(Number(config.inactiveOpacity ?? 0.36));
     const inactiveColor = typeof config.inactiveColor === 'string' ? config.inactiveColor : '#929292';
+    const down = config.direction !== 'up';
+    const textAlign = config.align === 'center' ? 'center' : 'left';
     const panelColor = typeof config.panelColor === 'string' ? config.panelColor : '#D9D9D9';
     const panelOpacity = clamp(Number(config.panelOpacity ?? 0));
     const panelRadius = Math.max(0, Number(config.panelRadius ?? 0));
@@ -371,24 +373,25 @@ const Layer = ({item, props, time, absolute, camera}: {item: Element; props: Sce
     const slots = [
       stack.previous && {
         word: stack.previous,
-        y: lerp(elementHeight / 2, lowerTop),
-        anchor: lerp(-50, 0),
+        y: lerp(elementHeight / 2, down ? lowerTop : upperBottom),
+        anchor: lerp(-50, down ? 0 : -100),
         size: lerp(activeSize, inactiveSize),
         opacity: lerp(1, fadedOpacity),
         color: inactiveColor,
       },
       {
         word: stack.active,
-        y: lerp(upperBottom, elementHeight / 2),
-        anchor: lerp(-100, -50),
+        y: lerp(down ? upperBottom : lowerTop, elementHeight / 2),
+        anchor: lerp(down ? -100 : 0, -50),
         size: lerp(inactiveSize, activeSize),
         opacity: lerp(fadedOpacity, 1),
         color: appearance.color ?? look.color,
       },
       stack.next && {
         word: stack.next,
-        y: lerp(-rowHeight * 0.20, upperBottom),
-        anchor: -100,
+        y: lerp(down ? -rowHeight * 0.20 : elementHeight + rowHeight * 0.20,
+          down ? upperBottom : lowerTop),
+        anchor: down ? -100 : 0,
         size: inactiveSize,
         opacity: fadedOpacity * progress,
         color: inactiveColor,
@@ -429,7 +432,7 @@ const Layer = ({item, props, time, absolute, camera}: {item: Element; props: Sce
           width: textWidth,
           maxHeight: rowHeight * 0.94,
           translate: `0 ${slot.anchor}%`,
-          textAlign: 'left',
+          textAlign,
           whiteSpace: 'normal',
           overflowWrap: 'anywhere',
           overflow: 'hidden',
