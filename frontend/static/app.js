@@ -13,7 +13,7 @@ let sourceRequestId = 0;
 const $ = (id) => document.getElementById(id);
 
 // Areas de trabalho isoladas: trocar de aba preserva o trabalho em andamento.
-const workspaces = ["videos", "transcription", "editor", "docs", "guide"];
+const workspaces = ["videos", "transcription", "editor", "docs"];
 function showWorkspace(name) {
   for (const workspace of workspaces) {
     const active = workspace === name;
@@ -42,8 +42,10 @@ document.querySelectorAll(".workspace-tab").forEach((tab) => {
     $(`tab-${workspaces[next]}`).focus();
   });
 });
-showWorkspace(workspaces.includes(location.hash.slice(1)) ? location.hash.slice(1) : "videos");
-$("guideOpenDocs")?.addEventListener("click", () => {showWorkspace("docs");$("tab-docs").focus();});
+// Old #guide links now lead directly to the single official reference workspace.
+const requestedWorkspace = location.hash.slice(1);
+showWorkspace(requestedWorkspace === "guide" ? "docs" :
+  workspaces.includes(requestedWorkspace) ? requestedWorkspace : "videos");
 
 function fmt(sec) {
   sec = Math.max(0, Math.round(sec));
