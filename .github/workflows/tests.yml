@@ -82,6 +82,8 @@ jobs:
         run: node server/smoke.mjs
       - name: Test vertical word carousel layout and transitions with real Remotion frames
         run: node server/smoke-word-stack.mjs
+      - name: Smooth 100ms animations retain timeline and render all transition directions
+        run: node server/smoke-motion.mjs
       - name: Two scenes, transitions, music, SFX and reuse
         run: node server/smoke-transitions.mjs
       - name: Detached launcher
