@@ -850,6 +850,18 @@ $("shutdownBtn").addEventListener("click", () => {
 });
 
 // ---------- transcrição de narração do projeto ----------
+let latestVoiceJobId = null;
+function updateVoiceAudioPreview(){
+  if(!latestVoiceJobId)return;
+  const audio=$("transcriptionAudio");
+  const wasPlaying=!audio.paused;
+  audio.pause();
+  audio.src="/api/transcription/jobs/"+encodeURIComponent(latestVoiceJobId)+
+    "/audio?variant="+encodeURIComponent($("transcriptionListenVersion").value);
+  audio.load();
+  if(wasPlaying)audio.play().catch(()=>{});
+}
+$("transcriptionListenVersion").addEventListener("change",updateVoiceAudioPreview);
 let transcriptionPoll = null;
 let lastTranscriptionFolder = null;
 function transcriptionError(message) {
@@ -901,7 +913,7 @@ $("transcriptionStart").addEventListener("click", async () => {
     form.append("removeMiddleSilence", String($("transcriptionRemoveMiddle").checked));
     form.append("minSilence", $("transcriptionMinSilence").value);
     form.append("thresholdDb", $("transcriptionThreshold").value);
-    form.append("pitchSemitones", $("transcriptionPitch").value);
+    form.append("voicePreset", $("transcriptionVoicePreset").value);
     form.append("language", $("transcriptionLanguage").value);
     const response = await fetch("/api/transcription/jobs", { method: "POST", body: form });
     const data = await response.json();
@@ -921,7 +933,9 @@ $("transcriptionStart").addEventListener("click", async () => {
         $("transcriptionStats").textContent = `${job.result.segmentCount} trecho(s) · ${job.result.wordCount} palavra(s) · ${job.result.removedCount} silêncio(s) reduzido(s)`;
         $("transcriptionPreview").value = job.result.preview || "Nenhuma fala foi reconhecida. Confira o áudio e tente outro modelo.";
         lastTranscriptionFolder = job.projectRoot;
-        $("transcriptionAudio").src = "/api/transcription/jobs/"+encodeURIComponent(data.jobId)+"/audio";
+        latestVoiceJobId = data.jobId;
+        $("transcriptionListenVersion").value = "styled";
+        updateVoiceAudioPreview();
         $("transcriptionResult").classList.remove("hidden");
         if (editorProject?.projectRoot === job.projectRoot) {
           try {
