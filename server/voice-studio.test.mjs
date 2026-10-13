@@ -39,8 +39,9 @@ const transcriber=async(audio,dest)=>{
 };
 
 test('FFmpeg rubberband detection reads an actual filter entry, not comments',()=>{
-  const listed='Filters:\\n .. rubberband A->A Pitch-shift audio\\n .. bass A->A Boost or cut bass';
-  assert.equal(ffmpegFilterAvailable(listed.replaceAll('\\\\n','\\n'),'rubberband'),true);
+  const listed=['Filters:',' .. rubberband A->A Pitch-shift audio',
+    ' .. bass A->A Boost or cut bass'].join(String.fromCharCode(10));
+  assert.equal(ffmpegFilterAvailable(listed,'rubberband'),true);
   assert.equal(ffmpegFilterAvailable('ffmpeg version compiled with --enable-librubberband','rubberband'),false);
   assert.equal(ffmpegFilterAvailable(' ... rubberbanded A->A Audio','rubberband'),false);
 });
