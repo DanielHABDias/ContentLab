@@ -13,7 +13,7 @@ export async function run(bin,args,{cwd,signal,onOutput}={}){
       const output=(stderr||stdout).slice(-16000);
       // EPIPE is a symptom: a downstream pipe (often a media subprocess)
       // closed, not proof that the scene's JSON is malformed.
-      const hint=/\\bEPIPE\\b/.test(output)&&String(args[0]||'').includes('remotion-cli')
+      const hint=/\bEPIPE\b/.test(output)&&String(args[0]||'').includes('remotion-cli')
         ? '\nDiagnóstico: o subprocesso Remotion perdeu uma conexão de escrita (EPIPE). '+
           'Confira o log da cena, o navegador de renderização, o FFmpeg e a memória. '+
           'Inicie o Content Lab por run.sh/iniciar.bat para usar o Node 22 LTS testado.' : '';
