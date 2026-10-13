@@ -260,3 +260,17 @@ code {background:#F1F4FA;color:#3C6DAE;border-radius:5px;padding:2px 5px}
  .docs-download-buttons .btn{justify-content:center}
  .workspace-tab{font-size:9px}
  #docsManual{min-height:680px;height:780px}}
+
+/* Narration studio: shared project audio is prepared before edit_plan.json. */
+.voice-studio-options{margin:18px 0 15px;padding:20px;border-radius:19px;
+ background:#F8F9FB;border:1px solid #E3E8EF;display:flex;flex-direction:column;gap:14px}
+.voice-studio-options-title{display:flex;flex-direction:column;gap:5px}
+.voice-studio-options-title strong{font-size:17px;color:#222A37;letter-spacing:-.035em}
+.voice-studio-options-title p{margin:2px 0 5px;max-width:690px}
+.voice-studio-options .transcription-grid{margin:0}
+.voice-toggle{display:flex;gap:10px;align-items:center;font-size:13px;font-weight:630;color:#324052}
+.voice-toggle input{accent-color:#1769E0;width:17px;height:17px;flex:none}
+.voice-studio-options select{background:white!important}
+.voice-studio-audio{display:block;width:100%;margin:14px 0 15px}
+.voice-editor-link{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
+.voice-editor-link .helper-text{max-width:650px}

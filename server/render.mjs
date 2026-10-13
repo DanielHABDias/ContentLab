@@ -5,7 +5,7 @@ import {APP_ROOT,readJson,assetReport,settings,compileScene,sha,projectFile,Plan
 import {statIdentity,SegmentCache,rendererIdentity,sceneFingerprint,cleanOutput} from './cache.mjs';
 import {transcriptWords,remapTranscriptWords,applyNarrationSilence,renderRemotionScene} from './remotion.mjs';
 import {prepareNarration,mixAudio,probeOutput,narrationCuts,analyzeNarrationEdges} from './audio.mjs';
-import {transcriptStatus} from './narration-pipeline.mjs';
+import {transcriptStatus,renderVoiceSettings} from './narration-pipeline.mjs';
 import {composeVisual} from './compose.mjs';
 
 function hashRender(plan,validation,identity){
@@ -55,9 +55,10 @@ export async function renderProject(directory,{
   }
   // Detect edge silence before scene fingerprints: the remapped transcript
   // and the prepared WAV must use the exact same post-trim clock.
+  const voiceSourceSettings=renderVoiceSettings(root,plan);
   const narrationEdges=prepareVoice===prepareNarration
-    ? await analyzeNarrationEdges(validation.narration,plan.audio,{ffmpeg,ffprobe,signal})
-    : {cuts:narrationCuts(plan.audio),headSeconds:0,tailSeconds:0};
+    ? await analyzeNarrationEdges(validation.narration,voiceSourceSettings,{ffmpeg,ffprobe,signal})
+    : {cuts:narrationCuts(voiceSourceSettings),headSeconds:0,tailSeconds:0};
   const transcription=transcriptStatus(root,plan);
   if(transcription.status==='stale')
     throw Error('Transcrição desatualizada para os cortes/pausas atuais. Gere novamente a transcrição do áudio preparado.');
@@ -104,7 +105,7 @@ export async function renderProject(directory,{
     });
     emit('compose',scenes.length,scenes.length,'Vídeo composto');
     const voice=path.join(work,'narration.cleaned.wav');
-    await prepareVoice(validation.narration,voice,plan.audio,{ffmpeg,ffprobe,signal,duration,
+    await prepareVoice(validation.narration,voice,voiceSourceSettings,{ffmpeg,ffprobe,signal,duration,
       autoTrimCuts:narrationEdges.cuts});
     emit('narration',scenes.length,scenes.length,'Narração preparada');
     const tempFinal=path.join(work,'final.mp4');
