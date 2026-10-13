@@ -5,13 +5,15 @@ import os from 'node:os';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {run} from './exec.mjs';
+import {ffmpegFilterAvailable} from './runtime-tools.mjs';
 import {detectedSilences,keepRanges,prepareStandaloneNarration,voiceStudioState,voiceOptions,VOICE_PRESETS} from './voice-studio.mjs';
 import {transcriptStatus,renderVoiceSettings} from './narration-pipeline.mjs';
 import {probeAudioDuration} from './audio.mjs';
 
 const ffmpegOk=spawnSync('ffmpeg',['-version'],{stdio:'ignore'}).status===0 &&
  spawnSync('ffprobe',['-version'],{stdio:'ignore'}).status===0;
-const rubber=ffmpegOk&&/\brubberband\b/.test(spawnSync('ffmpeg',['-filters'],{encoding:'utf8'}).stdout||'');
+const rubber=ffmpegOk&&ffmpegFilterAvailable(
+  spawnSync('ffmpeg',['-hide_banner','-filters'],{encoding:'utf8'}).stdout||'','rubberband');
 const createVoice=async(root)=>{
   const source=path.join(root,'source.wav');
   const filters=['anullsrc=r=48000:cl=mono:d=0.26',
@@ -35,6 +37,14 @@ const transcriber=async(audio,dest)=>{
   fs.writeFileSync(path.join(dest,'transcript.srt'),'1');
   return {wordCount:3,segmentCount:1,language:'pt',preview:'Exemplo de voz'};
 };
+
+test('FFmpeg rubberband detection reads an actual filter entry, not comments',()=>{
+  const listed=['Filters:',' .. rubberband A->A Pitch-shift audio',
+    ' .. bass A->A Boost or cut bass'].join(String.fromCharCode(10));
+  assert.equal(ffmpegFilterAvailable(listed,'rubberband'),true);
+  assert.equal(ffmpegFilterAvailable('ffmpeg version compiled with --enable-librubberband','rubberband'),false);
+  assert.equal(ffmpegFilterAvailable(' ... rubberbanded A->A Audio','rubberband'),false);
+});
 
 test('silence parser trims edges and keeps an intentionally short middle gap',()=>{
   const events='silence_start: 0\nsilence_end: 0.26 | silence_duration: 0.26\n'+

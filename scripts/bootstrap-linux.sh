@@ -64,6 +64,8 @@ cl_ffmpeg_supports_rubberband(){
 }
 cl_install_ffmpeg(){
   if cl_has_ffmpeg && cl_ffmpeg_supports_rubberband; then
+    export CONTENTLAB_FFMPEG="$(command -v ffmpeg)"
+    export CONTENTLAB_FFPROBE="$(command -v ffprobe)"
     cl_log "FFmpeg/FFprobe com filtro rubberband encontrados; reutilizando instalação."
     return
   fi
@@ -71,6 +73,8 @@ cl_install_ffmpeg(){
   # verified local build, and do not change global system packages or PATH.
   export PATH="$CL_TOOLS/ffmpeg:$PATH"
   if cl_has_ffmpeg && cl_ffmpeg_supports_rubberband; then
+    export CONTENTLAB_FFMPEG="$(command -v ffmpeg)"
+    export CONTENTLAB_FFPROBE="$(command -v ffprobe)"
     cl_log "FFmpeg/FFprobe locais com rubberband reutilizados."
     return
   fi
@@ -97,6 +101,8 @@ cl_install_ffmpeg(){
   rm -rf "$dir"
   cl_has_ffmpeg && cl_ffmpeg_supports_rubberband ||
     cl_die "FFmpeg ainda está sem o filtro rubberband após instalação local."
+  export CONTENTLAB_FFMPEG="$(command -v ffmpeg)"
+  export CONTENTLAB_FFPROBE="$(command -v ffprobe)"
   cl_log "FFmpeg/FFprobe com rubberband instalados localmente e verificados."
 }
 cl_has_whisper(){

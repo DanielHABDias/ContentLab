@@ -7,6 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {spawn} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
+import {instanceIdentity,startupAction} from './instance-identity.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const port=Number(process.env.PORT||5000);
@@ -17,16 +18,26 @@ const runtime=process.platform==='win32'?
 const logfile=path.join(runtime,'server.log');
 const pidfile=path.join(runtime,'server.pid');
 
-async function check(){
+async function healthInfo(){
   try{
-    const response=await fetch(url+'/health',{signal:AbortSignal.timeout(700)});
-    const info=await response.json();
-    if(response.ok&&info.backend==='node'&&info.renderer==='remotion')return true;
-    throw Error('A porta '+port+' já está ocupada por outra aplicação.');
-  }catch(e){
-    if(String(e.message).includes('ocupada'))throw e;
-    return false;
+    const response=await fetch(url+'/health',{signal:AbortSignal.timeout(1100)});
+    if(!response.ok)throw Error('A porta '+port+' está ocupada por outra aplicação.');
+    return await response.json();
+  }catch(error){
+    if(String(error.message).includes('ocupada'))throw error;
+    return null;
   }
+}
+async function check(){
+  const info=await healthInfo();
+  return info?.backend==='node'&&info.renderer==='remotion';
+}
+async function waitForStop(){
+  for(let i=0;i<40;i++){
+    await new Promise(resolve=>setTimeout(resolve,250));
+    if(!await healthInfo())return;
+  }
+  throw Error('O servidor anterior não foi encerrado. Use o botão Encerrar no Studio e abra novamente.');
 }
 function openBrowser(){
   const cmd=process.platform==='win32'?'cmd':process.platform==='darwin'?'open':'xdg-open';
@@ -36,7 +47,27 @@ function openBrowser(){
   child.unref();
 }
 async function start(){
-  if(await check()){openBrowser();console.log('Content Lab já estava iniciado. '+url);return;}
+  const running=await healthInfo(),local=instanceIdentity(root);
+  const action=startupAction(running,local,{hasLocalPid:fs.existsSync(pidfile)});
+  if(action==='occupied')throw Error(
+    'Há outro servidor na porta '+port+'. Encerre-o antes de iniciar este Content Lab.');
+  if(action==='reuse'){
+    openBrowser();
+    console.log('Content Lab atualizado já estava iniciado. '+url);
+    return;
+  }
+  if(action==='restart'){
+    console.log('Versão antiga do Content Lab detectada. Reiniciando servidor local...');
+    const response=await fetch(url+'/api/shutdown',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({force:false}),signal:AbortSignal.timeout(3000)
+    });
+    if(response.status===409)throw Error(
+      'O Content Lab antigo está processando tarefas. Termine-as e use Encerrar antes de atualizar.');
+    if(!response.ok)throw Error(
+      'Falha ao encerrar a versão antiga. Use Encerrar no Studio e abra novamente.');
+    await waitForStop();
+  }
   fs.mkdirSync(runtime,{recursive:true});
   const log=fs.openSync(logfile,'a');
   let child;
