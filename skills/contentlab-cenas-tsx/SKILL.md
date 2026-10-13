@@ -1,6 +1,6 @@
 ---
 name: contentlab-cenas-tsx
-description: Cria cenas Remotion complexas como arquivo TSX completo para download/salvamento manual e integração via customComponent no edit_plan.json, economizando tokens.
+description: Cria cenas Remotion complexas como arquivos TSX dentro da subpasta custom-scenes de cada projeto de vídeo, integrados ao edit_plan.json por customComponent.
 ---
 
 # Content Lab — Cenas programáveis TSX
@@ -11,12 +11,20 @@ Use para cenas em um mesmo espaço visual: câmera acompanhando trajetórias, di
 ## Contrato instalado (não inventar integração)
 O Content Lab suporta `timeline[].customComponent` com `module`, `mode`, `props` e `assets`. `module` deve referir `project://custom-scenes/Arquivo.tsx`; a pasta é na **raiz do projeto de vídeo**, não na pasta do repositório ContentLab. `replace` substitui a composição visual normal; `overlay` apresenta o TSX sobre a renderização da cena. A narração e o mixer FFmpeg continuam no projeto; não criar um segundo player/renderer.
 
-O arquivo TSX precisa **exportar um componente React como default**. Recebe propriedades vindas de `props` e um objeto `assets` com URLs dos assets declarados. O arquivo gerado por ChatGPT precisa ser baixado/salvo e copiado manualmente para `custom-scenes/`. Não alegar que o site o instala automaticamente ou que o JSON aceita código executável.
+O arquivo TSX precisa **exportar um componente React como default**. Recebe propriedades vindas de `props` e um objeto `assets` com URLs dos assets declarados. **Criar e manter o TSX diretamente na subpasta `custom-scenes/` do vídeo sempre que houver acesso de escrita à pasta de destino**; se apenas a pasta do Drive estiver acessível, publicar nela e orientar a cópia para o projeto local. O site não instala código TSX automaticamente e o JSON não aceita código executável.
+
+## Regra obrigatória de localização, persistência e entrega
+- Cada vídeo possui sua própria pasta canônica: `Guia de Edições/Vídeos Longos/VD_XXXX/` ou `Guia de Edições/Shorts/SH_XXXX/` no Drive e sua pasta correspondente no projeto local. **Criar primeiro a subpasta `custom-scenes/` dentro da pasta desse vídeo (se ainda não existir)**, nunca em pasta global de assets, repositório do Content Lab, raiz do Drive ou diretório temporário.
+- Um TSX criado para a cena `MinhaCena` deve ficar em `VD_XXXX/custom-scenes/MinhaCena.tsx`; no plano do MESMO vídeo usar exatamente `customComponent.module: "project://custom-scenes/MinhaCena.tsx"`. Salvar `edit_plan.json` na raiz do vídeo, não dentro de `custom-scenes/`.
+- **Quando houver conectores e permissão**, escrever/publicar cada `.tsx` imediatamente na subpasta `custom-scenes/` do vídeo no Google Drive e, quando o ambiente local também estiver acessível e autorizado, no caminho equivalente no computador. Quando não houver acesso de escrita, entregar arquivos para cópia e informar claramente que a instalação ainda está pendente; nunca afirmar que estão salvos apenas por terem sido produzidos na conversa.
+- Não entregar os componentes **somente** em texto solto, ZIP ou link de download se for possível gravá-los na pasta do vídeo. Um ZIP é cópia opcional e deve reproduzir exatamente a estrutura `custom-scenes/` e a versão canônica dos TSX. Não deixar versões divergentes ou criar backups duplicados sem solicitação.
+- Ao finalizar, verificar que **todos** os caminhos `customComponent.module` existentes em `edit_plan.json` correspondem aos arquivos reais na subpasta do vídeo; abrir/ler os TSX publicados para conferir o conteúdo, e registrar no `guia_de_edicao.md` quais cenas os utilizam. Preservar IDs/tempos, `props` e `assets` aprovados.
+- Aplicar esta regra sempre que a direção do Diazverso, a decupagem ou o contrato solicitarem TSX, inclusive em revisões e novos vídeos.
 
 ## Entrega econômica de tokens
 1. Identifique só os dados que faltam: duração, proporção, beats/fala, elementos centrais, assets existentes e identidade visual.
 2. Decida se é **uma cena contínua** com mundo/câmera próprios ou várias cenas independentes. Se a câmera percorre um cenário persistente, em geral escolha uma cena.
-3. Gere **um arquivo `MinhaCena.tsx` completo**, sem trazer o código inteiro para uma longa explicação. Se ferramentas de arquivo estiverem disponíveis, entregar o TSX como arquivo; caso contrário, um único bloco de código. Não afirmar download criado quando não criou.
+3. Gere **um arquivo `MinhaCena.tsx` completo** e grave-o na subpasta `custom-scenes/` da pasta do vídeo conforme a regra acima; não despeje seu código em longas respostas. Se não houver permissão para gravar, entregue o arquivo para instalação manual (ou um único bloco de código como último recurso). Nunca afirmar que criou ou instalou um arquivo sem verificar.
 4. Forneça um **fragmento JSON mínimo** para `customComponent` ou uma cena completa apenas se o usuário pedir; nunca reimprimir todo o `edit_plan.json` sem necessidade.
 5. Se estiver revisando uma cena existente, altere o menor trecho de código possível, preserve os demais arquivos/IDs e evite retransmitir TSX ou JSON inalterado.
 
