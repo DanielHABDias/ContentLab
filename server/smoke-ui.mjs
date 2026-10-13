@@ -86,7 +86,7 @@ try{
     'Exactly four tabs must remain');
   assert.equal(await evaluate('document.querySelectorAll("#tab-guide, #panel-guide").length'),0,
     'Obsolete project guide must not be rendered');
-  await send('Page.navigate',{url:'http://127.0.0.1:'+appPort+'/#guide'});
+  await send('Page.navigate',{url:'http://127.0.0.1:'+appPort+'/?legacy-guide=1#guide'});
   await wait(()=>evaluate('document.readyState === "complete" && location.hash==="#docs"'),
     'Legacy guide deep links redirect to documentation');
   assert.equal(await evaluate('document.getElementById("tab-docs").getAttribute("aria-selected")'),'true');
