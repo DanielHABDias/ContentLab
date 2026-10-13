@@ -24,10 +24,28 @@ export function voiceStudioFolder(folder){
   }
   return root;
 }
+// Profiles are intentionally gentler than the previous pitch-only filter.
+// CapCut does not disclose Super Deep's processing parameters: none of these
+// presets should be described as an exact reproduction of that proprietary effect.
+export const VOICE_PRESETS=Object.freeze({
+  original:{pitchSemitones:0,bassGainDb:0},
+  warm:{pitchSemitones:0,bassGainDb:1.8},
+  gentle:{pitchSemitones:-0.2,bassGainDb:1.3},
+  balanced:{pitchSemitones:-0.4,bassGainDb:1.7},
+  deep:{pitchSemitones:-0.7,bassGainDb:2.1}
+});
 export function voiceOptions(raw={}){
   const minSilence=raw.minSilence===undefined?.7:Number(raw.minSilence);
   const thresholdDb=raw.thresholdDb===undefined?-42:Number(raw.thresholdDb);
-  const pitchSemitones=raw.pitchSemitones===undefined?0:Number(raw.pitchSemitones);
+  const voicePreset=raw.voicePreset===undefined?
+    (raw.pitchSemitones===undefined?'original':'legacy'):String(raw.voicePreset);
+  if(voicePreset!=='legacy'&&!Object.hasOwn(VOICE_PRESETS,voicePreset))
+    throw Error('Perfil de voz não reconhecido.');
+  // Old API callers specifying pitchSemitones remain supported, but the UI
+  // uses the carefully tuned named presets instead.
+  const preset=voicePreset==='legacy'?null:VOICE_PRESETS[voicePreset];
+  const pitchSemitones=preset?.pitchSemitones??Number(raw.pitchSemitones??0);
+  const bassGainDb=preset?.bassGainDb??0;
   if(typeof raw.removeMiddleSilence!=='boolean'&&raw.removeMiddleSilence!==undefined)
     throw Error('Remoção de silêncio interno inválida.');
   if(!Number.isFinite(minSilence)||minSilence<.45||minSilence>2.5)
@@ -37,9 +55,8 @@ export function voiceOptions(raw={}){
   if(!Number.isFinite(pitchSemitones)||pitchSemitones< -3||pitchSemitones>0)
     throw Error('Pitch permitido: de -3 a 0 semitons.');
   return {removeMiddleSilence:raw.removeMiddleSilence!==false,minSilence,
-    thresholdDb,pitchSemitones};
+    thresholdDb,voicePreset,pitchSemitones,bassGainDb};
 }
-
 // FFmpeg silencedetect emits start/end pairs; retain speech-adjacent padding.
 // No silence removal is allowed to depend on the edit plan's future pauses.
 export function detectedSilences(stderr,duration){
@@ -82,17 +99,36 @@ export async function analyzeVoice(file,options={}, {ffmpeg='ffmpeg',ffprobe='ff
     '-af','silencedetect=noise='+config.thresholdDb+'dB:d=0.18','-f','null','-'],{signal});
   return keepRanges(duration,detectedSilences(stderr,duration),config);
 }
-async function applyVoicePitch(input,output,options,{ffmpeg='ffmpeg',ffprobe='ffprobe',signal}={}){
-  if(options.pitchSemitones===0){fs.copyFileSync(input,output);return;}
-  const {stdout}=await run(ffmpeg,['-hide_banner','-filters'],{signal});
-  if(!/\brubberband\b/.test(stdout))throw Error(
-    'O FFmpeg instalado não inclui rubberband. Instale FFmpeg com --enable-librubberband ou escolha Voz original.');
+async function applyVoiceStyle(input,output,options,{ffmpeg='ffmpeg',ffprobe='ffprobe',signal}={}){
+  const {pitchSemitones,bassGainDb}=options;
+  if(pitchSemitones===0&&bassGainDb===0){
+    fs.copyFileSync(input,output);
+    return;
+  }
+  const filters=[];
+  if(pitchSemitones!==0){
+    const {stdout}=await run(ffmpeg,['-hide_banner','-filters'],{signal});
+    if(!/\\brubberband\\b/.test(stdout))throw Error(
+      'O FFmpeg instalado não inclui rubberband. Escolha Corpo natural (sem pitch) ou instale FFmpeg com librubberband.');
+    const pitch=Math.pow(2,pitchSemitones/12);
+    // Longer analysis window and smoothing reduce warbling on spoken vowels,
+    // while formants are kept stable. Small pitch changes matter: do not
+    // transpose the full human voice multiple semitones for a subtle preset.
+    filters.push('rubberband=tempo=1:pitch='+pitch.toFixed(7)+
+      ':formant=preserved:transients=smooth:detector=soft:phase=laminar'+
+      ':window=long:smoothing=on:pitchq=quality');
+  }
+  if(bassGainDb>0){
+    // Moderate low-shelf enhancement adds body without making the vowels
+    // sound like a different person. Pull 320 Hz down slightly to avoid mud.
+    filters.push('bass=g='+Number(bassGainDb).toFixed(2)+':f=150:w=0.8');
+    filters.push('equalizer=f=320:t=q:w=1:g=-0.55');
+  }
   const duration=await probeAudioDuration(input,{ffprobe,signal});
-  const pitch=Math.pow(2,options.pitchSemitones/12);
+  filters.push('alimiter=limit=0.96:level=false','aresample=48000',
+    'apad=whole_dur='+fmt(duration),'atrim=end='+fmt(duration));
   await run(ffmpeg,['-hide_banner','-loglevel','error','-y','-i',input,'-vn',
-    '-af','rubberband=tempo=1:pitch='+pitch.toFixed(7)+':formant=preserved:pitchq=quality,'+
-      'aresample=48000,apad=whole_dur='+fmt(duration)+',atrim=end='+fmt(duration),
-    '-ar','48000','-ac','2','-c:a','pcm_s16le',output],{signal});
+    '-af',filters.join(','),'-ar','48000','-ac','2','-c:a','pcm_s16le',output],{signal});
   const final=await probeAudioDuration(output,{ffprobe,signal});
   if(Math.abs(final-duration)>.07)throw Error('Efeito de voz alterou a duração da narração.');
 }
@@ -139,7 +175,7 @@ export async function prepareStandaloneNarration(directory,{
     },{ffmpeg,ffprobe,signal,duration:layout.duration,autoTrimCuts:layout.cuts});
     const styled=path.join(staged,'narration.wav');
     update('Aplicando efeitos de voz opcionais...');
-    await applyVoicePitch(neutral,styled,config,{ffmpeg,ffprobe,signal});
+    await applyVoiceStyle(neutral,styled,config,{ffmpeg,ffprobe,signal});
     update('Transcrevendo o áudio limpo, antes dos efeitos de pitch...');
     const transcript=await transcriber(neutral,staged,{model,language,signal,update});
     for(const name of ['transcript.json','transcript.txt','transcript.srt'])
@@ -175,6 +211,6 @@ export async function prepareStandaloneNarration(directory,{
     update('Narração preparada e transcrição prontas para criar o edit_plan.json.');
     return {...transcript,source:original,narration:NARRATION_OUTPUT,
       neutral:NARRATION_NEUTRAL,transcript:'transcript.json',duration:meta.duration,
-      removedCount:layout.removed.length,pitchSemitones:config.pitchSemitones};
+      removedCount:layout.removed.length,voicePreset:config.voicePreset,pitchSemitones:config.pitchSemitones};
   }finally{fs.rmSync(staged,{recursive:true,force:true});}
 }

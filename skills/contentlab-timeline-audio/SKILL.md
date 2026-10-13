@@ -22,6 +22,10 @@ A narração **preparada** é a referência para sincronizar palavras, legendas 
 - Correções ortográficas no texto da transcrição não autorizam deslocar arbitrariamente timestamps.
 - `audio.voice.fadeIn/fadeOut` se refere ao áudio da voz, inclusive encerramento antes de uma cauda musical.
 
+## Timbre natural e referência externa de grave
+Os arquivos `audio/narration.original.*`, `audio/narration.prepared.wav` e `audio/narration.wav` têm funções diferentes: gravação bruta preservada, voz limpa/cortada e normalizada que alimenta o Whisper, e **voz final com o tratamento escolhido**. Original no seletor copia `prepared` para `narration.wav`; Corpo natural adiciona EQ suave sem mudar frequência fundamental; Grave suave/equilibrado/profundo alteram o pitch apenas um pouco, preservando a duração, e devem ser aprovados pela escuta.
+O Studio agora oferece comparação **A/B** da voz limpa contra a final. Não afirmar que o preset reproduz o Super Grave de algum editor comercial, pois seus parâmetros não são públicos. Se o efeito soar artificial, recomendar primeiro **Corpo natural**, ou Original; depois comparar o mesmo trecho antes de escolher uma opção mais profunda. O pitch só afeta a voz final, não o relógio da transcrição: o `transcript.json` vem de `prepared` antes do processamento do efeito.
+
 ## Música e SFX
 - Música: `start/end` localizam na timeline final; `sourceStart/sourceEnd` delimitam a região da fonte; `loop` repete o trecho selecionado.
 - Música tem auto-trim nas bordas da seleção antes de loop/fades, salvo `autoTrimSilence:false`.

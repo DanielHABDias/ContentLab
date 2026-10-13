@@ -391,7 +391,8 @@ app.post('/api/transcription/jobs',upload.single('file'),api(async(req,res)=>{
       removeMiddleSilence:req.body.removeMiddleSilence!=='false',
       minSilence:Number(req.body.minSilence||.7),
       thresholdDb:Number(req.body.thresholdDb||-42),
-      pitchSemitones:Number(req.body.pitchSemitones||0)
+      ...(req.body.voicePreset?{voicePreset:String(req.body.voicePreset)}:
+        {pitchSemitones:Number(req.body.pitchSemitones||0)})
     },update:message=>{job.message=message;}
   }).then(result=>Object.assign(job,{status:'done',message:'Narração e transcrição prontas.',result}))
     .catch(e=>Object.assign(job,{status:'error',message:'Falha no preparo da narração.',error:e.message}))
@@ -401,8 +402,12 @@ app.get('/api/transcription/jobs/:id/audio',api(async(req,res)=>{
   const job=transcriptions.get(req.params.id);
   if(!job||job.status!=='done'||!job.result?.narration)
     return res.status(404).json({error:'Narração processada ainda não disponível.'});
-  const audio=path.join(job.projectRoot,'audio','narration.wav');
+  const variant=String(req.query.variant||'styled');
+  if(!['styled','prepared'].includes(variant))return forbidden(res,'Versão de áudio inválida.');
+  const name=variant==='prepared'?'narration.prepared.wav':'narration.wav';
+  const audio=path.join(job.projectRoot,'audio',name);
   if(!fs.existsSync(audio))return res.status(404).json({error:'Áudio não encontrado.'});
+  res.set('Cache-Control','no-store');
   res.type('audio/wav').sendFile(audio);
 }));
 app.get('/api/transcription/jobs/:id',api(async(req,res)=>{
