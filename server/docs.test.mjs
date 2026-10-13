@@ -61,7 +61,15 @@ test('documents cover all main capabilities, include examples and all JS-generat
   assert.ok(md.includes('transcript.build.json'));
   assert.ok(html.includes('transcript.build.json'));
   assert.ok(md.includes('narration.prepared.wav'));
-  assert.ok(md.includes('Criar cena motion com grid 3×3'));
+  assert.ok(md.includes('Sua linha do tempo'));
+  assert.ok(md.includes('Propriedades avançadas'));
+  assert.ok(md.includes('sem obrigatoriedade de duas imagens'));
+  assert.ok(!md.includes('Criar cena motion com grid 3×3'));
+  assert.ok(!html.includes('Criar cena motion com grid 3×3'));
+  for(const output of [md,html]){
+    assert.doesNotMatch(output,/nox|diazverso|diasverso|vd[_-]?0005/i,
+      'Official docs must not expose channel-specific personas or internal plans');
+  }
   assert.ok(md.includes('fontes') || md.includes('project://'));
   const fullProject=model.exampleCases.find(c=>c.title==='Projeto completo com pastas e URIs');
   assert.ok(fullProject,'Quick-start JSON must be integrated in documentation');
@@ -76,6 +84,12 @@ test('website exposes one docs tab, dedicated reader and exactly three doc downl
   assert.ok(!html.includes('id="tab-guide"'));
   assert.ok(!html.includes('id="panel-guide"'));
   assert.ok(!html.includes('id="guideOpenDocs"'));
+  assert.ok(!html.includes('id="motionAddScene"'));
+  assert.ok(!html.includes('id="motionLeftAsset"'));
+  assert.ok(!html.includes('id="motionRightAsset"'));
+  assert.ok(html.includes('id="visualAddScene"'));
+  assert.ok(html.includes('id="visualSceneFields"'));
+
   assert.equal((html.match(/data-workspace="(?:videos|transcription|editor|docs)"/g)||[]).length,4);
   assert.ok(html.includes('id="tab-docs"'));
   assert.ok(html.includes('id="panel-docs"'));
