@@ -287,11 +287,13 @@
           <details id="editorReportDetails" class="hidden"><summary>Detalhes técnicos do render</summary><pre id="editorReport"></pre></details>
         </section>
         <div class="editor-inputs">
-          <button id="editorChooseNarration" class="btn btn-secondary btn-sm" type="button">Selecionar narração</button>
+          <button id="editorChooseNarration" class="btn btn-secondary btn-sm" type="button">Selecionar narração e gerar transcrição</button>
+           <button id="editorRetranscribe" class="btn btn-secondary btn-sm" type="button">Atualizar transcrição</button>
           <input id="editorNarrationFile" class="hidden" type="file" accept="audio/*,.wav,.mp3,.m4a,.aac,.flac,.ogg,.opus">
-          <span class="helper-text">O arquivo será copiado para <code>audio/</code> do projeto.</span>
+          <span class="helper-text">A narração será preparada (trim e pausas) antes de gerar <code>transcript.json</code> automaticamente. Requer whisper.cpp instalado.</span>
         </div>
-        <label class="block-label" for="editorAssetFolder">Pasta de assets dentro do projeto</label>
+        <p id="editorTranscriptState" class="helper-text" role="status" aria-live="polite"></p>
+         <label class="block-label" for="editorAssetFolder">Pasta de assets dentro do projeto</label>
         <div class="row">
           <input id="editorAssetFolder" type="text" placeholder="/caminho/projeto/assets">
           <button id="editorChooseAssets" class="btn btn-secondary" type="button">Escolher</button>
