@@ -113,7 +113,7 @@ app.post('/api/editor/project/narration',upload.single('file'),api(async(req,res
     plan.audio.narration=relative;
     plan.sources={...(plan.sources||{}),transcript:'transcript.json'};
     try{
-      const saved=saveProject(root,JSON.stringify(plan,null,2)+'\\n',current.revision);
+      const saved=saveProject(root,JSON.stringify(plan,null,2)+'\n',current.revision);
       const jobId=startPreparedTranscript(root);
       res.status(201).json({path:dest,relative,jobId,project:saved});
     }catch(error){fs.rmSync(dest,{force:true});throw error;}
