@@ -131,9 +131,14 @@ app.post('/api/editor/project/narration',upload.single('file'),api(async(req,res
   }finally{if(fs.existsSync(req.file.path))fs.rmSync(req.file.path,{force:true});}
 }));
 app.post('/api/editor/project/transcribe',api(async(req,res)=>{
-  const project=loadProject(req.body.projectRoot);
+  let project=loadProject(req.body.projectRoot);
   if(activeRender(project.projectRoot))return res.status(409).json({error:'Aguarde o render atual.'});
   if(!fs.existsSync(project.validation.narration||''))return forbidden(res,'Importe uma narração antes da transcrição.');
+  const plan=JSON.parse(project.planText);
+  if(plan.sources?.transcript!=='transcript.json'){
+    plan.sources={...(plan.sources||{}),transcript:'transcript.json'};
+    project=saveProject(project.projectRoot,JSON.stringify(plan,null,2)+'\n',project.revision);
+  }
   const id=startPreparedTranscript(project.projectRoot,{model:req.body.model,language:req.body.language});
   res.status(202).json({jobId:id});
 }));
