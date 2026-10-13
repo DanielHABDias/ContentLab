@@ -52,3 +52,27 @@ test('Node pipeline persists scene clips, redraws only changed scene and rebuild
     assert.ok(!fs.existsSync(path.join(root,'output','old.tmp')));
   }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
+
+test('render reports the failing scene before invoking Remotion, even on scene one',async()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'contentlab-render-diagnostics-'));
+  try{
+    fs.mkdirSync(path.join(root,'audio'));
+    fs.writeFileSync(path.join(root,'audio','voice.wav'),'dummy');
+    const plan={project:{name:'diagnostics',format:'youtube_long',profile:'generic'},
+      audio:{narration:'audio/voice.wav'},timeline:[
+        {id:'abertura',start:0,end:3,layout:'fullscreen',background:{color:'#000'},
+          elements:[]},
+        {id:'outra',start:3,end:6,layout:'fullscreen',background:{color:'#000'},
+          elements:[]}
+      ]};
+    fs.writeFileSync(path.join(root,'edit_plan.json'),JSON.stringify(plan));
+    const events=[];
+    await assert.rejects(()=>renderProject(root,{
+      progress:(...args)=>events.push(args),
+      renderScene:async()=>{throw Error('write EPIPE');},
+      prepareVoice:async()=>{},
+    }),error=>error.message.includes('cena 1/2 [abertura]')&&error.message.includes('write EPIPE'));
+    assert.deepEqual(events[0],['scene_start',1,2,'abertura']);
+    assert.equal(JSON.parse(fs.readFileSync(path.join(root,'output','final','render_report.json'))).status,'failed');
+  }finally{fs.rmSync(root,{recursive:true,force:true});}
+});
