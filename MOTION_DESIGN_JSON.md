@@ -55,7 +55,7 @@ Uma cena é uma composição contínua com um fundo persistente, câmera virtual
 
 - `transform` define estado inicial (`x`, `y`, `scale`, `rotation`, `opacity`).
 - `keyframes[].t` é relativo ao começo da cena, estritamente crescente.
-- `easing` usa `linear`, `ease_in`, `ease_out`, `ease_in_out`.
+- `easing` usa `linear`, `ease_in`, `ease_out`, `ease_in_out`. A omissão usa smootherstep C2 (velocidade e aceleração zero nos extremos); `linear` explícito continua linear. `ease_in_out` também é C2.
 - `animation.enter`/`idle`/`exit` escolhe presets reutilizáveis de entrada, movimento e saída.
 - `camera.keyframes` e `camera.shake` controlam a câmera para camadas posicionadas, sem ampliar automaticamente o background.
 - A composição deve ser determinística por frame; evitar relógio real e `Math.random()` sem seed.
