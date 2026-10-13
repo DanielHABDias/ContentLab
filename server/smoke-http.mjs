@@ -87,7 +87,8 @@ try{
   assert.equal(bytes[0],0x50);assert.equal(bytes[1],0x4b);
   const zipIndex=Buffer.from(bytes).toString('latin1');
   for(const required of ['SKILL.md','docs/Documentacao-ContentLab.md',
-    'docs/Documentacao-ContentLab.html','docs/figures/grid.svg','schemas/edit_plan.schema.json']){
+    'docs/Documentacao-ContentLab.html','docs/figures/grid.svg','schemas/edit_plan.schema.json',
+    'MOTION_DESIGN_JSON.md']){
     assert.ok(zipIndex.includes(required),'Skill ZIP is missing '+required);
   }
   const [closeStatus]=await json('/api/shutdown',{force:true});
