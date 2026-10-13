@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
@@ -34,7 +35,9 @@ test('Linux dependency checks reuse valid installs and reinstall only when manif
    fs.writeFileSync(path.join(temp,'fake-model.bin'),'whisper-model-for-test');
    for(const bin of ['ffmpeg','ffprobe','whisper-cli']){
     const f=path.join(temp,'mockbin',bin);
-    fs.writeFileSync(f,'#!/bin/sh\nexit 0\n');
+    fs.writeFileSync(f,bin==='ffmpeg'?
+      '#!/bin/sh\nif [ "$1" = "-hide_banner" ] && [ "$2" = "-filters" ]; then printf " .. rubberband A->A Pitch-shift audio\\n"; fi\nexit 0\n':
+      '#!/bin/sh\nexit 0\n');
     fs.chmodSync(f,0o755);
    }
    const npm=path.join(temp,'mockbin','npm');
@@ -68,3 +71,45 @@ test('Linux dependency checks reuse valid installs and reinstall only when manif
    assert.equal(log(),3,'changed project dependencies trigger one install');
   }finally{fs.rmSync(temp,{recursive:true,force:true});}
  });
+
+test('Linux bootstrap detects missing rubberband and installs verified portable FFmpeg only once',
+ {skip:process.platform==='win32'},()=>{
+ const temp=fs.mkdtempSync(path.join(os.tmpdir(),'contentlab-rubberband-setup-'));
+ try{
+   const mockbin=path.join(temp,'mockbin'),packageDir=path.join(temp,'package'),
+     packageBin=path.join(packageDir,'ffmpeg-master-latest-linux64-gpl','bin');
+   fs.mkdirSync(mockbin,{recursive:true});
+   fs.mkdirSync(packageBin,{recursive:true});
+   for(const file of ['ffmpeg','ffprobe']){
+     const system=path.join(mockbin,file);
+     fs.writeFileSync(system,'#!/bin/sh\nif [ "$1" = "-hide_banner" ]; then echo " .. aecho A->A"; fi\nexit 0\n');
+     fs.chmodSync(system,0o755);
+     const portable=path.join(packageBin,file);
+     fs.writeFileSync(portable,file==='ffmpeg'?
+       '#!/bin/sh\nif [ "$1" = "-hide_banner" ]; then echo " .. rubberband A->A Pitch-shift"; fi\nexit 0\n':
+       '#!/bin/sh\nexit 0\n');
+     fs.chmodSync(portable,0o755);
+   }
+   const archive=path.join(temp,'ffmpeg-master-latest-linux64-gpl.tar.xz');
+   const archiveName='ffmpeg-master-latest-linux64-gpl';
+   let x=spawnSync('tar',['-cJf',archive,'-C',packageDir,archiveName],{encoding:'utf8'});
+   assert.equal(x.status,0,x.stderr);
+   const hash=crypto.createHash('sha256').update(fs.readFileSync(archive)).digest('hex');
+   const manifest=path.join(temp,'checksums.sha256');
+   fs.writeFileSync(manifest,hash+'  '+path.basename(archive)+'\n');
+   const env={...process.env,CL_MOCK_ROOT:temp,CL_MOCK_ARCHIVE:archive,
+     CL_MOCK_MANIFEST:manifest,CL_MOCK_DOWNLOAD_LOG:path.join(temp,'downloads.log'),
+     PATH:mockbin+path.delimiter+process.env.PATH};
+   const script='source scripts/bootstrap-linux.sh\n'+
+    'CL_ROOT="$CL_MOCK_ROOT"; CL_TOOLS="$CL_ROOT/.tools"\n'+
+    'cl_download(){ if [[ "$1" == *checksums.sha256 ]]; then cp "$CL_MOCK_MANIFEST" "$2"; else cp "$CL_MOCK_ARCHIVE" "$2"; fi; echo download >> "$CL_MOCK_DOWNLOAD_LOG"; }\n'+
+    'cl_install_ffmpeg\ncl_install_ffmpeg\n'+
+    'cl_ffmpeg_supports_rubberband\n';
+   x=spawnSync('bash',['-c',script],{cwd:root,env,encoding:'utf8',timeout:30000});
+   assert.equal(x.status,0,x.stdout+'\n'+x.stderr);
+   assert.match(x.stdout,/rubberband instalados/);
+   assert.equal(fs.readFileSync(env.CL_MOCK_DOWNLOAD_LOG,'utf8').trim().split('\n').length,2,
+     'Portable build downloaded only on first run');
+   assert.ok(fs.existsSync(path.join(temp,'.tools','ffmpeg','ffmpeg')));
+ }finally{fs.rmSync(temp,{recursive:true,force:true});}
+});

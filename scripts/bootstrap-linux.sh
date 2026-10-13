@@ -55,28 +55,49 @@ cl_install_node(){
   cl_has_node || cl_die "Node/npm não ficaram disponíveis após a instalação."
 }
 cl_has_ffmpeg(){ command -v ffmpeg >/dev/null 2>&1 && command -v ffprobe >/dev/null 2>&1; }
+cl_ffmpeg_supports_rubberband(){
+  # Presence of ffmpeg alone is not enough: voice pitch requires this FILTER.
+  # Look for a named filter entry, not a generic mention in the build banner.
+  local executable="${1:-ffmpeg}"
+  "$executable" -hide_banner -filters 2>/dev/null |
+    grep -Eq '^[[:space:]]*[^[:space:]]+[[:space:]]+rubberband[[:space:]]'
+}
 cl_install_ffmpeg(){
-  if cl_has_ffmpeg; then cl_log "FFmpeg/FFprobe encontrados."; return; fi
+  if cl_has_ffmpeg && cl_ffmpeg_supports_rubberband; then
+    cl_log "FFmpeg/FFprobe com filtro rubberband encontrados; reutilizando instalação."
+    return
+  fi
+  # A system FFmpeg can work for rendering but lack librubberband. Prefer a
+  # verified local build, and do not change global system packages or PATH.
   export PATH="$CL_TOOLS/ffmpeg:$PATH"
-  if cl_has_ffmpeg; then cl_log "FFmpeg/FFprobe locais reutilizados."; return; fi
+  if cl_has_ffmpeg && cl_ffmpeg_supports_rubberband; then
+    cl_log "FFmpeg/FFprobe locais com rubberband reutilizados."
+    return
+  fi
   local arch filename dir base found
   arch="$(cl_arch)"
   [[ "$arch" == x64 ]] && arch="linux64" || arch="linuxarm64"
   filename="ffmpeg-master-latest-${arch}-gpl.tar.xz"
   base="https://github.com/BtbN/FFmpeg-Builds/releases/download/latest"
   dir="$(mktemp -d)"
-  cl_log "Baixando FFmpeg/FFprobe portáteis..."
+  cl_log "FFmpeg ausente ou sem filtro rubberband; preparando build GPL portátil em .tools/ffmpeg..."
   cl_download "$base/checksums.sha256" "$dir/checksums.sha256"
   cl_download "$base/$filename" "$dir/$filename"
   cl_hash "$(cl_release_hash "$dir/checksums.sha256" "$filename")" "$dir/$filename"
-  mkdir -p "$CL_TOOLS/ffmpeg"
   tar -xJf "$dir/$filename" -C "$dir"
   found="$(find "$dir" -type f -name ffmpeg -print -quit)"
-  [[ -n "$found" ]] || cl_die "Arquivo do FFmpeg não contém executáveis."
-  cp "$(dirname "$found")/ffmpeg" "$(dirname "$found")/ffprobe" "$CL_TOOLS/ffmpeg/"
+  [[ -n "$found" && -f "$(dirname "$found")/ffprobe" ]] ||
+    cl_die "Arquivo portátil do FFmpeg/FFprobe incompleto."
+  chmod +x "$found" "$(dirname "$found")/ffprobe"
+  cl_ffmpeg_supports_rubberband "$found" ||
+    cl_die "Build do FFmpeg baixado não contém rubberband; verifique a release portátil."
+  mkdir -p "$CL_TOOLS/ffmpeg"
+  cp "$found" "$(dirname "$found")/ffprobe" "$CL_TOOLS/ffmpeg/"
   chmod +x "$CL_TOOLS/ffmpeg/"{ffmpeg,ffprobe}
   rm -rf "$dir"
-  cl_has_ffmpeg || cl_die "Falha ao instalar FFmpeg."
+  cl_has_ffmpeg && cl_ffmpeg_supports_rubberband ||
+    cl_die "FFmpeg ainda está sem o filtro rubberband após instalação local."
+  cl_log "FFmpeg/FFprobe com rubberband instalados localmente e verificados."
 }
 cl_has_whisper(){
   local target="${CONTENTLAB_WHISPER_CLI:-whisper-cli}"
