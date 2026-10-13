@@ -7,7 +7,9 @@ export const APP_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)
 export const SCHEMA_PATH = path.join(APP_ROOT, 'schemas', 'edit_plan.schema.json');
 export const FORMATS = {youtube_long:[1920,1080,30],youtube_short:[1080,1920,30],custom:[1920,1080,30]};
 const MEDIA = new Set(['video','image','overlay','sfx']);
-const LAYOUTS = new Set(['fullscreen','3x3','custom_grid','three_columns','left_right','character_vs','nox']);
+// The old project-specific preset is accepted for existing JSONs only.
+// New projects and public catalog use the generic center_column name.
+const LAYOUTS = new Set(['fullscreen','3x3','custom_grid','three_columns','left_right','character_vs','center_column','nox']);
 const TRANSITIONS = new Set(['cut','fade','blur_left','blur_right','blur_up','slide_left']);
 const AUTO_CELLS = {
   three_columns:[[1,4,7],[2,5,8],[3,6,9]],
