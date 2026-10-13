@@ -286,6 +286,11 @@ Obrigatório significa exigido dentro do objeto pai. Um bloco opcional pode ter 
 | `timeline[].layout.preset` | string | Não | — | `"exemplo"` | Nome textual do layout a ser aplicado. |
 | `timeline[].transitionOut` | string | Não | — | `"fade"` | Transição: cut, fade, blur_left, blur_right, blur_up ou slide_left. |
 | `timeline[].transitionDuration` | number | Não | maior que 0 | `0.35` | Duração temporal da transição que introduz a próxima cena. |
+| `timeline[].customComponent` | object | Não | — | `{}` | Composição programável Remotion/TSX; código local confiável sob custom-scenes/. |
+| `timeline[].customComponent.module` | string | Sim | — | `"exemplo"` | URI project://custom-scenes/...tsx; o código só executa com CONTENTLAB_TRUST_CUSTOM_TSX=1. |
+| `timeline[].customComponent.mode` | enum | Não | opções: replace, overlay | `"replace"` | replace substitui a parte visual por TSX; overlay sobrepõe TSX às camadas normais. |
+| `timeline[].customComponent.props` | object | Não | — | `{}` | Parâmetros JSON fornecidos ao componente TSX como propriedades React. |
+| `timeline[].customComponent.assets` | object | Não | — | `{}` | Mapa de nomes para URIs existentes; arquivos expostos ao TSX pelo prop assets. |
 
 ### Fundo
 

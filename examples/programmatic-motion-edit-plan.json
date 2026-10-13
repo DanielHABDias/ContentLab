@@ -1,0 +1,39 @@
+{
+  "project": {
+    "name": "Motion procedural - copiar arquivos para um projeto",
+    "format": "custom",
+    "profile": "diazverso",
+    "resolution": {
+      "width": 576,
+      "height": 1024
+    },
+    "fps": 30,
+    "seed": 7
+  },
+  "audio": {
+    "narration": "audio/narration.wav"
+  },
+  "timeline": [
+    {
+      "id": "motion_world",
+      "start": 0,
+      "end": 17.7,
+      "layout": "fullscreen",
+      "background": {
+        "color": "#090a0e"
+      },
+      "customComponent": {
+        "module": "project://custom-scenes/FollowDot.tsx",
+        "mode": "replace",
+        "props": {
+          "title": "DIAZVERSO",
+          "subtitle": "EVERY MOVE, WRITTEN IN CODE",
+          "accent": "#fa4245"
+        },
+        "assets": {}
+      },
+      "elements": [],
+      "transitionOut": "cut"
+    }
+  ]
+}
