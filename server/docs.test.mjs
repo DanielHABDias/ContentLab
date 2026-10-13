@@ -51,6 +51,9 @@ test('documents cover all main capabilities, include examples and all JS-generat
   assert.ok(html.includes('Carrossel vertical de frases em largura total'));
   assert.ok(md.includes('faixa horizontal central'));
   assert.ok(md.includes('largura integral da tela'));
+  assert.ok(md.includes('Suavidade de motion design é independente da duração'));
+  assert.ok(html.includes('Motion suave em 0,1 segundo'));
+  assert.ok(md.includes('highlightTransitionDuration'));
 });
 test('website exposes one docs tab, dedicated reader and exactly three doc download actions',()=>{
   const html=readFileSync(new URL('../frontend/templates/index.html',import.meta.url),'utf8');
