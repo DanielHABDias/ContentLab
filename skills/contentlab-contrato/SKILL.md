@@ -28,6 +28,23 @@ description: Constrói e valida edit_plan.json do Content Lab conforme contrato 
 - No `word_stack_vertical`, a faixa central ocupa a largura do quadro; o painel opcional fica somente na faixa central. `config.items` define tempos de frases.
 - Em `bangers_highlight_block`, o fundo entre palavras faz crossfade sem mover o texto, respeitando tempos das palavras.
 
+## Contrato para uma cena programável TSX
+O projeto pode conter `custom-scenes/MinhaCena.tsx` e uma cena declarativa com `customComponent`:
+
+```json
+{"id":"grafico","start":0,"end":8,"layout":"fullscreen","background":{"color":"#080a10"},"elements":[],"customComponent":{"module":"project://custom-scenes/MinhaCena.tsx","mode":"replace","props":{"titulo":"Exemplo","cor":"#ff4444"},"assets":{}}}
+```
+
+- `module` é obrigatório: **`project://custom-scenes/...tsx`**, na raiz do projeto de edição. TSX não vai dentro do JSON.
+- `mode`: `replace` para cena inteira em TSX (não desenha as camadas tradicionais) ou `overlay` para sobreposição.
+- `props`: objeto JSON de conteúdo reutilizável. `assets`: mapa de nomes para URIs locais `project://` ou `builtin://`; os URLs resolvidos ficam em `assets` do componente.
+- O TSX exporta **default** de um componente React e usa `useCurrentFrame/useVideoConfig` para quadros determinísticos.
+- **Fluxo manual**: pedir arquivo TSX ao ChatGPT, baixar/salvar em `custom-scenes/`, apontar URI, validar e renderizar. Não há instalação automática de código do chat pela interface.
+- Código executável exige `CONTENTLAB_TRUST_CUSTOM_TSX=1` somente em ambiente local confiável. JSON válido não garante compilação TSX: inspecionar MP4.
+- Exemplo versionado: `examples/custom-scenes/FollowDot.tsx` + `examples/programmatic-motion-edit-plan.json`. Para montagem em um plano existente pedir só o fragmento, economizando tokens.
+
+Para planejamento de uma cena complexa, carregar `skills/contentlab-cenas-tsx/SKILL.md` antes de gerar o componente.
+
 ## Revisão de plano
 Antes de entregar: validar schema, regras semânticas, existência de assets, formatos, limites de tempo, IDs, camadas, transcript e eventos. Não afirmar suporte de um efeito apenas por campo desconhecido ter passado pelo parser. A saída deve refletir o estado atual do contrato; novos recursos de composição planejados nas skills serão implementados na fase técnica subsequente, sem serem falsamente simulados no JSON atual.
 

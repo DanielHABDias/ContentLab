@@ -6,6 +6,7 @@
 ## Módulos
 - `contentlab-composicao`: narrativa espacial, foco, tipografia, formatos e câmera.
 - `contentlab-motion`: coreografia, keyframes, easing, stagger, continuidade.
+- `contentlab-cenas-tsx`: gera um único componente Remotion para cena complexa e um pequeno trecho JSON, minimizando tokens.
 - `contentlab-timeline-audio`: voz, beats, transcript, SFX e música.
 - `contentlab-contrato`: autoria e validação do JSON único.
 - `contentlab-revisao`: inspeção visual, áudio, QA e feedback.
@@ -17,8 +18,10 @@ O download **Skill .zip** do aplicativo oferece o `SKILL.md` da Direção na rai
 
 Estes módulos também podem ser utilizados individualmente por agentes que trabalham diretamente no repositório, mas não devem ser confundidos com plugins ChatGPT instalados automaticamente apenas por estarem versionados no GitHub.
 
-## Escopo da primeira etapa
-Esta etapa altera instruções e empacotamento, **não** o `edit_plan.json`, schema ou renderer. Novas expectativas de qualidade e movimentos avançados são alvos do próximo ciclo de engenharia; até lá a skill de contrato identifica lacunas ao invés de gerar campos não executáveis.
+## Cenas TSX programáveis — fluxo de baixo custo
+Para movimento contínuo complexo, solicitar ao ChatGPT **um arquivo TSX completo** em vez de dezenas de objetos JSON. Baixar/salvar em `custom-scenes/MinhaCena.tsx` dentro do projeto e apontar `timeline[].customComponent.module` para `project://custom-scenes/MinhaCena.tsx`. Pedir apenas o fragmento `customComponent` (ou uma cena) se já houver plano; não regenerar arquivos extensos.
+
+`props` contém dados JSON; `assets` contém URIs locais nomeadas. `mode: "replace"` usa a composição TSX inteira; `mode: "overlay"` mantém as camadas normais atrás. O código **não** é instalado automaticamente pelo site e exige `CONTENTLAB_TRUST_CUSTOM_TSX=1` em ambiente local revisado. Validar JSON, renderizar, inspecionar frames e áudio. Exemplo: `examples/custom-scenes/FollowDot.tsx`.
 
 ## Manutenção
 - Mudar conteúdo das skills aqui; não voltar a embutir orientações extensas em `server/skill.mjs`.
