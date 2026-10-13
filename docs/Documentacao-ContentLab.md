@@ -100,7 +100,9 @@ Os clipes individuais não incluem obrigatoriamente toda a mixagem. Conferir o v
 
 Vídeos e cortes: carregamento de fonte YouTube, importação local, lista de arquivos em cache, marcação e exportação de trechos de vídeo e áudio.
 
-Transcrição: ao escolher a narração no projeto, o Content Lab executa primeiro auto-trim e cortes explícitos, insere os silêncios planejados, salva audio/narration.prepared.wav e só então usa whisper.cpp para gerar transcript.json, transcript.txt e transcript.srt. Não é necessário enviar uma transcrição. Uma alteração posterior nos cortes/pausas dispara nova transcrição e preserva cópias de correções manuais quando necessário. Requer whisper-cli e modelo instalados.
+Transcrição: ao escolher a narração no projeto, o Content Lab executa primeiro auto-trim e cortes explícitos, insere os silêncios planejados, salva audio/narration.prepared.wav e só então usa whisper.cpp para gerar transcript.json, transcript.txt e transcript.srt. Não é necessário enviar uma transcrição. Uma alteração posterior nos cortes/pausas dispara nova transcrição e preserva cópias de correções manuais quando necessário. Os inicializadores instalam automaticamente whisper-cli e o modelo base quando ausentes.
+
+Instalação automática: no Linux, execute bash run.sh ou use o atalho criado por instalar-atalho.sh; no Windows, abra iniciar.vbs ou iniciar.bat. Os inicializadores verificam Node.js 22+, FFmpeg/FFprobe, whisper.cpp, modelo Whisper e dependências npm/Remotion, baixando apenas o que estiver ausente. Binários locais ficam na pasta .tools ignorada pelo Git; no Zorin/Ubuntu o compilador para whisper.cpp pode exigir sudo. O Studio não precisa alterar a instalação global de Node. O download inicial requer internet; as aberturas posteriores reaproveitam o material instalado.
 
 Editor automático: abrir/criar projeto, conferir assets, buscar e selecionar cenas, criar, inserir, duplicar e excluir, ajustar tempos, editar camadas, importar transcrição, validar e salvar o JSON, visualizar clipes em cache e exportar o MP4.
 
