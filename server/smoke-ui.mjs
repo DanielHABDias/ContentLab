@@ -82,6 +82,16 @@ try{
   await send('Page.navigate',{url:'http://127.0.0.1:'+appPort+'/'});
   await wait(()=>evaluate('document.readyState === "complete" && !!document.getElementById("editorLoad")'),'Document load');
   assert.equal(await evaluate('getComputedStyle(document.body).backgroundColor'),'rgb(245, 246, 248)');
+  assert.equal(await evaluate('getComputedStyle(document.getElementById("panel-videos")).animationName'),
+    'studio-panel-appear','Workspace opens with a subtle entrance transition');
+  await evaluate('document.getElementById("tab-transcription").click()');
+  assert.equal(await evaluate('getComputedStyle(document.getElementById("panel-transcription")).animationName'),
+    'studio-panel-appear','Narration workspace animates on navigation');
+  assert.equal(await evaluate('document.getElementById("panel-videos").hidden'),true,
+    'Inactive workspace must stay hidden and non-interactive');
+  assert.equal(await evaluate('getComputedStyle(document.getElementById("loadBtn")).transitionProperty.includes("transform")'),true,
+    'Buttons must provide a transform-based tactile response');
+  await evaluate('document.getElementById("tab-videos").click()');
   assert.equal(await evaluate('document.querySelectorAll(".workspace-tab").length'),4,
     'Exactly four tabs must remain');
   assert.equal(await evaluate('document.querySelectorAll("#tab-guide, #panel-guide").length'),0,
