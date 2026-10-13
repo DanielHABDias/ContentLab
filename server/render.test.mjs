@@ -76,3 +76,32 @@ test('render reports the failing scene before invoking Remotion, even on scene o
     assert.equal(JSON.parse(fs.readFileSync(path.join(root,'output','final','render_report.json'))).status,'failed');
   }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
+
+test('GPU encoder fallback disables GPU attempts for remaining scenes',async()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'contentlab-render-gpu-fallback-'));
+  try{
+    fs.mkdirSync(path.join(root,'audio'));
+    fs.writeFileSync(path.join(root,'audio','voice.wav'),'voice');
+    const plan={project:{name:'gpu-fallback',format:'custom',profile:'generic',resolution:{width:64,height:36},fps:30},
+      audio:{narration:'audio/voice.wav'},timeline:[
+        {id:'first',start:0,end:1,layout:'fullscreen',background:{color:'#000'},elements:[]},
+        {id:'second',start:1,end:2,layout:'fullscreen',background:{color:'#000'},elements:[]},
+      ]};
+    fs.writeFileSync(path.join(root,'edit_plan.json'),JSON.stringify(plan));
+    const hardwareFlags=[];
+    const report=await renderProject(root,{
+      hardwareAccel:true,
+      renderScene:async(scene,cfg,words,target,{hardwareAccel,onHardwareFallback})=>{
+        hardwareFlags.push(hardwareAccel);
+        if(hardwareFlags.length===1)onHardwareFallback();
+        fs.writeFileSync(target,'scene-'+scene.id);
+      },
+      compose:async(scenes,segments,target)=>{fs.writeFileSync(target,'video');return {transitions:[]};},
+      prepareVoice:async(input,target)=>{fs.writeFileSync(target,'voice');},
+      mix:async(visual,voice,plan,assets,target)=>{fs.writeFileSync(target,'final');return [];},
+      probe:async()=>({videoDuration:2,audioDuration:2,videoCodec:'h264',audioCodec:'aac'}),
+    });
+    assert.equal(report.status,'completed');
+    assert.deepEqual(hardwareFlags,[true,false]);
+  }finally{fs.rmSync(root,{recursive:true,force:true});}
+});

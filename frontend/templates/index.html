@@ -301,7 +301,7 @@
         <section class="render-console" aria-label="Exportação de vídeo">
           <div><span class="eyebrow">EXPORTAR</span><h3>Seu filme, no seu tempo.</h3><p class="helper-text">Cenas renderizadas são reutilizadas automaticamente. O render completo só acontece quando você escolhe.</p></div>
           <div class="render-buttons"><button id="editorReuse" class="btn btn-primary" type="button" disabled>Aproveitar cache <span aria-hidden="true">↗</span></button><button id="editorRebuild" class="btn btn-secondary" type="button" disabled>Refazer tudo</button></div>
-          <label class="editor-gpu"><input id="editorGpu" type="checkbox"> Usar GPU quando disponível</label>
+          <label class="editor-gpu" title="Remotion usa NVENC (NVIDIA) no Linux/Windows; placas AMD usam a CPU. Se o encoder de GPU falhar, a cena é repetida na CPU."><input id="editorGpu" type="checkbox"> Usar GPU quando compatível (NVIDIA no Linux/Windows)</label>
           <button id="editorCancel" class="btn btn-danger btn-sm hidden" type="button">Cancelar render</button>
           <p id="editorStatus" class="helper-text" role="status" aria-live="polite"></p>
           <div class="editor-progress" role="progressbar" aria-label="Progresso do render" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="editorProgressFill"></span></div>

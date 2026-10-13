@@ -3,6 +3,7 @@ import path from 'node:path';
 import os from 'node:os';
 import {APP_ROOT} from './plan.mjs';
 import {run} from './exec.mjs';
+import {runRemotionWithEncodingFallback} from './remotion-encoding.mjs';
 import {stageCustomScene} from './custom-scenes.mjs';
 
 const REMOTION_DIR=path.join(APP_ROOT,'backend','remotion');
@@ -87,7 +88,7 @@ function bundledFont(item){
   return family.toLowerCase().includes('banger')?path.join(APP_ROOT,'builtin-assets','fonts','Bangers-Regular.ttf'):
          family.toLowerCase().includes('anton')?path.join(APP_ROOT,'builtin-assets','fonts','Anton-Regular.ttf'):null;
 }
-export async function renderRemotionScene(scene,settings,words,output,{signal,hardwareAccel=false}={}){
+export async function renderRemotionScene(scene,settings,words,output,{signal,hardwareAccel=false,onHardwareFallback}={}){
   const cli=path.join(REMOTION_DIR,'node_modules','@remotion','cli','remotion-cli.js');
   if(!fs.existsSync(cli))throw Error('Dependências Remotion não instaladas. Rode npm ci --prefix backend/remotion.');
   const work=fs.mkdtempSync(path.join(os.tmpdir(),'contentlab-remotion-'));
@@ -158,7 +159,14 @@ export async function renderRemotionScene(scene,settings,words,output,{signal,ha
     ...remotionCliRenderOptions(),'--overwrite'];
   if(hardwareAccel)command.push('--hardware-acceleration=if-possible');
   try{
-    await run(process.execPath,command,{cwd:REMOTION_DIR,signal});
+    await runRemotionWithEncodingFallback(command,{
+      hardwareAccel,signal,
+      execute:args=>run(process.execPath,args,{cwd:REMOTION_DIR,signal}),
+      onFallback:()=>{
+        console.warn('[ContentLab] NVENC indisponível. Repetindo esta cena com H.264 por CPU; GPU desativada para as próximas cenas.');
+        onHardwareFallback?.();
+      },
+    });
     if(!fs.existsSync(output)||fs.statSync(output).size===0)throw Error('O Remotion não gerou MP4.');
     return output;
   }finally{

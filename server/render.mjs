@@ -83,6 +83,7 @@ export async function renderProject(directory,{
   }
   const work=fs.mkdtempSync(path.join(finalDir,'contentlab-render-'));
   const reused=[],rendered=[],paths=[],started=Date.now();
+  let gpuEncodingAllowed=hardwareAccel;
   const emit=(stage,current,total,id)=>progress?.(stage,current,total,id);
   try {
     for(let i=0;i<scenes.length;i++){
@@ -96,7 +97,10 @@ export async function renderProject(directory,{
         // subprocess is not reported misleadingly as merely "prepare".
         emit('scene_start',i+1,scenes.length,scene.id);
         try{
-          await renderScene(scene,cfg,words,temp,{signal,hardwareAccel});
+          await renderScene(scene,cfg,words,temp,{
+            signal,hardwareAccel:gpuEncodingAllowed,
+            onHardwareFallback:()=>{gpuEncodingAllowed=false;},
+          });
         }catch(error){
           const name=raws[i].customComponent?.module;
           const label=name?' | TSX: '+name:'';
