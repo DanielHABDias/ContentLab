@@ -89,3 +89,16 @@ Camadas de PNG podem usar `cells:[5,8]` para encaixe automático nas duas célul
 O preset `kinetic_text` com `style:"word_stack_vertical"` ocupa três faixas. O destaque central (e seu painel, quando `panelOpacity>0`) **se estende horizontalmente por todo o quadro**, mesmo que `cells` inclua somente duas colunas. A frase ativa é maior e plenamente opaca no centro. A próxima, acima, é menor e semitransparente e se ancora pela borda de BAIXO de sua faixa; a anterior, abaixo, é menor e semitransparente e se ancora pela borda de CIMA. As três ficam alinhadas à esquerda por padrão. `direction:"down"` gera o movimento superior→central→inferior.
 
 Para frases completas, usar `config.items:[{"text":"BATMAN NÃO É JUIZ","start":0,"end":1.2},...]`; não simular a pilha com camadas independentes. A linha central aceita quebras responsivas; não usar `whiteSpace:nowrap` nem limitar o painel a duas colunas. O novo padrão visual é transparente (`panelOpacity:0`), com destaque cinza opcional restrito ao terço central e em largura total. O exemplo `examples/word-stack.json` e `server/smoke-word-stack.mjs` demonstram a composição.
+
+## Suavidade de animação sem alterar duração
+
+**Fluidez não significa lentidão.** O Content Lab interpola keyframes, câmera, entradas, saídas, movimento contínuo, word stack/stream e transições com curvas suaves. Isso altera a trajetória de velocidade **dentro** da janela; não altera start/end, enterDuration, exitDuration, config.transitionDuration nem transitionDuration. Se escolher **0,1 s**, o efeito ocupa **0,1 s**, sem mínimo implícito de 50/60 ms.
+
+- Keyframes de camada/câmera: padrão suavizado ease_in_out (curva smootherstep); easing:linear é opção explícita para movimentos uniformes; ease_in e ease_out atendem curvas assimétricas.
+- Entradas/saídas: slide, fade, pop, center_reveal e center_close respeitam durações configuradas; pop_in mantém overshoot leve e assenta suavemente.
+- Idles float_soft, wiggle_soft e pulse_soft usam envelope de amplitude para não surgir/desaparecer com salto. slow_zoom_in/out e pan aceleram e freiam dentro da duração existente.
+- word_stack_vertical e word_stream_horizontal respeitam config.transitionDuration sem duração mínima artificial. Em bangers_highlight_block, config.highlightTransitionDuration (ex. 0.1) controla o crossfade do FUNDO colorido entre palavras sem mover o texto.
+- Transições fade, blur_left/right/up e slide_left atingem o destino no último frame de sua janela; cut permanece instantâneo.
+- FPS: em 30 fps, 0,1 s representa ~3 frames; em 60 fps, ~6. Se a qualidade de um movimento muito rápido precisar de mais amostras, escolher project.fps:60 conscientemente, sem mudar FPS de projetos existentes.
+
+Exemplo: animation com enter: slide_up, enterDuration: 0.1, idle: float_soft, exit: fade_out, exitDuration: 0.1. Entrada e saída continuam de **100 ms cada uma**. Conferir no Preview/render com FPS escolhido.
