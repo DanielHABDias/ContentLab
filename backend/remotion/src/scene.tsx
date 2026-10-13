@@ -189,7 +189,10 @@ const Layer = ({item, props, time, absolute, camera}: {item: Element; props: Sce
   if (item.type === 'sfx' || absolute < item.start || absolute >= item.end) return null;
   const [rx, ry, rw, rh] = item.region;
   const width = props.width, height = props.height;
-  const anchorX = 0.25 + (rx + rw / 2) / (2 * width);
+  // Word carousel rows must span the *whole frame*, regardless of the
+  // columns selected by cells. Cells still control its vertical placement.
+  const isWordStack = item.type === 'kinetic_text' && item.data.style === 'word_stack_vertical';
+  const anchorX = isWordStack ? 0.5 : 0.25 + (rx + rw / 2) / (2 * width);
   const anchorY = 0.25 + (ry + rh / 2) / (2 * height);
   const state = stateAt({x: anchorX, y: anchorY, offsetX: 0, offsetY: 0, scale: 1, rotation: 0, opacity: 1, ...item.data.transform}, item.data.keyframes, time);
   const motion = item.data.animation ?? {};
@@ -227,7 +230,7 @@ const Layer = ({item, props, time, absolute, camera}: {item: Element; props: Sce
   if (motion.idle === 'pan') state.x += 0.015 * elapsed / Math.max(total, 0.01);
   const box = item.data.box && typeof item.data.box === 'object' ? item.data.box : {};
   const card = box.preset === 'floating_card' || box.background;
-  const elementWidth = item.type === 'filter' ? width : item.data.cells ? rw : width * 0.8;
+  const elementWidth = item.type === 'filter' || isWordStack ? width : item.data.cells ? rw : width * 0.8;
   const elementHeight = item.type === 'filter' ? height : item.data.cells ? rh : height * 0.8;
   // Pixel nudges apply after 3x3 cell placement and camera projection.
   // Positive X moves right and positive Y moves down.
@@ -324,88 +327,126 @@ const Layer = ({item, props, time, absolute, camera}: {item: Element; props: Sce
       <div style={{...textBase, left: (activeX * 100) + '%', opacity: activeOpacity}}>{activeLabel}</div>
     </div>;
   }
-  if (item.type === 'kinetic_text' && item.data.style === 'word_stack_vertical') {
+  if (isWordStack) {
     const stack = wordStackState(item, absolute, props.words);
     if (!stack) return null;
-    const look = styles.word_stack_vertical;
-    const appearance = item.data.textStyle ?? {};
-    const uppercase = appearance.uppercase ?? true;
     const config = item.data.config ?? {};
-    const inactiveOpacity = Number(config.inactiveOpacity ?? 0.36);
-    const gap = rh * Number(config.slotGap ?? 0.24);
-    const activeScale = Number(config.activeScale ?? 1.45);
-    const inactiveScale = Number(config.inactiveScale ?? 0.72);
-    const direction = config.direction === 'up' ? -1 : 1;
-    const align = config.align === 'center' ? 'center' : 'left';
-    const inactiveColor = typeof config.inactiveColor === 'string' ? config.inactiveColor : '#777777';
+    const appearance = item.data.textStyle ?? {};
+    const look = styles.word_stack_vertical;
+    const uppercase = appearance.uppercase ?? true;
+    const label = (word: Word) =>
+      uppercase ? String(word.word).toLocaleUpperCase('pt-BR') : String(word.word);
+    const activeScale = Math.max(1, Number(config.activeScale ?? 1.45));
+    // Always keep inactive labels noticeably smaller, even with legacy presets.
+    const inactiveScale = Math.min(Number(config.inactiveScale ?? 0.72), activeScale * 0.72);
+    const fadedOpacity = clamp(Number(config.inactiveOpacity ?? 0.36));
+    const inactiveColor = typeof config.inactiveColor === 'string' ? config.inactiveColor : '#929292';
     const panelColor = typeof config.panelColor === 'string' ? config.panelColor : '#D9D9D9';
-    const panelOpacity = Number(config.panelOpacity ?? 0.18);
-    const panelRadius = Number(config.panelRadius ?? 28);
-    const panelPaddingX = Number(config.panelPaddingX ?? Math.max(28, rw * 0.045));
-    const panelPaddingY = Number(config.panelPaddingY ?? Math.max(20, rh * 0.045));
-    const scaleFactor = Number(item.data.fontScale ?? 1);
-    const wordsToMeasure = [stack.previous, stack.active, stack.next].filter(Boolean).map((word) => String(word!.word));
-    const longest = wordsToMeasure.reduce((best, value) => value.length > best.length ? value : best, '');
-    const baseSize = Math.min(rh * 0.28, rw * 0.18) * scaleFactor;
-    const maxBaseByWidth = rw * 0.78 / Math.max(1, Array.from(longest).length * 0.52 * activeScale);
-    const fontSize = Math.max(18, Math.min(baseSize, maxBaseByWidth));
-    const shadow = appearance.shadow;
-    const p = stack.progress;
+    const panelOpacity = clamp(Number(config.panelOpacity ?? 0));
+    const panelRadius = Math.max(0, Number(config.panelRadius ?? 0));
+    const panelPaddingX = Math.min(elementWidth * 0.16,
+      Math.max(22, Number(config.panelPaddingX ?? elementWidth * 0.06)));
+    const textWidth = Math.max(40, elementWidth - panelPaddingX * 2);
+    const rowHeight = elementHeight / 3;
+    const fontScale = Number(item.data.fontScale ?? 1);
+    const longest = [stack.previous, stack.active, stack.next].filter(Boolean)
+      .map(word => label(word!))
+      .reduce((best, text) => text.length > best.length ? text : best, '');
+    // One shared fitted size keeps the active line larger for ALL phrases and
+    // allows long items to wrap inside the full-width middle row.
+    const preferred = Math.min(elementHeight * 0.15, textWidth * 0.135) *
+      fontScale * activeScale;
+    const activeSize = Math.min(
+      wrappedFontSize(longest, preferred, textWidth, rowHeight * 0.90),
+      rowHeight * 0.68
+    );
+    const inactiveSize = activeSize * Math.max(0.25, inactiveScale / activeScale);
+    const gapFraction = Math.max(0.18, Math.min(0.31, Number(config.slotGap ?? 0.24)));
+    const upperBottom = elementHeight * (0.5 - gapFraction);
+    const lowerTop = elementHeight * (0.5 + gapFraction);
+    const progress = stack.progress;
+    const lerp = (start: number, finish: number) => start + (finish - start) * progress;
+    // For each item, animate both its position and vertical anchoring:
+    // incoming top row is BOTTOM aligned, outgoing bottom row is TOP aligned.
     const slots = [
-      stack.previous ? {
+      stack.previous && {
         word: stack.previous,
-        y: rh / 2 + direction * gap * p,
-        opacity: 1 - (1 - inactiveOpacity) * p,
-        scale: activeScale - (activeScale - inactiveScale) * p,
+        y: lerp(elementHeight / 2, lowerTop),
+        anchor: lerp(-50, 0),
+        size: lerp(activeSize, inactiveSize),
+        opacity: lerp(1, fadedOpacity),
         color: inactiveColor,
-      } : null,
+      },
       {
         word: stack.active,
-        y: rh / 2 - direction * gap + direction * gap * p,
-        opacity: inactiveOpacity + (1 - inactiveOpacity) * p,
-        scale: inactiveScale + (activeScale - inactiveScale) * p,
+        y: lerp(upperBottom, elementHeight / 2),
+        anchor: lerp(-100, -50),
+        size: lerp(inactiveSize, activeSize),
+        opacity: lerp(fadedOpacity, 1),
         color: appearance.color ?? look.color,
       },
-      stack.next ? {
+      stack.next && {
         word: stack.next,
-        y: rh / 2 - direction * gap * 2 + direction * gap * p,
-        opacity: inactiveOpacity * p,
-        scale: inactiveScale,
+        y: lerp(-rowHeight * 0.20, upperBottom),
+        anchor: -100,
+        size: inactiveSize,
+        opacity: fadedOpacity * progress,
         color: inactiveColor,
-      } : null,
-    ].filter(Boolean) as Array<{word: Word; y: number; opacity: number; scale: number; color: string}>;
+      },
+    ].filter(Boolean) as Array<{
+      word: Word; y: number; anchor: number; size: number;
+      opacity: number; color: string;
+    }>;
     const panelRgba = /^#[0-9A-Fa-f]{6}$/.test(panelColor)
       ? `rgba(${parseInt(panelColor.slice(1, 3), 16)}, ${parseInt(panelColor.slice(3, 5), 16)}, ${parseInt(panelColor.slice(5, 7), 16)}, ${panelOpacity})`
       : panelColor;
+    const shadow = appearance.shadow;
     return <div style={{
       ...common,
-      position: 'absolute',
+      // Never render the legacy floating two-column grey card.
+      background: 'transparent',
+      borderRadius: 0,
+      padding: 0,
+      boxShadow: 'none',
       boxSizing: 'border-box',
-      background: panelRgba,
-      borderRadius: panelRadius,
-      padding: `${panelPaddingY}px ${panelPaddingX}px`,
+      overflow: 'hidden',
     }}>
-      {slots.map((slot, index) => {
-        const label = uppercase ? String(slot.word.word).toLocaleUpperCase('pt-BR') : String(slot.word.word);
-        const isLeft = align === 'left';
-        return <div key={index + '-' + label} style={{
+      {panelOpacity > 0 && <div data-stack-band="active" style={{
+        position: 'absolute',
+        left: 0,
+        top: rowHeight,
+        width: '100%',
+        height: rowHeight,
+        borderRadius: panelRadius,
+        background: panelRgba,
+      }}/>}
+      {slots.map((slot) => <div key={slot.word.start + '-' + slot.word.word}
+        data-stack-slot={slot.word === stack.active ? 'active' : slot.word === stack.previous ? 'previous' : 'next'}
+        style={{
           position: 'absolute',
-          left: isLeft ? panelPaddingX : '50%',
+          left: panelPaddingX,
           top: slot.y,
-          translate: isLeft ? '0 -50%' : '-50% -50%',
-          width: isLeft ? `calc(100% - ${panelPaddingX * 2}px)` : '92%',
-          textAlign: isLeft ? 'left' : 'center',
-          whiteSpace: 'nowrap',
+          width: textWidth,
+          maxHeight: rowHeight * 0.94,
+          translate: `0 ${slot.anchor}%`,
+          textAlign: 'left',
+          whiteSpace: 'normal',
+          overflowWrap: 'anywhere',
+          overflow: 'hidden',
+          lineHeight: 1.04,
           fontFamily: item.fontSrc ? item.fontFamily + ', Arial, sans-serif' : 'Arial, sans-serif',
           fontWeight: item.fontSrc ? 400 : 900,
-          fontSize: fontSize * slot.scale,
+          fontSize: slot.size,
           color: slot.color,
-          WebkitTextStroke: (appearance.outlineWidth ?? look.strokeWidth) + 'px ' + (appearance.outlineColor ?? look.stroke),
+          WebkitTextStroke: (appearance.outlineWidth ?? look.strokeWidth) + 'px ' +
+            (appearance.outlineColor ?? look.stroke),
           paintOrder: 'stroke fill',
           opacity: slot.opacity,
-          textShadow: shadow ? (shadow.offsetX ?? 3) + 'px ' + (shadow.offsetY ?? 4) + 'px ' + (shadow.blur ?? 8) + 'px ' + (shadow.color ?? '#00000099') : undefined,
-        }}>{label}</div>;
-      })}
+          textShadow: shadow
+            ? (shadow.offsetX ?? 3) + 'px ' + (shadow.offsetY ?? 4) + 'px ' +
+              (shadow.blur ?? 8) + 'px ' + (shadow.color ?? '#00000099')
+            : undefined,
+        }}>{label(slot.word)}</div>)}
     </div>;
   }
   if (item.type === 'caption' && item.data.style === 'bangers_highlight_block') {
