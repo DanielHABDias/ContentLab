@@ -2,7 +2,7 @@
 
 **Data:** 12/10/2026  
 **Content Lab examinado:** `main`, commit `1608d8f31c15d5bae34bec9ff33a48f3d7925c37`  
-**Escopo:** leitura de código e documentação, comparação de arquitetura/UX e verificação de resultados existentes de CI. **Sem renderizar o VD_0005** e sem alterar a implementação ou o formato do JSON.
+**Escopo:** leitura de código e documentação, comparação de arquitetura/UX e verificação de resultados existentes de CI. **Sem renderizar o projeto piloto de 101 cenas** e sem alterar a implementação ou o formato do JSON.
 
 ## Fontes
 
@@ -27,7 +27,7 @@ A recomendação desta auditoria é manter Remotion como renderizador visual no 
 | Interface Studio | `frontend/static/studio.css`, `frontend/static/visual_editor.js` | OK — lista, busca, cria, duplica, remove e inspeciona cenas |
 | CI | [Actions concluído](https://github.com/DanielHABDias/ContentLab/actions/runs/38273880022) | **Node, Windows e smoke Linux aprovados** |
 | Teste de UI | `server/smoke-ui.mjs` | Exercita Chrome real, cache MP4, seleção, busca e duplicação |
-| Render do projeto VD_0005 | Não executado, conforme pedido | **Não validado** |
+| Render do projeto projeto piloto de 101 cenas | Não executado, conforme pedido | **Não validado** |
 | Inspeção real de todas as animações/cenas | Não coberta pelos smoke tests | **Não validada** |
 
 ## Achados priorizados
@@ -106,11 +106,11 @@ O HyperFrames dispõe de skills especializadas, rules/blueprints, catálogo de b
 | Editor | Storyboard por ID + clipe em cache | Studio sobre mesma composição HTML | Timeline multitrack e painel contextual |
 | Histórico de ações | Não há undo/redo estruturado | Fluxo de edição sobre DOM/source | Pilha de comandos e interações específicas |
 | Testes | Smoke Node, Chrome, Remotion e Windows | Lint/check/snapshot/render + testes próprios | Testes de comandos de timeline e UI |
-| Adequação ao DiazVerso | Boa base para IA + edição simples | Referência ótima para ampliar motion design | Referência ótima para UX/edição reversível |
+| Adequação a conteúdo editorial e motion design | Boa base para IA + edição simples | Referência ótima para ampliar motion design | Referência ótima para UX/edição reversível |
 
 ## Limites desta auditoria
 
-- **Não executado:** `VD_0005` completo; inspeção frame a frame de 101 cenas; benchmarks de render de longa duração; verificação manual com modelos reais do whisper.cpp ou downloads externos.
+- **Não executado:** `projeto piloto de 101 cenas` completo; inspeção frame a frame de 101 cenas; benchmarks de render de longa duração; verificação manual com modelos reais do whisper.cpp ou downloads externos.
 - **Verificado:** estrutura e implementações do repositório, CI do merge, testes existentes e arquivos relevantes das duas referências.
 - **Não concluído:** que o JSON atual seja o formato ótimo; que se deva migrar para HyperFrames; que replicar o OpenCut seja necessário.
 - A compatibilidade e licenças devem ser revisadas antes de copiar ou integrar **código**, em vez de apenas conceitos de interface ou motion.
