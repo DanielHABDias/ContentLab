@@ -15,3 +15,6 @@ coverage/
 .cache/
 *.tmp
 *.temp
+
+# Bootstrap: downloaded tools and model weights remain local
+.tools/

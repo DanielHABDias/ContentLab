@@ -98,6 +98,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Parse Windows bootstrap PowerShell without downloading dependencies
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Join-Path $PWD "scripts/bootstrap-windows.ps1"), [ref]$tokens, [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Host $_.Message }
+            throw "PowerShell bootstrap possui erros de sintaxe"
+          }
       - name: Install Node dependencies
         run: npm install --no-audit --no-fund
       - name: Test project and cache modules on Windows

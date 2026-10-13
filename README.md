@@ -13,16 +13,30 @@ Editor automático e utilitários de vídeo para o Diazverso, com servidor Node.
 
 Remotion concentra a renderização visual; o FFmpeg continua responsável por áudio, cortes e composição final. O código de servidor utiliza exclusivamente Node.js.
 
-## Instalação
+## Instalação automática e inicialização
 
-1. Instale Node.js 22+, npm, FFmpeg e FFprobe no PATH.
-2. Execute `npm install` e `npm ci --prefix backend/remotion`.
-3. Execute `npm start` para desenvolvimento (primeiro plano), `./run.sh` ou o atalho no Linux e `iniciar.vbs` no Windows para abrir sem deixar terminal rodando.
-4. Abra `http://127.0.0.1:5000`.
+**Não é necessário instalar manualmente Node.js, FFmpeg, whisper.cpp ou o modelo de transcrição.** O Content Lab verifica as dependências e prepara o que estiver faltando antes de abrir o navegador.
 
-No Zorin/Ubuntu, use `sudo apt install ffmpeg` para as ferramentas de mídia. O browser Chrome/Chromium pode precisar ser instalado/baixado pelo Remotion.
+- **Zorin/Ubuntu/Linux:** execute `bash run.sh` (ou `./run.sh`) na pasta do repositório. Para criar um atalho no menu de aplicativos, execute `bash instalar-atalho.sh` uma única vez. O atalho abre um terminal durante a primeira instalação para mostrar downloads/avisos e, caso faltem compiladores, solicitar a senha do `sudo`.
+- **Windows 10/11:** dê duplo clique em `iniciar.vbs` ou execute `iniciar.bat`. A instalação inicial abre uma janela de progresso e fecha após iniciar o servidor. Não exige instalação global do Node nem acesso de administrador para as ferramentas portáteis.
+- **Modo de desenvolvimento:** `npm start` continua iniciando apenas o servidor e pressupõe runtime/dependências já preparadas. Para primeira instalação, use um dos inicializadores acima.
 
-**Abertura sem terminal:** no Zorin rode `bash instalar-atalho.sh` uma vez e depois abra **Content Lab** pelo menu de aplicativos. No Windows execute `iniciar.vbs` por duplo clique. O servidor inicia em segundo plano e abre o navegador; o botão **Encerrar** finaliza o serviço. Para encerrar manualmente, use `node server/launcher.mjs --stop`.
+Na primeira execução, o instalador confere e prepara, conforme necessário:
+
+1. **Node.js 22+ e npm:** utiliza uma instalação válida encontrada no sistema ou baixa o Node.js 22.16.0 portátil do site oficial, verificando SHA256.
+2. **FFmpeg + FFprobe:** reutiliza o par existente ou baixa binários portáteis do projeto BtbN/FFmpeg-Builds, verificando o manifesto SHA256 da release.
+3. **whisper.cpp:** reutiliza `whisper-cli` se instalado. No Windows baixa o binário CPU da release v1.9.4; no Linux baixa o código v1.9.4 e compila localmente. Se faltarem `cmake`, `c++` ou `make` no Zorin/Ubuntu, solicita autorização via `sudo apt-get` para instalar ferramentas de compilação.
+4. **Modelo Whisper multilíngue `base`:** reaproveita `CONTENTLAB_WHISPER_MODEL` ou `~/.cache/whisper.cpp/ggml-base.bin`; senão baixa `ggml-base.bin` do repositório oficial do autor no Hugging Face, com hash SHA256 verificado. É necessário para a transcrição automática ao importar a narração.
+5. **Dependências Node/Remotion:** instala o que falta com npm. As verificações de manifesto evitam reinstalar `node_modules` em toda abertura. Após mudanças em `package.json` ou no lockfile do Remotion, reinstala somente o conjunto afetado.
+6. **Chrome Headless Shell do Remotion:** executa a verificação oficial `remotion browser ensure`, baixando o navegador compatível quando necessário. Depois disso o primeiro render não depende de descobrir um Chrome ainda ausente.
+
+As ferramentas que forem baixadas ficam em **`.tools/` dentro do Content Lab** (ignorada pelo Git), sem alterar o Node de outros projetos nem as variáveis PATH globais. O primeiro setup requer internet e espaço em disco para os binários, o modelo (~148 MB) e os pacotes npm e o navegador do Remotion; as próximas aberturas podem funcionar offline usando o que já estiver instalado. O compilador Linux é a única parte que pode exigir permissão administrativa.
+
+**Diagnóstico:** caso o download falhe, a janela mostra o motivo e não inicia um servidor incompleto. No Windows execute `iniciar.bat` para rever mensagens. No Linux use `bash run.sh` no terminal. Para abrir sem instalar a transcrição (recursos de legenda automática não funcionarão), defina `CONTENTLAB_BOOTSTRAP_SKIP_WHISPER=1`.
+
+**Personalização:** `CONTENTLAB_WHISPER_CLI` e `CONTENTLAB_WHISPER_MODEL` continuam aceitando ferramentas/modelos pré-existentes. Os downloads são feitos via HTTPS; Node, FFmpeg e modelo Whisper têm integridade SHA256 verificada. Caso haja falha na instalação, remova apenas o diretório problemático dentro de `.tools/` e execute o inicializador novamente.
+
+**Abertura sem terminal permanente:** após a checagem, `server/launcher.mjs` inicia o servidor de modo destacado e abre automaticamente `http://127.0.0.1:5000`. O botão **Encerrar** do Studio continua finalizando o serviço. Para parar manualmente: `node server/launcher.mjs --stop` quando o Node estiver no PATH.
 
 ### Migração de planos anteriores
 
@@ -118,7 +132,7 @@ O resultado é `output/final/final.mp4`, com relatório `render_report.json`, na
 
 ## Transcrição
 
-O adaptador de transcrição usa o executável `whisper-cli` e um modelo `ggml-*.bin` do whisper.cpp. Configure `CONTENTLAB_WHISPER_CLI` e `CONTENTLAB_WHISPER_MODEL` ou armazene o modelo na pasta `~/.cache/whisper.cpp/`. A segmentação e a precisão dos timestamps ainda precisam de comparação com o motor anterior.
+O adaptador de transcrição usa o executável `whisper-cli` e um modelo `ggml-*.bin` do whisper.cpp. Os inicializadores `run.sh` e `iniciar.vbs` preparam o executável e o modelo automaticamente, se necessário. Como alternativa, configure `CONTENTLAB_WHISPER_CLI` e `CONTENTLAB_WHISPER_MODEL` ou armazene o modelo na pasta `~/.cache/whisper.cpp/`. A segmentação e a precisão dos timestamps ainda precisam de comparação com o motor anterior.
 
 ## Estado e limites de validação
 
