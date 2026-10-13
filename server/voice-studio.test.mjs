@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {run} from './exec.mjs';
-import {detectedSilences,keepRanges,prepareStandaloneNarration,voiceStudioState,voiceOptions} from './voice-studio.mjs';
+import {detectedSilences,keepRanges,prepareStandaloneNarration,voiceStudioState,voiceOptions,VOICE_PRESETS} from './voice-studio.mjs';
 import {transcriptStatus,renderVoiceSettings} from './narration-pipeline.mjs';
 import {probeAudioDuration} from './audio.mjs';
 
@@ -48,6 +48,12 @@ test('silence parser trims edges and keeps an intentionally short middle gap',()
   assert.equal(optional.removed.length,2);
   assert.ok(optional.duration>1.7);
   assert.throws(()=>voiceOptions({pitchSemitones:6}),/Pitch permitido/);
+  assert.equal(voiceOptions({voicePreset:'warm'}).pitchSemitones,0,
+    'Natural-body preset must preserve the speaker fundamental pitch');
+  assert.ok(voiceOptions({voicePreset:'gentle'}).pitchSemitones>-.5,
+    'Gentle pitch should be subtler than the previous implementation');
+  assert.equal(voiceOptions({voicePreset:'deep'}).pitchSemitones,VOICE_PRESETS.deep.pitchSemitones);
+  assert.throws(()=>voiceOptions({voicePreset:'not-capcut'}),/não reconhecido/);
 });
 
 test('standalone narration generates final WAV and transcript without edit_plan.json', {skip:!ffmpegOk},async()=>{
@@ -83,6 +89,18 @@ test('standalone narration generates final WAV and transcript without edit_plan.
       options:{removeMiddleSilence:true,minSilence:.7},transcriber
     });
     const backups=fs.readdirSync(root).filter(name=>name.startsWith('transcript.backup-'));
+    const natural=await prepareStandaloneNarration(root,{
+      sourceFile:path.join(root,processed.source),
+      options:{voicePreset:'warm',removeMiddleSilence:true,minSilence:.7},
+      transcriber
+    });
+    assert.equal(natural.voicePreset,'warm');
+    assert.equal(natural.pitchSemitones,0);
+    const effectAudio=fs.readFileSync(path.join(root,natural.narration));
+    const cleanAudio=fs.readFileSync(path.join(root,natural.neutral));
+    assert.notDeepEqual(effectAudio,cleanAudio,'EQ effect should differ from neutral');
+    assert.ok(Math.abs((await probeAudioDuration(path.join(root,natural.narration)))-
+      (await probeAudioDuration(path.join(root,natural.neutral))))<.07);
     assert.ok(backups.length>=1,'Manual transcript correction must be backed up');
     assert.equal(JSON.parse(fs.readFileSync(path.join(root,backups[0]),'utf8')).words[0].word,'CORRIGIDO');
 
