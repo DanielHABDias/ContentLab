@@ -3,6 +3,7 @@ import path from 'node:path';
 import os from 'node:os';
 import {APP_ROOT} from './plan.mjs';
 import {run} from './exec.mjs';
+import {stageCustomScene} from './custom-scenes.mjs';
 
 const REMOTION_DIR=path.join(APP_ROOT,'backend','remotion');
 export function transcriptWords(transcript){
@@ -94,13 +95,21 @@ export async function renderRemotionScene(scene,settings,words,output,{signal,ha
     return {id:e.id,type:e.type,start:e.start,end:e.end,z:e.z,region:e.region,
       src:linked(e.asset_path),fontSrc:linked(fontPath),fontFamily:'contentlab-font-'+i,data};
   });
+  const customAssets={};
+  for(const [name,uri] of Object.entries(scene.customComponent?.assets||{}))
+    customAssets[name]=linked(scene.customComponent?.assetPaths?.[name]);
   const props={width:settings.width,height:settings.height,fps:settings.fps,
     durationInFrames:Math.max(1,Math.round((scene.end-scene.start)*settings.fps)),
     scene:{id:scene.id,start:scene.start,end:scene.end,background:scene.background,
-      backgroundSrc:linked(scene.background_path),camera:scene.camera,elements},words};
+      backgroundSrc:linked(scene.background_path),camera:scene.camera,elements,customComponent:scene.customComponent?{mode:scene.customComponent.mode||'replace',props:scene.customComponent.props||{}}:undefined},words,customAssets};
   const propsFile=path.join(work,'props.json');
   fs.writeFileSync(propsFile,JSON.stringify(props));
-  const command=[cli,'render',path.join(REMOTION_DIR,'src','index.ts'),'Scene',output,
+  let custom=null;
+  try{
+    if(scene.customComponent)custom=stageCustomScene(scene.customComponent,REMOTION_DIR);
+  }catch(error){fs.rmSync(work,{recursive:true,force:true});throw error;}
+  const entry=custom?.entry||path.join(REMOTION_DIR,'src','index.ts');
+  const command=[cli,'render',entry,'Scene',output,
     '--props',propsFile,'--public-dir',publicDir,'--codec','h264',
     '--timeout',String(Math.max(30000,Number(process.env.CONTENTLAB_REMOTION_TIMEOUT_MS||90000))),
     '--concurrency',String(Math.max(1,Number(process.env.CONTENTLAB_REMOTION_CONCURRENCY||1))),
@@ -110,5 +119,8 @@ export async function renderRemotionScene(scene,settings,words,output,{signal,ha
     await run(process.execPath,command,{cwd:REMOTION_DIR,signal});
     if(!fs.existsSync(output)||fs.statSync(output).size===0)throw Error('O Remotion não gerou MP4.');
     return output;
-  }finally{fs.rmSync(work,{recursive:true,force:true});}
+  }finally{
+    fs.rmSync(work,{recursive:true,force:true});
+    if(custom?.directory)fs.rmSync(custom.directory,{recursive:true,force:true});
+  }
 }

@@ -801,6 +801,41 @@
             }
           },
           "additionalProperties": false
+        },
+        "customComponent": {
+          "$ref": "#/$defs/customComponent"
+        }
+      },
+      "additionalProperties": false
+    },
+    "customComponent": {
+      "type": "object",
+      "required": [
+        "module"
+      ],
+      "properties": {
+        "module": {
+          "type": "string",
+          "pattern": "^project://custom-scenes/.+\\.tsx$",
+          "description": "Trusted local TSX module inside project/custom-scenes. Requires CONTENTLAB_TRUST_CUSTOM_TSX=1 to render."
+        },
+        "mode": {
+          "enum": [
+            "replace",
+            "overlay"
+          ],
+          "description": "replace renders only the TSX scene; overlay draws the TSX on top of regular scene layers."
+        },
+        "props": {
+          "type": "object",
+          "description": "JSON serializable props passed to the React component."
+        },
+        "assets": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Named local project:// or builtin:// asset URLs exposed as assets prop to TSX."
         }
       },
       "additionalProperties": false

@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import {customSceneSourceFingerprint} from './custom-scenes.mjs';
 
 const hash=value=>crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
 export const statIdentity=file=>{
@@ -78,6 +79,8 @@ const relativeTime=(value,start)=>typeof value==='number'?Number((value-start).t
 export function sceneFingerprint(raw,compiled,settings,resolvedAssets,words,rendererKey){
   const uris=new Set();
   if(raw.background?.asset)uris.add(raw.background.asset);
+  if(raw.customComponent?.module)uris.add(raw.customComponent.module);
+  for(const uri of Object.values(raw.customComponent?.assets||{}))uris.add(uri);
   const visualElements=(raw.elements||[]).filter(item=>item.type!=='sfx');
   for(const e of visualElements)for(const k of ['asset','fontAsset'])if(e[k])uris.add(e[k]);
   const relevant=visualElements.some(e=>e.type==='caption'||e.type==='kinetic_text');
@@ -102,7 +105,9 @@ export function sceneFingerprint(raw,compiled,settings,resolvedAssets,words,rend
     rendererKey,scene,
     settings:{width:settings.width,height:settings.height,fps:settings.fps,seed:settings.seed},
     assets:[...uris].sort().map(uri=>[uri,resolvedAssets[uri]&&fs.existsSync(resolvedAssets[uri])?statIdentity(resolvedAssets[uri]):null]),
-    transcript:timestamps
+    transcript:timestamps,
+    customSource:compiled.customComponent?.module_path?
+      customSceneSourceFingerprint(compiled.customComponent.module_path):null
   });
 }
 export function cleanOutput(root,dependencies=[]){

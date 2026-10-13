@@ -116,6 +116,17 @@ export function validatePlan(plan){
         t=frame.t;
       }
     }
+    if(scene.customComponent){
+      const ref=scene.customComponent.module;
+      if(!/^project:\/\/custom-scenes\/.+\.tsx$/.test(ref||''))
+        issues.push({path:p+'.customComponent.module',message:'Código TSX deve ficar em project://custom-scenes/*.tsx.'});
+      for(const [name,uri] of Object.entries(scene.customComponent.assets||{})){
+        if(!/^[a-zA-Z_][a-zA-Z0-9_-]*$/.test(name))
+          issues.push({path:p+'.customComponent.assets',message:'Nomes de assets devem ser identificadores estáveis.'});
+        if(typeof uri!=='string'||!(/^(project|builtin):\/\//.test(uri)))
+          issues.push({path:p+'.customComponent.assets.'+name,message:'Asset precisa usar URI local project:// ou builtin://.'});
+      }
+    }
     const seen=new Set();
     for(let j=0;j<(scene.elements||[]).length;j++){
       const e=scene.elements[j],q=p+'.elements.'+j;
@@ -192,6 +203,8 @@ export function assetReport(plan,root){
   for(const music of plan.audio?.music||[])if(music.asset)uris.add(music.asset);
   for(const scene of plan.timeline||[]){
     if(scene.background?.asset)uris.add(scene.background.asset);
+    if(scene.customComponent?.module)uris.add(scene.customComponent.module);
+    for(const uri of Object.values(scene.customComponent?.assets||{}))uris.add(uri);
     for(const e of scene.elements||[])for(const key of ['asset','fontAsset'])if(e[key])uris.add(e[key]);
   }
   const resolvedAssets={},missingAssets=[];
@@ -229,5 +242,9 @@ export function compileScene(scene,plan,resolvedAssets){
       font_path:e.fontAsset?resolvedAssets[e.fontAsset]:null};
   }).sort((a,b)=>a.z-b.z);
   return {...scene,background:scene.background||{color:'#000000'},camera:scene.camera||{keyframes:[]},
-    elements,background_path:scene.background?.asset?resolvedAssets[scene.background.asset]:null};
+    elements,background_path:scene.background?.asset?resolvedAssets[scene.background.asset]:null,
+    customComponent:scene.customComponent?{
+      ...scene.customComponent,module_path:resolvedAssets[scene.customComponent.module],
+      assetPaths:Object.fromEntries(Object.entries(scene.customComponent.assets||{}).map(([key,uri])=>[key,resolvedAssets[uri]]))
+    }:undefined};
 }
