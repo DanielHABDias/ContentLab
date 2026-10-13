@@ -48,13 +48,17 @@ Tipos disponíveis: image e video para mídia, overlay para sobreposições, tex
 
 Os presets de entrada, movimento contínuo e saída ficam em animation. Os keyframes usam segundos relativos ao início da cena; já start/end/at usam tempo absoluto.
 
+Suavidade de motion design é independente da duração: animation.enterDuration:0.1, animation.exitDuration:0.1 ou config.transitionDuration:0.1 continuam ocupando 0,1 segundo quando existe tempo suficiente na janela da camada/palavra. O renderer suaviza câmera, keyframes, entradas, saídas, pop, idles e carrosséis. Não aumenta a duração nem impõe mínimos artificiais de 50/60 ms.
+
+Keyframes sem easing explícito passam a usar ease_in_out suave; easing:linear permanece disponível para movimentos deliberadamente uniformes. Idles float_soft/wiggle_soft/pulse_soft recebem envelope de amplitude para entrar/sair sem salto; slow_zoom_in/out e pan aceleram/freiam dentro da mesma duração. bangers_highlight_block faz crossfade do destaque colorido entre palavras, mantendo as letras estáticas; config.highlightTransitionDuration permite definir o tempo, como 0.1.
+
 O motor possui estilos impact, impact_yellow, paper_word, versus_big, word_pop, anton, bangers, word_stack_vertical e word_stream_horizontal, além de estilos de legendas anton_karaoke e bangers_highlight_block.
 
 O carrossel word_stack_vertical usa três faixas horizontais: a frase ativa ocupa a linha CENTRAL em toda a largura do vídeo, mesmo que cells indique somente duas colunas. A frase seguinte fica acima, menor, com transparência reduzida e alinhada à borda inferior do slot superior; a anterior fica abaixo, menor, semitransparente e alinhada ao topo do slot inferior. A transição padrão direction:down faz o texto de cima assumir o centro enquanto o centro desce. Todo o texto fica à esquerda por padrão, com quebras de linha automáticas para frases longas.
 
 O painel cinza opcional de word_stack_vertical pertence SOMENTE à faixa horizontal central e cobre a largura integral da tela. panelOpacity:0 (padrão) desativa a faixa; panelColor e panelOpacity permitem destaque sutil, sem card curto nem fundo atrás de toda a pilha. Para frases inteiras, use config.items com text/start/end por item, não elementos text independentes. config.align:center e direction:up continuam disponíveis em projetos antigos, mas a composição editorial padrão é align:left e direction:down.
 
-Campos específicos de config já usados pelo render: maxWords, highlightColors, highlightPaddingX/Y, highlightRadius, transitionDuration, items, inactiveOpacity, slotGap, activeScale, inactiveScale, direction, align, inactiveColor, panelColor, panelOpacity, panelRadius, panelPaddingX/Y, opacity, scanlineOpacity, vignette, flicker e jitter. config aceita outras chaves sintaticamente, mas elas só produzem efeito se o componente as interpretar.
+Campos específicos de config já usados pelo render: maxWords, highlightColors, highlightPaddingX/Y, highlightRadius, highlightTransitionDuration, transitionDuration, items, inactiveOpacity, slotGap, activeScale, inactiveScale, direction, align, inactiveColor, panelColor, panelOpacity, panelRadius, panelPaddingX/Y, opacity, scanlineOpacity, vignette, flicker e jitter. config aceita outras chaves sintaticamente, mas elas só produzem efeito se o componente as interpretar.
 
 O validador produz avisos para duas camadas de texto sobrepostas em tempo e região; isso não é erro bloqueante, pois composições intencionais são permitidas.
 
@@ -75,6 +79,8 @@ A música tem start/end na timeline e pode escolher um trecho do arquivo usando 
 A lista timeline é ordenada pelo start absoluto. Cada cena possui ID estável; cenas não se sobrepõem. A duração real resulta da diferença entre end e start.
 
 Transições disponíveis: cut, fade, blur_left, blur_right, blur_up e slide_left. O compositor utiliza frames em movimento da cena entrante sem ampliar o tempo total do vídeo.
+
+Fade, blur e slide usam interpolação suave e chegam à posição final no ÚLTIMO frame da transição, evitando trancos no frame seguinte. Duram o tempo informado, com quantização apenas à grade de frames. Em 30 fps, 0.1 segundo contém ~3 frames; em 60 fps contém ~6. FPS mais alto pode ajudar efeitos rápidos, mas não é aumentado automaticamente. Cut e digitação continuam discretos por intenção.
 
 O cache mantém MP4s individuais por ID. A montagem e o áudio final continuam sendo etapas necessárias mesmo quando todas as cenas visuais são reaproveitadas.
 
@@ -675,6 +681,59 @@ Duas modalidades que usam a transcrição temporizada.
           "#2563EB",
           "#E53935"
         ]
+      }
+    }
+  ]
+}
+```
+
+### Motion suave em 0,1 segundo
+
+Entrada e saída curtas sem tranco: curvas suaves alteram velocidade, nunca a duração.
+
+```json
+{
+  "id": "motion-curto",
+  "start": 0,
+  "end": 2,
+  "layout": "3x3",
+  "camera": {
+    "keyframes": [
+      {
+        "t": 0,
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 1
+      },
+      {
+        "t": 0.1,
+        "x": 0.49,
+        "y": 0.5,
+        "scale": 1.04,
+        "easing": "ease_in_out"
+      }
+    ]
+  },
+  "elements": [
+    {
+      "id": "texto-suave",
+      "type": "text",
+      "text": "MOVIMENTO RÁPIDO E FLUIDO",
+      "cells": [
+        4,
+        5,
+        6
+      ],
+      "start": 0,
+      "end": 2,
+      "style": "anton",
+      "fontScale": 0.75,
+      "animation": {
+        "enter": "slide_up",
+        "enterDuration": 0.1,
+        "idle": "float_soft",
+        "exit": "fade_out",
+        "exitDuration": 0.1
       }
     }
   ]
