@@ -66,15 +66,27 @@ function Has-FFmpeg {
   try { return (!!(Get-Command ffmpeg.exe -ErrorAction Stop) -and !!(Get-Command ffprobe.exe -ErrorAction Stop)) }
   catch { return $false }
 }
+function Has-Rubberband([string]$executable = "ffmpeg.exe") {
+  try {
+    $filters = (& $executable -hide_banner -filters 2>$null | Out-String)
+    # Check actual FFmpeg filter entries, not a mention in its banner.
+    return [bool]($filters -match '(?m)^\s*\S+\s+rubberband\s')
+  } catch { return $false }
+}
 function Ensure-FFmpeg {
-  if (Has-FFmpeg) { Log "FFmpeg/FFprobe encontrados."; return }
+  if ((Has-FFmpeg) -and (Has-Rubberband)) {
+    Log "FFmpeg/FFprobe com rubberband encontrados; reutilizando instalacao."
+    return
+  }
+  # Reuse when already capable; otherwise place a verified portable build in
+  # .tools without admin rights, global PATH changes or system FFmpeg removal.
   $arch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()
-  $suffix = switch ($arch) { "X64" { "win64" } "Arm64" { "winarm64" } default { Fail "Arquitetura Windows não suportada: $arch" } }
+  $suffix = switch ($arch) { "X64" { "win64" } "Arm64" { "winarm64" } default { Fail "Arquitetura Windows nao suportada: $arch" } }
   $name = "ffmpeg-master-latest-$suffix-gpl.zip"
   $base = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest"
   In-Temp {
     param($temp)
-    Log "Instalando FFmpeg/FFprobe portáteis..."
+    Log "FFmpeg ausente ou sem rubberband; instalando pacote portatil com filtro de voz..."
     Fetch "$base/checksums.sha256" (Join-Path $temp "checksums.sha256")
     $archive = Join-Path $temp $name
     Fetch "$base/$name" $archive
@@ -82,13 +94,19 @@ function Ensure-FFmpeg {
     $unpack = Join-Path $temp "unpacked"
     Expand-Archive -LiteralPath $archive -DestinationPath $unpack
     $exe = Get-ChildItem -LiteralPath $unpack -Filter "ffmpeg.exe" -File -Recurse | Select-Object -First 1
-    if (!$exe -or !(Test-Path (Join-Path $exe.DirectoryName "ffprobe.exe"))) { Fail "Binários do FFmpeg não encontrados no download." }
+    if (!$exe -or !(Test-Path (Join-Path $exe.DirectoryName "ffprobe.exe"))) { Fail "Binarios do FFmpeg nao encontrados no download." }
+    if (!(Has-Rubberband $exe.FullName)) {
+      Fail "Build do FFmpeg baixado nao contem rubberband; verifique a release portatil."
+    }
     $target = Join-Path $tools "ffmpeg"
     New-Item -ItemType Directory -Path $target -Force | Out-Null
     Copy-Item -LiteralPath $exe.FullName -Destination (Join-Path $target "ffmpeg.exe") -Force
     Copy-Item -LiteralPath (Join-Path $exe.DirectoryName "ffprobe.exe") -Destination (Join-Path $target "ffprobe.exe") -Force
   }
-  if (!(Has-FFmpeg)) { Fail "FFmpeg não pôde ser instalado." }
+  if (!(Has-FFmpeg) -or !(Has-Rubberband)) {
+    Fail "FFmpeg ainda nao oferece rubberband apos instalar versao local."
+  }
+  Log "FFmpeg/FFprobe com rubberband instalados e verificados."
 }
 function Has-Whisper {
   $configured = $env:CONTENTLAB_WHISPER_CLI
