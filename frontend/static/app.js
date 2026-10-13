@@ -1156,13 +1156,6 @@ $("editorInspectAssets").addEventListener("click", async () => {
     const data = await res.json();
     if (!res.ok) throw new Error(data.errors?.map(item => item.message).join("; ") || data.error || "Pasta inválida.");
     editorList("editorAssetLibrary", data.assets.length ? data.assets.map(item => ({ text: item.uri })) : [{ text: "Pasta vazia." }]);
-    const backgrounds = $("motionProjectBackgroundOptions");
-    backgrounds.replaceChildren();
-    data.assets.filter(item => /\.(png|jpe?g|webp|bmp|mp4|mov|mkv|webm)$/i.test(item.uri)).forEach(item => {
-      const option = document.createElement("option");
-      option.value = item.uri;
-      backgrounds.append(option);
-    });
     if (data.truncated) $("editorStatus").textContent = "Mostrando os primeiros 500 assets.";
     const plan = JSON.parse($("editorPlanText").value);
     plan.sources = plan.sources || {};
@@ -1200,82 +1193,6 @@ $("editorPlanText").addEventListener("input", () => {
   $("editorDraftState").textContent = "Alterações não salvas. Valide e salve antes do render.";
   editorBusy(editorRendering);
   window.visualEditor?.syncFromJson();
-});
-
-let builtinBackgroundsLoaded = false;
-async function loadBuiltinBackgrounds() {
-  if (builtinBackgroundsLoaded) return;
-  const response = await fetch("/api/editor/backgrounds");
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error || "Não foi possível listar os backgrounds padrão.");
-  const select = $("motionBuiltinBackground");
-  select.replaceChildren();
-  const placeholder = document.createElement("option");
-  placeholder.value = "";
-  placeholder.textContent = "Selecione um background";
-  select.append(placeholder);
-  data.backgrounds.forEach(item => {
-    const option = document.createElement("option");
-    option.value = item.uri;
-    option.textContent = `${item.name} (${item.type === "video" ? "vídeo" : "imagem"})`;
-    select.append(option);
-  });
-  builtinBackgroundsLoaded = true;
-}
-function updateMotionBackgroundFields() {
-  const source = $("motionBackgroundSource").value;
-  $("motionColorField").classList.toggle("hidden", source !== "color");
-  $("motionBuiltinField").classList.toggle("hidden", source !== "builtin");
-  $("motionProjectField").classList.toggle("hidden", source !== "project");
-  const uri = source === "builtin" ? $("motionBuiltinBackground").value : $("motionProjectBackground").value.trim();
-  $("motionLoopField").classList.toggle("hidden", source === "color" || !/\.(mp4|mov|mkv|webm)$/i.test(uri));
-}
-$("motionBackgroundSource").addEventListener("change", async () => {
-  try {
-    if ($("motionBackgroundSource").value === "builtin") await loadBuiltinBackgrounds();
-    updateMotionBackgroundFields();
-  } catch (error) { editorError(error.message); }
-});
-$("motionBuiltinBackground").addEventListener("change", updateMotionBackgroundFields);
-$("motionProjectBackground").addEventListener("input", updateMotionBackgroundFields);
-
-$("motionAddScene").addEventListener("click", () => {
-  editorError("");
-  try {
-    if (!editorProject) throw new Error("Carregue um projeto antes de criar a cena.");
-    const plan = JSON.parse($("editorPlanText").value);
-    if (!Array.isArray(plan.timeline)) throw new Error("O JSON precisa ter uma timeline.");
-    const leftAsset = $("motionLeftAsset").value.trim();
-    const rightAsset = $("motionRightAsset").value.trim();
-    const backgroundSource = $("motionBackgroundSource").value;
-    const backgroundValue = backgroundSource === "color" ? $("motionBackground").value.trim() : backgroundSource === "builtin" ? $("motionBuiltinBackground").value : $("motionProjectBackground").value.trim();
-    const duration = Number($("motionDuration").value);
-    const delay = Number($("motionDelay").value);
-    const scale = Number($("motionScale").value) / 100;
-    if (!leftAsset || !rightAsset || !backgroundValue) throw new Error("Informe o fundo e os dois assets.");
-    if (backgroundSource === "color" && !/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(backgroundValue)) throw new Error("Informe a cor como #RGB ou #RRGGBB.");
-    if (backgroundSource === "project" && !backgroundValue.startsWith("project://")) throw new Error("O fundo próprio precisa começar com project://.");
-    if (backgroundSource === "builtin" && !backgroundValue.startsWith("builtin://backgrounds/")) throw new Error("Selecione um background padrão da lista.");
-    if (!(duration > 0) || !(delay >= 0 && delay < duration) || !(scale > 0 && scale <= 8)) {
-      throw new Error("Confira duração, atraso e tamanho (até 800%).");
-    }
-    const start = plan.timeline.length ? Math.max(...plan.timeline.map(scene => Number(scene.end))) : 0;
-    const end = Number((start + duration).toFixed(3));
-    let idNumber = plan.timeline.length + 1;
-    while (plan.timeline.some(scene => scene.id === `motion-${idNumber}`)) idNumber += 1;
-    const background = backgroundSource === "color" ? { color: backgroundValue } : { asset: backgroundValue, fit: "cover" };
-    if (background.asset && /\.(mp4|mov|mkv|webm)$/i.test(backgroundValue)) background.loop = $("motionBackgroundLoop").checked;
-    plan.timeline.push({
-      id: `motion-${idNumber}`, start, end, layout: "3x3", background,
-      elements: [
-        { id: `motion-${idNumber}-left`, type: "image", asset: leftAsset, cells: [1, 4, 7], fit: "contain", start, end, z: 10, transform: { scale }, animation: { enter: "slide_from_left", idle: "none", exit: "cut" } },
-        { id: `motion-${idNumber}-right`, type: "image", asset: rightAsset, cells: [3, 6, 9], fit: "contain", start: Number((start + delay).toFixed(3)), end, z: 20, transform: { scale }, animation: { enter: "slide_from_right", idle: "none", exit: "cut" } },
-      ], transitionOut: "cut",
-    });
-    $("editorPlanText").value = JSON.stringify(plan, null, 2);
-    $("editorPlanText").dispatchEvent(new Event("input"));
-    $("editorStatus").textContent = "Cena motion adicionada ao rascunho. Valide e salve o JSON antes do render final.";
-  } catch (error) { editorError(error.message); }
 });
 
 $("editorValidate").addEventListener("click", async () => {
