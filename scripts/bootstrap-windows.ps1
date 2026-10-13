@@ -37,11 +37,13 @@ function Has-Node {
   try {
     $version = (& node --version 2>$null)
     $npmVersion = (& npm.cmd --version 2>$null)
-    return (($version -match '^v(\d+)\.') -and ([int]$Matches[1] -ge 22) -and !!$npmVersion)
+    return (($version -match '^v(\d+)\.') -and ([int]$Matches[1] -eq 22) -and !!$npmVersion)
   } catch { return $false }
 }
 function Ensure-Node {
-  if (Has-Node) { Log "Node.js e npm encontrados."; return }
+  # Keep the render runtime on the same Node 22 LTS major tested in CI.
+  # Do not change the globally installed Node 24+.
+  if (Has-Node) { Log "Node.js 22 LTS e npm encontrados."; return }
   $arch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()
   $suffix = switch ($arch) { "X64" { "x64" } "Arm64" { "arm64" } default { Fail "Arquitetura Windows não suportada: $arch" } }
   $name = "node-v$nodeVersion-win-$suffix.zip"
