@@ -19,6 +19,8 @@ export const chapters=[
     'Tipos disponíveis: image e video para mídia, overlay para sobreposições, text para frase estática, kinetic_text para palavras em movimento, caption para legendas, filter para tratamento visual e sfx para som.',
     'Os presets de entrada, movimento contínuo e saída ficam em animation. Os keyframes usam segundos relativos ao início da cena; já start/end/at usam tempo absoluto.',
     'O motor possui estilos impact, impact_yellow, paper_word, versus_big, word_pop, anton, bangers, word_stack_vertical e word_stream_horizontal, além de estilos de legendas anton_karaoke e bangers_highlight_block.',
+    'O carrossel word_stack_vertical usa três faixas horizontais: a frase ativa ocupa a linha CENTRAL em toda a largura do vídeo, mesmo que cells indique somente duas colunas. A frase seguinte fica acima, menor, com transparência reduzida e alinhada à borda inferior do slot superior; a anterior fica abaixo, menor, semitransparente e alinhada ao topo do slot inferior. A transição padrão direction:down faz o texto de cima assumir o centro enquanto o centro desce. Todo o texto fica à esquerda por padrão, com quebras de linha automáticas para frases longas.',
+    'O painel cinza opcional de word_stack_vertical pertence SOMENTE à faixa horizontal central e cobre a largura integral da tela. panelOpacity:0 (padrão) desativa a faixa; panelColor e panelOpacity permitem destaque sutil, sem card curto nem fundo atrás de toda a pilha. Para frases inteiras, use config.items com text/start/end por item, não elementos text independentes. config.align:center e direction:up continuam disponíveis em projetos antigos, mas a composição editorial padrão é align:left e direction:down.',
     'Campos específicos de config já usados pelo render: maxWords, highlightColors, highlightPaddingX/Y, highlightRadius, transitionDuration, items, inactiveOpacity, slotGap, activeScale, inactiveScale, direction, align, inactiveColor, panelColor, panelOpacity, panelRadius, panelPaddingX/Y, opacity, scanlineOpacity, vignette, flicker e jitter. config aceita outras chaves sintaticamente, mas elas só produzem efeito se o componente as interpretar.',
     'O validador produz avisos para duas camadas de texto sobrepostas em tempo e região; isso não é erro bloqueante, pois composições intencionais são permitidas.'
   ]},
@@ -81,6 +83,12 @@ export const exampleCases=[
  voice:{normalize:true,fadeIn:0.4,fadeOut:0.8},
  music:[{asset:'project://audio/trilha-a.wav',start:0,end:20,sourceStart:12,sourceEnd:32,autoTrimSilence:true,fadeOut:3},
  {asset:'project://audio/trilha-b.wav',start:17,end:40,sourceStart:5,sourceEnd:45,fadeIn:3,fadeOut:2}]}}},
+ {title:'Carrossel vertical de frases em largura total',summary:'Três faixas: próxima menor acima, ativa maior no centro, anterior menor abaixo. Painel do centro percorre a largura inteira mesmo com cells em duas colunas.',
+ data:{id:'pilha',type:'kinetic_text',style:'word_stack_vertical',cells:[1,2,4,5,7,8],start:0,end:4,
+ fontScale:0.95,textStyle:{fontFamily:'Anton',uppercase:true,color:'#FFFFFF',outlineWidth:0},
+ config:{items:[{text:'BATMAN NÃO É JUIZ',start:0,end:1.3},{text:'BATMAN NÃO É JÚRI',start:1.3,end:2.6},
+ {text:'BATMAN NÃO É O CARRASCO',start:2.6,end:4}],direction:'down',align:'left',inactiveOpacity:0.38,
+ activeScale:1.45,inactiveScale:0.72,panelColor:'#D9D9D9',panelOpacity:0.12,panelRadius:0,transitionDuration:0.18}}},
  {title:'Legendas e texto cinético',summary:'Duas modalidades que usam a transcrição temporizada.',
  data:{id:'dialogo',start:15,end:21,layout:'3x3',elements:[
  {id:'palavras',type:'kinetic_text',text:'EU SOU A VINGANÇA',start:15,end:19,
