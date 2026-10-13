@@ -108,8 +108,10 @@ export function voiceStudioState(folder){
     const build=JSON.parse(fs.readFileSync(file,'utf8'));
     const audio=path.join(root,NARRATION_OUTPUT);
     const transcript=path.join(root,'transcript.json');
-    const ready=build.mode==='voice-studio'&&fs.existsSync(audio)&&fs.existsSync(transcript)&&
-      fs.statSync(audio).size===build.outputIdentity?.size;
+    const stat=fs.existsSync(audio)?fs.statSync(audio):null;
+    const ready=build.mode==='voice-studio'&&stat&&fs.existsSync(transcript)&&
+      stat.size===build.outputIdentity?.size&&
+      Math.abs(stat.mtimeMs-build.outputIdentity?.mtimeMs)<1;
     return {ready,source:build.source,options:build.options,duration:build.duration,
       removedCount:build.removedCount,output:NARRATION_OUTPUT,transcript:'transcript.json'};
   }catch{return {ready:false};}
@@ -148,6 +150,13 @@ export async function prepareStandaloneNarration(directory,{
     atomicReplace(source,path.join(root,original));
     atomicReplace(neutral,path.join(root,NARRATION_NEUTRAL));
     atomicReplace(styled,path.join(root,NARRATION_OUTPUT));
+    // Keep manually corrected text safe when reprocessing with another effect.
+    const existing=path.join(root,'transcript.json');
+    if(fs.existsSync(existing)&&fs.readFileSync(existing,'utf8')!==
+      fs.readFileSync(path.join(staged,'transcript.json'),'utf8')){
+      const backup=path.join(root,'transcript.backup-'+Date.now()+'-'+crypto.randomUUID()+'.json');
+      fs.copyFileSync(existing,backup);
+    }
     for(const name of ['transcript.json','transcript.txt','transcript.srt'])
       atomicReplace(path.join(staged,name),path.join(root,name));
     const identity=fs.statSync(path.join(root,NARRATION_OUTPUT));
