@@ -1,0 +1,34 @@
+name: One-time cleanup of merged documentation branch
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/cleanup-docs-branch-once.yml
+permissions:
+  contents: write
+jobs:
+  cleanup:
+    if: github.repository == 'DanielHABDias/ContentLab'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Remove only the reviewed branch if unchanged and merged
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch='feat/unify-docs-remove-project-guide'
+          expected='311277109ab41347afee84bba43988c4107929c5'
+          current="$(git ls-remote origin "refs/heads/$branch" | awk '{print $1}')"
+          if [[ -z "$current" ]]; then
+            echo "Branch already removed: $branch"
+            exit 0
+          fi
+          [[ "$current" == "$expected" ]] || { echo "::error::Branch changed"; exit 1; }
+          git fetch origin '+refs/heads/*:refs/remotes/origin/*'
+          git merge-base --is-ancestor "$expected" "$GITHUB_SHA" || { echo "::error::Branch was not merged"; exit 1; }
+          gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/$branch"
+          echo "DELETED $branch at $expected"
