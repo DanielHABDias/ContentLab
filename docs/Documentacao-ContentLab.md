@@ -53,6 +53,8 @@ meu-video/
 │   ├── abertura.mp4
 │   └── personagens/
 │       └── heroi.png                 subpastas permitidas
+├── custom-scenes/
+│   └── MinhaCena.tsx                  componente Remotion local (opcional)
 ├── transcript.json                    gerado após preparar a narração
 ├── transcript.txt                     texto gerado
 ├── transcript.srt                     legendas geradas
@@ -107,6 +109,28 @@ O mesmo trim automático dos SFX agora se aplica por padrão às bordas da narra
 A música tem start/end na timeline e pode escolher um trecho do arquivo usando sourceStart/sourceEnd; o trim automático tira silêncio das bordas do trecho selecionado antes de aplicar loop e fades, e loop repete somente a parte audível quando necessário. Duas músicas podem se cruzar: a primeira termina em 20 s com fadeOut de 3 s; a próxima começa em 17 s com fadeIn de 3 s. A sobreposição de 17 a 20 s produz o crossfade no mixer. Ducking reduz o volume durante a voz. Mudanças só de som não invalidam clipes visuais.
 
 ![Trim de silêncio nas bordas dos SFX](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/docs/figures/audio.svg)
+
+## Cenas programáveis Remotion (TSX) — do ChatGPT ao vídeo
+
+Quando a composição precisar de uma câmera virtual que percorre um espaço maior, SVGs procedurais, partículas, tipografia coreografada, grades reativas ou outros movimentos complexos, use uma cena programável TSX. Não precisa fragmentar uma animação contínua em dezenas de cenas: uma cena da timeline pode conter a composição React inteira. Para imagens simples, textos e cartões comuns, continue usando os elementos existentes.
+
+Fluxo econômico de tokens: descreva o objetivo e os tempos e peça ao ChatGPT um ÚNICO arquivo .tsx completo, export default, pronto para o Remotion do Content Lab. Solicite alterações futuras como patches ao mesmo arquivo, preservando os nomes e a estrutura, em vez de reescrever o código todo. Peça também apenas o fragmento JSON da cena, não o plano completo quando já existir.
+
+Baixe ou salve o arquivo TSX gerado pelo ChatGPT em seu computador e coloque-o dentro da pasta do projeto: custom-scenes/MinhaCena.tsx. A interface atual não baixa nem instala automaticamente o código produzido no chat; essa cópia é manual. Use project://custom-scenes/MinhaCena.tsx em timeline[].customComponent.module. A geração e o download do arquivo dependem das ferramentas que estiverem disponíveis no ChatGPT.
+
+No edit_plan.json existente, use customComponent: {module: 'project://custom-scenes/MinhaCena.tsx', mode: 'replace', props: {...}, assets: {...}}. mode replace entrega toda a composição visual ao componente; mode overlay desenha o TSX sobre as camadas tradicionais. O JSX deve ter export default. Não cole código TSX dentro do JSON: o contrato só contém referência, parâmetros e URIs de assets.
+
+Em props, forneça valores JSON reutilizáveis como títulos, cores e dados, sem repetir a estrutura de cada elemento. Em assets, dê nomes a URIs locais como project://assets/logo.svg, project://assets/nox.png ou builtin://...; o componente recebe os URLs pelo objeto assets. Retículas, curvas, linhas, diagramas e cards normalmente devem ser desenhados com React/SVG/CSS por código, sem downloads desnecessários. Não suponha que arquivos citados existem antes de conferir.
+
+No TSX, importações suportadas são React, Remotion e módulos locais de custom-scenes, respeitadas as dependências realmente instaladas. Use useCurrentFrame e useVideoConfig para calcular qualquer quadro por tempo; use SVG, interpolate, spring e cálculos determinísticos conforme a necessidade. Não use setInterval, relógio real, CSS animations/transitions, URLs externas não verificadas nem aleatoriedade sem semente, pois os quadros devem renderizar corretamente em qualquer ordem.
+
+Por segurança, código TSX é código executável e só deve vir de projeto local inspecionado. Para habilitar, inicie o processo com CONTENTLAB_TRUST_CUSTOM_TSX=1 (Linux: export CONTENTLAB_TRUST_CUSTOM_TSX=1; PowerShell: $env:CONTENTLAB_TRUST_CUSTOM_TSX='1'). A opção não deve ser ligada para projetos ou código de terceiros não confiáveis. O Content Lab não executa esse TSX a partir do texto do JSON nem oferece sandbox completo.
+
+Depois de copiar TSX e atualizar o JSON, clique Validar JSON, salve, renderize e confira o MP4. A validação do JSON não comprova que o TSX compilou: importações, fonte, layout, clipping e comportamento de frames exigem render. O cache da cena identifica mudanças nos arquivos da pasta custom-scenes; mantenha IDs estáveis e repita a inspeção de quadros após modificar o TSX.
+
+Exemplo de código e plano de edição versionados no repositório: examples/custom-scenes/FollowDot.tsx e examples/programmatic-motion-edit-plan.json. O exemplo mostra câmera e geometria contínua em uma cena de 17,7 s; não é cópia pixel a pixel do vídeo de referência. Para reproduzir a cena no próprio projeto, copie o TSX, prepare uma narração válida e adapte seu JSON, duração e resolução.
+
+![Composição das camadas z](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/docs/figures/layers.svg)
 
 ## Cenas, tempo e transições
 
@@ -401,6 +425,50 @@ Obrigatório significa exigido dentro do objeto pai. Um bloco opcional pode ter 
 ## Exemplos de uso
 
 Alguns exemplos abaixo são fragmentos de cena ou áudio. Complete o projeto principal e valide os caminhos antes de renderizar.
+
+### Cena programável TSX (câmera, SVG e movimento)
+
+Copie examples/custom-scenes/FollowDot.tsx para custom-scenes/FollowDot.tsx na pasta do projeto, confirme narração existente e habilite CONTENTLAB_TRUST_CUSTOM_TSX=1 somente para código local confiável. É uma única cena contínua; sem importar JavaScript no JSON.
+
+```json
+{
+  "project": {
+    "name": "Exemplo TSX",
+    "format": "custom",
+    "profile": "diazverso",
+    "resolution": {
+      "width": 576,
+      "height": 1024
+    },
+    "fps": 30
+  },
+  "audio": {
+    "narration": "audio/narration.wav"
+  },
+  "timeline": [
+    {
+      "id": "motion_world",
+      "start": 0,
+      "end": 17.7,
+      "layout": "fullscreen",
+      "background": {
+        "color": "#090a0e"
+      },
+      "customComponent": {
+        "module": "project://custom-scenes/FollowDot.tsx",
+        "mode": "replace",
+        "props": {
+          "title": "DIAZVERSO",
+          "accent": "#fa4245"
+        },
+        "assets": {}
+      },
+      "elements": [],
+      "transitionOut": "cut"
+    }
+  ]
+}
+```
 
 ### Projeto completo com pastas e URIs
 
