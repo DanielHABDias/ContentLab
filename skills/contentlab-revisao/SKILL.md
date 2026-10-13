@@ -25,6 +25,9 @@ Inspecione início de cena, primeiro estado legível, pico de movimento, hold, s
 - frames vazios/pretos inesperados e sobreposição de cenas;
 - diferenças negativas entre versão 9:16 e 16:9.
 
+## QA de cenas programáveis TSX
+Em uma cena contínua, inspecione frames na abertura, trajeto do objeto, movimento de câmera, revelação de tipografia e composição final. Confirmar que o arquivo `custom-scenes/*.tsx` existe, `customComponent.module` aponta corretamente, as dependências instaladas compilam e os assets nomeados resolvem. Verificar `replace` vs `overlay`, clipping de SVG e que o HUD não se move junto da câmera. A validação do schema não executa TSX; só afirmar sucesso após render real e checkpoints. Proteger o cache quando arquivos TSX locais mudarem.
+
 ## Áudio
 Ouça o arquivo final: voz inteligível, SFX realmente audível no `at`, música sem cortes ou picos, eventos sincronizados à palavra relevante e pausas intencionais preservadas. Não inferir correção sonora só porque o JSON valida.
 

@@ -41,5 +41,8 @@ A cena tem estado de entrada → estabelecimento do foco → desenvolvimento →
 ## Áudio e sincronismo
 Defina âncoras de fala/evento antes de coreografar. Movimentos não devem revelar uma resposta antes que a narração prepare o público, nem atrasar o entendimento depois da fala. SFX é pontuação seletiva, não obrigatório em todo corte.
 
+## Coreografia procedural com TSX
+Para uma trajetória animada única com vários beats, usar `contentlab-cenas-tsx`: ela cria um componente `export default` com quadro determinado por `useCurrentFrame` e `useVideoConfig`. Uma cena pode durar vários segundos e conter diversos momentos de tipografia, geometria e câmera sem divisões artificiais. Separar transformações dos objetos da câmera e de sobreposições fixas, sincronizar efeitos com narração, dar hold real e minimizar animações que não informam. Pedir ao ChatGPT o `.tsx` como arquivo e apenas o fragmento JSON para render, poupando tokens.
+
 ## Implementação e inspeção
 Produção baseada em frames determinísticos e estado calculável para qualquer instante; sem relógio do sistema ou aleatoriedade sem seed. Compare frames antes, durante e depois do movimento, verificando trajetória, clipping e hold. Se o contrato atual não expuser alguma interpolação avançada, mantenha a intenção registrada como requisito de engenharia — não invente propriedades JSON.

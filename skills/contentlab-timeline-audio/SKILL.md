@@ -32,5 +32,8 @@ A narração **preparada** é a referência para sincronizar legendas, palavras 
 ## Alteração editorial
 Ao inserir ou duplicar cenas, mantenha alinhamento dos tempos posteriores e da voz por `silenceInserts` quando adequado; verifique música, SFX e legendas. Não reconfigure automaticamente tempos aprovados só para suavizar movimentos. A renderização final exige ouvir o áudio, além de inspecionar imagens.
 
+## Narração em cenas TSX
+Uma cena TSX ainda possui `timeline[].start/end` absolutos; internamente o `useCurrentFrame()` começa em zero para aquela cena e `useVideoConfig().fps` define a conversão para segundos. Forneça ao componente **tempos relativos** aos beats já conferidos na voz preparada. A cena programável não substitui `audio.narration`, música, SFX ou FFmpeg do projeto. Não gere um player de áudio paralelo dentro da composição sem pedido específico.
+
 ## Saída para outras skills
 Produza mapa de beats (tempo → informação → ação visual → hold → possível SFX) e restrições temporais. O motion é construído sobre esse mapa, não o contrário.

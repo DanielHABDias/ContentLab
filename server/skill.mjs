@@ -14,7 +14,7 @@ export function streamSkillZip(response){
   zip.pipe(response);
   zip.append(instruction,{name:'SKILL.md'});
   for(const skill of [
-    'contentlab-composicao','contentlab-motion','contentlab-timeline-audio',
+    'contentlab-composicao','contentlab-motion','contentlab-cenas-tsx','contentlab-timeline-audio',
     'contentlab-contrato','contentlab-revisao','diazverso-video','gsb-contentlab'
   ]){
     const relative=`skills/${skill}/SKILL.md`;
@@ -30,7 +30,8 @@ export function streamSkillZip(response){
     'CORRECOES_CACHE_AUDIO_TRANSICOES.md',
     'examples/minimal-edit-plan.json','examples/motion-grid.json',
     'examples/motion-storyboard.json','examples/tipografia.json',
-    'examples/word-stack.json','examples/audio-phase8-edit-plan.json'
+    'examples/word-stack.json','examples/audio-phase8-edit-plan.json',
+    'examples/custom-scenes/FollowDot.tsx','examples/programmatic-motion-edit-plan.json'
   ]){
     const source=path.join(APP_ROOT,file);
     if(fs.existsSync(source))zip.file(source,{name:file});

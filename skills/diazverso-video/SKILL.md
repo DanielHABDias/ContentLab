@@ -24,6 +24,11 @@ Canal brasileiro de cultura geek, narrativo, interpretativo e opinativo, com foc
 - Nox é marca/reação/humor; não inserir em toda cena. Respeitar o personagem oficial: capuz preto, rosto sem traços, olhos amarelos grandes e glitch dimensional azul/vermelho controlado; nunca redesenhá-lo.
 - Paleta derivada de preto, azul elétrico, vermelho vivo e amarelo, com branco/cinzas auxiliares. Bangers e Anton para funções de destaque; respeitar referência visual aprovada antes de qualquer descrição textual.
 
+## Cenas complexas com Content Lab
+Quando uma explicação do Diazverso exigir linha temporal de universos, mapas de relações, painel de evidências animado, tipografia coreografada ou câmera percorrendo o mesmo ambiente, usar a skill `contentlab-cenas-tsx` para criar **um arquivo Remotion TSX completo**. Pedir ao ChatGPT esse arquivo com a composição pronta para o formato e os tempos, baixar/salvar manualmente no `custom-scenes/` do projeto e integrar por `customComponent.module` em vez de despejar a lógica no `edit_plan.json`. Para economizar tokens, pedir o TSX uma vez e depois só pequenos patches e `props`/fragmentos JSON.
+
+Não usar TSX apenas porque está disponível. O padrão Diazverso continua sendo **baixa interferência**, com B-roll narrativo real e cortes simples sempre que suficientes. SVGs, cards e linhas podem nascer do código; cenas de filmes, Nox e imagens autorais continuam sendo assets reais em `customComponent.assets`. Não redesenhar Nox. O site não importa automaticamente arquivos criados pelo ChatGPT; código TSX executável requer projeto revisado e opt-in local `CONTENTLAB_TRUST_CUSTOM_TSX=1`.
+
 ## Packaging e formatos
 O título, thumbnail e o conteúdo devem fazer promessas consistentes. Para vídeos verticais, recomponha painéis/legendas respeitando margens; para horizontal, preserve leitura e fluxo do olhar. Verifique a escrita Diazverso em qualquer elemento público. Não inferir aceitação estética sem render inspecionado.
 

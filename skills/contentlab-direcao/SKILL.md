@@ -29,11 +29,15 @@ Esta é a skill central para qualquer trabalho de edição automatizada no Conte
 - Para formatos diferentes, recompose o layout; não presuma que crop é adaptação editorial.
 - A referência de @thejplabs inspira princípios de composição, ritmo e transformações, **não** cópias de cenas, marcas, textos ou timing.
 
+## Cenas programáveis quando o JSON padrão não basta
+Para coreografia complexa num único plano (câmera virtual, grade SVG, partículas, objetos persistentes e tipografia detalhada), **encaminhar à skill `skills/contentlab-cenas-tsx/SKILL.md`**. O caminho econômico é pedir ao ChatGPT **um `.tsx` completo para uma cena**, salvar/baixar e copiar manualmente em `custom-scenes/` na raiz do projeto e devolver apenas `customComponent` no JSON (ou o fragmento mínimo de cena). Não duplicar o TSX no JSON nem regenerar um plano completo por cada ajuste. `replace` é cena toda TSX; `overlay` adiciona TSX sobre a montagem declarativa. A execução exige opt-in `CONTENTLAB_TRUST_CUSTOM_TSX=1` e código de origem confiável; validação do JSON não substitui render e inspeção. O site não instala o TSX automaticamente.
+
 ## Encaminhamento por tarefa
 | Solicitação | Carregue |
 | --- | --- |
 | Roteiro ou criação de storyboard | composição + motion + timeline-áudio + perfil de marca |
 | JSON pronto para render | contrato + composição + motion + timeline-áudio + revisão |
+| Cena complexa ou vídeo de motion inteiramente contínuo | cenas TSX + composição + motion + contrato + revisão |
 | "Movimento está duro/artificial" | motion + revisão |
 | "Texto ficou cortado"/adaptação 9:16 | composição + revisão + contrato |
 | Narração, música, SFX ou pausas | timeline-áudio + contrato + revisão |

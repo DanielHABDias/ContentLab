@@ -38,6 +38,9 @@ Antes de especificar componentes, registrar de forma concisa:
 - Avalie cada proporção independentemente: legibilidade, posição do foco, clipping, sobreposição, movimentos e transições.
 - `contain` preserva a mídia; `cover` implica recorte intencional. Não ampliar um 1920x1080 em outro 16:9 sem motivo.
 
+## Quando entregar a cena como TSX
+Se a composição exigir **mundo virtual contínuo**, câmera seguindo trajetórias, dezenas de formas desenhadas, máscaras ou muitas relações de transformação entre objetos, passe um mapa simples dos estados visuais à `contentlab-cenas-tsx` e mantenha a cena inteira coesa. Não descreva individualmente centenas de retângulos no JSON: as formas geométricas devem ser geradas em SVG/React. Declare os poucos assets reais via `customComponent.assets`. A skill especializada gera o componente, enquanto esta determina foco, layout e reflow por formato.
+
 ## Entrega ao módulo de motion
 Forneça uma intenção clara por elemento: estado inicial, estado focal, duração de leitura, saída e eventual objeto compartilhado com a próxima composição. Não dite easing antes de a disposição visual estar resolvida.
 
