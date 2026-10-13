@@ -16,7 +16,7 @@ Esta documentação diferencia propriedades aceitas pelo schema de comportamento
 
 Content Lab funciona localmente com servidor Node.js, interface JavaScript, renderização visual Remotion e ferramentas FFmpeg. A IA pode criar um edit_plan.json, que a interface permite validar e ajustar por cena.
 
-O fluxo recomendado é: preparar assets e narração; criar edit_plan.json; abrir a pasta; validar os arquivos; revisar o storyboard; salvar; renderizar com cache; conferir MP4 e áudio.
+Para começar, abra Editor automático → Criar e escolha a pasta do novo vídeo: o Studio cria o edit_plan.json e as pastas audio/ e assets/. Depois use Selecionar narração e gerar transcrição: ele prepara o áudio (cortes e pausas) e gera transcript.json/txt/srt automaticamente, quando o Whisper local está disponível. Adicione assets, monte cenas, valide o JSON, salve, renderize e confira vídeo/áudio.
 
 A referência de campos desta página é derivada do schema instalado. Um campo previsto no JSON não significa automaticamente que todo componente visual use esse campo: essas limitações são mencionadas em cada descrição.
 
@@ -28,7 +28,37 @@ Organize edit_plan.json, audio/narration.wav e assets dentro da pasta do projeto
 
 O atributo sources.assets indica uma pasta, mas não completa os caminhos das camadas: cada asset deve ter seu URI completo e existente. A narração e a transcrição usam caminhos relativos.
 
+Na aba Editor automático, use Criar para começar um vídeo, Selecionar narração e gerar transcrição para importar a fala, Listar para consultar os URIs dos assets e Validar JSON antes de salvar/renderizar. Os tempos de legendas devem acompanhar a narração preparada, não a gravação original.
+
+Use / como separador nos caminhos tanto no Windows quanto no Linux. Nomes, subpastas e extensões precisam corresponder exatamente aos arquivos: no Linux, Narracao.wav não é igual a narracao.wav. Caminhos que saem da pasta do projeto, inclusive por links simbólicos, são bloqueados.
+
+Para criar uma composição sem escrever keyframes, no Editor automático abra Criar cena motion com grid 3×3: escolha cor hexadecimal, fundo builtin instalado ou URI project:// de mídia própria. Em fundos de vídeo, background.loop:true permite repetir o clipe até o fim da cena.
+
+Se o projeto já tem edit_plan.json e mídia organizada, abra essa pasta em vez de criar outra. Os arquivos transcript.json, transcript.txt e transcript.srt normalmente são GERADOS após a narração ser preparada; não é necessário inseri-los antes da criação. A aba Transcrição separada serve para outras fontes de vídeo/áudio.
+
+Para imagens, vídeos, músicas e SFX, use URIs project:// desde a raiz da pasta do projeto (ex.: project://assets/personagens/heroi.png); arquivos incorporados ao aplicativo usam builtin://. O atributo sources.assets nunca preenche automaticamente o caminho dos elementos.
+
 Para gameplay, preserve a proporção. contain mostra todo o quadro e é o padrão visual; cover recorta e stretch estica. Não amplie um clipe 1920×1080 quando a saída também é 1920×1080.
+
+### Estrutura sugerida do projeto
+
+```text
+meu-video/
+├── edit_plan.json                     plano de edição
+├── audio/
+│   ├── narracao.wav                   arquivo original
+│   ├── musica.mp3                     música opcional
+│   └── narration.prepared.wav         gerado ao preparar a voz
+├── assets/
+│   ├── abertura.mp4
+│   └── personagens/
+│       └── heroi.png                 subpastas permitidas
+├── transcript.json                    gerado após preparar a narração
+├── transcript.txt                     texto gerado
+├── transcript.srt                     legendas geradas
+├── transcript.build.json              controle de sincronização
+└── output/                            produzido após render
+```
 
 ![Comparação entre contain e cover](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/docs/figures/fitting.svg)
 
@@ -364,6 +394,83 @@ Obrigatório significa exigido dentro do objeto pai. Um bloco opcional pode ter 
 ## Exemplos de uso
 
 Alguns exemplos abaixo são fragmentos de cena ou áudio. Complete o projeto principal e valide os caminhos antes de renderizar.
+
+### Projeto completo com pastas e URIs
+
+Exemplo ilustrativo: crie/importa narração no Editor, respeite os nomes reais dos arquivos e valide o JSON. transcript.json é gerado automaticamente após preparar a voz.
+
+```json
+{
+  "project": {
+    "name": "Meu vídeo",
+    "format": "youtube_long",
+    "profile": "generic"
+  },
+  "sources": {
+    "assets": "assets",
+    "transcript": "transcript.json"
+  },
+  "audio": {
+    "narration": "audio/narracao.wav",
+    "music": [
+      {
+        "asset": "project://audio/musica.mp3",
+        "start": 0,
+        "end": 5,
+        "fadeIn": 0.3,
+        "fadeOut": 0.5
+      }
+    ]
+  },
+  "timeline": [
+    {
+      "id": "intro",
+      "start": 0,
+      "end": 5,
+      "layout": "3x3",
+      "background": {
+        "color": "#121826"
+      },
+      "elements": [
+        {
+          "id": "abertura",
+          "type": "video",
+          "asset": "project://assets/abertura.mp4",
+          "start": 0,
+          "end": 5,
+          "fit": "contain",
+          "cells": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ]
+        },
+        {
+          "id": "heroi",
+          "type": "image",
+          "asset": "project://assets/personagens/heroi.png",
+          "start": 0,
+          "end": 5,
+          "cells": [
+            2,
+            5,
+            8
+          ],
+          "fit": "contain",
+          "z": 2
+        }
+      ],
+      "transitionOut": "cut"
+    }
+  ]
+}
+```
 
 ### Plano completo mínimo
 
