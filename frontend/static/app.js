@@ -950,6 +950,7 @@ let editorPoll = null;
 let editorDirty = false;
 let editorRendering = false;
 let editorJobId = null;
+let editorTranscriptionPoll = null;
 
 function editorError(message) {
   $("editorError").textContent = message || "";
@@ -958,7 +959,8 @@ function editorError(message) {
 
 function editorBusy(busy) {
   editorRendering = busy;
-  const canRender = !!editorProject?.validation?.valid && !editorDirty && !busy;
+  const transcriptReady=['ready','external'].includes(editorProject?.transcription?.status);
+  const canRender = !!editorProject?.validation?.valid && transcriptReady && !editorDirty && !busy;
   $("editorReuse").disabled = !canRender;
   $("editorRebuild").disabled = !canRender;
   $("editorSave").disabled = !editorProject || !editorDirty || busy;
@@ -967,6 +969,7 @@ function editorBusy(busy) {
   $("editorChooseFolder").disabled = busy;
   $("editorCreate").disabled = busy;
   $("editorChooseNarration").disabled = busy;
+  $("editorRetranscribe").disabled = busy || !editorProject?.validation?.narration;
   $("editorChooseAssets").disabled = busy;
   $("editorInspectAssets").disabled = busy;
   $("editorCancel").classList.toggle("hidden", !busy);
@@ -1005,6 +1008,13 @@ async function editorShowProject(data) {
   $("transcriptionProjectRoot").value = data.projectRoot;
   editorDirty = false;
   $("editorProjectName").textContent = data.name;
+  const state=data.transcription?.status;
+  $("editorTranscriptState").textContent = ({
+    ready:'Transcrição sincronizada com a narração preparada.',
+    missing:'Transcrição ainda não gerada. Importe a narração para iniciar automaticamente.',
+    stale:'Transcrição desatualizada. Atualize após alterar cortes/pausas.',
+    external:'Transcrição externa: confira a sincronização manualmente.'
+  })[state]||'Transcrição ainda não disponível.';
   $("editorPlanText").value = data.planText;
   try {
     const source = JSON.parse(data.planText).sources?.assets || "assets";
@@ -1057,23 +1067,69 @@ $("editorCreate").addEventListener("click", async () => {
   } catch (error) { editorError(error.message); }
 });
 
+async function editorFollowTranscription(jobId){
+  if(editorTranscriptionPoll)clearInterval(editorTranscriptionPoll);
+  editorBusy(true);
+  $("editorTranscriptState").textContent='Preparando narração e gerando transcript.json...';
+  editorTranscriptionPoll=setInterval(async()=>{
+    try{
+      const res=await fetch('/api/transcription/jobs/'+encodeURIComponent(jobId));
+      const job=await res.json();
+      if(!res.ok)throw Error(job.error||'Transcrição não encontrada.');
+      $("editorTranscriptState").textContent=job.message;
+      if(job.status==='running')return;
+      clearInterval(editorTranscriptionPoll);editorTranscriptionPoll=null;
+      editorBusy(false);
+      if(job.status==='error')throw Error(job.error||'Falha ao transcrever narração preparada.');
+      const dataRes=await fetch('/api/editor/project',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({projectRoot:job.projectRoot})
+      });
+      const data=await dataRes.json();
+      if(!dataRes.ok)throw Error(data.error||'Falha ao carregar transcrição.');
+      if(editorDirty){
+        $("editorTranscriptState").textContent='Transcrição concluída. Salve suas alterações do JSON e recarregue para conferir.';
+      }else{
+        await editorShowProject(data);
+        $("editorStatus").textContent='Narração preparada; transcript.json gerado com tempos do áudio final.';
+      }
+    }catch(error){
+      if(editorTranscriptionPoll){clearInterval(editorTranscriptionPoll);editorTranscriptionPoll=null;}
+      editorBusy(false);
+      editorError(error.message);
+      $("editorTranscriptState").textContent='Falha na transcrição. Verifique whisper.cpp/modelo e use Atualizar transcrição.';
+    }
+  },1000);
+}
+$("editorRetranscribe").addEventListener('click',async()=>{
+  if(!editorProject||editorDirty)return editorError('Salve o JSON antes de atualizar a transcrição.');
+  try{
+    const res=await fetch('/api/editor/project/transcribe',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({projectRoot:editorProject.projectRoot})
+    });
+    const data=await res.json();
+    if(!res.ok)throw Error(data.error||'Não foi possível iniciar a transcrição.');
+    await editorFollowTranscription(data.jobId);
+  }catch(error){editorError(error.message);}
+});
 $("editorChooseNarration").addEventListener("click", () => $("editorNarrationFile").click());
 $("editorNarrationFile").addEventListener("change", async () => {
   const file = $("editorNarrationFile").files[0];
   if (!file || !editorProject) return;
+  if(editorDirty){editorError("Valide e salve o JSON atual antes de importar uma nova narração.");return;}
   editorError("");
   try {
-    const plan = JSON.parse($("editorPlanText").value);
     const form = new FormData();
     form.append("projectRoot", editorProject.projectRoot);
+    form.append("revision", editorProject.revision);
     form.append("file", file);
     const res = await fetch("/api/editor/project/narration", { method: "POST", body: form });
     const data = await res.json();
     if (!res.ok) throw new Error(data.errors?.map(item => item.message).join("; ") || data.error || "Falha ao importar narração.");
-    plan.audio.narration = data.relative;
-    $("editorPlanText").value = JSON.stringify(plan, null, 2);
-    $("editorPlanText").dispatchEvent(new Event("input"));
-    $("editorStatus").textContent = `Narração importada: ${data.relative}. Salve o plano.`;
+    await editorShowProject(data.project);
+    $("editorStatus").textContent = 'Narração importada: '+data.relative+'. Preparando transcrição...';
+    await editorFollowTranscription(data.jobId);
   } catch (error) { editorError(error.message); }
   finally { $("editorNarrationFile").value = ""; }
 });
@@ -1246,6 +1302,7 @@ $("editorSave").addEventListener("click", async () => {
     if (!res.ok) throw new Error(data.errors?.map(item => item.message).join("; ") || data.error || "Falha ao salvar.");
     await editorShowProject(data);
     $("editorStatus").textContent = "Plano salvo.";
+    if(data.transcriptionJobId)await editorFollowTranscription(data.transcriptionJobId);
   } catch (error) { editorError(error.message); }
 });
 
