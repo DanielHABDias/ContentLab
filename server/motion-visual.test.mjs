@@ -8,8 +8,11 @@ import {run} from './exec.mjs';
 import {composeVisual} from './compose.mjs';
 
 const exists=cmd=>spawnSync(cmd,['-version'],{stdio:'ignore'}).status===0;
+const available=exists('ffmpeg')&&exists('ffprobe');
+const required=process.env.CONTENTLAB_REQUIRE_FFMPEG_TEST==='1';
 test('0.1-second fade / slide / blur transitions remain 0.1 seconds and end on the right frame',
- {skip:!exists('ffmpeg')||!exists('ffprobe'),timeout:120000},async()=>{
+ {skip:!available&&!required,timeout:120000},async()=>{
+  assert.ok(available,'FFmpeg/FFprobe required: pixel test must not be skipped in smoke CI');
   const folder=fs.mkdtempSync(path.join(os.tmpdir(),'contentlab-smooth-'));
   try {
     const fps=30,w=160,h=90;
