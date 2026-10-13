@@ -260,15 +260,23 @@
       <select id="transcriptionThreshold"><option value="-48">Conservadora (−48 dB)</option><option value="-42" selected>Normal (−42 dB)</option><option value="-36">Mais agressiva (−36 dB)</option></select>
     </label>
   </div>
-  <div class="voice-studio-options-title"><span class="eyebrow">ESTILO DA VOZ</span><strong>Efeito opcional</strong><p class="helper-text">Grave suave preservando a duração e, quando possível, os formantes. Exige FFmpeg com rubberband. O reconhecimento das palavras usa a versão limpa anterior ao pitch.</p></div>
-  <label class="visual-field" for="transcriptionPitch">Tom da voz
-    <select id="transcriptionPitch"><option value="0" selected>Original — sem efeito</option><option value="-0.5">Grave suave — −0,5 semitom</option><option value="-1">Grave natural — −1 semitom</option><option value="-1.5">Grave profundo — −1,5 semitom</option><option value="-2">Grave forte — −2 semitons</option></select>
+  <div class="voice-studio-options-title"><span class="eyebrow">ESTILO DA VOZ</span><strong>Mais corpo, menos voz artificial</strong><p class="helper-text">Corpo natural usa apenas equalização: não muda o tom da sua voz e dispensa rubberband. Os graves progressivos usam mudanças pequenas de pitch e preservam a duração. Super Grave do CapCut é uma referência sonora, não um preset idêntico. A transcrição usa o áudio limpo antes do efeito.</p></div>
+  <label class="visual-field" for="transcriptionVoicePreset">Tratamento da voz
+    <select id="transcriptionVoicePreset">
+      <option value="original" selected>Original — sem efeito</option>
+      <option value="warm">Corpo natural — grave por equalização, sem pitch (recomendado)</option>
+      <option value="gentle">Grave suave — corpo + pitch muito discreto (−0,2 semitom)</option>
+      <option value="balanced">Grave equilibrado — −0,4 semitom</option>
+      <option value="deep">Grave profundo — −0,7 semitom (experimental)</option>
+    </select>
   </label>
 </div>
 <button id="transcriptionStart" class="btn btn-primary" type="button">Preparar narração e gerar transcrição</button>
         <p id="transcriptionError" class="error-text hidden" role="alert"></p>
         <p id="transcriptionStatus" class="helper-text" role="status" aria-live="polite"></p>
-        <div id="transcriptionResult" class="hidden"><div class="transcription-result-head"><strong>Transcrição pronta</strong><span id="transcriptionStats"></span></div><p class="helper-text">Arquivos salvos: <code>audio/narration.wav</code> (efeito opcional), <code>audio/narration.prepared.wav</code>, <code>transcript.json</code>, <code>transcript.txt</code> e <code>transcript.srt</code>.</p><audio id="transcriptionAudio" class="voice-studio-audio" controls preload="none" aria-label="Ouvir narração preparada"></audio><textarea id="transcriptionPreview" rows="12" readonly aria-label="Prévia da transcrição com tempos"></textarea><div class="transcription-result-actions"><button id="transcriptionOpenFolder" class="btn btn-secondary btn-sm" type="button">Abrir pasta dos arquivos</button><p id="transcriptionPlanHint" class="helper-text"></p></div></div>
+        <div id="transcriptionResult" class="hidden"><div class="transcription-result-head"><strong>Transcrição pronta</strong><span id="transcriptionStats"></span></div><p class="helper-text">Arquivos salvos: <code>audio/narration.wav</code> (efeito opcional), <code>audio/narration.prepared.wav</code>, <code>transcript.json</code>, <code>transcript.txt</code> e <code>transcript.srt</code>.</p><div class="voice-studio-compare"><label class="visual-field" for="transcriptionListenVersion">Comparar o efeito com a voz limpa
+    <select id="transcriptionListenVersion"><option value="styled" selected>Narração final — com tratamento escolhido</option><option value="prepared">Antes do efeito — narração limpa</option></select>
+  </label><audio id="transcriptionAudio" class="voice-studio-audio" controls preload="none" aria-label="Ouvir a narração selecionada"></audio></div><textarea id="transcriptionPreview" rows="12" readonly aria-label="Prévia da transcrição com tempos"></textarea><div class="transcription-result-actions"><button id="transcriptionOpenFolder" class="btn btn-secondary btn-sm" type="button">Abrir pasta dos arquivos</button><p id="transcriptionPlanHint" class="helper-text"></p></div></div>
       </section>
     </div>
 
