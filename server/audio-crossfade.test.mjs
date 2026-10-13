@@ -5,7 +5,8 @@ import os from 'node:os';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {run} from './exec.mjs';
-import {mixAudio,narrationCuts,prepareNarration,probeOutput,probeAudioDuration} from './audio.mjs';
+import {mixAudio,narrationCuts,prepareNarration,probeOutput,probeAudioDuration,analyzeNarrationEdges,measureAudioSliceEdges} from './audio.mjs';
+import {remapTranscriptWords} from './remotion.mjs';
 import {validatePlan,validateShape} from './plan.mjs';
 
 const ffmpegAvailable=spawnSync('ffmpeg',['-version'],{stdio:'ignore'}).status===0&&
@@ -61,5 +62,79 @@ test('FFmpeg trims a narration, fades voice, and mixes two overlapping, independ
   const probed=await probeOutput(output);
   assert.ok(Math.abs(probed.videoDuration-6)<.25);
   assert.ok(Math.abs(probed.audioDuration-6)<.25);
+ }finally{fs.rmSync(root,{recursive:true,force:true});}
+});
+
+test('automatic narration edge trim preserves internal pauses and keeps transcript timestamps aligned', {skip:!ffmpegAvailable},async()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'contentlab-voice-edge-trim-'));
+ try{
+  const voice=path.join(root,'voice.wav'),out=path.join(root,'clean.wav');
+  // .4 s silence + .7 s tone + .3 s INTERNAL silence + .7 s tone + .5 s silence
+  const inputs=[
+    'anullsrc=r=48000:cl=mono:d=0.4',
+    'sine=frequency=440:sample_rate=48000:duration=0.7',
+    'anullsrc=r=48000:cl=mono:d=0.3',
+    'sine=frequency=660:sample_rate=48000:duration=0.7',
+    'anullsrc=r=48000:cl=mono:d=0.5'
+  ];
+  const args=['-hide_banner','-loglevel','error','-y'];
+  for(const src of inputs)args.push('-f','lavfi','-i',src);
+  args.push('-filter_complex','[0:a][1:a][2:a][3:a][4:a]concat=n=5:v=0:a=1[out]',
+    '-map','[out]',voice);
+  await run('ffmpeg',args);
+  const settings={voice:{normalize:false,highpassHz:0,autoTrimSilence:true}};
+  const trim=await analyzeNarrationEdges(voice,settings);
+  assert.ok(Math.abs(trim.headSeconds-.4)<.06,JSON.stringify(trim));
+  assert.ok(Math.abs(trim.tailSeconds-.5)<.06,JSON.stringify(trim));
+  await prepareNarration(voice,out,settings,{autoTrimCuts:trim.cuts});
+  // .7 + INTERNAL .3 + .7 = 1.7 s. Interior pause is preserved.
+  assert.ok(Math.abs((await probeAudioDuration(out))-1.7)<.09);
+  const words=remapTranscriptWords([{word:'START',start:.5,end:.7},
+    {word:'AFTER PAUSE',start:1.55,end:1.75}],trim.cuts);
+  assert.ok(Math.abs(words[0].start-.1)<.06,JSON.stringify(words));
+  assert.ok(Math.abs(words[1].start-1.15)<.06,JSON.stringify(words));
+  const full=path.join(root,'full.wav');
+  await prepareNarration(voice,full,{voice:{normalize:false,highpassHz:0,autoTrimSilence:false}});
+  assert.ok(Math.abs((await probeAudioDuration(full))-2.6)<.09);
+ }finally{fs.rmSync(root,{recursive:true,force:true});}
+});
+
+test('music auto trim removes only edges before repeating and applying fades', {skip:!ffmpegAvailable},async()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'contentlab-music-edge-trim-'));
+ try{
+  const tone=path.join(root,'music.wav'),voice=path.join(root,'voice.wav'),
+    video=path.join(root,'video.mp4'),out=path.join(root,'final.mp4');
+  const inputs=['anullsrc=r=48000:cl=mono:d=0.4',
+    'sine=frequency=440:sample_rate=48000:duration=0.8',
+    'anullsrc=r=48000:cl=mono:d=0.3',
+    'sine=frequency=500:sample_rate=48000:duration=0.8',
+    'anullsrc=r=48000:cl=mono:d=0.5'];
+  const args=['-hide_banner','-loglevel','error','-y'];
+  for(const src of inputs)args.push('-f','lavfi','-i',src);
+  args.push('-filter_complex','[0:a][1:a][2:a][3:a][4:a]concat=n=5:v=0:a=1[out]','-map','[out]',tone);
+  await run('ffmpeg',args);
+  const edges=await measureAudioSliceEdges(tone);
+  assert.ok(Math.abs(edges.start-.4)<.06);
+  assert.ok(Math.abs(edges.duration-edges.end-.5)<.06);
+  await run('ffmpeg',['-hide_banner','-loglevel','error','-y','-f','lavfi',
+    '-i','anullsrc=r=48000:cl=stereo:d=5',voice]);
+  await run('ffmpeg',['-hide_banner','-loglevel','error','-y','-f','lavfi',
+    '-i','color=c=black:s=320x180:r=10:d=5','-c:v','mpeg4',video]);
+  const plan={audio:{narration:'voice.wav',ducking:{enabled:false},
+    voice:{normalize:false},music:[
+      {asset:'project://audio/music.wav',start:0,end:5,fadeIn:.5,fadeOut:.6,trimDb:-20}
+    ]},timeline:[]};
+  const layers=await mixAudio(video,voice,plan,{'project://audio/music.wav':tone},
+    out,5);
+  assert.equal(layers.length,1);
+  assert.ok(layers[0].autoSilenceTrim,JSON.stringify(layers));
+  assert.ok(Math.abs(layers[0].autoSilenceTrim.start-.4)<.06);
+  assert.ok(Math.abs(layers[0].autoSilenceTrim.end-.5)<.06);
+  assert.ok(Math.abs((await probeOutput(out)).audioDuration-5)<.2);
+  const outNoTrim=path.join(root,'no-trim.mp4');
+  plan.audio.music[0].autoTrimSilence=false;
+  const regular=await mixAudio(video,voice,plan,{'project://audio/music.wav':tone},
+    outNoTrim,5);
+  assert.equal(regular[0].autoSilenceTrim,undefined);
  }finally{fs.rmSync(root,{recursive:true,force:true});}
 });

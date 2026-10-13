@@ -127,6 +127,10 @@
               "type": "number",
               "minimum": 0,
               "description": "Fade-out em segundos no fim audível da voz, antes da cauda musical."
+            },
+            "autoTrimSilence": {
+              "type": "boolean",
+              "description": "Detecta e remove automaticamente silêncio só nas bordas da narração, após recortes explícitos; padrão true."
             }
           },
           "additionalProperties": false
@@ -208,6 +212,10 @@
               "loop": {
                 "type": "boolean",
                 "description": "Repetir apenas o trecho escolhido para preencher start/end; padrão true."
+              },
+              "autoTrimSilence": {
+                "type": "boolean",
+                "description": "Detecta e remove silêncio só nas bordas do trecho musical selecionado, antes de loop/fades; padrão true."
               }
             },
             "additionalProperties": false

@@ -13,7 +13,8 @@ test('every declared schema property is represented and documented meaningfully'
   assert.deepEqual(fields.filter(f=>!f.description).map(f=>f.path),[],
     'Every schema field requires a human explanation');
   assert.ok(fields.some(f=>f.path==='audio.silenceInserts[].duration'));
-  for(const key of ['audio.narrationTrim.start','audio.voice.fadeIn','audio.voice.fadeOut',
+  for(const key of ['audio.voice.autoTrimSilence','audio.music[].autoTrimSilence',
+    'audio.narrationTrim.start','audio.voice.fadeIn','audio.voice.fadeOut',
     'audio.music[].sourceStart','audio.music[].sourceEnd','audio.music[].loop'])
     assert.ok(fields.some(f=>f.path===key),'Missing documented audio field '+key);
   assert.ok(fields.some(f=>f.path==='timeline[].elements[].textStyle.shadow.blur'));
