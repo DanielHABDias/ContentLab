@@ -16,7 +16,7 @@ Esta documentação diferencia propriedades aceitas pelo schema de comportamento
 
 Content Lab funciona localmente com servidor Node.js, interface JavaScript, renderização visual Remotion e ferramentas FFmpeg. A IA pode criar um edit_plan.json, que a interface permite validar e ajustar por cena.
 
-Para começar, abra Editor automático → Criar e escolha a pasta do novo vídeo: o Studio cria o edit_plan.json e as pastas audio/ e assets/. Depois use Selecionar narração e gerar transcrição: ele prepara o áudio (cortes e pausas) e gera transcript.json/txt/srt automaticamente, quando o Whisper local está disponível. Adicione assets, monte cenas, valide o JSON, salve, renderize e confira vídeo/áudio.
+Comece pela aba Narração: escolha uma pasta que pode estar vazia, importe a gravação, aplique limpeza de silêncios e efeito opcional, ouça o resultado e gere transcript.json/txt/srt. Nenhum edit_plan.json é exigido nessa etapa. Com a transcrição preparada, peça ao ChatGPT o guia e o edit_plan.json; abra a mesma pasta no Editor, organize assets, valide, salve e renderize.
 
 A referência de campos desta página é derivada do schema instalado. Um campo previsto no JSON não significa automaticamente que todo componente visual use esse campo: essas limitações são mencionadas em cada descrição.
 
@@ -28,13 +28,13 @@ Organize edit_plan.json, audio/narration.wav e assets dentro da pasta do projeto
 
 O atributo sources.assets indica uma pasta, mas não completa os caminhos das camadas: cada asset deve ter seu URI completo e existente. A narração e a transcrição usam caminhos relativos.
 
-Na aba Editor automático, use Criar para começar um vídeo, Selecionar narração e gerar transcrição para importar a fala, Listar para consultar os URIs dos assets e Validar JSON antes de salvar/renderizar. Os tempos de legendas devem acompanhar a narração preparada, não a gravação original.
+Na aba Narração, a voz é preparada antes do plano; o editor oferece um atalho para voltar a essa aba. Ao criar edit_plan.json depois, use audio.narration = 'audio/narration.wav' e sources.transcript = 'transcript.json'; o MP4 usa a voz já tratada. No Editor, use Listar para consultar URIs de assets e Validar JSON antes do render.
 
 Use / como separador nos caminhos tanto no Windows quanto no Linux. Nomes, subpastas e extensões precisam corresponder exatamente aos arquivos: no Linux, Narracao.wav não é igual a narracao.wav. Caminhos que saem da pasta do projeto, inclusive por links simbólicos, são bloqueados.
 
 Para criar cenas de motion design, vá à seção Sua linha do tempo no Editor automático, clique em + Nova cena e abra Editar propriedades avançadas (fundo, câmera, elementos, animações). Use background.color para cor, background.asset com URI builtin:// ou project:// para mídia própria e background.loop:true para repetir um fundo de vídeo. Adicione quantas camadas quiser e defina cells livremente no grid 3×3, sem obrigatoriedade de duas imagens ou de uma composição esquerda/direita.
 
-Se o projeto já tem edit_plan.json e mídia organizada, abra essa pasta em vez de criar outra. Os arquivos transcript.json, transcript.txt e transcript.srt normalmente são GERADOS após a narração ser preparada; não é necessário inseri-los antes da criação. A aba Transcrição separada serve para outras fontes de vídeo/áudio.
+Se a pasta já possui narração, a aba Narração pode reaproveitar o original arquivado para gerar novas versões, sobrescrevendo audio/narration.wav e as transcrições sem apagar o original. O mesmo projeto posteriormente recebe edit_plan.json; não precisa criar pastas paralelas.
 
 Para imagens, vídeos, músicas e SFX, use URIs project:// desde a raiz da pasta do projeto (ex.: project://assets/personagens/heroi.png); arquivos incorporados ao aplicativo usam builtin://. O atributo sources.assets nunca preenche automaticamente o caminho dos elementos.
 
@@ -44,11 +44,11 @@ Para gameplay, preserve a proporção. contain mostra todo o quadro e é o padr�
 
 ```text
 meu-video/
-├── edit_plan.json                     plano de edição
+├── edit_plan.json                     criado DEPOIS da narração
 ├── audio/
-│   ├── narracao.wav                   arquivo original
-│   ├── musica.mp3                     música opcional
-│   └── narration.prepared.wav         gerado ao preparar a voz
+│   ├── narration.original.wav         gravação original preservada
+│   ├── narration.prepared.wav         voz limpa (antes do efeito)
+│   └── narration.wav                  voz final, com efeito opcional
 ├── assets/
 │   ├── abertura.mp4
 │   └── personagens/
@@ -58,7 +58,8 @@ meu-video/
 ├── transcript.json                    gerado após preparar a narração
 ├── transcript.txt                     texto gerado
 ├── transcript.srt                     legendas geradas
-├── transcript.build.json              controle de sincronização
+├── transcript.build.json              origem dos timestamps
+├── narration.build.json               opções e arquivo de origem
 └── output/                            produzido após render
 ```
 
@@ -102,9 +103,9 @@ O validador produz avisos para duas camadas de texto sobrepostas em tempo e regi
 
 ## Áudio, narração, música e SFX
 
-Narração é exigida no fluxo atual, mas a transcrição não precisa ser importada: ela é criada automaticamente depois da preparação do áudio, não antes. O JSON gerado tem timestamps no relógio da narração limpa (inclusive silenceInserts) e não deve ser remapeado novamente no render. narrationTrim mantém um intervalo start/end da gravação original, enquanto sourceCuts une vários trechos (não usar ambos); silenceInserts cria pausas para sincronizar inserções de cenas. Em voice, fadeIn e fadeOut controlam a entrada e a saída da fala, inclusive antes de uma cauda musical.
+Crie a transcrição antes do edit_plan.json: a aba Narração reduz silêncio no início, no fim e intervalos internos longos conforme o parâmetro escolhido, salva audio/narration.wav com pitch opcional e transcreve a versão limpa sem efeito de pitch. O JSON posterior usa esses timestamps originais da voz preparada. As pausas deliberateadas posteriores devem usar audio.silenceInserts no edit_plan.json: o renderer aplica a inserção aos tempos das palavras uma só vez. narrationTrim e sourceCuts são destinados a edições posteriores do áudio de entrada, não devem reproduzir cortes que a aba Narração já fez.
 
-O mesmo trim automático dos SFX agora se aplica por padrão às bordas da narração e de cada trecho musical. O transcript.json é regenerado quando o áudio importado ou seus recortes/pausas mudarem; corrigir somente texto de palavras não deve alterar os tempos. O FFmpeg usa detecção aproximada de silêncio abaixo de -50 dBFS por pelo menos 40 ms, preserva pausas internas e corrige o relógio das palavras da narração para as legendas. Para respeitar uma abertura silenciosa intencional, use voice.autoTrimSilence: false ou music[].autoTrimSilence: false.
+O estágio independente de Narração usa silencedetect com limite padrão -42 dB e redução de pausas internas acima de 0,7 s, mantendo pequena margem para evitar cortes secos; ajuste ou desative a redução interna se comprometer a expressão. A limpeza é executada ANTES do Whisper. Um pitch opcional de -0,5 a -2 semitons usa FFmpeg rubberband (se instalado), preservando duração; mudar somente o efeito ainda requer nova exportação, mas os timestamps permanecem na mesma base temporal. O Studio reconhece narração já preparada e evita repetir normalização e trim na montagem final. Em outros fluxos legados, voice.autoTrimSilence controla bordas e sourceCuts/silenceInserts ainda funcionam normalmente.
 
 A música tem start/end na timeline e pode escolher um trecho do arquivo usando sourceStart/sourceEnd; o trim automático tira silêncio das bordas do trecho selecionado antes de aplicar loop e fades, e loop repete somente a parte audível quando necessário. Duas músicas podem se cruzar: a primeira termina em 20 s com fadeOut de 3 s; a próxima começa em 17 s com fadeIn de 3 s. A sobreposição de 17 a 20 s produz o crossfade no mixer. Ducking reduz o volume durante a voz. Mudanças só de som não invalidam clipes visuais.
 
@@ -166,11 +167,11 @@ Os clipes individuais não incluem obrigatoriamente toda a mixagem. Conferir o v
 
 Vídeos e cortes: carregamento de fonte YouTube, importação local, lista de arquivos em cache, marcação e exportação de trechos de vídeo e áudio.
 
-Transcrição: ao escolher a narração no projeto, o Content Lab executa primeiro auto-trim e cortes explícitos, insere os silêncios planejados, salva audio/narration.prepared.wav e só então usa whisper.cpp para gerar transcript.json, transcript.txt e transcript.srt. Não é necessário enviar uma transcrição. Uma alteração posterior nos cortes/pausas dispara nova transcrição e preserva cópias de correções manuais quando necessário. Os inicializadores instalam automaticamente whisper-cli e o modelo base quando ausentes.
+Narração: escolha a pasta mesmo sem edit_plan.json, selecione a gravação (ou reutilize a original preservada), ajuste remoção de pausas longas e o efeito grave opcional. O app salva audio/narration.original.ext, audio/narration.prepared.wav, audio/narration.wav, transcript.json/txt/srt e metadados. Ouça pelo player integrado; o arquivo final já pode ser usado no plano e no render. O tratamento por Rubber Band depende do FFmpeg instalado; se não estiver disponível, use o perfil sem pitch. Os inicializadores instalam whisper-cli/modelo quando necessário.
 
 Instalação automática: no Linux, execute bash run.sh ou use o atalho criado por instalar-atalho.sh; no Windows, abra iniciar.vbs ou iniciar.bat. Os inicializadores verificam Node.js 22+, FFmpeg/FFprobe, whisper.cpp, modelo Whisper e dependências npm/Remotion e Chrome Headless Shell para renderizar, baixando apenas o que estiver ausente. Binários locais ficam na pasta .tools ignorada pelo Git; no Zorin/Ubuntu o compilador para whisper.cpp pode exigir sudo. O Studio não precisa alterar a instalação global de Node. O download inicial requer internet; as aberturas posteriores reaproveitam o material instalado.
 
-Editor automático: abrir/criar projeto, conferir assets, buscar e selecionar cenas, criar, inserir, duplicar e excluir, ajustar tempos, editar camadas, importar transcrição, validar e salvar o JSON, visualizar clipes em cache e exportar o MP4.
+Editor automático: abrir/criar projeto depois do preparo da voz, conferir assets, buscar e selecionar cenas, criar, inserir, duplicar e excluir, ajustar tempos, editar camadas, abrir a aba Narração quando necessário, validar e salvar o JSON, visualizar clipes em cache e exportar o MP4. Pausas editoriais são inseridas na timeline por audio.silenceInserts.
 
 Na seção Sua linha do tempo, + Nova cena cria uma cena editável; + Adicionar camada inclui imagem, vídeo, texto, legenda, overlay ou efeito sonoro; e Propriedades avançadas contém background, grid/cells, câmera, animações, transformações e keyframes. Não há um formulário paralelo limitado a esquerda/direita: toda a composição usa o mesmo editor visual e um único edit_plan.json.
 
