@@ -32,7 +32,7 @@ const instruction=[
   '- Suavidade visual não altera velocidade: defina enterDuration, exitDuration, config.transitionDuration e keyframe t com a duração editorial exata (inclusive 0.1 s). Nunca aumente tempos automaticamente para parecer mais fluido.',
   '- O renderer aplica smootherstep C2 por padrão em keyframes, câmera, entradas, saídas e carrosséis; easing:linear mantém trajetória explicitamente linear. A interpolação melhora aceleração/desaceleração, não o tempo total.',
   '- Pan/zoom e idles evitam saltos nas bordas. fade/slide/blur são suavizados até o último frame da transição e preservam a duração total do vídeo. cut permanece corte seco intencional.',
-  '- FPS limita a amostragem: 0.1 s tem 3 frames em 30 fps e 6 em 60 fps; para mais fluidez temporal, escolher FPS maior sem esticar a duração. Nunca prometer quadros que não existem.'
+  '- FPS limita a amostragem: 0.1 s tem 3 frames em 30 fps e 6 em 60 fps; para mais fluidez temporal, escolher FPS maior sem esticar a duração. Nunca prometer quadros que não existem.',
   '- O campo at do SFX define o início audível. O sistema remove somente silêncio das bordas, não pausas internas.',
   '- Ao inserir uma cena no meio, ajuste música e eventos posteriores e preserve o alinhamento da narração via silenceInserts.',
   '- Para cortar um único trecho da narração use audio.narrationTrim {start,end}; para unir vários trechos use sourceCuts. Não use os dois juntos.',
