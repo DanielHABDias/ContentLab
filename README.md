@@ -106,6 +106,8 @@ Veja [CORRECOES_CACHE_AUDIO_TRANSICOES.md](CORRECOES_CACHE_AUDIO_TRANSICOES.md).
 
 A aba **Documentação** do site oferece o manual completo com navegação lateral, busca por campos, exemplos de JSON e diagramas SVG gerados por JavaScript. Há **somente três downloads de documentação**: **Documentação .md**, **Documentação .html** e **Skill .zip**.
 
+A interface mantém **quatro áreas de trabalho**: Vídeos e cortes, Transcrição, Editor automático e Documentação. O antigo Guia do projeto foi incorporado à Documentação, que agora inclui o primeiro acesso, uma árvore de pastas com arquivos gerados automaticamente, regras para caminhos `project://` e `builtin://`, um `edit_plan.json` completo de exemplo e a verificação de assets. Links antigos com `#guide` abrem diretamente a Documentação. Não há duplicação de abas nem de downloads.
+
 A skill ZIP contém `SKILL.md`, a documentação oficial completa em Markdown e HTML, diagramas SVG, schema único e exemplos de edição. O HTML baixado é autossuficiente e inclui os diagramas sem precisar de internet para consultá-los. O Markdown referencia as figuras SVG versionadas no repositório.
 
 Arquivos de referência: [Documentação Markdown](docs/Documentacao-ContentLab.md) · [Documentação HTML](docs/Documentacao-ContentLab.html).

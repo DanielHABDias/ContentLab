@@ -59,7 +59,7 @@ button,input,textarea,select {font-family:var(--font-ui)}
   line-height:1.11;font-weight:760;color:#161C28}
 .heading-muted {color:#8B93A0}
 .workspace-intro p {max-width:640px;color:#7A8290;font-size:14px;line-height:1.65}
-.block,.transcription-card,.guide-card,.editor-project {background:white;border:1px solid #E8EBEF;
+.block,.transcription-card,.editor-project {background:white;border:1px solid #E8EBEF;
   border-radius:22px;box-shadow:0 5px 28px rgba(34,47,69,.035);padding:25px}
 .block-label {font-size:12px;font-weight:700;color:#505C6D;letter-spacing:-.008em}
 .eyebrow {font-size:10px;font-weight:800;letter-spacing:.14em;color:#5076AC}
@@ -85,8 +85,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea,
   border-radius:11px;box-shadow:none}
 input:focus,select:focus,textarea:focus {border-color:#7AAAF4 !important;box-shadow:0 0 0 3px #E6F0FF !important;outline:0}
 input::placeholder,textarea::placeholder {color:#A5ACB6}
-code,.guide-card code {background:#F1F4FA;color:#3C6DAE;border-radius:5px;padding:2px 5px}
-.guide-code,.guide-tree {background:#F8F9FB;color:#394659;border:1px solid var(--border);border-radius:13px}
+code {background:#F1F4FA;color:#3C6DAE;border-radius:5px;padding:2px 5px}
 .source-tab,.radio-card,.mode-switch-block {background:#F8F9FB;color:#5F6876;border:1px solid var(--border);border-radius:12px}
 .source-tab:has(input:checked),.radio-card:has(input:checked) {border-color:#89B2F1;background:#ECF3FF;color:#2259A6}
 .player-wrap {background:#0D111B;border-radius:18px;overflow:hidden}
