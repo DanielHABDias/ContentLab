@@ -387,7 +387,7 @@ app.post('/api/transcription/jobs',upload.single('file'),api(async(req,res)=>{
   transcriptions.set(id,job);
   res.status(202).json({jobId:id});
   prepareStandaloneNarration(root,{
-    sourceFile,model:req.body.model||'small',language:req.body.language||'pt',
+    sourceFile,model:req.body.model||'small',language:req.body.language||'pt',detail:req.body.detail||'words',
     options:{
       removeMiddleSilence:req.body.removeMiddleSilence!=='false',
       minSilence:Number(req.body.minSilence||.7),

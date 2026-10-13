@@ -155,7 +155,7 @@ export function voiceStudioState(folder){
   }catch{return {ready:false};}
 }
 export async function prepareStandaloneNarration(directory,{
-  sourceFile,options={},model='small',language='pt',
+  sourceFile,options={},model='small',language='pt',detail='words',
   update=()=>{},signal,ffmpeg='ffmpeg',ffprobe='ffprobe',transcriber=transcribeAudio
 }={}){
   const root=voiceStudioFolder(directory),config=voiceOptions(options);
@@ -179,7 +179,7 @@ export async function prepareStandaloneNarration(directory,{
     update('Aplicando efeitos de voz opcionais...');
     await applyVoiceStyle(neutral,styled,config,{ffmpeg,ffprobe,signal});
     update('Transcrevendo o áudio limpo, antes dos efeitos de pitch...');
-    const transcript=await transcriber(neutral,staged,{model,language,signal,update});
+    const transcript=await transcriber(neutral,staged,{model,language,detail,signal,update});
     for(const name of ['transcript.json','transcript.txt','transcript.srt'])
       if(!fs.existsSync(path.join(staged,name)))throw Error('Transcrição não gerou '+name);
     if(signal?.aborted)throw Error('Preparação cancelada.');

@@ -28,14 +28,14 @@ const createVoice=async(root)=>{
     '-map','[a]',source]);
   return source;
 };
-const transcriber=async(audio,dest)=>{
+const transcriber=async(audio,dest,{detail}={})=>{
   const dur=await probeAudioDuration(audio);
   const doc={language:'pt',segments:[{start:0,end:dur,text:'Exemplo de voz'}],
     words:[{word:'Exemplo',start:0,end:.3},{word:'de',start:.3,end:.6},{word:'voz',start:.6,end:dur}]};
   fs.writeFileSync(path.join(dest,'transcript.json'),JSON.stringify(doc));
   fs.writeFileSync(path.join(dest,'transcript.txt'),'Exemplo de voz');
   fs.writeFileSync(path.join(dest,'transcript.srt'),'1');
-  return {wordCount:3,segmentCount:1,language:'pt',preview:'Exemplo de voz'};
+  return {wordCount:3,segmentCount:1,language:'pt',detail,preview:'Exemplo de voz'};
 };
 
 test('FFmpeg rubberband detection reads an actual filter entry, not comments',()=>{
@@ -76,6 +76,7 @@ test('standalone narration generates final WAV and transcript without edit_plan.
     assert.ok(!fs.existsSync(path.join(root,'edit_plan.json')),'No edit plan needed');
     assert.equal(processed.narration,'audio/narration.wav');
     assert.equal(processed.transcript,'transcript.json');
+    assert.equal(processed.detail,'words','Voice Studio must forward the selected text detail');
     assert.equal(processed.removedCount,3);
     assert.ok(fs.existsSync(path.join(root,'audio','narration.original.wav')));
     assert.ok(fs.existsSync(path.join(root,'audio','narration.prepared.wav')));

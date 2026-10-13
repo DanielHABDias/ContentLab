@@ -959,6 +959,7 @@ $("transcriptionStart").addEventListener("click", async () => {
         if (job.status === "error") throw new Error(job.error || "Falha na transcrição.");
         $("transcriptionStats").textContent = `${job.result.segmentCount} trecho(s) · ${job.result.wordCount} palavra(s) · ${job.result.removedCount} silêncio(s) reduzido(s)`;
         $("transcriptionPreview").value = job.result.preview || "Nenhuma fala foi reconhecida. Confira o áudio e tente outro modelo.";
+        $("transcriptionPreviewDetail").textContent = job.result.detail === "words" ? "Prévia por palavra — cada linha mostra os tempos reais daquela palavra. O JSON também inclui frases em segments." : "Prévia por trecho — o JSON também mantém os tempos individuais de cada palavra em words.";
         lastTranscriptionFolder = job.projectRoot;
         latestVoiceJobId = data.jobId;
         $("transcriptionListenVersion").value = "styled";
