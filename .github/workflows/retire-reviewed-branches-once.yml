@@ -1,0 +1,46 @@
+name: One-time retirement of reviewed, superseded branches
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/retire-reviewed-branches-once.yml
+permissions:
+  contents: write
+jobs:
+  retire:
+    if: github.repository == 'DanielHABDias/ContentLab'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check current production implementation
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Delete exactly the two reviewed refs if unchanged
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in server/render.mjs server/compose.mjs server/migrate.mjs server/motion.test.mjs backend/remotion/src/motion.mjs backend/remotion/src/scene.tsx schemas/edit_plan.schema.json; do
+            test -f "$file" || { echo "::error::Production replacement missing: $file"; exit 1; }
+          done
+          while read -r branch expected; do
+            if [[ "$branch" == "main" || -z "$branch" ]]; then
+              echo "::error::Invalid branch in retirement list"
+              exit 1
+            fi
+            actual="$(git ls-remote origin "refs/heads/$branch" | awk '{print $1}')"
+            if [[ -z "$actual" ]]; then
+              echo "Already removed: $branch"
+              continue
+            fi
+            if [[ "$actual" != "$expected" ]]; then
+              echo "::error::Branch changed since review: $branch; expected $expected, got $actual"
+              exit 1
+            fi
+            gh api -X DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/$branch"
+            echo "DELETED $branch at $expected"
+          done <<'BRANCHES'
+          feat/smooth-motion-preserve-timing 75bf9cfc9dd064460ac84e950ccfa6ec2099d4a1
+          refactor/node-only-single-json efd9117cb1cc56e32957c82b028d63081ece48a1
+          BRANCHES
