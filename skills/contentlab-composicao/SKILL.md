@@ -5,6 +5,12 @@ description: Planejamento de composição visual para cenas Content Lab, com hie
 
 # Content Lab — Composição visual
 
+## Perfil de marca Diazverso — arte final definida em 14/10/2026
+
+Aplicar esta seção **somente a projetos Diazverso**; perfis de outras marcas continuam neutros. A estética-base combina **composição/motion gráficos modernos e acabados com HQ editorial adulta e discreta**. Usar molduras e gutters para conectar evidências/cenas reais, halftone suave, recortes, câmera saindo da mídia para uma página de quadrinhos estilizada, aproximando um quadro cinza que recupera a cor e entrando no novo footage. Evitar páginas literais como slides e **não usar balões de fala, pensamento ou diálogo como padrão**; caixas retangulares de narração editorial podem funcionar. Anton para textos enormes sobre fundos sólidos coloridos (inclusive mudança de cor), Bangers para lettering, Comic Sans pontual em caixas; Inter/sans se adequados a dados e UI, não como substituto automático da marca. TSX frequente nas explicações, mas imagens e cenas do assunto precisam estar presentes quando sustentam a narração. O Studio oferece **referência de acabamento**, não identidade exclusiva. O VD_0005 não recebe mudanças retroativas.
+
+
+
 ## Objetivo
 Transformar a narrativa em cenas compreensíveis e visualmente expressivas, sem depender de um template rígido de duas imagens. Planejar a **cena inteira**, não elementos isolados.
 
@@ -67,8 +73,8 @@ Para efeito de separar camadas, identificar planos independentes **de verdade**:
 O Diazverso deve experimentar mais TSX em ideias abstratas autorais (mapas, dilemas, relações, espaço, tipografia e mídia em perspectiva), alternando com filmes/jogos/quadrinhos pertinentes e cortes que deem respiro. Variar conceito espacial antes de variar enfeites.
 
 
-## Estética HQ em movimento — experimento futuro Diazverso
+## Repertório HQ anterior (incorporado à direção de 14/10/2026)
 
 Para roteiros novos do Diazverso, avaliar composições com **quadros de HQ de tamanhos variados**, calhas que conduzem câmera, moldura preta como máscara para o próximo beat, balões associados a personagens, retícula de impressão opcional, onomatopeias com spring/impacto curto e tinta SVG que desenha causa e consequência. Um quadro pode virar splash panel por expansão e mudança de hierarquia; uma página pode se mover no mundo virtual com 2.5D. Preservar ritmo de leitura, autenticidade das imagens e clareza do sujeito. Se uma cena real basta, não impor painéis. `examples/custom-scenes/ComicMotionKit.tsx` fornece variantes de estudo; `NarrativePath` e `EvidenceConstellation` ajudam a transformar argumento em espaço.
 
-Essa é opção de **direção para produções posteriores**, não alteração automática do estilo aprovado no VD_0005. Para títulos e frases de impacto Diazverso em TSX, priorizar Anton/Bangers realmente carregadas; fallback sans-serif é contingência técnica, não design final desejado.
+Esse repertório integra a **direção consolidada para produções posteriores**, não alteração automática do estilo aprovado no VD_0005. Para títulos e frases de impacto Diazverso em TSX, priorizar Anton/Bangers realmente carregadas; fallback sans-serif é contingência técnica, não design final desejado.
