@@ -63,3 +63,10 @@ Para variar, experimentar deslocamento da câmera por palavras em diagonal, víd
 A criação do `edit_plan.json`, guia e componentes `custom-scenes/*.tsx` **não é a conclusão do trabalho**. Antes de solicitar render/edição automática, acionar obrigatoriamente `contentlab-revisao` + `contentlab-timeline-audio` para checagem completa pré-render, e após o primeiro render executar QA audiovisual final. Checar todas as cenas e, em cada cena com movimento editorial, cada evento significativo com SFX real e **início audível dentro da animação** (não antes/depois). Se áudio for mais curto/maior que o movimento, aceitar; caudas extensas só se funcionais e com `fadeOut` em cortes necessários. Variar tipos de efeito, preservar áudio embutido sem duplicar e proteger narração. Não fazer o motor de render inventar SFX ou assumir que TSX contém som; eventos de TSX precisam ser traduzidos em `type:"sfx"` no plano.
 
 Se houver falhas, corrigir plano/TSX e refazer QA antes de liberar; caso ainda não exista render, classificar apenas `APROVADO PRÉ-RENDER`, nunca `APROVADO FINAL`. O revisor especializado da marca Diazverso (`diazverso-revisao-edicao` no Drive) adiciona identidade/Nox/CRT/estilo sem substituir a validação geral do ContentLab.
+
+
+## Componentes derivados de produção e direção futura HQ
+
+Consultar `VD0005_REUSABLE_REVIEW.md` para escolher padrões comprovados por **inspeção de código** do VD_0005, mas **não certificados por render**: `examples/custom-scenes/NarrativePath.tsx`, `EvidenceConstellation.tsx`, `PixelNotification.tsx` e `ComicMotionKit.tsx`. Modelos de exemplos não se tornam presets da UI ou campos novos no JSON. Configurar `props`, `assets` e sincronismo de cada novo roteiro; manter tempo de cena, SFX absolutos e assets reais.
+
+Para futuros vídeos Diazverso, considerar teste criativo de *HQ em movimento*: quadros/gutters, tinta desenhada, halftone discreto, balões, lettering Anton/Bangers, máscaras entre painéis e parallax 2.5D com recortes. Não afetar o VD_0005 aprovado. Fonte e licença da música devem ser verificadas antes de promover localmente; ver `MUSIC_LIBRARY_DIAZVERSO.md` e skill `contentlab-timeline-audio`.
