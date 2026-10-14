@@ -5,6 +5,14 @@ description: Planejamento de composição visual para cenas Content Lab, com hie
 
 # Content Lab — Composição visual
 
+## Crop obrigatório de footage horizontal em Shorts Diazverso (14/10/2026)
+
+Quando o projeto for **Short 9:16 do Diazverso**, vídeo de origem 16:9 deve manter proporção e ocupar **toda a composição**: usar `background.fit: "cover"` ou `objectFit: "cover"; objectPosition: "center center"` no TSX. O espectador vê prioritariamente a **coluna central do vídeo original**; **não encaixar todo o 16:9 dentro do 9:16 com barras** (`contain`). Reenquadramento horizontal só com intenção e teste explícitos. Em painéis internos de HQ, o crop pode ser escolhido por painel, mas o fundo full-bleed conserva cover.
+
+Para Shorts dinâmicos, alternar **formas diferentes de motion**, em vez de repetir o mesmo título em todos os beats: câmera/página HQ, prova/dossiê, split, zoom-out/zoom-in, clip dessaturado que ganha cor, tipografia Anton com fundo mutável, timeline, máscara e composições com clips reais verificáveis. Nenhum vídeo sobre uma obra deve virar só abstracionismo de TSX. Os Shorts continuam com a assinatura sonora Minecraft (0–3 s), riser antes da primeira transição, blur direcional com Woosh durante, música pós-blur e CTA final. Não aplicar essa assinatura a longos.
+
+
+
 ## Perfil de marca Diazverso — arte final definida em 14/10/2026
 
 Aplicar esta seção **somente a projetos Diazverso**; perfis de outras marcas continuam neutros. A estética-base combina **composição/motion gráficos modernos e acabados com HQ editorial adulta e discreta**. Usar molduras e gutters para conectar evidências/cenas reais, halftone suave, recortes, câmera saindo da mídia para uma página de quadrinhos estilizada, aproximando um quadro cinza que recupera a cor e entrando no novo footage. Evitar páginas literais como slides e **não usar balões de fala, pensamento ou diálogo como padrão**; caixas retangulares de narração editorial podem funcionar. Anton para textos enormes sobre fundos sólidos coloridos (inclusive mudança de cor), Bangers para lettering, Comic Sans pontual em caixas; Inter/sans se adequados a dados e UI, não como substituto automático da marca. TSX frequente nas explicações, mas imagens e cenas do assunto precisam estar presentes quando sustentam a narração. O Studio oferece **referência de acabamento**, não identidade exclusiva. O VD_0005 não recebe mudanças retroativas.
