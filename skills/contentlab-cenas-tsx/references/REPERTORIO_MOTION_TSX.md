@@ -3,7 +3,7 @@
 Guia técnico e criativo complementar a `contentlab-cenas-tsx/SKILL.md`, `contentlab-motion/SKILL.md`, `contentlab-timeline-audio/SKILL.md` e ao schema atual. Técnicas abaixo são exemplos, não presets obrigatórios. O ContentLab não promete reconstrução 3D automática, separação semântica automática de vídeos ou bibliotecas não instaladas.
 
 ## 1. Exemplos que já existem no Diazverso
-Os arquivos ficam no próprio vídeo `VD_0005/custom-scenes/`, não na pasta global de presets. O `edit_plan.json` desse vídeo tem 101 cenas e 10 referências TSX:
+Os arquivos ficam no próprio vídeo `VD_0005/custom-scenes/`, não na pasta global de presets. O `edit_plan.json` foi ampliado posteriormente; a contagem de cenas e componentes deve ser lida do plano canônico, não presumida a partir deste exemplo:
 - **PerguntaAbertura.tsx**, cena `01_abertura_pergunta` (+0 a +3,68 s): palco horizontal de 7.000 unidades, câmera percorre palavras em pontos diferentes e chega ao personagem Batman. Entrada do PNG termina em +2,91 s, antes de a palavra “Batman” começar em +2,93 s.
 - **ConflitoCentral.tsx**, cena `05_conflito_texto` (99,96–106,19 s absolutos): uma rota SVG liga três argumentos com câmera que muda o foco; mídia de filme escurecida permanece na base.
 - **OutraRazao.tsx**, cena `21_outra_razao` (534,9–537,483 s): frases ocupam posições distintas na tela e a rota as conecta. A entrada de “OUTRA RAZÃO” é programada para terminar antes de sua enunciação.
@@ -82,3 +82,10 @@ Para um vídeo existente declarado em `customComponent.assets`, usar a mídia j�
 - A entrada do termo/objeto tem de estar concluída até o fim da palavra e idealmente antes do começo; a câmera também já deve apontar para o foco.
 - Testar TSX com MP4 real, não só JSON válido; verificar cache e vínculo de assets.
 - Comparar com a cena anterior para detectar repetição cansativa. Deixar espaço para imagens originais da obra e respiro.
+
+
+## 7. Novas técnicas e receitas reproduzíveis (13/10/2026)
+
+Ver a [matriz de disponibilidade](../../../MOTION_TECHNIQUES.md) e o [toolkit TSX demonstrativo](../../../examples/custom-scenes/MotionDesignToolkit.tsx). Estão implementadas **no exemplo**, e não automaticamente no editor, dezesseis variantes parametrizáveis: cinética por letras, morph SVG de contornos equivalentes, desenho por `strokeDashoffset`, física com `spring`/quique amortecido, blob líquido deformável, partículas determinísticas, gráfico de barras/contador, 2.5D parallax, glitch em bandas, circular mask reveal, motion blur estilizado e passagens internas slide/whip/flip/zoom/cortina.
+
+Checklist para reaproveitamento: escolher uma variante coerente com a fala; copiar TSX de `examples/` para `custom-scenes/` do vídeo; fornecer `title/nextTitle/values/color/background` relevantes; adaptar tempos ao trecho efetivo da narração; mapear SFX externo no JSON; validar compilação, frame zero/chegada/hold/fim; escutar MP4 renderizado. Não usar dados artificiais do exemplo em narração factual. Não inferir 3D físico de `perspective` CSS. Não registrar `transition_whip` etc no `transitionOut` sem ampliar motor/schema.
