@@ -5,6 +5,12 @@ description: Cria cenas Remotion complexas como arquivos TSX dentro da subpasta 
 
 # Content Lab — Cenas programáveis TSX
 
+## Coreografia sonora perceptível — Diazverso Shorts (14/10/2026)
+
+Para cada `customComponent` editorial de Shorts, identificar **os tempos reais dos gestos** no TSX (p.ex., chegada de painel, texto, máscara, fechamento de página, impacto e destaque de personagem) e posicionar SFX em `edit_plan.json` nos respectivos tempos absolutos. Evitar cues fixos em segundos sem compensar a duração da cena e os fatores de aceleração internos da animação. Animação visual sem efeito audível suficiente é falha de direção, mas não duplicar áudio que já está no vídeo. Preferir whoosh/swish no deslocamento, click/snap em surgimento, hit no assentamento e chime em destaque. Nível deve permanecer perceptível mesmo com voz e música, validado no MP4. Ao cortar os movimentos externos usar `blur_*` rápido (~0,20 s) com blur forte aplicado globalmente pelo compositor, e whoosh no início da cena entrante. O Metallic Riser da abertura toca natural completo via `config.preserveFullSource:true` + `config.alignEndAt`, antes do primeiro whoosh.
+
+
+
 ## QA autoral de Shorts Diazverso — variantes reais, crop central e CTA (14/10/2026)
 
 Uma composição TSX só conta como direção nova quando **muda a gramática visual ou a coreografia**, não apenas texto, cor ou `variant:"hook"` repetidos. Nos Shorts, variar painéis, câmera, máscaras, perspectiva, timeline, comparações, dossiê, tipografia, transformação e passagem entre cenas reais. Todo clip 16:9 de fundo do Short 9:16 deve manter proporção e preencher a tela por `cover` central; nunca `contain` por padrão. `assets` de mídia devem estar realmente presentes no projeto. Cenas reais da fala devem permanecer visíveis no fundo ou no TSX. CTA: Nox pode ser maior, lettering Anton com “TEM VÍDEO NOVO NO CANAL!”, thumbnail real e safe area.
