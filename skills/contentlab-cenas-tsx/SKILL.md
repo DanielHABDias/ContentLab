@@ -5,6 +5,14 @@ description: Cria cenas Remotion complexas como arquivos TSX dentro da subpasta 
 
 # Content Lab — Cenas programáveis TSX
 
+## QA autoral de Shorts Diazverso — variantes reais, crop central e CTA (14/10/2026)
+
+Uma composição TSX só conta como direção nova quando **muda a gramática visual ou a coreografia**, não apenas texto, cor ou `variant:"hook"` repetidos. Nos Shorts, variar painéis, câmera, máscaras, perspectiva, timeline, comparações, dossiê, tipografia, transformação e passagem entre cenas reais. Todo clip 16:9 de fundo do Short 9:16 deve manter proporção e preencher a tela por `cover` central; nunca `contain` por padrão. `assets` de mídia devem estar realmente presentes no projeto. Cenas reais da fala devem permanecer visíveis no fundo ou no TSX. CTA: Nox pode ser maior, lettering Anton com “TEM VÍDEO NOVO NO CANAL!”, thumbnail real e safe area.
+
+Os blur_left/right/up/down são transições do **compositor** do ContentLab, não de `customComponent`: renderizar duas cenas adjacentes para confirmar a percepção. O blur começa no tempo da **cena seguinte** por `transitionDuration`; o Woosh deve estar audível nessa janela. Checar montagem, SFX, fonte e MP4 final, não somente `edit_plan.json` ou transpile TSX. Só promover cenas ao catálogo de exemplos **após teste real de render**, nunca ao criar rascunhos.
+
+
+
 ## TSX Diazverso — identidade visual consolidada (14/10/2026)
 
 Para novos projetos Diazverso, **TSX é recurso frequente e especialmente recomendado para explicações e trechos argumentativos**, mesmo com complexidade moderada quando a linguagem autoral justificar. A direção integra motion design moderno, câmera espacial e **HQ editorial sóbria**, com halftone sutil, painéis/gutters, caixas retangulares de narração e trechos reais de obras em planos/painéis. Repertório de transição: footage real → zoom-out para página de painéis → travelling até painel dessaturado → cor volta quando chega ao foco → zoom-in para a próxima cena. Evitar balões de fala, diálogo ou pensamento; não infantilizar a composição. **Anton** para palavra gigante sobre cor sólida mutável, **Bangers** para lettering, **Comic Sans** pontual em caixas, sem proibir UI moderna secundária. Não forçar TSX em toda cena, não sumir com vídeo real citado, e só promover código à biblioteca após revisão de fonte, compilação, render/escuta e QA. A assinatura sonora/visual Minecraft + riser + blur/woosh + música posterior/CTA pertence exclusivamente aos Shorts Diazverso, não ao motor genérico. O VD_0005 não deve receber patches.
