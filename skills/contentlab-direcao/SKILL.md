@@ -5,6 +5,14 @@ description: Porta de entrada do Content Lab para planejar e revisar edições, 
 
 # Content Lab — Direção
 
+## Perfil Diazverso: direção consolidada em 14/10/2026
+
+Quando a marca for **Diazverso**, a direção visual aprovada é **motion design moderno/cinematográfico + linguagem HQ editorial sóbria**, não UI minimalista pura e não gibi infantil. Combinar retícula/halftone discreta, painéis/gutters, páginas espaciais, câmera transitando entre trechos reais de filmes/jogos, quadro dessaturado que ganha cor ao receber foco e caixas retangulares de narração. Evitar balões de fala/pensamento por padrão. **Anton** para palavras enormes e fundo sólido com cores mutáveis, **Bangers** para lettering HQ e Comic Sans pontual em caixas editoriais; Inter/sans apenas quando a função pedir. Usar bastante TSX em explicações e comparações, preservando cenas reais citadas — em tela cheia ou incorporadas ao motion. Baixa interferência significa movimentos justificados, não escassez de motion. Padrões TSX novos só entram no catálogo depois de implementação, render e QA.
+
+**Shorts Diazverso** conservam a assinatura própria: gancho forte com voz imediata, vídeo 0–3s `explosaoMinecraft.mp4` com chroma/áudio, riser metálico antes da primeira virada, blur direcional acompanhado de woosh durante o movimento, música apenas após o blur e CTA final. Não aplicar essa vinheta a longos nem a outras marcas. **VD_0005 continua fechado.**
+
+
+
 Esta é a skill central para qualquer trabalho de edição automatizada no Content Lab. A função dela é compreender o objetivo, escolher quais competências especializadas utilizar, integrar as decisões e produzir instruções de edição coesas. **Não** é uma biblioteca de presets nem substitui a documentação técnica.
 
 ## Antes de iniciar
