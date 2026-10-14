@@ -65,3 +65,10 @@ Pense a cena como um palco 2D/2.5D maior que o viewport: palavras, clipes, fotos
 Para efeito de separar camadas, identificar planos independentes **de verdade**: fundo, recorte transparente de sujeito, primeiro plano, grafismo/HUD. Animar parallax, z-order, oclusão e perspectiva de forma coordenada; não prometer que uma foto achatada vira volumetria 3D sem segmentação. Quando não houver recortes, usar painéis geométricos explicitamente estilizados. Cuidado com clipping, deformação de personagens, texto em ângulo ilegível e proporção de vídeo.
 
 O Diazverso deve experimentar mais TSX em ideias abstratas autorais (mapas, dilemas, relações, espaço, tipografia e mídia em perspectiva), alternando com filmes/jogos/quadrinhos pertinentes e cortes que deem respiro. Variar conceito espacial antes de variar enfeites.
+
+
+## Estética HQ em movimento — experimento futuro Diazverso
+
+Para roteiros novos do Diazverso, avaliar composições com **quadros de HQ de tamanhos variados**, calhas que conduzem câmera, moldura preta como máscara para o próximo beat, balões associados a personagens, retícula de impressão opcional, onomatopeias com spring/impacto curto e tinta SVG que desenha causa e consequência. Um quadro pode virar splash panel por expansão e mudança de hierarquia; uma página pode se mover no mundo virtual com 2.5D. Preservar ritmo de leitura, autenticidade das imagens e clareza do sujeito. Se uma cena real basta, não impor painéis. `examples/custom-scenes/ComicMotionKit.tsx` fornece variantes de estudo; `NarrativePath` e `EvidenceConstellation` ajudam a transformar argumento em espaço.
+
+Essa é opção de **direção para produções posteriores**, não alteração automática do estilo aprovado no VD_0005. Para títulos e frases de impacto Diazverso em TSX, priorizar Anton/Bangers realmente carregadas; fallback sans-serif é contingência técnica, não design final desejado.
