@@ -1,5 +1,5 @@
 import React from 'react';
-import {AbsoluteFill, spring, useCurrentFrame, useVideoConfig} from 'remotion';
+import {AbsoluteFill, Img, spring, useCurrentFrame, useVideoConfig} from 'remotion';
 
 /** Future Diazverso direction: comic-book motion, NOT a copy of any comic publisher's artwork.
  * Single-scene modes: ink reveal, panels, speech bubbles, impact or split choice.
@@ -30,7 +30,7 @@ export default function ComicMotionKit({variant='panels',title='UM NOVO CAPÍTUL
     <div style={{position:'absolute',left,top,width:pw,height:ph,opacity:show,
       transform:`translateY(${(1-show)*70}px) rotate(${angle}deg)`,border:'9px solid #11131B',boxSizing:'border-box',background:ink,
       boxShadow:'18px 18px 0 #11131B55',overflow:'hidden'}}>
-      {src?<img src={src} alt="" style={{width:'100%',height:'100%',objectFit:'cover',filter:'saturate(.82) contrast(1.08)'}}/>:
+      {src?<Img src={src} style={{width:'100%',height:'100%',objectFit:'cover',filter:'saturate(.82) contrast(1.08)'}}/>:
        <div style={{position:'absolute',inset:0,backgroundImage:'radial-gradient(#11131B38 2px,transparent 2px)',backgroundSize:'17px 17px'}}/>}
       <div style={{position:'absolute',left:24,bottom:24,padding:'8px 18px',maxWidth:'85%',border:'4px solid #11131B',background:'#F8F0DC'}}>{titles(label,41)}</div>
     </div>;
