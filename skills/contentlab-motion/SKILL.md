@@ -5,6 +5,12 @@ description: Planeja coreografia de motion design no Content Lab: keyframes, eas
 
 # Content Lab — Movimento e coreografia
 
+## Primeiro blur dos Shorts Diazverso — timing operacional (14/10/2026)
+
+No compositor atual, `blur_left/right/up/down` estão implementadas: a transição usa o último frame da cena anterior e os primeiros frames da próxima, ocupando o **início da próxima cena**. A duração de partida ~0,4 s deve ser conferida no MP4 a 30 fps, e o Woosh inicia audivelmente durante `[nextScene.start,nextScene.start+transitionDuration)`, não antes da troca nem depois do movimento. Riser fica na saída do gancho, música só após o primeiro blur. O mecanismo completo exige verificação audiovisual; transição declarada no JSON não garante perceptibilidade.
+
+
+
 ## Motion Diazverso — padrão HQ contemporâneo consolidado (14/10/2026)
 
 Com o perfil Diazverso, criar motion design moderno/cinematográfico com estruturas discretas de HQ: câmera recua do footage para revelar painéis em página 2.5D, viaja até outro painel cinza/dessaturado, esse quadro ganha cor ao ser focado e a câmera entra na próxima cena real. É **exemplo de coreografia**, não transição mandatória em todos os cortes. Manter gutters, retícula sutil, caixas retangulares de narração, Anton para palavra gigante/fundo colorido, Bangers para lettering; evitar balões de diálogo/pensamento e cartoon infantil. Em explicações, considerar TSX com frequência, desde que o filme, jogo ou personagem mencionado possa ser visto full screen ou no próprio painel. O áudio segue o contrato de movimentos com SFX iniciando audivelmente durante a animação. Shorts conservam explosão Minecraft 0–3s, riser pré-transição, blur + whoosh durante o movimento, música pós-blur e CTA; não estender vinheta a vídeos longos nem a marcas diferentes. VD_0005 permanece fechado.
