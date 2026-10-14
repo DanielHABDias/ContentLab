@@ -5,6 +5,12 @@ description: Planeja coreografia de motion design no Content Lab: keyframes, eas
 
 # Content Lab — Movimento e coreografia
 
+## Motion Diazverso — padrão HQ contemporâneo consolidado (14/10/2026)
+
+Com o perfil Diazverso, criar motion design moderno/cinematográfico com estruturas discretas de HQ: câmera recua do footage para revelar painéis em página 2.5D, viaja até outro painel cinza/dessaturado, esse quadro ganha cor ao ser focado e a câmera entra na próxima cena real. É **exemplo de coreografia**, não transição mandatória em todos os cortes. Manter gutters, retícula sutil, caixas retangulares de narração, Anton para palavra gigante/fundo colorido, Bangers para lettering; evitar balões de diálogo/pensamento e cartoon infantil. Em explicações, considerar TSX com frequência, desde que o filme, jogo ou personagem mencionado possa ser visto full screen ou no próprio painel. O áudio segue o contrato de movimentos com SFX iniciando audivelmente durante a animação. Shorts conservam explosão Minecraft 0–3s, riser pré-transição, blur + whoosh durante o movimento, música pós-blur e CTA; não estender vinheta a vídeos longos nem a marcas diferentes. VD_0005 permanece fechado.
+
+
+
 ## Propósito
 Definir **por que, quando e como** a composição muda. Movimento deve guiar atenção e explicar relações; não acrescentar atividade visual artificial.
 
