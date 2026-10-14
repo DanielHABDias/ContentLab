@@ -163,9 +163,22 @@ export async function mixAudio(visual,cleaned,plan,resolvedAssets,output,duratio
     }
     for(const item of scene.elements||[]){
       if(item.type==='sfx'&&item.asset){
-        const start=item.at??item.start??scene.start;
-        queue.push({item,type:'sfx',start,end:Math.min(duration,start+(item.config?.duration??duration)),
-          file:resolvedAssets[item.asset],loop:false});
+        // alignEndAt places the END of the complete SFX immediately before
+        // the intended whoosh. This is based on ffprobe's real source length;
+        // config.duration must not truncate an effect marked preserveFullSource.
+        const file=resolvedAssets[item.asset],conf=item.config||{};
+        const naturalDuration=conf.preserveFullSource && file
+          ? await probeAudioDuration(file,{ffprobe,signal}) : null;
+        const targetEnd=conf.alignEndAt;
+        let start=item.at??item.start??scene.start;
+        if(conf.preserveFullSource&&Number.isFinite(targetEnd)){
+          start=targetEnd-naturalDuration;
+          if(start<-.001)throw Error('SFX completo não cabe antes do whoosh em '+targetEnd+'s: '+item.asset);
+          start=Math.max(0,start);
+        }
+        const length=conf.preserveFullSource?naturalDuration:(conf.duration??duration);
+        queue.push({item,type:'sfx',start,end:Math.min(duration,start+length),
+          file,loop:false});
       }else if(['video','overlay'].includes(item.type)&&item.muted===false&&item.asset){
         queue.push({item,type:item.type,start:item.start??scene.start,end:item.end??scene.end,
           file:resolvedAssets[item.asset],loop:!!item.loop});
@@ -181,6 +194,8 @@ export async function mixAudio(visual,cleaned,plan,resolvedAssets,output,duratio
     if(type==='sfx'){
       if(!measured.has(file))measured.set(file,await measureSfxEdges(file,{ffmpeg,ffprobe,signal}));
       edges=measured.get(file);
+      if(item.config?.preserveFullSource===true)
+        edges={start:0,end:edges.duration,duration:edges.duration,empty:false};
       if(edges.empty)continue;
     }
     const audibleLength=edges?Math.min(length,edges.end-edges.start):length;
