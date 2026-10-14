@@ -8,7 +8,7 @@ const fileLine=file=>"file '"+path.resolve(file).replace(/\\/g,'/').replace(/'/g
 const encoding=['-c:v','libx264','-preset','veryfast','-crf','18','-threads',String(Math.max(1,Number(process.env.CONTENTLAB_COMPOSE_THREADS||2)))];
 const D=n=>Number(n).toFixed(6);
 const durationOf=scene=>scene.end-scene.start;
-const identity=(sources,params)=>sha({sources:sources.map(statIdentity),params,code:'composer-4-readable-blur'});
+const identity=(sources,params)=>sha({sources:sources.map(statIdentity),params,code:'composer-5-cinematic-whip-blur'});
 async function ffconcat(files,output,work,ffmpeg,signal,copy=false){
   const manifest=path.join(work,'segments-'+Math.random().toString(16).slice(2)+'.ffconcat');
   fs.writeFileSync(manifest,'ffconcat version 1.0\n'+files.map(fileLine).join(''));
@@ -117,11 +117,18 @@ export async function composeVisual(scenes,segments,output,settings,work,{ffmpeg
           if(type.startsWith('blur_')){
             // Blur is strongest halfway through the motion but ZERO on
             // the first and last frame. Prevents a blurry/sharp hard cut.
+            // Aggressive full-frame whip blur inspired by rapid mobile edits.
+            // Directional Gaussian uses a wider streak along travel, applies to
+            // the WHOLE composite (including footage/overlays), and stays sharp
+            // at the first and last frames to prevent a snap on entry/exit.
             const weight=frames>1
-              ? '(0.96*sin(PI*min(1,max(0,T/'+D(travel)+')))^2)'
+              ? '(0.995*sin(PI*min(1,max(0,T/'+D(travel)+'))))'
               : '0';
+            const anisotropic=['blur_left','blur_right'].includes(type)
+              ? 'gblur=sigma=56:sigmaV=22:steps=2'
+              : 'gblur=sigma=22:sigmaV=56:steps=2';
             graph=moving+
-              ';[moving]split[sharp][blurSrc];[blurSrc]gblur=sigma=12[blurry];'+
+              ';[moving]split[sharp][blurSrc];[blurSrc]'+anisotropic+'[blurry];'+
               "[sharp][blurry]blend=all_expr='A*(1-"+weight+")+B*"+weight+"'[out]";
           }else{
             graph=moving+';[moving]null[out]';
