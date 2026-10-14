@@ -5,6 +5,14 @@ description: Planeja coreografia de motion design no Content Lab: keyframes, eas
 
 # Content Lab — Movimento e coreografia
 
+## Whip blur forte e riser completo — Diazverso Shorts (14/10/2026)
+
+Para **Shorts Diazverso** especificamente, a duração recomendada do `blur_left/right/up/down` passou a ser `transitionDuration:0.20` segundo a 30 fps (6 frames). O compositor `server/compose.mjs` aplica um blur gaussiano anisotrópico **ao quadro inteiro**, com `sigma=56:sigmaV=22` para deslocamento horizontal e `22:56` para vertical, e peso máximo de 99,5% no centro do efeito. O arquivo do compositor recebeu nova assinatura de cache para invalidar frames de transições antigas. Nunca presumir que apenas alterar o JSON torna o blur mais forte: usar a versão mais recente do ContentLab e validar frames centrais do render.
+
+Antes do primeiro whoosh, o `builtin://sfx/Riser metálico.mp3` deve tocar **inteiro**, não apenas 0,6 s. Na mixagem atual, `config.preserveFullSource:true` impede corte automático de início/fim e `config.alignEndAt:<tempo do whoosh>` calcula o começo a partir da duração real do arquivo (nesta biblioteca, cerca de 2,82 s). Não definir `config.duration` para limitar esse riser nem `fadeOut` artificial; o whoosh dispara já dentro da nova cena, tipicamente +0,02 s. Caso um arquivo seja maior do que o trecho disponível antes do whoosh, o motor sinaliza erro em vez de truncar. Música após a transição. Direção sonora específica, nunca padrão imposto em vídeo longo ou em GSB.
+
+
+
 ## Primeiro blur dos Shorts Diazverso — timing operacional (14/10/2026)
 
 No compositor atual, `blur_left/right/up/down` estão implementadas: a transição usa o último frame da cena anterior e os primeiros frames da próxima, ocupando o **início da próxima cena**. A duração de partida ~0,4 s deve ser conferida no MP4 a 30 fps, e o Woosh inicia audivelmente durante `[nextScene.start,nextScene.start+transitionDuration)`, não antes da troca nem depois do movimento. Riser fica na saída do gancho, música só após o primeiro blur. O mecanismo completo exige verificação audiovisual; transição declarada no JSON não garante perceptibilidade.
