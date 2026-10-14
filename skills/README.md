@@ -43,3 +43,11 @@ Exemplos de referência na pasta VD_0005: `PerguntaAbertura`, `ConflitoCentral`,
 Cada movimento/animação editorial recebe cobertura sonora com início audível **durante** a animação. SFX pode durar menos/mais que a ação visual, com tail natural; se estiver excessivamente longo, encurtar com `config.duration` e `fadeOut`, não cortar seco. Variar família de sons, não repetir sempre o mesmo whoosh, nem duplicar efeitos existentes em CTA/Nox. Ver `contentlab-timeline-audio`, `contentlab-motion`, `contentlab-revisao` e `contentlab-revisao/references/AUDITORIA_COMPLETA_PRE_E_POS_RENDER.md`.
 
 A skill já existente `contentlab-revisao` passa a ser gate obrigatório pré-render (para liberar edição automática) e pós-render (para aprovar o vídeo final). No Diazverso, `diazverso-revisao-edicao`, mantida nas skills específicas do Drive, acrescenta QA de identidade autoral.
+
+
+## Catálogo atualizado de reutilização, música e futura linguagem HQ
+
+- [Auditoria de reutilização dos TSX do VD_0005](../VD0005_REUSABLE_REVIEW.md): diferencia núcleo reaproveitável de cenas/diálogos particulares e preserva o vídeo fechado.
+- [Exemplos TSX](../examples/custom-scenes/): `NarrativePath`, `EvidenceConstellation`, `PixelNotification`, `ComicMotionKit`. Os arquivos precisam ser copiados para `custom-scenes/` do projeto novo; não são automaticamente componentes da UI.
+- [Música e importação local](../MUSIC_LIBRARY_DIAZVERSO.md): três faixas já presentes, três candidatas a importação privada e alerta de direitos autorais.
+- Para próximos vídeos Diazverso: testar *quadrinhos em movimento* com gutters, quadros, retícula, tinta desenhada, balões, lettering e 2.5D, sem impor esse estilo ao VD_0005 concluído.
