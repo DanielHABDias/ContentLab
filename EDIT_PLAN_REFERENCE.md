@@ -48,7 +48,7 @@
 - Arquivos são `project://` (raiz do projeto) ou `builtin://` (biblioteca instalada). O resolver bloqueia `..`, symlinks externos e URI inválida. Não use caminhos absolutos em `asset`.
 - `audio.narration` informa um arquivo dentro do projeto. `sourceCuts` lista trechos `{start,end}` da narração original, aplicados antes da mixagem.
 - `audio.music[]` aceita `asset`, `start`, `end`, `trimDb`, `fadeIn`, `fadeOut`, `preset`. A voz pode usar `normalize`, `targetLufs`, `truePeakDb`, `highpassHz` e `trimDb`. Também há configuração `ducking`; confirme o comportamento audiovisual final nos testes.
-- `timeline[].transitionOut`: `cut`, `fade`, `slide_left`, `blur_left`, `blur_right`, `blur_up` com `transitionDuration`. Transições dependem das cenas adjacentes.
+- `timeline[].transitionOut`: `cut`, `fade`, `slide_left`, `blur_left`, `blur_right`, `blur_up`, `blur_down` com `transitionDuration`. Transições dependem das cenas adjacentes.
 
 As transições não encurtam cenas: os quadros misturados/deslizados ocupam o **começo da cena seguinte**. Para um whoosh centralizado em `blur_*`, posicione `sfx.at` na cena entrante, em segundos absolutos, aproximadamente em `cena_entrante.start + (duração_visual - duração_audível_do_whoosh)/2`. O mixer remove silêncio nas bordas do SFX antes de posicioná-lo, então meça a duração audível e confirme uma prévia curta com áudio.
 - `background` recebe `color` ou `asset`; `fit: contain` preserva conteúdo inteiro, `cover` só quando o recorte for intencional; `loop` repete vídeo curto. Vídeo 16:9 já no formato final não deve ser ampliado implicitamente.
@@ -140,7 +140,7 @@ O sistema registra `transcript.build.json` para identificar qual narração/cort
 
 ## Interpolação suave sem mudar velocidade (Content Lab)
 
-A curva de movimento e a duração são conceitos diferentes. A implementação suaviza `keyframes` de camadas e câmera, `animation.enter/exit`, `word_stack_vertical`, `word_stream_horizontal`, `pan`, zoom e idle sem alterar os segundos declarados no JSON. A curva padrão é **smootherstep C2**, que começa e termina com velocidade e aceleração zero; `easing:"linear"` é respeitado caso seja escolha explícita. `fade`, `slide_left`, `blur_left/right/up` chegam ao fim da transição no último frame, e o blur deixa de aparecer ou sumir abruptamente. `cut` permanece instantâneo.
+A curva de movimento e a duração são conceitos diferentes. A implementação suaviza `keyframes` de camadas e câmera, `animation.enter/exit`, `word_stack_vertical`, `word_stream_horizontal`, `pan`, zoom e idle sem alterar os segundos declarados no JSON. A curva padrão é **smootherstep C2**, que começa e termina com velocidade e aceleração zero; `easing:"linear"` é respeitado caso seja escolha explícita. `fade`, `slide_left`, `blur_left/right/up/down` chegam ao fim da transição no último frame, e o blur deixa de aparecer ou sumir abruptamente. `cut` permanece instantâneo.
 
 Exemplo: `animation:{"enter":"slide_up","enterDuration":0.1}` continua com **100 ms**; `{ "config": {"transitionDuration":0.1} }` faz carrossel em **100 ms**. Nunca alongar o tempo automaticamente em nome da fluidez. O limite visual é o FPS: a 30 fps, 0.1s = 3 frames, a 60 fps = 6 frames. Teste `node --test server/motion.test.mjs` valida matematicamente as curvas e `node server/smoke-motion.mjs` renderiza cada transição FFmpeg com 100 ms e verifica 24 frames para duas cenas de 0.4 s.
 

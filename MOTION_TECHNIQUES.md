@@ -16,7 +16,7 @@
 | Parallax e 3D | Câmera 2D/scale; não oferece geometria 3D real | CSS perspective, planos PNG/SVG separados, translateZ/rotateY | **2.5D**; 3D real só com solução dedicada verificada |
 | Glitch | Footage, overlay e SFX podem usar material glitch | Cortes de bandas, deslocamento cromático calculado por frame | **Receita incorporada**, usar com parcimônia |
 | Mask reveal | `center_reveal`, `center_close` | `clipPath`, máscara SVG, paths animados | **Existente / receita mais ampla** |
-| Motion blur | `blur_left/right/up` em composição final | Ecos e blur orientado pela velocidade | **Existente / aproximação demonstrada**; não confundir com optical flow |
+| Motion blur | `blur_left/right/up/down` em composição final | Ecos e blur orientado pela velocidade | **Existente / aproximação demonstrada**; não confundir com optical flow |
 | Transições slide | `slide_left`; outros sentidos não estão no contrato do JSON | Sim, composição A → B no mesmo TSX | **Preset TSX** fornecido |
 | Transições whip | Não declarativo no contrato atual | Slide acelerado + blur no TSX | **Preset TSX** fornecido |
 | Transições flip | Não declarativo no contrato atual | `perspective` + `rotateY` em um palco TSX | **Preset TSX** fornecido como 2.5D |
@@ -63,8 +63,8 @@ Arquivo: [`examples/custom-scenes/MotionDesignToolkit.tsx`](examples/custom-scen
 
 ## Limites de implementação
 
-Atualmente `server/plan.mjs` reconhece apenas `cut`, `fade`, `blur_left`, `blur_right`, `blur_up` e `slide_left`. Não escrever valores novos no `transitionOut` sem implementação e teste do compositor. As receitas TSX são **exemplos de código reutilizáveis**, não efeito já disponível na UI por clique, nem garantia de render final sem testes de cada projeto.
+Atualmente `server/plan.mjs` reconhece apenas `cut`, `fade`, `blur_left`, `blur_right`, `blur_up`, `blur_down` e `slide_left`. Não escrever valores novos no `transitionOut` sem implementação e teste do compositor. As receitas TSX são **exemplos de código reutilizáveis**, não efeito já disponível na UI por clique, nem garantia de render final sem testes de cada projeto.
 
 ## Evolução do renderizador (engenharia)
 
-Para incorporar os novos nomes no JSON, implementar em conjunto: schema (enum), validador, compositor FFmpeg, preview com paridade, cache e teste visual de primeiro/último frame. Priorizar `slide_right/up/down`, `curtain`, `whip`, `zoom` e `flip`, sempre garantindo que o último frame da transição já seja exatamente o primeiro estado visível da cena seguinte. 
+Para incorporar os novos nomes no JSON, implementar em conjunto: schema (enum), validador, compositor FFmpeg, preview com paridade, cache e teste visual de primeiro/último frame. Priorizar `slide_right/up/down`, `curtain`, `whip`, `zoom` e `flip`, sempre garantindo que o último frame da transição já seja exatamente o primeiro estado visível da cena seguinte.

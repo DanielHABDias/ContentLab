@@ -20,7 +20,7 @@
     duration: {type: 'number', exclusiveMinimum: 0}, trimDb: {type: 'number'}, fadeIn: {type: 'number', minimum: 0}, fadeOut: {type: 'number', minimum: 0}, preset: {type: 'string'},
   };
   const suggestions = {
-    layout: ['fullscreen', '3x3', 'custom_grid', 'center_column', 'three_columns'], transitionOut: ['cut', 'fade', 'blur_left'],
+    layout: ['fullscreen', '3x3', 'custom_grid', 'center_column', 'three_columns'], transitionOut: ['cut', 'fade', 'blur_left', 'blur_right', 'blur_up', 'blur_down', 'slide_left'],
     enter: ['cut', 'none', 'fade', 'pop_in', 'slide_from_left', 'slide_from_right', 'slide_up', 'slide_down'],
     idle: ['none', 'float_soft', 'pulse_soft', 'slow_zoom_in', 'slow_zoom_out', 'pan'],
     exit: ['cut', 'none', 'fade', 'fade_out', 'slide_to_left', 'slide_to_right', 'slide_to_bottom'],

@@ -33,6 +33,12 @@ test('Linux dependency checks reuse valid installs and reinstall only when manif
    fs.writeFileSync(path.join(temp,'package.json'),'{"dependencies":{"express":"1"}}');
    fs.writeFileSync(path.join(temp,'backend','remotion','package-lock.json'),'{"lockfileVersion":3}');
    fs.writeFileSync(path.join(temp,'fake-model.bin'),'whisper-model-for-test');
+   // This fixture tests dependency reuse, not Node installation. Present a
+   // Node 22 executable so the bootstrap does not prepend a real downloaded
+   // npm ahead of the mocked npm on hosts running a newer Node major.
+   const node=path.join(temp,'mockbin','node');
+   fs.writeFileSync(node,'#!/bin/sh\nif [ "$1" = "-p" ]; then echo 22; else exec "'+process.execPath+'" "$@"; fi\n');
+   fs.chmodSync(node,0o755);
    for(const bin of ['ffmpeg','ffprobe','whisper-cli']){
     const f=path.join(temp,'mockbin',bin);
     fs.writeFileSync(f,bin==='ffmpeg'?

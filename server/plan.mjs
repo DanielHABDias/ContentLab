@@ -10,7 +10,7 @@ const MEDIA = new Set(['video','image','overlay','sfx']);
 // The old project-specific preset is accepted for existing JSONs only.
 // New projects and public catalog use the generic center_column name.
 const LAYOUTS = new Set(['fullscreen','3x3','custom_grid','three_columns','left_right','character_vs','center_column','nox']);
-const TRANSITIONS = new Set(['cut','fade','blur_left','blur_right','blur_up','slide_left']);
+const TRANSITIONS = new Set(['cut','fade','blur_left','blur_right','blur_up','blur_down','slide_left']);
 const AUTO_CELLS = {
   three_columns:[[1,4,7],[2,5,8],[3,6,9]],
   character_vs:[[1,4,7],[3,6,9]],

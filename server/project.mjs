@@ -92,7 +92,7 @@ export function installedAssets(){
 }
 export function registry(){
   return {layouts:['fullscreen','3x3','custom_grid','three_columns','left_right','character_vs','center_column'],
-    transitions:['cut','fade','blur_left','blur_right','blur_up','slide_left'],
+    transitions:['cut','fade','blur_left','blur_right','blur_up','blur_down','slide_left'],
     motions:['cut','none','fade','fade_out','slide_up','pop_in','float_soft','wiggle_soft','slow_zoom_in','slow_zoom_out','pan','pulse_soft'],
     motion_enter:['cut','none','fade','pop_in','slide_from_left','slide_from_right','slide_up','slide_down','center_reveal'],
     motion_idle:['none','float_soft','wiggle_soft','pulse_soft','slow_zoom_in','slow_zoom_out','pan'],

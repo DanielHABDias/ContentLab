@@ -106,6 +106,9 @@ export async function composeVisual(scenes,segments,output,settings,work,{ffmpeg
           }else if(type==='blur_up'){
             moveOld="x=0:y='-"+h+"*"+phase+"'";
             moveNew="x=0:y='"+h+"-"+h+"*"+phase+"'";
+          }else if(type==='blur_down'){
+            moveOld="x=0:y='"+h+"*"+phase+"'";
+            moveNew="x=0:y='-"+h+"+"+h+"*"+phase+"'";
           }
           const moving=outgoing+incoming+
             'color=c=black:s='+w+'x'+h+':r='+fps+':d='+D(seconds)+'[base];'+

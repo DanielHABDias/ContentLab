@@ -21,7 +21,7 @@ try{
     {id:'first',start:0,end:0.4,transitionOut:type,transitionDuration:0.1},
     {id:'second',start:0.4,end:0.8,transitionOut:'cut'}
   ];
-  for(const type of ['fade','slide_left','blur_left','blur_right','blur_up']){
+  for(const type of ['fade','slide_left','blur_left','blur_right','blur_up','blur_down']){
     const output=path.join(root,type+'.mp4');
     const result=await composeVisual(scenes(type),files,output,cfg,root,{ffmpeg:'ffmpeg'});
     assert.equal(result.transitions.length,1);
@@ -32,7 +32,7 @@ try{
     assert.equal(Number(probe.stdout.trim()),24,
       'two 0.4s scenes must remain exactly 24 frames at 30fps for '+type);
   }
-  console.log(JSON.stringify({status:'passed',transitionTypes:5,transitionSeconds:0.1,
+  console.log(JSON.stringify({status:'passed',transitionTypes:6,transitionSeconds:0.1,
     fps,frames:24}));
 }finally{
   if(process.env.CONTENTLAB_KEEP_SMOKE!=='1')fs.rmSync(root,{recursive:true,force:true});

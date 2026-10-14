@@ -85,7 +85,7 @@ Os presets de entrada, movimento contínuo e saída ficam em animation. Os keyfr
 
 Suavidade não significa lentidão: o motor usa interpolação contínua de ordem C2 (smootherstep) por padrão em keyframes de elementos e câmera, entradas, saídas e carrosséis. Uma duração de 0.1 segundo continua tendo exatamente 0.1 segundo. animation.enterDuration/exitDuration e config.transitionDuration controlam TEMPO, independentemente da curva. easing:linear continua disponível para movimento intencionalmente linear; ease_in/out aceleram/desaceleram. Não adicionar segundos automaticamente em nome da fluidez.
 
-O pan e slow_zoom_in/out usam início e fim assentados; float_soft, wiggle_soft, pulse_soft e camera.shake têm envelope de amplitude suave para não começar ou encerrar com saltos. No word_stack_vertical a posição, escala, opacidade e cor dos textos mudam continuamente; word_stream_horizontal também elimina a antiga palavra-fantasma ao terminar a passagem. Transições fade, slide_left e blur_left/right/up usam curvas suaves e chegam à posição final no último frame, sem expandir a timeline; o blur só cresce no meio da passagem e recua antes do corte.
+O pan e slow_zoom_in/out usam início e fim assentados; float_soft, wiggle_soft, pulse_soft e camera.shake têm envelope de amplitude suave para não começar ou encerrar com saltos. No word_stack_vertical a posição, escala, opacidade e cor dos textos mudam continuamente; word_stream_horizontal também elimina a antiga palavra-fantasma ao terminar a passagem. Transições fade, slide_left e blur_left/right/up/down usam curvas suaves e chegam à posição final no último frame, sem expandir a timeline; o blur só cresce no meio da passagem e recua antes do corte.
 
 Limitação física: uma transição de 0.1 s em 30 fps tem apenas 3 frames; em 60 fps tem 6. O software não inventa quadros nem transforma 0.1 s em 0.4 s: caso queira mais amostras de movimento, aumente project.fps conscientemente. cut continua instantâneo por definição, e texto digitado/reveal continua discreto por caractere; suavizar não deve mudar sua cadência semântica.
 
@@ -139,7 +139,7 @@ Exemplo de código e plano de edição versionados no repositório: examples/cus
 
 A lista timeline é ordenada pelo start absoluto. Cada cena possui ID estável; cenas não se sobrepõem. A duração real resulta da diferença entre end e start.
 
-Transições disponíveis: cut, fade, blur_left, blur_right, blur_up e slide_left. O compositor utiliza frames em movimento da cena entrante sem ampliar o tempo total do vídeo.
+Transições disponíveis: cut, fade, blur_left, blur_right, blur_up, blur_down e slide_left. O compositor utiliza frames em movimento da cena entrante sem ampliar o tempo total do vídeo.
 
 O cache mantém MP4s individuais por ID. A montagem e o áudio final continuam sendo etapas necessárias mesmo quando todas as cenas visuais são reaproveitadas.
 
@@ -199,7 +199,7 @@ Primeiro render após atualizar o motor pode recalcular assinaturas do cache. N�
 
 ### Transições
 
-`cut` · `fade` · `blur_left` · `blur_right` · `blur_up` · `slide_left`
+`cut` · `fade` · `blur_left` · `blur_right` · `blur_up` · `blur_down` · `slide_left`
 
 ### Animações de entrada
 
@@ -311,7 +311,7 @@ Obrigatório significa exigido dentro do objeto pai. Um bloco opcional pode ter 
 | `timeline[].layout` | texto ou objeto | Não | — | `{}` | Layout predefinido como fullscreen, 3x3 ou character_vs. |
 | `timeline[].layout.grid` | objeto | Não | fixo: 3x3 | `"3x3"` | Grade declarada na forma de objeto: atualmente 3x3. |
 | `timeline[].layout.preset` | string | Não | — | `"exemplo"` | Nome textual do layout a ser aplicado. |
-| `timeline[].transitionOut` | string | Não | — | `"fade"` | Transição: cut, fade, blur_left, blur_right, blur_up ou slide_left. |
+| `timeline[].transitionOut` | string | Não | — | `"fade"` | Transição: cut, fade, blur_left, blur_right, blur_up, blur_down ou slide_left. |
 | `timeline[].transitionDuration` | number | Não | maior que 0 | `0.35` | Duração temporal da transição que introduz a próxima cena. |
 | `timeline[].customComponent` | object | Não | — | `{}` | Composição programável Remotion/TSX; código local confiável sob custom-scenes/. |
 | `timeline[].customComponent.module` | string | Sim | — | `"exemplo"` | URI project://custom-scenes/...tsx; o componente local renderiza sem configuração extra, mas deve ser confiável. |

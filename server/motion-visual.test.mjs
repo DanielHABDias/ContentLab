@@ -24,7 +24,7 @@ test('0.1-second fade / slide / blur transitions remain 0.1 seconds and end on t
         '-c:v','libx264','-pix_fmt','yuv420p',video]);
       videos.push(video);
     }
-    for(const type of ['fade','slide_left','blur_left','blur_right','blur_up']){
+    for(const type of ['fade','slide_left','blur_left','blur_right','blur_up','blur_down']){
       const output=path.join(folder,type+'.mp4');
       const scenes=[{id:'red',start:0,end:0.5,transitionOut:type,transitionDuration:0.1},
         {id:'blue',start:0.5,end:1,transitionOut:'cut'}];
@@ -47,6 +47,19 @@ test('0.1-second fade / slide / blur transitions remain 0.1 seconds and end on t
       const [red,green,blue]=sample.stdout.subarray(offset,offset+3);
       assert.ok(blue>120&&blue>red*2&&blue>green*2,
         `${type}: final transition frame not settled on incoming blue (${red},${green},${blue})`);
+      if(type==='blur_down'){
+        // Halfway through, the new blue scene enters from the top while the
+        // outgoing red scene leaves through the bottom.
+        const midpoint=spawnSync('ffmpeg',['-hide_banner','-loglevel','error',
+          '-i',output,'-vf','select=eq(n\\,16)','-frames:v','1','-f','rawvideo',
+          '-pix_fmt','rgb24','-'],{encoding:null,maxBuffer:4*w*h,timeout:20000});
+        assert.equal(midpoint.status,0,String(midpoint.stderr));
+        const top=(10*w+80)*3,bottom=(80*w+80)*3;
+        assert.ok(midpoint.stdout[top+2]>midpoint.stdout[top],
+          'blur_down should bring the incoming blue scene from the top');
+        assert.ok(midpoint.stdout[bottom]>midpoint.stdout[bottom+2],
+          'blur_down should move the outgoing red scene toward the bottom');
+      }
     }
   }finally{fs.rmSync(folder,{recursive:true,force:true});}
 });

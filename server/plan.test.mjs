@@ -22,6 +22,13 @@ test('one canonical schema with no version key',()=>{
   assert.deepEqual(validatePlan(p),[]);
   assert.ok(validatePlan({...p,version:'0.2'}).some(x=>x.path==='$.version'));
 });
+test('blur_down is a supported scene transition',()=>{
+  const p=example();
+  p.timeline[0].transitionOut='blur_down';
+  p.timeline[0].transitionDuration=0.35;
+  assert.deepEqual(validateShape(p),[]);
+  assert.deepEqual(validatePlan(p),[]);
+});
 test('scene IDs are stable and duplicates rejected',()=>{
   const p=example();p.timeline.push({...p.timeline[0],start:3,end:6});
   assert.ok(validatePlan(p).some(e=>e.message.includes('duplicado')));
