@@ -60,3 +60,10 @@ Exemplo estrutural (ajustar duração e instante aos eventos reais; asset deve e
 {"id":"fx_painel_entrada","type":"sfx","asset":"builtin://sfx/Whoosh 01.mp3","at":12.24,"fadeOut":0.08,"config":{"duration":0.32,"preset":"subtle","trimDb":-18}}
 ```
 Esse exemplo não prova que existe animação em 12,24 s; primeiro localizar seu intervalo. A verificação automática inspeciona janelas e paths; a verificação perceptual exige preview com áudio, pois `at` exato no JSON não prova que o SFX é ouvido no movimento. Variar categorias de SFX ao longo do vídeo; não usar whoosh indiscriminadamente. Silêncio deve ser escolha justificada, não esquecimento de uma animação.
+
+
+## Biblioteca local de música aprovada versus direitos de redistribuição
+
+Ver `MUSIC_LIBRARY_DIAZVERSO.md` (auditoria VD_0005). `Something is Going On - Godmode`, `The New Order - Aaron Kenny` e `Future Rennaisance - Godmode` já estão em `builtin-assets/music/`. `A Great Darkness Approaches, Can You Feel It_ - ELPHNT`, `Elegy - Asher Fulero` e `Frightmare - Jimena Contreras` estão no acervo pessoal mas **não** no repositório. Existe `scripts/import-diazverso-music.mjs` para instalar localmente somente após revisão da licença no YouTube Studio; não comitar esses MP3s no GitHub. Verificar atribuição por faixa e destino de publicação. Música marcada "NoCopyright" no Drive **não** significa domínio público. OST de GTA V e outras faixas comerciais exigem cautela especial e não devem ser promovidas como livre uso.
+
+A importação é local e não reescreve qualquer `edit_plan.json` antigo. Para projetos novos, pode-se usar `builtin://music/...` somente se o arquivo existir na instalação real; caso contrário, `project://assets/music/...` com MP3 legitimamente fornecido. Não declarar como instalado só porque o nome está no catálogo.
