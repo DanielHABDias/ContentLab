@@ -5,6 +5,12 @@ description: Cria cenas Remotion complexas como arquivos TSX dentro da subpasta 
 
 # Content Lab — Cenas programáveis TSX
 
+## TSX Diazverso — identidade visual consolidada (14/10/2026)
+
+Para novos projetos Diazverso, **TSX é recurso frequente e especialmente recomendado para explicações e trechos argumentativos**, mesmo com complexidade moderada quando a linguagem autoral justificar. A direção integra motion design moderno, câmera espacial e **HQ editorial sóbria**, com halftone sutil, painéis/gutters, caixas retangulares de narração e trechos reais de obras em planos/painéis. Repertório de transição: footage real → zoom-out para página de painéis → travelling até painel dessaturado → cor volta quando chega ao foco → zoom-in para a próxima cena. Evitar balões de fala, diálogo ou pensamento; não infantilizar a composição. **Anton** para palavra gigante sobre cor sólida mutável, **Bangers** para lettering, **Comic Sans** pontual em caixas, sem proibir UI moderna secundária. Não forçar TSX em toda cena, não sumir com vídeo real citado, e só promover código à biblioteca após revisão de fonte, compilação, render/escuta e QA. A assinatura sonora/visual Minecraft + riser + blur/woosh + música posterior/CTA pertence exclusivamente aos Shorts Diazverso, não ao motor genérico. O VD_0005 não deve receber patches.
+
+
+
 ## Quando acionar
 Use para cenas em um mesmo espaço visual: câmera acompanhando trajetórias, diagramas procedurais, linha do tempo, multiverso, grafos, geometria SVG, grades, partículas, grupos de cards coordenados ou tipografia com muitos keyframes. Para cenas simples, preferir componentes declarativos do JSON. O critério não é "parecer bonito", é reduzir complexidade de autoria e manter uma cena coesa.
 
