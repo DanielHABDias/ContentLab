@@ -23,3 +23,8 @@ __pycache__/
 
 # Temporary generated Remotion entry points are never source-controlled
 backend/remotion/.contentlab-custom-*/
+
+# YouTube Audio Library candidates are LOCAL-ONLY; do not redistribute standalone tracks.
+builtin-assets/music/A Great Darkness Approaches, Can You Feel It_ - ELPHNT.mp3
+builtin-assets/music/Elegy - Asher Fulero.mp3
+builtin-assets/music/Frightmare - Jimena Contreras.mp3
