@@ -31,10 +31,12 @@ test('writes credentials preserving unrelated keys and comments',()=>sandbox(roo
 test('rejects unsafe keys, newlines and symlink credentials',()=>sandbox(root=>{
   assert.throws(()=>writeSocialEnv({EVIL:'x'},root),/inválido/);
   assert.throws(()=>writeSocialEnv({CONTENTLAB_YOUTUBE_CLIENT_SECRET:'a\nb'},root),/inválido/);
-  const external=path.join(root,'other');
-  fs.writeFileSync(external,'secret');
-  fs.symlinkSync(external,envPath(root));
-  assert.throws(()=>ensureSocialEnv(root),/inseguro/);
+  if(process.platform!=='win32'){
+    const external=path.join(root,'other');
+    fs.writeFileSync(external,'secret');
+    fs.symlinkSync(external,envPath(root));
+    assert.throws(()=>ensureSocialEnv(root),/inseguro/);
+  }
 }));
 test('stores refresh tokens without leaking into unrelated values',()=>sandbox(root=>{
   const secret='random+=/ :# " token';
