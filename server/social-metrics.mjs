@@ -8,7 +8,8 @@ const numberOrNull=value=>value===null||value===undefined||value===''?null:
   Number.isFinite(Number(value))?Math.max(0,Number(value)):null;
 const utc=value=>{
   if(!value)return null;
-  const ms=typeof value==='number'?value*1000:Date.parse(String(value).replace(/([+-]\d{2})(\d{2})$/,'$1:$2'));
+  const ms=(typeof value==='number'||/^\d{10}$/.test(String(value)))?Number(value)*1000:
+    Date.parse(String(value).replace(/([+-]\d{2})(\d{2})$/,'$1:$2'));
   return Number.isFinite(ms)?new Date(ms).toISOString():null;
 };
 const sortRecent=(items)=>items.sort((a,b)=>(Date.parse(b.publishedAt||0)||0)-(Date.parse(a.publishedAt||0)||0));
@@ -99,8 +100,14 @@ async function youtube(token,fetcher){
 async function instagram(token,fetcher){
   const base='https://graph.instagram.com/v24.0/';
   const auth={fetcher,token};
-  const profile=await getJSON('Instagram',base+'me?'+new URLSearchParams({
-    fields:'id,username,followers_count,media_count'}),auth);
+  let profile;
+  try{
+    profile=await getJSON('Instagram',base+'me?'+new URLSearchParams({
+      fields:'id,username,followers_count,media_count'}),auth);
+  }catch{
+    profile=await getJSON('Instagram',base+'me?'+new URLSearchParams({
+      fields:'id,username'}),auth);
+  }
   // Uma falha em campos opcionais do Instagram não deve ocultar o painel inteiro.
   const standard='id,caption,media_type,permalink,timestamp,like_count,comments_count,thumbnail_url';
   let media;
