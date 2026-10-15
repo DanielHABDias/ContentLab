@@ -39,13 +39,13 @@ O repertório **Modern Editorial UI** deriva do CSS existente do Studio: interfa
 
 ## Aprendizado de motion TSX no Diazverso
 
-Em cenas explicativas autorais, TSX virou opção prioritária quando melhora a compreensão: câmera sobre um palco maior que a tela, palavras em posições diagonais, mídia em perspectiva 2.5D, parallax em planos separados, mapas de relações, split e recomposição de camadas. **A entrada do elemento deve estar concluída até o fim da palavra citada** (idealmente antes do início), com hold legível durante a fala. Para material real pertinente, um corte simples ainda pode ser a melhor decisão.
+Para o perfil Diazverso, a antiga preferência por muitos TSX complexos foi REVOGADA em 15/10/2026. O padrão vigente é montagem de cenas reais, artes completas em movimento suave, PNGs com animação discreta e poucos componentes HQ reutilizáveis; trajetórias 2.5D/mapas/splits continuam opcionais apenas quando realmente necessários. **A entrada do elemento deve estar concluída até o fim da palavra citada** (idealmente antes do início), com hold legível durante a fala. Para material real pertinente, um corte simples ainda pode ser a melhor decisão.
 
 Exemplos de referência na pasta VD_0005: `PerguntaAbertura`, `ConflitoCentral`, `OutraRazao`, `LegadoEmRede`, `ArgumentosEmConflito`, `ConstelacaoFamilia`. Consultar `contentlab-cenas-tsx/references/REPERTORIO_MOTION_TSX.md` antes de projetar movimentos novos. Não confundir TSX custom da pasta do vídeo com presets globais do motor.
 
 ## Revisão obrigatória de som e edição automática (2026-10)
 
-Cada movimento/animação editorial recebe cobertura sonora com início audível **durante** a animação. SFX pode durar menos/mais que a ação visual, com tail natural; se estiver excessivamente longo, encurtar com `config.duration` e `fadeOut`, não cortar seco. Variar família de sons, não repetir sempre o mesmo whoosh, nem duplicar efeitos existentes em CTA/Nox. Ver `contentlab-timeline-audio`, `contentlab-motion`, `contentlab-revisao` e `contentlab-revisao/references/AUDITORIA_COMPLETA_PRE_E_POS_RENDER.md`.
+Cada movimento/animação editorial recebe cobertura sonora; no perfil Diazverso o ataque audível deve acompanhar o **meio** do gesto, não antes nem no primeiro frame como automatismo. SFX pode durar menos/mais que a ação visual, com tail natural; se estiver excessivamente longo, encurtar com `config.duration` e `fadeOut`, não cortar seco. Variar família de sons, não repetir sempre o mesmo whoosh, nem duplicar efeitos existentes em CTA/Nox. Ver `contentlab-timeline-audio`, `contentlab-motion`, `contentlab-revisao` e `contentlab-revisao/references/AUDITORIA_COMPLETA_PRE_E_POS_RENDER.md`.
 
 A skill já existente `contentlab-revisao` passa a ser gate obrigatório pré-render (para liberar edição automática) e pós-render (para aprovar o vídeo final). No Diazverso, `diazverso-revisao-edicao`, mantida nas skills específicas do Drive, acrescenta QA de identidade autoral.
 
@@ -55,4 +55,10 @@ A skill já existente `contentlab-revisao` passa a ser gate obrigatório pré-re
 - [Auditoria de reutilização dos TSX do VD_0005](../VD0005_REUSABLE_REVIEW.md): diferencia núcleo reaproveitável de cenas/diálogos particulares e preserva o vídeo fechado.
 - [Exemplos TSX](../examples/custom-scenes/): `NarrativePath`, `EvidenceConstellation`, `PixelNotification`, `ComicMotionKit`. Os arquivos precisam ser copiados para `custom-scenes/` do projeto novo; não são automaticamente componentes da UI.
 - [Música e importação local](../MUSIC_LIBRARY_DIAZVERSO.md): três faixas já presentes, três candidatas a importação privada e alerta de direitos autorais.
-- Para próximos vídeos Diazverso: testar *quadrinhos em movimento* com gutters, quadros, retícula, tinta desenhada, balões, lettering e 2.5D, sem impor esse estilo ao VD_0005 concluído.
+- Para próximos vídeos Diazverso: adotar HQ simples com caixas de narrador branca/amarela com sombra, halftone, Anton, Bangers e fonte Avengers verificada para os TSX, sem balões como padrão. A montagem com cenas e ilustrações é a base; preservar VD_0005 concluído.
+
+## Regras Diazverso revisadas em 15/10/2026
+
+A entrada canônica para projetos de marca neste repositório é [`diazverso-video`](diazverso-video/SKILL.md), coordenada por [`diazverso-criacao-video`](diazverso-criacao-video/SKILL.md) para produção completa. Mudanças principais: poucos TSX, edição simples; Shorts com explosão Minecraft, legenda Bangers, riser só para tensão, whoosh/blur e CTA `ComicPageCTA`; longos com cenas relevantes, imagens sempre em zoom/pan sem borda preta, CRT em filmes/animações (não jogos), Nox/Anton e CTA HQ. Whoosh varia em deslizes, click/pop/bling em aparições, pico de SFX no meio do movimento; Metallic Riser NUNCA em slide. Música de Shorts é preferência autoral, não licença.
+
+As skills específicas do Diazverso mantidas no **Drive/IA/Skills** podem ter espelhos desatualizados até sincronização explícita. O documento de consolidação no Drive ID `1R-fldN8Pni77DYIJd5yvPZCdwM1JAue-Yi_JBMW0GBQ` registra decisões e exceções. Não apagar/renomear skills específicas por causa das cópias do ContentLab. Para arquivos específicos de Drive ainda não sincronizados, o criador deve aplicar a atualização textual quando a integração de edição Markdown estiver disponível. Não declarar que um espelho foi modificado só porque o GitHub mudou.
