@@ -13,7 +13,7 @@ let sourceRequestId = 0;
 const $ = (id) => document.getElementById(id);
 
 // Areas de trabalho isoladas: trocar de aba preserva o trabalho em andamento.
-const workspaces = ["videos", "transcription", "editor", "multieditor", "publications", "metrics", "settings", "docs"];
+const workspaces = ["videos", "transcription", "editor", "multieditor", "publications", "metrics", "library", "settings", "docs"];
 const workspaceGroups = {
   editor: ["editor", "multieditor"],
   social: ["publications", "metrics"]
