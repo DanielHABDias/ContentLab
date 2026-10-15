@@ -85,7 +85,9 @@ export function beginAuthorization(provider) {
     url.search=new URLSearchParams({
       client_id:value(CLIENT_KEYS.youtube[0]),redirect_uri:redirectUri,
       response_type:'code',scope:'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly',
-      access_type:'offline',prompt:'select_account consent',state
+      access_type:'offline',prompt:'select_account consent',state,
+      code_challenge:crypto.createHash('sha256').update(verifier).digest('base64url'),
+      code_challenge_method:'S256'
     }).toString();
   } else if(provider==='instagram'){
     url=new URL('https://www.instagram.com/oauth/authorize');
@@ -124,7 +126,8 @@ export async function completeAuthorization(provider,state,code) {
   if(provider==='youtube'){
     data=await tokenRequest('https://oauth2.googleapis.com/token',{
       client_id:value(CLIENT_KEYS.youtube[0]),client_secret:value(CLIENT_KEYS.youtube[1]),
-      redirect_uri:item.redirectUri,grant_type:'authorization_code',code
+      redirect_uri:item.redirectUri,grant_type:'authorization_code',code,
+      code_verifier:item.verifier
     });
     if(!data.access_token||!data.refresh_token)throw Error('Google não enviou refresh token. Revogue acesso e faça login novamente.');
     patch={CONTENTLAB_YOUTUBE_ACCESS_TOKEN:data.access_token,
