@@ -5,13 +5,14 @@ import path from 'node:path';
 import {Readable,Transform} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 import {safeTitle,importLocalSource,downloadYoutube} from './source.mjs';
+import {searchPinterest} from './pinterest-search.mjs';
 
 const entries=new Map();
 const TTL=20*60*1000;
 const MAX_BYTES=240*1024*1024;
 const IMAGE_EXT=new Set(['.jpg','.jpeg','.png','.webp','.gif']);
 const VIDEO_EXT=new Set(['.mp4','.webm','.mov','.mkv']);
-const SOURCES=['commons','archive','youtube'];
+const SOURCES=['youtube','pinterest','commons','archive'];
 const allowedLicense=value=>{
   const s=String(value||'').toLowerCase().trim();
   if(/^https?:\/\/creativecommons\.org\/(?:licenses\/(?:by|by-sa)\/|publicdomain\/(?:zero|mark)\/)/.test(s))return true;
@@ -60,7 +61,7 @@ export function normalizeArchive(docs){
     }];
   });
 }
-export function normalizeYouTube(videos){
+export function normalizeYouTube(videos,{creativeCommons=false}={}){
   return Array.from(videos||[]).slice(0,15).flatMap(video=>{
     const id=String(video.id||'');
     if(!/^[A-Za-z0-9_-]{11}$/.test(id))return [];
@@ -72,7 +73,8 @@ export function normalizeYouTube(videos){
       pageUrl:'https://www.youtube.com/watch?v='+id,
       preview:thumb||'https://i.ytimg.com/vi/'+id+'/hqdefault.jpg',
       credit:attribute(video.author?.name||video.author?.toString?.()||'Canal YouTube'),
-      license:'Resultado do filtro Creative Commons. Confirme a licença no YouTube antes de usar.',
+      license:creativeCommons?'Filtro Creative Commons — confirme a licença na página original.':
+        'Licença não verificada. Conteúdo padrão do YouTube; obtenha autorização do titular para reutilizar.',
       licenseUrl:null,assetUrl:'https://www.youtube.com/watch?v='+id
     }];
   });
@@ -104,14 +106,15 @@ export async function searchArchive(q,kind,{fetcher=fetch}={}){
   return normalizeArchive(data.response?.docs).slice(0,16);
 }
 let youtube;
-export async function searchYouTube(q,kind,{youtubeSearch}={}){
+export async function searchYouTube(q,kind,{youtubeSearch,creativeCommons=false}={}){
   if(kind==='image')return [];
   if(!youtubeSearch){
     if(!youtube){const m=await import('youtubei.js');youtube=await m.Innertube.create({generate_session_locally:true});}
-    youtubeSearch=(term)=>youtube.search(term,{type:'video',features:['creative_commons']});
+    youtubeSearch=(term)=>youtube.search(term,creativeCommons?
+      {type:'video',features:['creative_commons']}:{type:'video'});
   }
   const results=await youtubeSearch(q);
-  return normalizeYouTube(results.videos).slice(0,15);
+  return normalizeYouTube(results.videos,{creativeCommons}).slice(0,15);
 }
 function putResults(items){
   const now=Date.now();
@@ -124,21 +127,23 @@ function putResults(items){
     return {...safe,key};
   });
 }
-export async function searchMedia(query,{source='all',kind='all',fetcher=fetch,youtubeSearch}={}){
+export async function searchMedia(query,{source='popular',kind='all',fetcher=fetch,youtubeSearch}={}){
   const q=checkedQuery(query);
-  if(!['all',...SOURCES].includes(source))throw Error('Fonte inválida.');
+  if(!['all','popular','youtube-cc',...SOURCES].includes(source))throw Error('Fonte inválida.');
   if(!['all','image','video'].includes(kind))throw Error('Tipo de mídia inválido.');
-  const requested=source==='all'?SOURCES:[source];
+  const requested=source==='all'?SOURCES:source==='popular'?['youtube','pinterest']:
+    source==='youtube-cc'?['youtube']:[source];
   const resolvers={commons:()=>searchCommons(q,kind,{fetcher}),
     archive:()=>searchArchive(q,kind,{fetcher}),
-    youtube:()=>searchYouTube(q,kind,{youtubeSearch})};
+    youtube:()=>searchYouTube(q,kind,{youtubeSearch,creativeCommons:source==='youtube-cc'}),
+    pinterest:()=>searchPinterest(q,kind,{fetcher})};
   const settled=await Promise.all(requested.map(async p=>{
     try{return {provider:p,items:await resolvers[p]()};}
     catch(error){return {provider:p,items:[],error:String(error?.message||'Indisponível').slice(0,150)};}
   }));
   const warnings=settled.filter(r=>r.error).map(r=>r.provider+': '+r.error);
   return {query:q,items:putResults(settled.flatMap(r=>r.items)),warnings,
-    sources:requested,notice:'Verifique a licença e os créditos na página original antes de reutilizar a mídia.'};
+    sources:requested,notice:'Resultados públicos não significam permissão de reutilização. Verifique licença e créditos com os autores.'};
 }
 export function selectedMedia(key){
   const entry=entries.get(key);
@@ -149,6 +154,7 @@ export function safeDownloadHost(u){
   if(u.protocol!=='https:'||u.username||u.password)return false;
   const name=u.hostname.toLowerCase();
   return name==='upload.wikimedia.org'||name==='archive.org'||
+    /^(?:[a-z0-9-]+\.)?pinimg\.com$/.test(name)||
     /^[a-z0-9.-]+\.archive\.org$/.test(name);
 }
 async function mediaResponse(url,{fetcher=fetch}={}){
