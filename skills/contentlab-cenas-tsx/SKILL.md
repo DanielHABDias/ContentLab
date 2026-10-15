@@ -5,6 +5,14 @@ description: Cria cenas Remotion complexas como arquivos TSX dentro da subpasta 
 
 # Content Lab — Cenas programáveis TSX
 
+## Prioridade do overlay Minecraft sobre TSX e diversidade visual de Shorts (14/10/2026)
+
+Na abertura do Short 9:16 Diazverso, a explosão `project://assets/overlays/explosaoMinecraft.mp4` deve aparecer **em cima de TODO o TSX** entre 0 e 3 s. No JSON, marcar o elemento `type:"overlay"` com `z:900`, `config.alwaysOnTop:true`, `style:"green_screen"`, `loop:false` e `muted:false`. No ContentLab, `server/custom-scenes.mjs` agora desenha uma segunda passagem transparente de overlays prioritários **depois** de `<UserScene />`; o z ordenado apenas dentro de `<Scene />` NÃO é suficiente contra a composição TSX. Renderizar e conferir primeiro frame e 0–3s; nunca declarar correção só com JSON.
+
+**Evitar reuso mecânico do MESMO clip:** considerar a fonte realmente exibida pelo TSX (`customComponent.assets.main/next`), não apenas `scene.background.asset`, porque muitas variantes TSX ocultam quase todo o fundo. Planejar alternância conforme o argumento: imagens reais e múltiplas cenas distintas da obra, recortes transparentes de personagens, painéis HQ, texto gigantesco puro e transições visuais. Para PNGs de personagem, `Img objectFit:"contain"` (corpo inteiro visível). Para vídeo horizontal 16:9 em Short, manter `OffthreadVideo objectFit:"cover"` central. A alternância não autoriza assets inexistentes; seguir o mapa de assets e validar clipes/nomes. Preservar o áudio Minecraft, riser integral, whoosh no blur de 0,20s, música pós-blur e CTA.
+
+
+
 ## Coreografia sonora perceptível — Diazverso Shorts (14/10/2026)
 
 Para cada `customComponent` editorial de Shorts, identificar **os tempos reais dos gestos** no TSX (p.ex., chegada de painel, texto, máscara, fechamento de página, impacto e destaque de personagem) e posicionar SFX em `edit_plan.json` nos respectivos tempos absolutos. Evitar cues fixos em segundos sem compensar a duração da cena e os fatores de aceleração internos da animação. Animação visual sem efeito audível suficiente é falha de direção, mas não duplicar áudio que já está no vídeo. Preferir whoosh/swish no deslocamento, click/snap em surgimento, hit no assentamento e chime em destaque. Nível deve permanecer perceptível mesmo com voz e música, validado no MP4. Ao cortar os movimentos externos usar `blur_*` rápido (~0,20 s) com blur forte aplicado globalmente pelo compositor, e whoosh no início da cena entrante. O Metallic Riser da abertura toca natural completo via `config.preserveFullSource:true` + `config.alignEndAt`, antes do primeiro whoosh.
