@@ -202,7 +202,7 @@
     });
   }
   $('metricsRefresh').addEventListener('click',()=>load({refresh:true}));
-  $('metricsGoConnect').addEventListener('click',()=>$('tab-publications').click());
+  $('metricsGoConnect').addEventListener('click',()=>$('tab-settings').click());
   $('tab-metrics').addEventListener('click',()=>load());
   if(location.hash==='#metrics')load();
 })();

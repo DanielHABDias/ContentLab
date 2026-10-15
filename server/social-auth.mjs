@@ -85,7 +85,7 @@ export function beginAuthorization(provider) {
     url.search=new URLSearchParams({
       client_id:value(CLIENT_KEYS.youtube[0]),redirect_uri:redirectUri,
       response_type:'code',scope:'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly',
-      access_type:'offline',prompt:'consent',state
+      access_type:'offline',prompt:'select_account consent',state
     }).toString();
   } else if(provider==='instagram'){
     url=new URL('https://www.instagram.com/oauth/authorize');

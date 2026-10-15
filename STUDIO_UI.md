@@ -11,6 +11,14 @@ Interface original do Content Lab com linguagem editorial de software criativo: 
 
 O projeto é inspirado na clareza visual de aplicativos contemporâneos e **não** replica logotipos, ícones ou identidade comercial da Apple.
 
+## Configurações — contas OAuth e permissões
+
+A aba **Configurações** concentra os cartões de YouTube, Instagram e TikTok com status, botão de conexão e desconexão. Não há formulário de login na aba Publicações. Os cartões usam a identidade visual do Studio e mostram **Conectar com Google** para YouTube; os demais abrem o site oficial de autorização de cada provedor.
+
+Um acordeão **Configuração avançada** recolhido guarda os campos opcionais para registrar o aplicativo OAuth quando necessário (Client ID/Secret da aplicação; callback HTTPS do Instagram). São credenciais do aplicativo, nunca senhas pessoais. Contas previamente configuradas no `.env` só precisam da autorização. O login Google solicita a seleção de conta; o consentimento Instagram/TikTok é separado, mesmo que a conta social tenha sido criada com Google.
+
+**Portas de acesso:** quando não existe conta autorizada, a aba Publicações mostra apenas o convite para Configurações e mantém o editor oculto; Métricas mostra o mesmo direcionamento. Depois de conectar alguma rede, Publicações exibe somente destinos já autorizados e mantém a impossibilidade de enviar vídeos 16:9 ao TikTok.
+
 ## Métricas — dashboard conectado
 
 A aba **Métricas** abre depois de Publicações. Sem OAuth, exibe somente o convite para conectar as contas. Com ao menos uma conta, exibe a visão geral e botões de filtro YouTube, Instagram e TikTok. Um segundo clique no botão selecionado retorna à visão geral.
@@ -21,7 +29,7 @@ YouTube exige `youtube.readonly`, TikTok exige `video.list`, além das permissõ
 
 ## Publicações — distribuição de vídeos
 
-A aba **Publicações** agora inclui login OAuth, seleção de MP4s, preparo de metadados e envio com confirmação explícita. Login grava apenas tokens e configuração de aplicativos em `.env` local, ignorado pelo Git.
+A aba **Publicações** permanece oculta até uma autorização OAuth válida. A conexão/desconexão fica exclusivamente em **Configurações**; Publicações cuida apenas da seleção de MP4s, metadados e envios com confirmação explícita. Tokens e configuração do aplicativo continuam no `.env` local ignorado pelo Git.
 
 - Formato **16:9**: somente YouTube/Instagram; TikTok fica acinzentado e não recebe o vídeo. Formato **9:16**: as três redes. Backend verifica resolução com FFprobe.
 - YouTube agenda com `publishAt` e exige escolher se o vídeo é para crianças.
