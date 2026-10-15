@@ -47,3 +47,16 @@ O script valida estrutura inicial MP3 e SHA para não substituir silenciosamente
 - Frightmare (Jimena Contreras): suspense mais forte, conflito/terror situacional.
 - Future Rennaisance (Godmode): energia e fechamento expansivo.
 - Algo existir no YouTube Audio Library não obriga usá-lo em todos os vídeos nem comprova licença cross-platform. Selecionar pela emoção da narração, não para preencher uma playlist.
+## Playlist preferencial de Shorts Diazverso — 15/10/2026
+
+Esta seção registra **gosto editorial** do criador; NÃO equivale a certificado de uso livre. Os arquivos abaixo foram identificados no Drive em `Diazverso/Musicas/NoCopyright/Muito usadas no YouTube` (pasta ID `1iYBvTpLpzuMOlqNZSl4Y9R0AM-T5RPr1`). Verificar a licença/atribuição/Content ID ANTES de usar ou redistribuir:
+
+- **Bully — Main Theme**: `Bully - Soundtrack Main Theme(MP3_320K).mp3`.
+- **Bully — Walk Theme**: `Bully - Walk Theme - [Music] (HD)(MP3_320K).mp3`.
+- **L's Theme A**: `L's theme A.mp3`.
+- **Kuroi Light**: `Kuroi Light [VIiOSrYclc8].mp3`.
+- **GTA IV Theme**: `Grand Theft Auto IV Theme Song _[best quality]_(MP3_320K).mp3`.
+- **GTA San Andreas Opening Intro**: `GTA San Andreas Opening Intro(MP3_320K).mp3`.
+- **GTA V Welcome to Los Santos**: `GTA V - Welcome to Los Santos Soundtrack - IntroTheme song.mp3` (NÃO confundir com `GTA V Pause Menu Main Menu Music`).
+
+Escolher por energia da microtese e narração, não rodízio obrigatório. Em Shorts com a abertura aprovada, introduzir música somente após riser de tensão e whoosh/blur direcional pós-gancho. Não importar/commitar MP3 automaticamente; manter direitos e disponibilidade por projeto como pendência verificável.
