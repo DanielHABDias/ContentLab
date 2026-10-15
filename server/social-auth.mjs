@@ -13,9 +13,10 @@ const CLIENT_KEYS={
 const TOKEN_KEYS=Object.fromEntries(Object.keys(CLIENT_KEYS).map(provider=>{
   const prefix='CONTENTLAB_'+provider.toUpperCase()+'_';
   return [provider,[
-    prefix+'ACCESS_TOKEN',prefix+'REFRESH_TOKEN',prefix+'EXPIRES_AT',
+    prefix+'ACCESS_TOKEN',prefix+'EXPIRES_AT',
     prefix+'SCOPE',prefix+'ACCOUNT_ID',prefix+'ACCOUNT_NAME',
     prefix+'ACCOUNT_USERNAME',prefix+'AUTH_ERROR',
+    ...(provider!=='instagram'?[prefix+'REFRESH_TOKEN']:[]),
     ...(provider==='tiktok'?[prefix+'OPEN_ID']:[])
   ]];
 }));
