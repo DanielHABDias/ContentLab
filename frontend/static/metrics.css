@@ -59,3 +59,11 @@
  #panel-metrics .metrics-toolbar-head{align-items:flex-start}
  #panel-metrics .metrics-bar-row{grid-template-columns:minmax(80px,110px) minmax(0,1fr) 55px;gap:9px}
 }
+
+
+.metrics-history-bars{display:flex;align-items:end;justify-content:space-between;gap:3px;min-height:150px;max-height:190px;overflow-x:auto;padding:12px 4px 2px;border-bottom:1px solid #e4eaf3}
+.metrics-history-day{height:140px;flex:1 0 9px;min-width:9px;max-width:30px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:5px}
+.metrics-history-fill{display:block;width:100%;background:linear-gradient(180deg,#5e9cff,#2468cf);border-radius:5px 5px 1px 1px;min-height:2px}
+.metrics-history-day small{font-size:8px;color:#8b98a9;white-space:nowrap;transform:rotate(-45deg);transform-origin:center;margin-top:4px}
+.metrics-history-day:focus-visible{outline:2px solid #2f70d2}
+#metricsHistorySection[hidden]{display:none!important}
