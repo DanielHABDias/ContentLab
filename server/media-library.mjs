@@ -139,7 +139,7 @@ export async function searchMedia(query,{source='popular',kind='all',fetcher=fet
     pinterest:()=>searchPinterest(q,kind,{fetcher})};
   const settled=await Promise.all(requested.map(async p=>{
     try{return {provider:p,items:await resolvers[p]()};}
-    catch(error){return {provider:p,items:[],error:String(error?.message||'Indisponível').slice(0,150)};}
+    catch(error){return {provider:p,items:[],error:String(error?.message||'Indisponível').slice(0,280)};}
   }));
   const warnings=settled.filter(r=>r.error).map(r=>r.provider+': '+r.error);
   return {query:q,items:putResults(settled.flatMap(r=>r.items)),warnings,
