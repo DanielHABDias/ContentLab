@@ -3,6 +3,10 @@ name: contentlab-direcao
 description: Porta de entrada do Content Lab para planejar e revisar edições, motion design, vídeos narrados e edit_plan.json. Encaminha a tarefa para os módulos de composição, movimento, áudio, contrato e qualidade, respeitando perfis como Diazverso e GSB.
 ---
 
+
+## Direção Diazverso — biblioteca oficial TSX (regra de precedência)
+Em projetos Diazverso, consultar a [biblioteca Custom Cenas Diasverso](https://drive.google.com/drive/folders/1yWogLK6bRWXunvdJxTHBMIqB4ibSN44f) e seus READMEs antes de planejar `customComponent`. Somente os sete TSX oficiais são opção **padrão**, responsivos em 16:9/9:16; **novo TSX ou alteração de código apenas com comando explícito do criador**, mesmo que outros módulos genéricos sugiram implementar um. Guia de edição + `edit_plan.json` devem especificar `mode`, props/asset reais, formato, SFX no JSON e referência. Sobreposições: QuadroHQSobreCena e CaixinhaCTAHQ; os outros cinco substituem a composição. TSX não tocam áudio. Priorizar montagem por cenas e imagens, e não composição gráfica a cada beat. Qualquer instrução histórica desta skill sugerindo geração espontânea de TSX para Diazverso fica subordinada a esta regra.
+
 # Content Lab — Direção
 
 ## Checagem de variedade e ordem visual (14/10/2026)
