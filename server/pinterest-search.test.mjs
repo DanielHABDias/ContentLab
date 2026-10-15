@@ -88,25 +88,28 @@ test('Pinterest photo saves into library image folder and attribution is explici
     assert.equal(got.kind,'image');
     assert.equal(fs.existsSync(got.filePath),true);
     const sidecar=got.filePath.replace(/\.jpg$/,'.license.txt');
-    assert.match(fs.readFileSync(sidecar,'utf8'),/Pinterest/);
+    assert.match(fs.readFileSync(sidecar,'utf8'),/pinterest/i);
     assert.match(fs.readFileSync(sidecar,'utf8'),/Licença não verificada/);
   }finally{fs.rmSync(temp,{recursive:true,force:true});}
 });
 test('Pinterest video downloads the direct MP4 then uses existing local video importer',async()=>{
-  const found=await searchMedia('edit',{source:'pinterest',kind:'video',fetcher:pinterestFetcher});
-  assert.equal(found.items.length,1);
-  let imported=false;
-  const result=await importMedia(found.items[0].key,{
-    fetcher:async(url)=>new Response(new Uint8Array([0,1,2,3]),{
-      status:200,headers:{'Content-Type':'video/mp4','Content-Length':'4'}
-    }),
-    localImporter:async file=>{
-      imported=fs.existsSync(file);
-      return {key:'local-fake',path:'/tmp/video.mp4',folder:os.tmpdir()};
-    }
-  });
-  assert.equal(imported,true);
-  assert.equal(result.kind,'video');
-  assert.equal(result.cachedKey,'local-fake');
-  fs.rmSync(path.join(os.tmpdir(),'source-license.txt'),{force:true});
+  const temp=fs.mkdtempSync(path.join(os.tmpdir(),'cl-pin-video-test-'));
+  try{
+    const found=await searchMedia('edit',{source:'pinterest',kind:'video',fetcher:pinterestFetcher});
+    assert.equal(found.items.length,1);
+    let imported=false;
+    const result=await importMedia(found.items[0].key,{
+      fetcher:async(url)=>new Response(new Uint8Array([0,1,2,3]),{
+        status:200,headers:{'Content-Type':'video/mp4','Content-Length':'4'}
+      }),
+      localImporter:async file=>{
+        imported=fs.existsSync(file);
+        return {key:'local-fake',path:path.join(temp,'video.mp4'),folder:temp};
+      }
+    });
+    assert.equal(imported,true);
+    assert.equal(result.kind,'video');
+    assert.equal(result.cachedKey,'local-fake');
+    assert.match(fs.readFileSync(path.join(temp,'source-license.txt'),'utf8'),/pinterest/i);
+  }finally{fs.rmSync(temp,{recursive:true,force:true});}
 });
