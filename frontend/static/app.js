@@ -13,7 +13,7 @@ let sourceRequestId = 0;
 const $ = (id) => document.getElementById(id);
 
 // Areas de trabalho isoladas: trocar de aba preserva o trabalho em andamento.
-const workspaces = ["videos", "transcription", "editor", "docs"];
+const workspaces = ["videos", "transcription", "editor", "multieditor", "docs"];
 function showWorkspace(name) {
   for (const workspace of workspaces) {
     const active = workspace === name;
@@ -1301,3 +1301,151 @@ $("editorCancel").addEventListener("click", async () => {
   } catch (error) { editorError(error.message); }
   finally { $("editorCancel").disabled = false; }
 });
+
+
+// ---------- Multi-editor automático: fila sequencial de projetos distintos ----------
+let queuePoll=null;
+let queueJobId=null;
+let queueRunning=false;
+const queuePaths=()=>Array.from(
+  new Set($("queueFolders").value.split(/\r?\n/).map(line=>line.trim()).filter(Boolean))
+);
+function queueError(message){
+  $("queueError").textContent=message||"";
+  $("queueError").classList.toggle("hidden",!message);
+}
+function queueCount(){
+  const count=queuePaths().length;
+  $("queueFolderCount").textContent=count+" "+(count===1?"pasta":"pastas");
+}
+function queueAddPath(folder){
+  const value=String(folder||"").trim();
+  if(!value)return;
+  const paths=queuePaths();
+  if(!paths.includes(value))paths.push(value);
+  $("queueFolders").value=paths.join("\n");
+  queueCount();
+}
+function queueBusy(busy){
+  queueRunning=busy;
+  for(const id of ["queueStart","queueFolders","queueChooseFolder","queueFromEditor",
+    "queueCacheMode","queueGpu","queueContinue"])$(id).disabled=busy;
+  $("queueCancel").classList.toggle("hidden",!busy);
+}
+function queueDraw(job){
+  const total=job.items.length;
+  const done=job.items.filter(item=>!["waiting","running"].includes(item.status)).length;
+  const active=job.items.find(item=>item.status==="running");
+  const pct=Math.round(job.items.reduce((sum,item)=>
+    sum+(item.status==="done"||item.status==="error"||item.status==="cancelled"?100:item.percent||0),0)/Math.max(1,total));
+  $("queueProgressFill").style.width=pct+"%";
+  $("queueProgressFill").parentElement.setAttribute("aria-valuenow",String(pct));
+  const finished=job.status!=="running";
+  queueBusy(!finished);
+  $("queueStatus").textContent=finished
+    ?"Fila encerrada: "+done+"/"+total+" projetos processados ("+job.status+")."
+    :"Executando "+(job.currentIndex+1)+"/"+total+": "+(active?.name||"Preparando")+" — "+(active?.message||"");
+  const list=$("queueItems");
+  list.replaceChildren();
+  for(const item of job.items){
+    const li=document.createElement("li");
+    li.className="queue-item queue-"+item.status;
+    const top=document.createElement("div");
+    top.className="queue-item-header";
+    const title=document.createElement("strong");
+    title.textContent=item.name;
+    const flag=document.createElement("span");
+    flag.className="queue-item-status";
+    const names={waiting:"Aguardando",running:"Renderizando",done:"Concluído",error:"Falhou",cancelled:"Cancelado"};
+    flag.textContent=names[item.status]||item.status;
+    top.append(title,flag);
+    const folder=document.createElement("code");
+    folder.textContent=item.projectRoot;
+    const detail=document.createElement("p");
+    detail.textContent=item.error?"Erro: "+item.error:item.filepath?"Arquivo: "+item.filepath:item.message||"";
+    const meter=document.createElement("div");
+    meter.className="queue-item-meter";
+    const bar=document.createElement("span");
+    bar.style.width=String(item.percent||0)+"%";
+    meter.append(bar);
+    li.append(top,folder,detail,meter);
+    list.append(li);
+  }
+}
+async function queueFetch(id){
+  const res=await fetch("/api/render-queue/"+encodeURIComponent(id));
+  const data=await res.json();
+  if(!res.ok)throw Error(data.error||"Não foi possível consultar a fila.");
+  return data;
+}
+function queueStopPoll(){
+  if(queuePoll!==null){clearInterval(queuePoll);queuePoll=null;}
+}
+function queueStartPoll(id){
+  queueStopPoll();
+  queueJobId=id;
+  let fetching=false;
+  queuePoll=setInterval(async()=>{
+    if(fetching)return;
+    fetching=true;
+    try{
+      const job=await queueFetch(id);
+      queueDraw(job);
+      if(job.status!=="running"){queueStopPoll();queueJobId=null;}
+    }catch(e){queueError(e.message);queueStopPoll();}
+    finally{fetching=false;}
+  },1000);
+}
+$("queueFolders").addEventListener("input",queueCount);
+$("queueChooseFolder").addEventListener("click",async()=>{
+  queueError("");
+  try{
+    const res=await fetch("/api/choose-folder",{method:"POST"});
+    const data=await res.json();
+    if(!res.ok)throw Error(data.error||"Não foi possível abrir o seletor.");
+    queueAddPath(data.folder);
+  }catch(e){queueError(e.message);}
+});
+$("queueFromEditor").addEventListener("click",()=>{
+  const folder=editorProject?.projectRoot||$("editorProjectRoot").value.trim();
+  if(!folder){queueError("Abra ou informe primeiro uma pasta na aba Editor automático.");return;}
+  queueAddPath(folder);queueError("");
+});
+$("queueStart").addEventListener("click",async()=>{
+  queueError("");
+  const roots=queuePaths();
+  if(roots.length===0){queueError("Informe pelo menos uma pasta de projeto.");return;}
+  if(roots.length>40){queueError("O limite é de 40 projetos por fila.");return;}
+  const mode=$("queueCacheMode").value;
+  if(mode==="rebuild"&&!window.confirm("Refazer tudo apagará o output atual de CADA projeto na fila. Continuar?"))return;
+  queueBusy(true);
+  $("queueStatus").textContent="Validando projetos e iniciando a fila...";
+  try{
+    const res=await fetch("/api/render-queue",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({projectRoots:roots,cacheMode:mode,
+        hardwareAccel:$("queueGpu").checked,continueOnError:$("queueContinue").checked})
+    });
+    const data=await res.json();
+    if(!res.ok)throw Error(data.error||"Não foi possível iniciar a fila.");
+    queueDraw(data);
+    queueStartPoll(data.id);
+  }catch(e){queueBusy(false);queueError(e.message);$("queueStatus").textContent="Fila não iniciada.";}
+});
+$("queueCancel").addEventListener("click",async()=>{
+  if(!queueJobId)return;
+  $("queueCancel").disabled=true;
+  try{
+    const res=await fetch("/api/render-queue/"+encodeURIComponent(queueJobId)+"/cancel",{method:"POST"});
+    const data=await res.json();
+    if(!res.ok)throw Error(data.error||"Não foi possível cancelar.");
+    $("queueStatus").textContent="Cancelando a fila e o render atual...";
+  }catch(e){queueError(e.message);}
+  finally{$("queueCancel").disabled=false;}
+});
+queueCount();
+fetch("/api/render-queue/latest").then(res=>res.ok?res.json():null).then(data=>{
+  if(!data?.job)return;
+  queueDraw(data.job);
+  if(data.job.status==="running")queueStartPoll(data.job.id);
+}).catch(()=>{});
