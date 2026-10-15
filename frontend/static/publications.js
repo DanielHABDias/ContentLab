@@ -348,10 +348,13 @@
     busy=true;updateSubmit();
     byId("publishSendResults").replaceChildren();
     let success=0,failed=0;
-    const ordered=items.slice();
+    // Congela destinos/metadados que foram exibidos na confirmação.
+    const ordered=items.map(item=>({
+      ...item,platforms:targetsFor(item),file:item.file
+    }));
     for(let i=0;i<ordered.length;i++){
       const item=ordered[i];
-      const platforms=targetsFor(item);
+      const platforms=item.platforms;
       const parts=startDate.value.split("-").map(Number);
       const hours=startTime.value.split(":").map(Number);
       const when=new Date(parts[0],parts[1]-1,parts[2]+i,hours[0],hours[1],0);
@@ -379,8 +382,26 @@
             const link=document.createElement("a");link.href=result.url;link.target="_blank";
             link.rel="noopener noreferrer";link.textContent="Ver no YouTube";
             status.replaceChildren(document.createTextNode("Agendado · "),link);
-          }else status.textContent=result?.state==="published"?"Publicado":result?.state==="processing"?
-            "Enviado; aguardando processamento TikTok":"Enviado";
+          }else if(result?.state==="processing"){
+            status.textContent="Enviado; TikTok está processando...";
+            // Estado final pode demorar por moderação. Não reenviar automaticamente.
+            const jobId=received.jobId;
+            (async()=>{
+              for(let attempt=0;attempt<90;attempt++){
+                await new Promise(resolve=>setTimeout(resolve,10000));
+                const reply=await fetch("/api/social/jobs/"+encodeURIComponent(jobId),{cache:"no-store"});
+                if(!reply.ok)break;
+                const outcome=await reply.json();
+                if(outcome.status==="error"){
+                  status.textContent="TikTok: "+(outcome.error||"publicação recusada");
+                  status.classList.add("publish-result-error");break;
+                }
+                if(outcome.result?.state==="published"){
+                  status.textContent="Publicado no TikTok";break;
+                }
+              }
+            })().catch(()=>{status.textContent="TikTok: verifique a publicação no aplicativo.";});
+          }else status.textContent=result?.state==="published"?"Publicado":"Enviado";
           success++;
         }catch(error){failed++;status.textContent="Falha: "+error.message;status.classList.add("publish-result-error");}
       }
