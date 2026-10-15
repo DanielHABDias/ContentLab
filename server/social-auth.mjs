@@ -113,7 +113,7 @@ const tokenRequest=async(url,params)=>{
   const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
     body:new URLSearchParams(params),signal:AbortSignal.timeout(20000)});
   const data=await response.json().catch(()=>({}));
-  const code=data.error?.code||data.error||response.status;
+  const code=data.error?.code??(typeof data.error==='string'?data.error:response.status);
   const rejected=!response.ok||(data.error&&code!==0&&code!=='ok');
   if(rejected){
     const error=Error('O provedor recusou a autenticação ('+String(code).slice(0,70)+').');
