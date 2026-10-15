@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
-import {publishFile,tiktokCreatorInfo} from './social-publish.mjs';
+import {publishFile,tiktokCreatorInfo,checkTikTokStatus} from './social-publish.mjs';
 import {providerStatus} from './social-auth.mjs';
 
 const jobs=new Map();
@@ -62,6 +62,21 @@ export function mountSocialPublishRoutes(app,api,upload){
     res.set('Cache-Control','no-store');
     const job=jobs.get(req.params.id);
     if(!job)return res.status(404).json({error:'Envio não encontrado nesta sessão.'});
+    if(job.platform==='tiktok'&&job.status==='done'&&job.result?.state==='processing'&&
+      (!job.lastChecked||Date.now()-job.lastChecked>10000)){
+      job.lastChecked=Date.now();
+      try{
+        const platform=await checkTikTokStatus(job.result.id);
+        job.result.tiktokStatus=platform.state;
+        if(platform.state==='PUBLISH_COMPLETE'){
+          job.result.state='published';job.message='Publicado no TikTok';
+        }else if(platform.state==='FAILED'){
+          job.status='error';job.error='TikTok recusou o vídeo: '+String(platform.failure||'motivo não informado');
+        }
+      }catch(error){
+        job.result.tiktokStatusError='Não foi possível consultar o processamento neste momento.';
+      }
+    }
     res.json(status(job));
   }));
 }
