@@ -113,8 +113,14 @@ const tokenRequest=async(url,params)=>{
   const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
     body:new URLSearchParams(params),signal:AbortSignal.timeout(20000)});
   const data=await response.json().catch(()=>({}));
-  if(!response.ok||data.error)throw Error('O provedor recusou a autenticação ('+
-    String(data.error?.code||data.error||response.status).slice(0,70)+').');
+  const code=data.error?.code||data.error||response.status;
+  const rejected=!response.ok||(data.error&&code!==0&&code!=='ok');
+  if(rejected){
+    const error=Error('O provedor recusou a autenticação ('+String(code).slice(0,70)+').');
+    error.status=response.status;
+    error.providerCode=String(code);
+    throw error;
+  }
   return data;
 };
 const expires=seconds=>String(Date.now()+Math.max(0,Number(seconds)||0)*1000);
@@ -217,8 +223,13 @@ async function renewAccess(provider){
     writeSocialEnv(patch);
     return data.access_token;
   }catch(error){
-    writeSocialEnv({[field(provider,'AUTH_ERROR')]:statusMessage(error)});
-    throw Error('A sessão do '+provider+' precisa ser reconectada em Configurações.');
+    const permanent=[400,401,403].includes(error.status)||
+      /invalid_grant|invalid_token|unauthorized_client|revoked/i.test(error.providerCode||'');
+    if(permanent)
+      writeSocialEnv({[field(provider,'AUTH_ERROR')]:statusMessage(error)});
+    throw Error(permanent?
+      'A sessão do '+provider+' precisa ser reconectada em Configurações.':
+      'Falha temporária ao renovar '+provider+'. Verifique sua conexão e tente novamente.');
   }
 }
 export async function usableAccessToken(provider){
