@@ -1,4 +1,4 @@
-import {providerStatus,configureProvider,disconnectProvider,beginAuthorization,completeAuthorization} from './social-auth.mjs';
+import {providerStatus,configureProvider,disconnectProvider,beginAuthorization,completeAuthorization,verifySocialConnection} from './social-auth.mjs';
 
 // Apenas o servidor local possui os secrets e tokens. O navegador recebe somente status.
 const sameOrigin=(req)=>{
@@ -20,6 +20,18 @@ export function mountSocialRoutes(app,api){
       const status=configureProvider(req.params.provider,req.body);
       res.set('Cache-Control','no-store').json({status});
     }catch(error){res.status(422).json({error:error.message});}
+  }));
+  app.post('/api/social/verify/:provider',api(async(req,res)=>{
+    if(!sameOrigin(req)||!safeProvider(req.params.provider))
+      return res.status(403).json({error:'Verificação de conta não autorizada.'});
+    try {
+      const status=await verifySocialConnection(req.params.provider);
+      res.set('Cache-Control','no-store').json({status});
+    } catch(error) {
+      res.status(422).set('Cache-Control','no-store')
+        .json({error:String(error.message||'Reconecte a conta em Configurações.').slice(0,170),
+          status:providerStatus()[req.params.provider]});
+    }
   }));
   app.post('/api/social/disconnect/:provider',api(async(req,res)=>{
     if(!sameOrigin(req)||!safeProvider(req.params.provider))
