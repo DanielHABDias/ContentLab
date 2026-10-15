@@ -101,6 +101,12 @@ try{
   assert.equal(await evaluate('document.getElementById("workspace-group-social-items").hidden'),true,
     'Social submenu starts collapsed');
 
+  assert.equal(await evaluate('document.querySelector("#panel-videos .source-tab span").textContent'),'Link da internet',
+    'Video source now accepts a general supported site URL');
+  assert.equal(await evaluate('document.querySelector("label[for=url]").textContent'),'Link da internet',
+    'URL field label matches internet video import');
+  assert.equal(await evaluate('document.getElementById("url").placeholder.includes("TikTok")'),true,
+    'Source explains support for compatible public video sites');
   await evaluate('document.getElementById("tab-library").click()');
   assert.equal(await evaluate('document.getElementById("panel-library").hidden'),false,
     'Online media library is a dedicated workspace');
