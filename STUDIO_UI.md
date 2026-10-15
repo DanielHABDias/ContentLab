@@ -11,9 +11,15 @@ Interface original do Content Lab com linguagem editorial de software criativo: 
 
 O projeto é inspirado na clareza visual de aplicativos contemporâneos e **não** replica logotipos, ícones ou identidade comercial da Apple.
 
+## Banco de mídia e acervo online
+
+**Banco de mídia** é uma área própria de pesquisa de mídia com filtros, prévia, créditos e licença, além de download protegido por confirmação de direitos. Consulta o Wikimedia Commons, filmes com licença aberta no Internet Archive e o filtro Creative Commons do YouTube via YouTube.js. Resultados de fontes indisponíveis não bloqueiam as demais. Fotos são armazenadas em Downloads/ContentLab/Imagens e vídeos utilizam o cache existente para cortes. Não há download integrado do Pinterest nesta etapa.
+
+A API local expõe `GET /api/library/search`, `POST /api/library/download` e `GET /api/library/jobs/:id`. Não aceita URLs arbitrárias para download: só as chaves temporárias geradas na busca, com regras de hosts HTTPS permitidos e tamanho máximo 240 MB. Sem bypass de DRM ou streaming protegido. O usuário deve verificar os direitos e o crédito na origem antes de importar.
+
 ## Navegação lateral agrupada
 
-O menu apresenta seis opções de primeiro nível: **Vídeos e cortes**, **Narração**, **Editor**, **Redes sociais**, **Configurações** e **Documentação**. Ao clicar em **Editor**, aparecem **Editor automático** e **Multi-editor automático**; ao clicar em **Redes sociais**, aparecem **Publicações** e **Métricas**. São submenus expansíveis que mostram uma categoria por vez; clicar novamente em uma categoria a recolhe sem fechar a tela já aberta.
+O menu apresenta sete opções de primeiro nível: **Vídeos e cortes**, **Narração**, **Editor**, **Redes sociais**, **Configurações** e **Documentação**. Ao clicar em **Editor**, aparecem **Editor automático** e **Multi-editor automático**; ao clicar em **Redes sociais**, aparecem **Publicações** e **Métricas**. São submenus expansíveis que mostram uma categoria por vez; clicar novamente em uma categoria a recolhe sem fechar a tela já aberta.
 
 Os IDs originais `tab-editor`, `tab-multieditor`, `tab-publications` e `tab-metrics` e as respectivas seções `panel-*` foram preservados. Links por fragmento `#editor`, `#multieditor`, `#publications` e `#metrics` abrem a área correta e expandem automaticamente o seu grupo. O grupo ativo recebe uma marca visual mesmo quando recolhido. Os botões são acessíveis por teclado e os submenus têm `aria-expanded` e identificação própria; a navegação móvel respeita a mesma estrutura.
 
