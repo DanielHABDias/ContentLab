@@ -145,6 +145,8 @@ try{
     'Metrics empty state before connecting');
   assert.equal(await evaluate('document.getElementById("metricsDashboard").hidden'),true,
     'No metric cards appear without OAuth');
+  await wait(()=>evaluate('!document.getElementById("metricsRefresh").disabled'),
+    'Initial disconnected metrics response must finish');
   await evaluate('document.getElementById("metricsGoConnect").click()');
   assert.equal(await evaluate('document.getElementById("panel-publications").hidden'),false,
     'Connect CTA returns to Publications');
