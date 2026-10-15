@@ -235,8 +235,7 @@ try{
   assert.equal(await evaluate('document.getElementById("workspace-group-social-items").hidden'),true,
     'Direct workspaces close the nested menu');
   await evaluate('location.hash="#metrics"');
-  await wait(()=>evaluate('document.getElementById("panel-metrics").hidden===false &&
-    document.getElementById("workspace-group-social-items").hidden===false'),
+  await wait(()=>evaluate('document.getElementById("panel-metrics").hidden===false && document.getElementById("workspace-group-social-items").hidden===false'),
     'Deep links reopen the correct nested menu');
   await evaluate('document.getElementById("tab-metrics").click()');
   await wait(()=>evaluate('!document.getElementById("metricsConnectionGate").hidden'),
