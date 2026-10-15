@@ -62,6 +62,16 @@ Exemplo estrutural (ajustar duração e instante aos eventos reais; asset deve e
 Esse exemplo não prova que existe animação em 12,24 s; primeiro localizar seu intervalo. A verificação automática inspeciona janelas e paths; a verificação perceptual exige preview com áudio, pois `at` exato no JSON não prova que o SFX é ouvido no movimento. Variar categorias de SFX ao longo do vídeo; não usar whoosh indiscriminadamente. Silêncio deve ser escolha justificada, não esquecimento de uma animação.
 
 
+## Regra editorial Diazverso — som a serviço do movimento (15/10/2026)
+
+Para projetos Diazverso, sincronizar o ATAQUE AUDÍVEL ou PICO ÚTIL do SFX ao **meio da animação** (ou ponto de passagem/impacto no corpo do gesto), NÃO antecipar antes, nem agendar automaticamente no primeiro frame. Calcular pelo evento real e pela porção audível do arquivo, inspecionar no MP4. `at` pode vir antes do pico apenas para compensar o ataque do sample, desde que o início audível não soe antes do gesto.
+
+- Deslize, deslocamento de PNG, slide de caixa HQ e transição: preferir WHOOSH, alternando as opções reais do acervo; não repetir um único arquivo por automatismo.
+- Aparição curta, ícone, botão ou clique: POP/BLING/CLICK conforme a ação; sino pede bell/sino. CTAs HQ com entrada/saída em whoosh, contração + retorno no clique e hold visível de pelo menos 5 segundos.
+- `Riser metálico`/Metallic Rise: SÓ construir tensão e preparar uma virada; **NUNCA** sonorizar slide ou entrada de PNG/caixa. Em Shorts pode anteceder o primeiro whoosh após o gancho Minecraft, com música começando depois do blur.
+- Preservar a narração e áudio embutido de clipes/CTAs. Não gerar SFX para cortes secos sem gesto e não fingir cobertura só pelo JSON.
+- Preferências atuais de trilha de Shorts: Bully Main Theme, Bully Walk Theme, L's Theme A, Kuroi Light, GTA IV Main Theme, GTA San Andreas Opening Intro e GTA V Welcome to Los Santos (não GTA V Pause Menu). Pasta NoCopyright do Drive NÃO comprova licença nem Content ID seguro.
+
 ## Biblioteca local de música aprovada versus direitos de redistribuição
 
 Ver `MUSIC_LIBRARY_DIAZVERSO.md` (auditoria VD_0005). `Something is Going On - Godmode`, `The New Order - Aaron Kenny` e `Future Rennaisance - Godmode` já estão em `builtin-assets/music/`. `A Great Darkness Approaches, Can You Feel It_ - ELPHNT`, `Elegy - Asher Fulero` e `Frightmare - Jimena Contreras` estão no acervo pessoal mas **não** no repositório. Existe `scripts/import-diazverso-music.mjs` para instalar localmente somente após revisão da licença no YouTube Studio; não comitar esses MP3s no GitHub. Verificar atribuição por faixa e destino de publicação. Música marcada "NoCopyright" no Drive **não** significa domínio público. OST de GTA V e outras faixas comerciais exigem cautela especial e não devem ser promovidas como livre uso.
