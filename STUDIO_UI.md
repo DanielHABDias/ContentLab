@@ -11,6 +11,14 @@ Interface original do Content Lab com linguagem editorial de software criativo: 
 
 O projeto é inspirado na clareza visual de aplicativos contemporâneos e **não** replica logotipos, ícones ou identidade comercial da Apple.
 
+## Assistente para login social
+
+O fluxo preferencial é um clique no cartão e autorização no provedor oficial. Quando falta cadastro do aplicativo OAuth, o botão abre um assistente com passos da rede, link para portal oficial, documentação e URL de callback. Os campos Client ID/Secret estão em **Configuração avançada** e aparecem apenas ao optar por preenchê-los.
+
+YouTube tem **Importar JSON do Google** para credenciais OAuth de aplicativo Desktop: verifica o JSON no navegador, envia Client ID/Secret para a API local existente e redireciona para o login oficial, sem importar tokens pessoais. Google Desktop usa PKCE S256 e escolha da conta; TikTok Desktop usa PKCE S256, Instagram usa consentimento empresarial com callback HTTPS. Em caso de falha do callback, a tela reabre o guia da rede para ajudar a diagnosticar permissões e URLs.
+
+As três plataformas exigem aplicativos OAuth cadastrados; esta UI não pode substituir aprovações ou permissões externas nem conectar Instagram/TikTok apenas com a permissão Google. Não guardar senhas pessoais, tokens ou client secrets no frontend ou nos commits Git.
+
 ## Configurações — contas OAuth e permissões
 
 A aba **Configurações** concentra os cartões de YouTube, Instagram e TikTok com status, botão de conexão e desconexão. Não há formulário de login na aba Publicações. Os cartões usam a identidade visual do Studio e mostram **Conectar com Google** para YouTube; os demais abrem o site oficial de autorização de cada provedor.

@@ -47,3 +47,28 @@
 #panel-settings .settings-account-card p{min-height:auto}
 #panel-settings .settings-panel-heading{flex-direction:column;align-items:start}
 #panel-settings .settings-account-card:hover{transform:none}}
+
+
+/* Assistente de primeira conexão, exibido somente sem aplicativo OAuth configurado. */
+#panel-settings .settings-setup-assistant{border:1px solid #CFE0F5;background:linear-gradient(160deg,#FBFDFF,#F1F7FF);box-shadow:0 12px 35px rgba(36,93,174,.05)}
+#panel-settings .settings-guide-head{display:flex;justify-content:space-between;align-items:start;gap:20px;margin-bottom:20px}
+#panel-settings .settings-guide-head h3{font-size:23px;letter-spacing:-.04em;margin:8px 0}
+#panel-settings .settings-guide-head .helper-text{max-width:670px;margin:0}
+#panel-settings .settings-guide-grid{display:grid;grid-template-columns:1fr minmax(260px,.92fr);gap:16px}
+#panel-settings .settings-guide-instructions,#panel-settings .settings-guide-return{border:1px solid #E1E8F3;border-radius:17px;padding:22px;background:white;min-width:0}
+#panel-settings .settings-guide-steps{margin:0 0 19px;padding-left:23px;display:grid;gap:12px;list-style:decimal}
+#panel-settings .settings-guide-steps li{font-size:13px;color:#4A5C74;line-height:1.6;padding-left:4px}
+#panel-settings .settings-guide-steps li::marker{font-weight:800;color:#4178BB}
+#panel-settings .settings-guide-docs{display:inline-flex;margin:13px 0 0 12px;font-size:12px;color:#2866B8;text-decoration:underline;text-underline-offset:3px}
+#panel-settings .settings-guide-return>.helper-text{margin:12px 0}
+#panel-settings .settings-guide-copy{display:flex;gap:9px;align-items:center;border-radius:12px;background:#F3F6FC;padding:8px 8px 8px 13px}
+#panel-settings .settings-guide-copy code{flex:1;overflow-wrap:anywhere;min-width:0;color:#285481;font-size:12px}
+#panel-settings .settings-google-import{margin-top:18px;padding-top:17px;border-top:1px solid #E9EEF5}
+#panel-settings .settings-google-import strong{font-size:13px;color:#364D72}
+#panel-settings .settings-google-import p{font-size:12px;color:#6E7B8C;line-height:1.65;margin:8px 0 13px}
+#panel-settings .settings-import-label{display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+#panel-settings .settings-guide-manual{display:block;margin-top:20px;border:0;padding:0;background:none;color:#356FAB;text-decoration:underline;text-underline-offset:4px;font-size:12px;font-weight:720;text-align:left;cursor:pointer}
+#panel-settings #settingsSetupMessage{margin:15px 0 0}
+#panel-settings .settings-setup-assistant[hidden],#panel-settings .settings-google-import[hidden]{display:none}
+@media(max-width:760px){#panel-settings .settings-guide-grid{grid-template-columns:1fr}
+#panel-settings .settings-guide-head{flex-direction:column}}
