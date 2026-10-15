@@ -447,7 +447,8 @@ app.get('/health',api(async(req,res)=>res.json({
 })));
 const server=app.listen(PORT,HOST,()=>console.log('Content Lab Node: http://'+HOST+':'+PORT));
 app.post('/api/shutdown',api(async(req,res)=>{
-  const active=[...sourceJobs.values(),...jobs.values(),...transcriptions.values()].filter(j=>j.status==='running').length;
+  const active=[...sourceJobs.values(),...jobs.values(),...transcriptions.values()].filter(j=>j.status==='running').length+
+    (renderQueue.latest()?.status==='running'?1:0);
   if(active&&!req.body?.force)return res.status(409).json({requires_force:true,active_jobs:active});
   res.json({ok:true});server.close();
 }));
