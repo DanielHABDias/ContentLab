@@ -5,6 +5,12 @@ description: Porta de entrada do Content Lab para planejar e revisar edições, 
 
 # Content Lab — Direção
 
+## Checagem de variedade e ordem visual (14/10/2026)
+
+Em Shorts Diazverso, rejeitar a sequência em que várias cenas consecutivas reapresentam o mesmo clipe mesmo com títulos/cores ou variantes TSX diferentes. Identificar as fontes visíveis em `background.asset` **e** `customComponent.assets.main/next` por cena; TSX pode cobrir o background, então a mera troca de fundo não corrige a repetição. Misturar clipes relevantes, PNGs oficiais/de acervo de personagens, composições HQ e telas tipográficas puras. PNG de personagem inteiramente visível com `contain`; vídeo 16:9 no formato 9:16 com crop `cover` central. A abertura Minecraft 0–3s deve passar **na frente** do componente TSX: `z>=900` e `config.alwaysOnTop:true` com o ContentLab atualizado; `server/custom-scenes.mjs` contém a passagem foreground após UserScene. Não alterar padrão sonoro anterior nem presumir QA sem MP4.
+
+
+
 ## Perfil Diazverso: direção consolidada em 14/10/2026
 
 Quando a marca for **Diazverso**, a direção visual aprovada é **motion design moderno/cinematográfico + linguagem HQ editorial sóbria**, não UI minimalista pura e não gibi infantil. Combinar retícula/halftone discreta, painéis/gutters, páginas espaciais, câmera transitando entre trechos reais de filmes/jogos, quadro dessaturado que ganha cor ao receber foco e caixas retangulares de narração. Evitar balões de fala/pensamento por padrão. **Anton** para palavras enormes e fundo sólido com cores mutáveis, **Bangers** para lettering HQ e Comic Sans pontual em caixas editoriais; Inter/sans apenas quando a função pedir. Usar bastante TSX em explicações e comparações, preservando cenas reais citadas — em tela cheia ou incorporadas ao motion. Baixa interferência significa movimentos justificados, não escassez de motion. Padrões TSX novos só entram no catálogo depois de implementação, render e QA.
