@@ -71,3 +71,25 @@
  #panel-publications .publish-platform{padding:12px}
  #panel-publications .publish-footer button{width:100%}
 }
+
+
+/* Restrições por formato e resultados de distribuição */
+#panel-publications .publish-choice.is-unavailable{background:#F1F2F4;color:#979DA7;border-color:#E4E6EA;cursor:not-allowed;filter:grayscale(1);opacity:.65}
+#panel-publications .publish-choice.is-unavailable input{cursor:not-allowed}
+#panel-publications .publish-publishing-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 22px;margin-top:18px;padding:20px;border:1px solid #E3E9F3;border-radius:16px;background:#FBFCFF}
+#panel-publications .publish-publishing-controls>.publish-field{min-width:0;margin:0}
+#panel-publications .publish-publishing-controls select{display:block;width:100%;min-width:0;padding:11px}
+#panel-publications .publish-inline-controls{display:flex;align-items:center;gap:10px}
+#panel-publications .publish-inline-controls select{flex:1}
+#panel-publications .publish-publishing-controls>.helper-text,#panel-publications .publish-publishing-controls>.publish-consent{grid-column:1/-1}
+#panel-publications .publish-consent{display:flex;align-items:flex-start;gap:9px;font-size:12px;color:#425370}
+#panel-publications .publish-consent input{accent-color:#1769E0;flex:none;margin-top:2px}
+#panel-publications .publish-send-results{display:grid;gap:8px;margin-top:22px}
+#panel-publications .publish-result-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border:1px solid #E0E6EF;border-radius:12px;background:#FAFCFF;padding:12px 15px;font-size:12px}
+#panel-publications .publish-result-row strong{overflow-wrap:anywhere;font-size:12px;color:#394B65}
+#panel-publications .publish-result-row span{color:#315B87;text-align:right;overflow-wrap:anywhere}
+#panel-publications .publish-result-row .publish-result-error{color:#BC3749}
+@media(max-width:780px){#panel-publications .publish-publishing-controls{grid-template-columns:1fr}
+ #panel-publications .publish-publishing-controls>.helper-text,#panel-publications .publish-publishing-controls>.publish-consent{grid-column:auto}
+ #panel-publications .publish-inline-controls{flex-wrap:wrap}
+}
