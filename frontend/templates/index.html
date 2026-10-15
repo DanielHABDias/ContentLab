@@ -23,7 +23,8 @@
       <button class="workspace-tab is-active" id="tab-videos" role="tab" aria-selected="true" aria-controls="panel-videos" type="button" data-workspace="videos"><span>01</span> Vídeos e cortes</button>
       <button class="workspace-tab" id="tab-transcription" role="tab" aria-selected="false" aria-controls="panel-transcription" type="button" data-workspace="transcription"><span>02</span> Narração</button>
       <button class="workspace-tab" id="tab-editor" role="tab" aria-selected="false" aria-controls="panel-editor" type="button" data-workspace="editor"><span>03</span> Editor automático</button>
-      <button class="workspace-tab" id="tab-docs" role="tab" aria-selected="false" aria-controls="panel-docs" type="button" data-workspace="docs"><span>04</span> Documentação</button>
+      <button class="workspace-tab" id="tab-multieditor" role="tab" aria-selected="false" aria-controls="panel-multieditor" type="button" data-workspace="multieditor"><span>04</span> Multi-editor automático</button>
+      <button class="workspace-tab" id="tab-docs" role="tab" aria-selected="false" aria-controls="panel-docs" type="button" data-workspace="docs"><span>05</span> Documentação</button>
   </nav><div class="sidebar-foot"><span class="sidebar-foot-icon">✦</span><strong>Faça a ideia ganhar movimento.</strong><small>Node.js · Remotion · Local</small></div></aside>
   <main class="panel">
     <div id="panel-videos" class="workspace-panel" role="tabpanel" aria-labelledby="tab-videos">
@@ -371,6 +372,41 @@
         </details>
       </div>
     </section>
+    </div>
+
+    <div id="panel-multieditor" class="workspace-panel hidden" role="tabpanel" aria-labelledby="tab-multieditor" hidden>
+      <div class="workspace-intro"><span class="eyebrow">STUDIO / MULTI-EDITOR AUTOMÁTICO</span>
+        <h2>Uma fila de vídeos.<br><span class="heading-muted">Sem abrir um por um.</span></h2>
+        <p>Coloque as pastas dos projetos na ordem desejada. O ContentLab lê o edit_plan.json de cada pasta e faz os renders finais sequencialmente, com progresso e saída separados.</p>
+      </div>
+      <section class="block multi-editor-block" aria-labelledby="queueHeading">
+        <div class="section-heading"><div><span class="eyebrow">01 / SEQUÊNCIA</span><h3 id="queueHeading">Pastas dos projetos</h3></div>
+          <p class="helper-text">Uma pasta por linha, de cima para baixo. Cada pasta deve conter seu próprio edit_plan.json, narração e assets.</p></div>
+        <label class="block-label" for="queueFolders">Ordem de renderização</label>
+        <textarea id="queueFolders" class="queue-paths" rows="8" spellcheck="false"
+          placeholder="/home/daniel/Downloads/SH_0005&#10;/home/daniel/Downloads/SH_0006&#10;/home/daniel/Downloads/SH_0007"></textarea>
+        <div class="queue-folder-actions">
+          <button id="queueChooseFolder" type="button" class="btn btn-secondary">Adicionar pasta pelo seletor</button>
+          <button id="queueFromEditor" type="button" class="btn btn-secondary">Adicionar projeto aberto no editor</button>
+          <span id="queueFolderCount" class="helper-text">0 pastas</span>
+        </div>
+        <div class="queue-options">
+          <label class="visual-field" for="queueCacheMode">Cenas renderizadas
+            <select id="queueCacheMode"><option value="reuse">Reaproveitar cache (recomendado)</option><option value="rebuild">Refazer tudo</option></select>
+          </label>
+          <label class="queue-toggle"><input id="queueGpu" type="checkbox"> Usar GPU quando compatível</label>
+          <label class="queue-toggle"><input id="queueContinue" type="checkbox" checked> Continuar os demais projetos se um falhar</label>
+        </div>
+        <div class="queue-actions">
+          <button id="queueStart" type="button" class="btn btn-primary">Iniciar fila de renders</button>
+          <button id="queueCancel" type="button" class="btn btn-danger hidden">Cancelar fila</button>
+        </div>
+        <p id="queueError" class="error-text hidden" role="alert"></p>
+        <p id="queueStatus" class="helper-text" role="status" aria-live="polite">Nenhuma fila em execução.</p>
+        <div class="editor-progress" role="progressbar" aria-label="Progresso da fila" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="queueProgressFill"></span></div>
+        <ol id="queueItems" class="queue-items" aria-label="Projetos na fila"></ol>
+        <p class="helper-text queue-note">A fila roda enquanto o ContentLab estiver aberto. Os vídeos ficam em output/final/final.mp4 dentro de cada projeto. Não é necessário abrir ou editar o JSON nesta aba.</p>
+      </section>
     </div>
 
     <div id="panel-docs" class="workspace-panel hidden" role="tabpanel" aria-labelledby="tab-docs" hidden>
