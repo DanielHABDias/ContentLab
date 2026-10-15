@@ -22,24 +22,28 @@
   const sendButton=byId("publishSubmit");
   let busy=false;
   let privacyLevels=[];
+  let authorizedNetworks=null;
   let videos = [];
   let activeId = null;
   let nextId = 1;
 
   const current = () => videos.find((item) => item.id === activeId);
   const selected = () => videos.filter((item) => item.selected);
-  const platformEnabled = (name) => byId("publishPlatform-" + name).checked;
+  const platformEnabled = (name) => !!authorizedNetworks?.[name] && byId("publishPlatform-" + name).checked;
   const targetsFor=(item)=>networks.filter(name=>platformEnabled(name)&&(name!=="tiktok"||item.format==="9:16"));
   function syncFormat(){
     const item=current();
     const blocked=!!item&&item.format==="16:9";
-    tiktokInput.disabled=blocked||busy;
+    const tiktokReady=!!authorizedNetworks?.tiktok;
+    tiktokInput.disabled=blocked||busy||!tiktokReady;
     const choice=byId("publishTiktokChoice");
-    choice.classList.toggle("is-unavailable",blocked);
-    choice.title=blocked?"TikTok não recebe este vídeo horizontal 16:9":"TikTok disponível para 9:16";
+    choice.classList.toggle("is-unavailable",blocked||!tiktokReady);
+    choice.title=blocked?"TikTok não recebe vídeos horizontais 16:9":
+      tiktokReady?"TikTok disponível para 9:16":"Conecte o TikTok na aba Configurações";
     byId("publishTiktokUnavailable").textContent=blocked
-      ?"TikTok indisponível para este vídeo 16:9. YouTube e Instagram continuam disponíveis."
-      :"TikTok permitido para 9:16. Vídeos horizontais na fila serão pulados nessa plataforma.";
+      ?"TikTok indisponível neste vídeo 16:9. YouTube e Instagram seguem disponíveis se conectados."
+      :tiktokReady?"TikTok disponível para 9:16. Vídeos horizontais na fila serão pulados.":
+        "Conecte sua conta TikTok em Configurações para habilitar envios verticais.";
   }
   function updateSubmit(){
     sendButton.disabled=busy||selected().length===0||!networks.some(platformEnabled);
@@ -82,7 +86,7 @@
     if (!videos.length) {
       const empty = document.createElement("div");
       empty.className = "publish-empty";
-      empty.textContent = "Nenhum MP4 selecionado. Escolha arquivos finalizados do computador para testar a interface. Os vídeos não são enviados.";
+      empty.textContent = "Nenhum MP4 selecionado. Escolha os vídeos finalizados do computador; eles só serão enviados após sua confirmação.";
       list.append(empty);
       return;
     }
@@ -411,6 +415,20 @@
       " falha(s). Confira o processamento final nas plataformas antes de reenviar qualquer vídeo.";
   });
 
+  window.addEventListener('contentlab:social-status',event=>{
+    const previous=authorizedNetworks;
+    const next=Object.fromEntries(networks.map(name=>[
+      name,!!(event.detail?.[name]?.connected||event.detail?.[name]?.needsRenewal)
+    ]));
+    authorizedNetworks=next;
+    for(const name of networks){
+      const input=byId('publishPlatform-'+name);
+      if(!next[name])input.checked=false;
+      else if(!previous||!previous[name])input.checked=true;
+      if(name!=='tiktok')input.disabled=!next[name]||busy;
+    }
+    syncFormat();renderPreviews();renderSchedule();
+  });
   window.addEventListener("beforeunload", clearVideoUrls, {once: true});
   renderList();
   renderEditor();
