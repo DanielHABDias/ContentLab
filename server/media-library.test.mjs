@@ -51,6 +51,10 @@ test('Media search keeps separate source errors, makes opaque download keys',asy
       if(String(url).includes('commons.wikimedia'))return new Response(JSON.stringify({
         query:{pages:commons}
       }),{status:200,headers:{'Content-Type':'application/json'}});
+      if(String(url).includes('/search/pins/'))return new Response('ok');
+      if(String(url).includes('/resource/BaseSearchResource/get/'))return new Response(JSON.stringify({
+        resource_response:{data:{results:[]}}
+      }),{status:200,headers:{'Content-Type':'application/json'}});
       if(String(url).includes('advancedsearch.php'))return new Response(JSON.stringify({
         response:{docs:[{identifier:'old_movie',title:'Old Movie',licenseurl:openLicense}]}
       }),{status:200,headers:{'Content-Type':'application/json'}});
@@ -102,4 +106,43 @@ test('YouTube import reuses the existing Content Lab video cache instead of a se
   }});
   assert.equal(originalUrl,'https://www.youtube.com/watch?v=abcdefghijk');
   assert.equal(result.cachedKey,'yt-example');
+});
+
+test('YouTube normal search is not restricted to Creative Commons, while CC remains optional',async()=>{
+  let options;
+  const results=await searchMedia('favorite movie',{source:'youtube',kind:'video',
+    youtubeSearch:async(q,opts)=>{
+      options=opts;
+      return {videos:[{id:'abcdefghijk',title:'Public video'}]};
+    }
+  });
+  assert.equal(options.type,'video');
+  assert.equal(Object.hasOwn(options,'features'),false,'Default search must see ordinary public videos');
+  assert.equal(results.items.length,1);
+  assert.match(results.items[0].license,/Licença não verificada/);
+  const cc=await searchMedia('nature',{source:'youtube-cc',kind:'video',
+    youtubeSearch:async(q,opts)=>{options=opts;return {videos:[]};}
+  });
+  assert.deepEqual(options.features,['creative_commons']);
+  assert.equal(cc.items.length,0);
+});
+test('The initial popular source combines YouTube and Pinterest, not archival results',async()=>{
+  const urls=[];
+  const output=await searchMedia('actor',{source:'popular',kind:'all',
+    youtubeSearch:async()=>({videos:[{id:'abcdefghijk',title:'Review'}]}),
+    fetcher:async(url)=>{
+      urls.push(String(url));
+      if(String(url).includes('/search/pins/'))return new Response('ok');
+      if(String(url).includes('/resource/BaseSearchResource/get/'))
+        return new Response(JSON.stringify({resource_response:{data:{results:[{
+          id:'12345678901234567',title:'Scene wallpaper',
+          images:{orig:{url:'https://i.pinimg.com/originals/a/b/photo.jpg'}}
+        }]}}}),{status:200});
+      throw Error('Unexpected URL '+url);
+    }
+  });
+  assert.deepEqual(output.sources,['youtube','pinterest']);
+  assert.equal(output.items.length,2);
+  assert.ok(output.items.some(i=>i.provider==='pinterest'));
+  assert.ok(urls.every(u=>u.includes('pinterest.com')));
 });
