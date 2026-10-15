@@ -9,6 +9,39 @@
   };
   if(!$('panel-settings'))return;
   let status={};
+  let guideProvider=null;
+  const onboarding={
+    youtube:{
+      title:'Conectar YouTube com Google',
+      portal:'https://console.cloud.google.com/apis/credentials',
+      docs:'https://developers.google.com/identity/protocols/oauth2/native-app',
+      steps:[
+        'Entre no Google Cloud, selecione ou crie um projeto e habilite YouTube Data API v3.',
+        'Configure a tela de consentimento OAuth e, se estiver em modo de teste, adicione sua conta aos usuários de teste.',
+        'Crie um cliente OAuth do tipo App para computador e baixe o arquivo JSON. Você não precisa copiar tokens.',
+        'Importe o JSON aqui: o Content Lab guardará a configuração local e abrirá a tela oficial para escolher a conta Google.'
+      ]},
+    instagram:{
+      title:'Conectar uma conta profissional do Instagram',
+      portal:'https://developers.facebook.com/apps/',
+      docs:'https://www.postman.com/meta/instagram/folder/6raa77c/instagram-api-with-instagram-login',
+      steps:[
+        'No Meta for Developers, crie ou selecione um aplicativo e configure Instagram API with Instagram Login.',
+        'Use uma conta Instagram profissional (Criador ou Empresa) e habilite instagram_business_basic e instagram_business_content_publish.',
+        'Registre uma URL HTTPS de retorno que encaminhe com segurança para o callback do Content Lab local; a Meta não aceita o retorno HTTP local deste fluxo.',
+        'Em Configuração avançada, informe o App ID, App Secret e essa URL HTTPS. Depois clique em Conectar Instagram e autorize no site oficial.'
+      ]},
+    tiktok:{
+      title:'Conectar TikTok',
+      portal:'https://developers.tiktok.com/',
+      docs:'https://developers.tiktok.com/docs/en/login-kit-desktop',
+      steps:[
+        'Entre no TikTok for Developers, abra Manage apps e crie ou selecione seu aplicativo.',
+        'Adicione o Login Kit para Desktop e registre o retorno localhost indicado ao lado.',
+        'Para vídeos e métricas, configure os produtos e solicite video.publish e video.list; a liberação depende da aprovação do TikTok.',
+        'Em Configuração avançada, informe Client Key e Client Secret do aplicativo. Depois clique em Conectar TikTok para autorizar pelo site oficial.'
+      ]}
+  };
   const connected=value=>!!(value?.connected||value?.needsRenewal);
   const notice=(message,error=false)=>{
     const target=$('socialAuthMessage');
@@ -67,10 +100,9 @@
       label.classList.toggle('is-warning',!!item.needsRenewal);
       label.textContent=item.needsRenewal?'Renovar autorização':ready?'Conectado':
         item.configured?'Pronto para conectar':'Configurar primeiro';
-      button.textContent=ready?'Reconectar '+names[provider]:
-        item.configured?originalLabels[provider]:'Preparar conexão';
+      button.textContent=ready?'Reconectar '+names[provider]:originalLabels[provider];
       button.title=item.configured?'Abrir a autorização oficial de '+names[provider]:
-        'Configuração de aplicativo OAuth necessária apenas uma vez';
+        'Iniciar o assistente de primeira configuração para '+names[provider];
       disconnect.hidden=!ready;
     }
     applyGates();
@@ -78,13 +110,89 @@
   }
   const openConfiguration=provider=>{
     navigateToSettings();
-    const advanced=$('settingsOAuthAdvanced');
-    advanced.open=true;
+    guideProvider=provider;
+    const config=onboarding[provider];
+    const guide=$('settingsSetupGuide');
+    guide.hidden=false;
+    $('settingsSetupTitle').textContent=config.title;
+    $('settingsSetupIntro').textContent=
+      'Primeira configuração: o portal oficial cadastra o aplicativo uma vez. Depois, o acesso à sua conta é feito com um clique.';
+    const steps=$('settingsSetupSteps');
+    steps.replaceChildren();
+    for(const step of config.steps){
+      const li=document.createElement('li');
+      li.textContent=step;
+      steps.append(li);
+    }
+    $('settingsSetupPortal').href=config.portal;
+    $('settingsSetupDocs').href=config.docs;
+    const redirect=status[provider]?.redirectUri||'';
+    const usable=provider==='instagram'?/^https:\/\//.test(redirect):
+      /^http:\/\/127\.0\.0\.1:\d+\/api\/social\/oauth\//.test(redirect);
+    $('settingsSetupRedirect').textContent=usable?redirect:
+      'HTTPS público necessário — configure um domínio ou túnel seguro';
+    $('settingsSetupCopyRedirect').disabled=!usable;
+    $('settingsSetupRedirectHint').textContent=provider==='instagram'?
+      'Para o Instagram, registre uma URL HTTPS válida com seu domínio/túnel e informe-a na configuração avançada.':
+      'Copie esta URL de retorno e cadastre-a no produto OAuth / Login Kit do aplicativo.';
+    $('settingsGoogleImport').hidden=provider!=='youtube';
     $('socialProvider').value=provider;
     updateProviderForm();
-    $('socialClientId').focus();
-    notice('A conexão de '+names[provider]+' precisa de uma configuração inicial do aplicativo OAuth. Preencha os dados abaixo uma única vez.');
+    $('settingsSetupMessage').textContent='';
+    guide.scrollIntoView({behavior:'smooth',block:'start'});
+    notice('Siga o assistente de '+names[provider]+'. Nenhum token ou senha precisa ser digitado.');
   };
+  $('settingsSetupClose').addEventListener('click',()=>{
+    $('settingsSetupGuide').hidden=true;
+    guideProvider=null;
+  });
+  $('settingsSetupCopyRedirect').addEventListener('click',async()=>{
+    const value=$('settingsSetupRedirect').textContent;
+    try{
+      await navigator.clipboard.writeText(value);
+      $('settingsSetupMessage').textContent='URL copiada. Cole no cadastro OAuth do aplicativo.';
+    }catch{
+      $('settingsSetupMessage').textContent='Não foi possível copiar automaticamente. Selecione a URL e copie manualmente.';
+      const selection=window.getSelection();
+      const range=document.createRange();
+      range.selectNodeContents($('settingsSetupRedirect'));
+      selection.removeAllRanges();selection.addRange(range);
+    }
+  });
+  $('settingsSetupManual').addEventListener('click',()=>{
+    const form=$('settingsOAuthAdvanced');
+    form.open=true;
+    $('socialProvider').value=guideProvider||'youtube';
+    updateProviderForm();
+    form.scrollIntoView({behavior:'smooth',block:'start'});
+    $('socialClientId').focus();
+  });
+  $('settingsGoogleJSON').addEventListener('change',async(event)=>{
+    const file=event.target.files?.[0];
+    if(!file)return;
+    event.target.value='';
+    try{
+      if(file.size<10||file.size>65536)throw Error('O arquivo JSON do cliente OAuth deve ter no máximo 64 KB.');
+      const data=JSON.parse(await file.text());
+      const installed=data?.installed;
+      if(!installed||typeof installed.client_id!=='string'||
+        !installed.client_id.endsWith('.apps.googleusercontent.com')||
+        typeof installed.client_secret!=='string'||!installed.client_secret)
+        throw Error('Use o JSON de credenciais do tipo App para computador, não um token ou arquivo de conta de serviço.');
+      $('settingsSetupMessage').textContent='Registrando o aplicativo Google localmente...';
+      await request('/api/social/configure/youtube',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({clientId:installed.client_id,clientSecret:installed.client_secret})
+      });
+      await loadStatus();
+      if(!status.youtube?.configured)throw Error('Configuração Google não foi concluída.');
+      $('settingsSetupMessage').textContent='Configuração salva. Abrindo a autorização oficial do Google...';
+      window.location.assign('/api/social/oauth/youtube/start');
+    }catch(error){
+      $('settingsSetupMessage').textContent=error?.message||'Falha ao importar credenciais.';
+      notice('Importação não concluída. '+$('settingsSetupMessage').textContent,true);
+    }
+  });
   for(const provider of providers){
     $('socialConnect-'+provider).addEventListener('click',()=>{
       if(!status[provider]?.configured){openConfiguration(provider);return;}
@@ -127,7 +235,9 @@
       await loadStatus();
       if(status[provider]?.configured){
         $('settingsOAuthAdvanced').open=false;
-        notice('Aplicativo '+names[provider]+' configurado! Clique em Conectar para abrir o login oficial.');
+        $('settingsSetupGuide').hidden=true;
+        notice('Aplicativo '+names[provider]+' configurado. Abrindo a autorização oficial...');
+        window.location.assign('/api/social/oauth/'+provider+'/start');
       }else notice('Configuração parcial salva. Confira os campos ainda necessários.',true);
     }catch(error){notice(error.message,true);}
   });
