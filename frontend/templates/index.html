@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="/static/studio.css">
 <link rel="stylesheet" href="/static/publications.css">
 <link rel="stylesheet" href="/static/social-connections.css">
+<link rel="stylesheet" href="/static/metrics.css">
 </head>
 <body>
 
@@ -27,7 +28,8 @@
       <button class="workspace-tab" id="tab-editor" role="tab" aria-selected="false" aria-controls="panel-editor" type="button" data-workspace="editor"><span>03</span> Editor automático</button>
       <button class="workspace-tab" id="tab-multieditor" role="tab" aria-selected="false" aria-controls="panel-multieditor" type="button" data-workspace="multieditor"><span>04</span> Multi-editor automático</button>
       <button class="workspace-tab" id="tab-publications" role="tab" aria-selected="false" aria-controls="panel-publications" type="button" data-workspace="publications"><span>05</span> Publicações</button>
-      <button class="workspace-tab" id="tab-docs" role="tab" aria-selected="false" aria-controls="panel-docs" type="button" data-workspace="docs"><span>06</span> Documentação</button>
+      <button class="workspace-tab" id="tab-metrics" role="tab" aria-selected="false" aria-controls="panel-metrics" type="button" data-workspace="metrics"><span>06</span> Métricas</button>
+      <button class="workspace-tab" id="tab-docs" role="tab" aria-selected="false" aria-controls="panel-docs" type="button" data-workspace="docs"><span>07</span> Documentação</button>
   </nav><div class="sidebar-foot"><span class="sidebar-foot-icon">✦</span><strong>Faça a ideia ganhar movimento.</strong><small>Node.js · Remotion · Local</small></div></aside>
   <main class="panel">
     <div id="panel-videos" class="workspace-panel" role="tabpanel" aria-labelledby="tab-videos">
@@ -568,6 +570,62 @@
       </section>
     </div>
 
+    <div id="panel-metrics" class="workspace-panel hidden" role="tabpanel" aria-labelledby="tab-metrics" hidden>
+      <div class="workspace-intro">
+        <span class="eyebrow">STUDIO / DESEMPENHO</span>
+        <h2>Seu conteúdo.<br><span class="heading-muted">Tudo em uma visão.</span></h2>
+        <p>Acompanhe os últimos vídeos, as visualizações e as publicações programadas sem abrir cada rede social.</p>
+      </div>
+      <section id="metricsConnectionGate" class="block metrics-gate" aria-label="Conecte suas redes sociais">
+        <div class="metrics-gate-icon" aria-hidden="true">↗</div>
+        <span class="eyebrow">PRIMEIRO PASSO</span>
+        <h3>Conecte suas contas para ver os resultados.</h3>
+        <p>Autorize YouTube, Instagram ou TikTok na aba Publicações. As estatísticas aparecerão aqui após a conexão.</p>
+        <button id="metricsGoConnect" class="btn btn-primary" type="button">Ir para Publicações e conectar</button>
+      </section>
+      <div id="metricsDashboard" class="metrics-dashboard" hidden>
+        <section class="block metrics-toolbar" aria-label="Selecionar plataforma">
+          <div class="metrics-toolbar-head">
+            <div><span class="eyebrow">VISÃO DE DESEMPENHO</span>
+              <h3 id="metricsViewTitle">Visão geral</h3>
+              <p id="metricsUpdated" class="helper-text">Conectando aos serviços...</p></div>
+            <button id="metricsRefresh" class="btn btn-secondary btn-sm" type="button">↻ Atualizar dados</button>
+          </div>
+          <div class="metrics-platform-filters" role="group" aria-label="Filtrar métricas por rede social">
+            <button type="button" class="metrics-filter" id="metricsFilter-youtube" data-metrics-platform="youtube" aria-pressed="false">
+              <span class="metrics-filter-icon metrics-youtube" aria-hidden="true">▶</span><span><strong>YouTube</strong><small id="metricsFilterStatus-youtube">Verificar conexão</small></span>
+            </button>
+            <button type="button" class="metrics-filter" id="metricsFilter-instagram" data-metrics-platform="instagram" aria-pressed="false">
+              <span class="metrics-filter-icon metrics-instagram" aria-hidden="true">◎</span><span><strong>Instagram</strong><small id="metricsFilterStatus-instagram">Verificar conexão</small></span>
+            </button>
+            <button type="button" class="metrics-filter" id="metricsFilter-tiktok" data-metrics-platform="tiktok" aria-pressed="false">
+              <span class="metrics-filter-icon metrics-tiktok" aria-hidden="true">♪</span><span><strong>TikTok</strong><small id="metricsFilterStatus-tiktok">Verificar conexão</small></span>
+            </button>
+          </div>
+          <p class="helper-text metrics-toggle-help">Clique em uma rede para ver só os dados dela. Clique novamente para voltar à visão geral.</p>
+          <p id="metricsFeedback" role="status" aria-live="polite" class="helper-text"></p>
+        </section>
+        <div class="metrics-stat-grid" id="metricsStatGrid" aria-label="Indicadores principais"></div>
+        <div class="metrics-detail-grid">
+          <section class="block" aria-labelledby="metricsRecentTitle">
+            <div class="metrics-heading"><span class="eyebrow">ÚLTIMAS PUBLICAÇÕES</span><h3 id="metricsRecentTitle">Vídeos recentes</h3></div>
+            <div id="metricsRecent" class="metrics-video-list"></div>
+          </section>
+          <section class="block" aria-labelledby="metricsScheduledTitle">
+            <div class="metrics-heading"><span class="eyebrow">PRÓXIMOS ENVIOS</span><h3 id="metricsScheduledTitle">Agendados no YouTube</h3></div>
+            <div id="metricsScheduled" class="metrics-video-list"></div>
+            <p class="helper-text">Somente agendamentos que a API do YouTube disponibiliza. O TikTok Studio e o Instagram não disponibilizam aqui seus próprios calendários.</p>
+          </section>
+        </div>
+        <section class="block" aria-labelledby="metricsTopTitle">
+          <div class="metrics-heading"><span class="eyebrow">MAIS ASSISTIDOS</span><h3 id="metricsTopTitle">Destaques dos vídeos recentes</h3></div>
+          <p class="helper-text">Comparação de visualizações dos vídeos retornados pelas APIs, não de todo o histórico dos perfis.</p>
+          <div id="metricsBars" class="metrics-bars"></div>
+        </section>
+        <div id="metricsNotes" class="metrics-notes" aria-live="polite"></div>
+      </div>
+    </div>
+
     <div id="panel-docs" class="workspace-panel hidden" role="tabpanel" aria-labelledby="tab-docs" hidden>
       <div class="workspace-intro">
         <span class="eyebrow">CONTENT LAB / REFERÊNCIA OFICIAL</span>
@@ -613,5 +671,6 @@
 <script src="/static/visual_editor.js"></script>
 <script src="/static/publications.js"></script>
 <script src="/static/social-connections.js"></script>
+<script src="/static/metrics.js"></script>
 </body>
 </html>
