@@ -84,7 +84,7 @@ export function beginAuthorization(provider) {
     url=new URL('https://accounts.google.com/o/oauth2/v2/auth');
     url.search=new URLSearchParams({
       client_id:value(CLIENT_KEYS.youtube[0]),redirect_uri:redirectUri,
-      response_type:'code',scope:'https://www.googleapis.com/auth/youtube.upload',
+      response_type:'code',scope:'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly',
       access_type:'offline',prompt:'consent',state
     }).toString();
   } else if(provider==='instagram'){
@@ -97,7 +97,7 @@ export function beginAuthorization(provider) {
     url=new URL('https://www.tiktok.com/v2/auth/authorize/');
     url.search=new URLSearchParams({
       client_key:value(CLIENT_KEYS.tiktok[0]),redirect_uri:redirectUri,
-      response_type:'code',scope:'user.info.basic,video.publish',state,
+      response_type:'code',scope:'user.info.basic,video.publish,video.list',state,
       code_challenge:crypto.createHash('sha256').update(verifier).digest('hex'),
       code_challenge_method:'S256'
     }).toString();
