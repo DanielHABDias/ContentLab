@@ -13,7 +13,7 @@ let sourceRequestId = 0;
 const $ = (id) => document.getElementById(id);
 
 // Areas de trabalho isoladas: trocar de aba preserva o trabalho em andamento.
-const workspaces = ["videos", "transcription", "editor", "multieditor", "publications", "metrics", "docs"];
+const workspaces = ["videos", "transcription", "editor", "multieditor", "publications", "metrics", "settings", "docs"];
 function showWorkspace(name) {
   for (const workspace of workspaces) {
     const active = workspace === name;
