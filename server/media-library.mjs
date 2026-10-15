@@ -110,10 +110,10 @@ export async function searchYouTube(q,kind,{youtubeSearch,creativeCommons=false}
   if(kind==='image')return [];
   if(!youtubeSearch){
     if(!youtube){const m=await import('youtubei.js');youtube=await m.Innertube.create({generate_session_locally:true});}
-    youtubeSearch=(term)=>youtube.search(term,creativeCommons?
-      {type:'video',features:['creative_commons']}:{type:'video'});
+    youtubeSearch=(term,options)=>youtube.search(term,options);
   }
-  const results=await youtubeSearch(q);
+  const options=creativeCommons?{type:'video',features:['creative_commons']}:{type:'video'};
+  const results=await youtubeSearch(q,options);
   return normalizeYouTube(results.videos,{creativeCommons}).slice(0,15);
 }
 function putResults(items){
