@@ -43,7 +43,8 @@ test('yt-dlp metadata parses one public video and never invokes a shell',async()
   assert.equal(info.duration,122.3);
   assert.equal(info.thumbnail,'https://i.vimeocdn.com/video/123.jpg');
   assert.equal(invocation.bin,'/custom/bin/yt-dlp');
-  assert.equal(invocation.args.includes('--dump-single-json'),true);
+  assert.equal(invocation.args.includes('--print'),true);
+  assert.equal(invocation.args.includes('%(.{id,title,duration,thumbnail})j'),true);
   assert.equal(invocation.args.includes('--no-playlist'),true);
   assert.equal(invocation.args.includes('--ignore-config'),true);
   assert.deepEqual(invocation.args.slice(-1),['https://vimeo.com/1234']);
