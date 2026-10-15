@@ -82,7 +82,7 @@ Shorts: gancho com explosão Minecraft sobreposta, metallic riser para tensão e
 
 SFX: whoosh variado para movimento/deslize, pop/click/bling para aparição ou interação, sino para bell; **metallic riser somente para tensão**, nunca deslize. O som útil coincide com o **meio da animação**, não antes nem no primeiro frame por padrão. QA exige escuta do render. A seleção musical de Shorts (Bully 2 temas, L's Theme A, Kuroi Light, GTA IV, GTA San Andreas e GTA V Welcome to Los Santos) é preferencial, sujeita a direito autoral; não confundir arquivo em 'NoCopyright' com licença.
 
-Consultar o documento de consolidação do Drive (ID `1R-fldN8Pni77DYIJd5yvPZCdwM1JAue-Yi_JBMW0GBQ`) e o perfil `diazverso-video`. Estes comandos orientam as especializadas ainda que seus espelhos no Drive estejam aguardando sincronização. Preservar a produção já concluída VD_0005. Não criar novos TSX/assets agora; os templates serão elaborados com Codex posteriormente.
+Consultar o documento de consolidação do Drive (ID `documento de consolidação em IA/Skills no Drive privado`) e o perfil `diazverso-video`. Estes comandos orientam as especializadas ainda que seus espelhos no Drive estejam aguardando sincronização. Preservar a produção já concluída VD_0005. Não criar novos TSX/assets agora; os templates serão elaborados com Codex posteriormente.
 
 ### L5 — Direção, assets e guia de edição
 Entrada da fase: `diazverso-direcao-edicao`, que delega `diazverso-edicao-decupagem`, `contentlab-composicao`, `contentlab-motion`, música/SFX e Nox. Preparar mapa de cenas, prioridade de footage real, screenshots/PNG de personagens, fontes, trilhas, licenças e pontos de coleta. Sempre indicar **asset já disponível / reutilizável / precisa baixar / indisponível** e sua função exata no roteiro.
