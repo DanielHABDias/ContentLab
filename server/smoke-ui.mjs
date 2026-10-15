@@ -113,9 +113,30 @@ try{
   assert.equal(await evaluate('document.getElementById("settingsOAuthAdvanced").open'),false,
     'Advanced OAuth setup remains collapsed by default');
   await evaluate('document.getElementById("socialConnect-youtube").click()');
+  assert.equal(await evaluate('document.getElementById("settingsSetupGuide").hidden'),false,
+    'First connection opens the official setup guide');
+  assert.equal(await evaluate('document.getElementById("settingsOAuthAdvanced").open'),false,
+    'Developer credentials remain a last-resort, collapsed option');
+  assert.equal(await evaluate('document.getElementById("settingsGoogleImport").hidden'),false,
+    'Google supports direct import of a desktop OAuth client JSON');
+  assert.equal(await evaluate('document.getElementById("settingsSetupPortal").href.includes("console.cloud.google.com")'),true,
+    'Guide links to official Google Cloud');
+  assert.equal(await evaluate('document.getElementById("settingsSetupRedirect").textContent.includes("127.0.0.1")'),true,
+    'Guide displays local callback address');
+  await evaluate('document.getElementById("settingsSetupManual").click()');
   assert.equal(await evaluate('document.getElementById("settingsOAuthAdvanced").open'),true,
-    'Unconfigured OAuth opens setup without leaving Content Lab');
+    'Advanced fields are opt-in only');
   assert.equal(await evaluate('document.getElementById("socialProvider").value'),'youtube');
+  await evaluate('document.getElementById("socialConnect-tiktok").click()');
+  assert.equal(await evaluate('document.getElementById("settingsSetupTitle").textContent.includes("TikTok")'),true,
+    'TikTok shows its own developer setup steps');
+  assert.equal(await evaluate('document.getElementById("settingsGoogleImport").hidden'),true,
+    'Google client import is not offered to other providers');
+  assert.equal(await evaluate('document.getElementById("settingsSetupDocs").href.includes("tiktok.com")'),true,
+    'TikTok guide links to official developer documentation');
+  await evaluate('document.getElementById("settingsSetupClose").click()');
+  assert.equal(await evaluate('document.getElementById("settingsSetupGuide").hidden'),true,
+    'Guided setup can be dismissed');
   const socialStatus = await evaluate('(async () => { const r=await fetch("/api/social/status"); return {ok:r.ok,body:await r.json()}; })()');
   assert.equal(socialStatus.ok,true);
   assert.equal(typeof socialStatus.body.providers.youtube.configured,'boolean');
