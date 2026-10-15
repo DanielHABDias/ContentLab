@@ -123,6 +123,17 @@ try{
     'Guide links to official Google Cloud');
   assert.equal(await evaluate('document.getElementById("settingsSetupRedirect").textContent.includes("127.0.0.1")'),true,
     'Guide displays local callback address');
+
+  await evaluate(`(() => {
+    const input=document.getElementById("settingsGoogleJSON");
+    const files=new DataTransfer();
+    files.items.add(new File(['{"type":"service_account","private_key":"not-an-oauth-client"}'],
+      "wrong-google.json",{type:"application/json"}));
+    input.files=files.files;
+    input.dispatchEvent(new Event("change",{bubbles:true}));
+  })()`);
+  await wait(()=>evaluate('document.getElementById("settingsSetupMessage").textContent.includes("App para computador")'),
+    'Google importer must reject service-account JSON without contacting provider');
   await evaluate('document.getElementById("settingsSetupManual").click()');
   assert.equal(await evaluate('document.getElementById("settingsOAuthAdvanced").open'),true,
     'Advanced fields are opt-in only');
