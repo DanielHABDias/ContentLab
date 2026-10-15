@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import {ensureSocialEnv,readSocialEnv,socialValue,writeSocialEnv} from './social-env.mjs';
+import {createOAuthAuthorizeUrl} from './social-oauth-url.mjs';
 
 const PROVIDERS=['youtube','instagram','tiktok'];
 const CLIENT_KEYS={
@@ -79,32 +80,10 @@ export function beginAuthorization(provider) {
   const verifier=crypto.randomBytes(48).toString('base64url');
   const redirectUri=status.redirectUri;
   inFlight.set(state,{provider,redirectUri,verifier,created:Date.now()});
-  let url;
-  if(provider==='youtube'){
-    url=new URL('https://accounts.google.com/o/oauth2/v2/auth');
-    url.search=new URLSearchParams({
-      client_id:value(CLIENT_KEYS.youtube[0]),redirect_uri:redirectUri,
-      response_type:'code',scope:'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly',
-      access_type:'offline',prompt:'select_account consent',state,
-      code_challenge:crypto.createHash('sha256').update(verifier).digest('base64url'),
-      code_challenge_method:'S256'
-    }).toString();
-  } else if(provider==='instagram'){
-    url=new URL('https://www.instagram.com/oauth/authorize');
-    url.search=new URLSearchParams({
-      client_id:value(CLIENT_KEYS.instagram[0]),redirect_uri:redirectUri,
-      response_type:'code',scope:'instagram_business_basic,instagram_business_content_publish',state
-    }).toString();
-  } else {
-    url=new URL('https://www.tiktok.com/v2/auth/authorize/');
-    url.search=new URLSearchParams({
-      client_key:value(CLIENT_KEYS.tiktok[0]),redirect_uri:redirectUri,
-      response_type:'code',scope:'user.info.basic,video.publish,video.list',state,
-      code_challenge:crypto.createHash('sha256').update(verifier).digest('hex'),
-      code_challenge_method:'S256'
-    }).toString();
-  }
-  return {url:url.toString(),state};
+  const url=createOAuthAuthorizeUrl(provider,{
+    clientId:value(CLIENT_KEYS[provider][0]),redirectUri,state,verifier
+  });
+  return {url,state};
 }
 const tokenRequest=async(url,params)=>{
   const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
