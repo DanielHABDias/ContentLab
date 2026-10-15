@@ -2,6 +2,19 @@
 
 Editor automático e utilitários de vídeo para projetos de conteúdo e motion design, com servidor Node.js, interface JavaScript, Remotion e FFmpeg. Os testes automatizados Linux e Windows estão disponíveis no GitHub Actions. A validação estética final continua dependendo dos arquivos e objetivos de cada projeto real.
 
+## Banco de mídia — pesquisar, baixar e criar cortes
+
+A nova aba **Banco de mídia** tem busca por palavras-chave, filtros de fonte e formato, miniaturas, créditos, condições de licença e importação integrada ao cache existente de Vídeos e cortes.
+
+- **Wikimedia Commons:** pesquisa imagens e vídeos (JPG, PNG, WebP, GIF, MP4, WebM etc.) com metadados de licenças abertas reconhecidas. Exige conferência dos créditos e da atribuição na página original.
+- **Internet Archive:** pesquisa filmes e registros audiovisuais que declaram licenças Creative Commons BY/BY-SA ou domínio público. A importação verifica novamente a licença no item original e escolhe um arquivo original suportado, de até **240 MB**. Um resultado não é prova absoluta de que o uploader possui os direitos; verifique antes de reutilizar cenas.
+- **YouTube:** busca filtrada por Creative Commons com a biblioteca **YouTube.js**, já usada no Content Lab. A importação reutiliza o downloader e o cache da aba Vídeos e cortes, sem exigir o OAuth de publicação do Google. O filtro não garante direitos sobre material de terceiros; confira licença e termos da plataforma. Algumas transferências podem falhar quando o YouTube altera seus mecanismos.
+- **Pinterest:** atalho para pesquisar na plataforma; download de pins **ainda não integrado**. Estudamos o projeto [gallery-dl](https://github.com/mikf/gallery-dl), que admite URLs do Pinterest e, em alguns fluxos, precisa de cookies; não prometemos login nem importação automática nessa primeira versão.
+- **Fotos:** são salvas em `~/Downloads/ContentLab/Imagens` (ou pasta Downloads equivalente), acompanhadas por um arquivo `.license.txt` com fonte e créditos. **Vídeos:** vão para o cache de fontes existente e ficam disponíveis para uso e exportação de cortes na aba Vídeos e cortes.
+- A API aceita downloads **somente de resultados obtidos por busca válida**, com um identificador temporário, confirmação dos direitos, restrição de servidores de origem, limite de arquivo, limite de dois downloads simultâneos e sem permitir URL arbitrária ou bypass de DRM. Não há integração com sites de streaming protegido nem download de filmes/séries comerciais sem permissão.
+
+Ferramentas avaliadas: [yt-dlp](https://github.com/yt-dlp/yt-dlp), [gallery-dl](https://github.com/mikf/gallery-dl), [YouTube.js](https://github.com/LuanRT/YouTube.js) e [Internet Archive](https://archive.org). O Banco de mídia usa APIs públicas e nosso código Node, sem exigir essas ferramentas extras como dependências.
+
 ## Tecnologias
 
 - **Node.js 22+**: servidor HTTP, validação, projetos, cache, cortes, áudio e automações.
