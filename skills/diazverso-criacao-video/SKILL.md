@@ -7,6 +7,11 @@ metadata:
   role: orchestrator
 ---
 
+
+## Fonte oficial de cenas reutilizáveis — substituir instruções futuras/hipotéticas
+Biblioteca já criada e disponibilizada: [Custom Cenas Diasverso](https://drive.google.com/drive/folders/1yWogLK6bRWXunvdJxTHBMIqB4ibSN44f). Antes de L5/L6, ler o README geral e o README + TSX da subpasta específica; usar **somente os sete padrões oficiais por padrão**: `ComicPageCTA`, `QuadroHQSobreCena`, `TextoBangersHalftone`, `PaginaHQCenas`, `LinhaDoTempoHQ`, `PersonagemEspiralLegenda`, `CaixinhaCTAHQ`. Não criar ou modificar TSX novo sem **pedido explícito do criador**; um pedido genérico para criar um vídeo não autoriza. A biblioteca responde a **16:9 e 9:16** pelas dimensões, com composição distinta por formato. Preferir cenas reais/ilustrações em movimento quando os TSX não agregarem.
+No **guia de edição** e no `edit_plan.json`, registrar componente escolhido, função, formato, `mode`, caminho `project://custom-scenes/Nome.tsx`, props reais, assets/fontes, duração, camadas, timestamp de fala e eventos SFX absolutos. `overlay`: Quadro HQ e Caixinha; `replace`: outros cinco. TSX são visuais e NÃO contêm áudio; som no plano. `PersonagemEspiralLegenda` usa tempos reais `transcript.words` com `transcriptOffset` ou `captions`. `PaginaHQCenas`/`LinhaDoTempoHQ` exigem continuidade sem reiniciar clipes após expansão. Não retomar a decupagem editorial antiga. Testar frames e mixagem reais antes de declarar aprovação.
+
 # Diazverso — Criação de Vídeo | Orquestradora de ponta a ponta
 
 ## Ativação
@@ -74,7 +79,7 @@ Responsáveis: `diazverso-narracao`, `contentlab-timeline-audio`. Confirmar vers
 
 ### Direção editorial vigente — 15/10/2026
 
-A atualização aprovada pelo criador substitui instruções anteriores que incentivavam excesso de TSX. Em longos e Shorts, o vídeo deve ser montado principalmente de cenas reais pertinentes e ilustrações completas com pan/zoom suave, alternando PNGs e quadros gráficos comedidos, sem repetição excessiva de tomadas ou spoilers. **Poucos TSX padronizados** com molduras HQ, halftone, personagem que entra em quadro e a fonte Avengers quando verificada; Bangers continua no lettering/legendas HQ e Anton grande continua para frases de impacto sobre fundos sólidos ou clipes escurecidos. Retângulos de narrador branco/creme com etiqueta amarela e sombra preta serão recorrentes. Não criar TSX só para aplicar uma textura repetida; pode usar overlay gráfico transparente de imagem reutilizável.
+A atualização aprovada pelo criador substitui instruções anteriores que incentivavam excesso de TSX. Em longos e Shorts, o vídeo deve ser montado principalmente de cenas reais pertinentes e ilustrações completas com pan/zoom suave, alternando PNGs e quadros gráficos comedidos, sem repetição excessiva de tomadas ou spoilers. **Poucos TSX da biblioteca oficial**, com as fontes específicas de cada README (não presumir Avengers nos sete); Bangers continua no lettering/legendas HQ e Anton grande continua para frases de impacto sobre fundos sólidos ou clipes escurecidos. Retângulos de narrador branco/creme com etiqueta amarela e sombra preta serão recorrentes. Não criar TSX só para aplicar uma textura repetida; pode usar overlay gráfico transparente de imagem reutilizável.
 
 Longos: TSX em 16:9; cena conserva aspecto original; filtro de TV sobre filmes/animações, **não** jogos. Nox grande em cenas de opinião, oscilação suave e legenda especial abaixo. CTA HQ nova de like/inscrição/sino no canto superior direito, com hold mínimo de cinco segundos e click/sino/wooshes sincronizados; não substituir as CTAs Nox aprovadas. Cartela de capítulo apenas em vídeos que recontam jogos em capítulos, SOBRE cena com áudio original, seguida de corte para narração.
 
@@ -82,7 +87,7 @@ Shorts: gancho com explosão Minecraft sobreposta, metallic riser para tensão e
 
 SFX: whoosh variado para movimento/deslize, pop/click/bling para aparição ou interação, sino para bell; **metallic riser somente para tensão**, nunca deslize. O som útil coincide com o **meio da animação**, não antes nem no primeiro frame por padrão. QA exige escuta do render. A seleção musical de Shorts (Bully 2 temas, L's Theme A, Kuroi Light, GTA IV, GTA San Andreas e GTA V Welcome to Los Santos) é preferencial, sujeita a direito autoral; não confundir arquivo em 'NoCopyright' com licença.
 
-Consultar o perfil atualizado `diazverso-video` e as regras editoriais vigentes nesta orquestradora. O documento temporário de consolidação foi excluído a pedido do criador. Estas regras orientam as especializadas enquanto seus espelhos Markdown do Drive aguardam sincronização. Preservar a produção concluída VD_0005. Os novos templates TSX/assets serão elaborados com Codex posteriormente.
+Consultar o perfil atualizado `diazverso-video` e as regras editoriais vigentes nesta orquestradora. O documento temporário de consolidação foi excluído a pedido do criador. Estas regras orientam as especializadas enquanto seus espelhos Markdown do Drive aguardam sincronização. Preservar a produção concluída VD_0005. Os sete templates oficiais TSX já foram criados; consultar a biblioteca no Drive.
 
 ### L5 — Direção, assets e guia de edição
 Entrada da fase: `diazverso-direcao-edicao`, que delega `diazverso-edicao-decupagem`, `contentlab-composicao`, `contentlab-motion`, música/SFX e Nox. Preparar mapa de cenas, prioridade de footage real, screenshots/PNG de personagens, fontes, trilhas, licenças e pontos de coleta. Sempre indicar **asset já disponível / reutilizável / precisa baixar / indisponível** e sua função exata no roteiro.
