@@ -5,6 +5,10 @@ description: Planeja coreografia de motion design no Content Lab: keyframes, eas
 
 # Content Lab — Movimento e coreografia
 
+## Diazverso — motion usando os sete padrões oficiais
+A programação original de cenas sofisticadas deste módulo é genérica e **não** autoriza novos TSX para Diazverso. Consultar [biblioteca oficial](https://drive.google.com/drive/folders/1yWogLK6bRWXunvdJxTHBMIqB4ibSN44f) e ler o README específico antes de orientar movimentos. **Reusar somente sete TSX oficiais por padrão; criar ou modificar TSX apenas com comando explícito do criador.** O movimento deve obedecer props/tempos já disponíveis; não criar props de câmera, entradas ou fonte inexistentes. Quando a necessidade não couber no padrão, preferir cortes, pan/zoom em imagens e movimentação normal de PNGs ou solicitar direção. Cada efeito editorial pede SFX correspondente no JSON e checagem de áudio; o TSX não reproduz áudio automaticamente. Os layouts são responsivos em 16:9 e 9:16.
+
+
 ## Direção de motion Shorts Diazverso — 15/10/2026
 
 A referência antiga de Short inteiro animado no TSX `DiazversoFlowHQ` foi DESCARTADA pelo criador. Novo padrão: clipes e imagens/ilustrações em movimento suave como base; poucos overlays HQ, lettering de impacto e CTA final. Preservar somente os visuais aprovados de `DiazversoHQEditorial.tsx` (hook/caixas/tipografia) e `ComicPageCTA.tsx` no SH_0005. PNG de personagem entra animado, tem balanço discreto e sai com movimento; sincronizar efeito real ao gesto. Fonte especial citada: **Avengers** em TSX se o arquivo de fonte correto existir e renderizar; Bangers permanece fonte HQ de legendas/caixas, Anton em frases de impacto. Não confundir os nomes nem alegar fonte carregada sem asset.
