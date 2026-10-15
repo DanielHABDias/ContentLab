@@ -7,6 +7,7 @@ import crypto from 'node:crypto';
 import {APP_ROOT,projectFile,readJson,assetReport,validatePlan,PlanError} from './plan.mjs';
 import {createProject,loadProject,saveProject,listAssets,registry,visualContext,installedAssets} from './project.mjs';
 import {renderProject} from './render.mjs';
+import {createRenderQueue} from './render-queue.mjs';
 import {run} from './exec.mjs';
 import {instanceIdentity} from './instance-identity.mjs';
 import {SOURCE_CACHE,listSources,cachedSource,importLocalSource,removeSource,getYoutubeInfo,resolveSource,exportCut} from './source.mjs';
@@ -24,8 +25,11 @@ const app=express(),jobs=new Map(),transcriptions=new Map(),sourceJobs=new Map()
 app.disable('x-powered-by');
 app.use(express.json({limit:'5mb'}));
 app.use('/static',express.static(path.join(APP_ROOT,'frontend','static'),{index:false}));
-const activeRender=root=>[...jobs.values()].some(job=>job.projectRoot===root&&job.status==='running');
+const singleRenderActive=root=>[...jobs.values()].some(job=>job.projectRoot===root&&job.status==='running');
 const runningTranscription=root=>[...transcriptions.values()].find(job=>job.projectRoot===root&&job.status==='running');
+const renderQueue=createRenderQueue({loadProject,renderProject,isSingleRenderBusy:singleRenderActive,
+  isTranscribing:root=>!!runningTranscription(root)});
+const activeRender=root=>singleRenderActive(root)||renderQueue.isQueued(root);
 function startPreparedTranscript(root,options={}){
   const running=runningTranscription(root);
   if(running)return running.id;
@@ -216,6 +220,23 @@ app.get('/api/editor/jobs/:id/log',api(async(req,res)=>{
   if(!job?.hasErrorLog)return res.status(404).json({error:'Log não disponível.'});
   res.download(job.errorLog);
 }));
+// Multi-editor: accepts an ordered list of saved project folders and renders them
+// strictly one at a time, without the plan editor or a separate JSON input.
+app.post('/api/render-queue',api(async(req,res)=>{
+  try{res.status(202).json(renderQueue.enqueue(req.body||{}));}
+  catch(e){res.status(e.statusCode||500).json({error:e.message});}
+}));
+app.get('/api/render-queue/latest',api(async(req,res)=>res.json({job:renderQueue.latest()})));
+app.get('/api/render-queue/:id',api(async(req,res)=>{
+  const job=renderQueue.get(req.params.id);
+  if(!job)return res.status(404).json({error:'Fila não encontrada.'});
+  res.json(job);
+}));
+app.post('/api/render-queue/:id/cancel',api(async(req,res)=>{
+  try{res.json(renderQueue.cancel(req.params.id));}
+  catch(e){res.status(e.statusCode||500).json({error:e.message});}
+}));
+
 app.post('/api/choose-folder',api(async(req,res)=>{
   let selected='';
   try{
