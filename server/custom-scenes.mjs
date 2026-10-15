@@ -70,7 +70,7 @@ const Combined=(props:any)=>{
   // z (e.g. Minecraft green-screen intro z=900) need a separate foreground
   // pass AFTER UserScene; otherwise z only orders elements INSIDE Scene.
   const isForeground=(element:any)=>element.type==='overlay' &&
-    (Number(element.z)>=900 || element.data?.alwaysOnTop===true);
+    (Number(element.z)>=900 || element.data?.config?.alwaysOnTop===true || element.data?.alwaysOnTop===true);
   const foreground=(props.scene.elements||[]).filter(isForeground);
   const normal=(props.scene.elements||[]).filter((element:any)=>!isForeground(element));
   const baseProps={...props,scene:{...props.scene,elements:normal}};
