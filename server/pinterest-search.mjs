@@ -78,7 +78,7 @@ function networkMessage(error,stage){
   if(has('ENOTFOUND')||has('EAI_AGAIN'))detail='O DNS não conseguiu localizar o Pinterest.';
   else if(has('ETIMEDOUT')||has('UND_ERR_CONNECT_TIMEOUT')||
     error?.name==='TimeoutError')detail='A conexão com o Pinterest expirou.';
-  else if(codes.some(c=>/CERT|TLS|SSL|SELF_SIGNED/.test(c)))
+  else if(codes.some(c=>/CERT|TLS|SSL|SELF_SIGNED|UNABLE_TO_VERIFY|UNABLE_TO_GET_ISSUER/.test(c)))
     detail='O certificado HTTPS foi recusado. Verifique a rede e o relógio do computador.';
   else if(has('ENETUNREACH')||has('EHOSTUNREACH')||has('ECONNREFUSED'))
     detail='A rede não conseguiu alcançar o Pinterest.';
