@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="/static/style.css">
 <link rel="stylesheet" href="/static/studio.css">
 <link rel="stylesheet" href="/static/publications.css">
+<link rel="stylesheet" href="/static/social-connections.css">
 </head>
 <body>
 
@@ -420,22 +421,43 @@
       <section class="block" aria-label="Situação das integrações">
         <div class="publish-note" role="status">
           <span class="publish-dot" aria-hidden="true"></span>
-          <div><strong>Modo de demonstração.</strong> Esta versão prepara apenas a interface. Nenhuma conta é conectada, nenhum vídeo é enviado e nenhum agendamento é salvo. Os arquivos escolhidos ficam somente nesta sessão do navegador.</div>
+          <div><strong>Modo de demonstração.</strong> Conecte suas contas pelos serviços oficiais abaixo. A autorização OAuth e os tokens passam a ser armazenados localmente; o envio e o agendamento de vídeos continuam desativados nesta etapa.</div>
         </div>
         <div class="publish-platforms">
           <div class="publish-platform">
             <span class="publish-platform-symbol youtube" aria-hidden="true">▶</span>
-            <div><strong>YouTube Shorts</strong><small>Prioridade · Não conectado</small></div>
+            <div><strong>YouTube Shorts</strong><small>Prioridade · <span id="socialStatus-youtube">Não conectado</span></small></div>
           </div>
           <div class="publish-platform">
             <span class="publish-platform-symbol instagram" aria-hidden="true">◎</span>
-            <div><strong>Instagram Reels</strong><small>Não conectado</small></div>
+            <div><strong>Instagram Reels</strong><small><span id="socialStatus-instagram">Não conectado</span></small></div>
           </div>
           <div class="publish-platform">
             <span class="publish-platform-symbol tiktok" aria-hidden="true">♪</span>
-            <div><strong>TikTok</strong><small>Não conectado</small></div>
+            <div><strong>TikTok</strong><small><span id="socialStatus-tiktok">Não conectado</span></small></div>
           </div>
         </div>
+        <div class="social-auth-actions" aria-label="Conectar contas">
+          <button type="button" id="socialConnect-youtube" class="btn btn-secondary btn-sm" disabled>Conectar YouTube</button>
+          <button type="button" id="socialConnect-instagram" class="btn btn-secondary btn-sm" disabled>Conectar Instagram</button>
+          <button type="button" id="socialConnect-tiktok" class="btn btn-secondary btn-sm" disabled>Conectar TikTok</button>
+        </div>
+        <p id="socialAuthMessage" class="helper-text" role="status" aria-live="polite">Verificando conexões locais...</p>
+        <details class="social-auth-setup">
+          <summary>Configurar credenciais do aplicativo OAuth (uma vez por plataforma)</summary>
+          <p class="helper-text">Crie um aplicativo de desenvolvedor no Google Cloud, Meta ou TikTok e copie aqui o Client ID/Key e Secret. O Content Lab nunca pede sua senha da rede social. Os dados serão gravados em <code>.env</code> local, ignorado pelo Git.</p>
+          <form id="socialCredentialsForm">
+            <div class="social-auth-form-grid">
+              <div><label for="socialProvider">Plataforma</label><select id="socialProvider"><option value="youtube">YouTube / Google</option><option value="instagram">Instagram / Meta</option><option value="tiktok">TikTok</option></select></div>
+              <div><label for="socialClientId">Client ID / Client Key</label><input id="socialClientId" autocomplete="off" required placeholder="Identificador fornecido pelo provedor"></div>
+              <div><label for="socialClientSecret">Client Secret</label><input id="socialClientSecret" type="password" autocomplete="new-password" placeholder="Secret da aplicação (não é sua senha)"></div>
+              <div id="socialInstagramRedirectField" hidden><label for="socialInstagramRedirect">Callback HTTPS do Instagram</label><input id="socialInstagramRedirect" type="url" placeholder="https://seu-dominio/api/social/oauth/instagram/callback"></div>
+            </div>
+            <p id="socialRedirectHint" class="helper-text"></p>
+            <div class="social-auth-actions"><button type="submit" class="btn btn-primary btn-sm">Salvar configurações no .env local</button><button type="button" class="btn btn-ghost btn-sm" id="socialDisconnect">Desconectar conta selecionada</button></div>
+            <p class="helper-text">Ao trocar de máquina, você pode levar seu <code>.env</code> com segurança ou configurar o aplicativo e fazer login novamente. Nunca envie esse arquivo para repositórios ou outras pessoas.</p>
+          </form>
+        </details>
       </section>
 
       <div class="publish-layout">
@@ -582,5 +604,6 @@
 <script src="/static/app.js"></script>
 <script src="/static/visual_editor.js"></script>
 <script src="/static/publications.js"></script>
+<script src="/static/social-connections.js"></script>
 </body>
 </html>
