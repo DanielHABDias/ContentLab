@@ -20,6 +20,7 @@ import {diagramNames,diagramSvg} from './docs-diagrams.mjs';
 import {sceneCacheOverview,savedSceneFile} from './scene-browser.mjs';
 import {mountSocialRoutes} from './social-routes.mjs';
 import {mountSocialPublishRoutes} from './social-publish-routes.mjs';
+import {mountSocialMetricsRoutes} from './social-metrics-routes.mjs';
 
 const PORT=Number(process.env.PORT||5000);
 const HOST='127.0.0.1';
@@ -447,6 +448,7 @@ app.get('/api/transcription/jobs/:id',api(async(req,res)=>{
 }));
 mountSocialRoutes(app,api);
 mountSocialPublishRoutes(app,api,upload);
+mountSocialMetricsRoutes(app,api);
 const runningIdentity=instanceIdentity();
 app.get('/health',api(async(req,res)=>res.json({
   ok:true,backend:'node',renderer:'remotion',...runningIdentity
