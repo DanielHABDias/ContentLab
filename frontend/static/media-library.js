@@ -3,7 +3,7 @@
   'use strict';
   const $=id=>document.getElementById(id);
   if(!$('panel-library'))return;
-  const names={commons:'Wikimedia Commons',archive:'Internet Archive',youtube:'YouTube'};
+  const names={commons:'Wikimedia Commons',archive:'Internet Archive',youtube:'YouTube',pinterest:'Pinterest'};
   let chosen=null,requestId=0,downloading=false,lastImportedKey=null;
   const label=(text,cls)=>{const span=document.createElement('span');span.textContent=text;span.className=cls||'';return span;};
   const feedback=(text,error=false)=>{
@@ -59,6 +59,12 @@
     if(q.length<2){feedback('Digite pelo menos dois caracteres.',true);return;}
     const ticket=++requestId;
     $('librarySearchBtn').disabled=true;
+    const source=$('librarySource').value;
+    const hasPinterest=['popular','pinterest','all'].includes(source);
+    $('libraryFallback').hidden=!hasPinterest;
+    $('libraryPinterestExternal').href='https://www.pinterest.com/search/pins/?'+
+      new URLSearchParams({q});
+    $('libraryTikTokSearch').href='https://www.tiktok.com/search?'+new URLSearchParams({q});
     feedback('Pesquisando nas fontes disponíveis…');
     $('libraryResults').replaceChildren();
     $('libraryResultCount').textContent='';
@@ -73,13 +79,13 @@
       const items=data.items||[];
       if(!items.length){
         const empty=document.createElement('div');empty.className='library-empty';
-        empty.textContent='Nenhum arquivo com licença aberta foi encontrado. Experimente outra busca ou uma fonte diferente.';
+        empty.textContent='Nenhum resultado público encontrado. Experimente outro assunto, altere a fonte ou abra a pesquisa no site original.';
         $('libraryResults').append(empty);
       }else for(const item of items)$('libraryResults').append(makeCard(item));
       $('libraryResultCount').textContent=items.length+' resultado(s)';
       feedback(data.warnings?.length?
         'Algumas fontes não responderam: '+data.warnings.join(' · '):
-        items.length+' arquivo(s) encontrados. Confira os créditos e licenças antes de usar.',
+        items.length+' resultado(s) encontrados. Confira se possui autorização para reutilizá-los.',
         Boolean(data.warnings?.length));
     }catch(error){
       if(ticket!==requestId)return;

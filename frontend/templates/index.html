@@ -628,19 +628,27 @@
       <div class="workspace-intro">
         <span class="eyebrow">ACERVO / PESQUISAR E IMPORTAR</span>
         <h2>Encontre a cena.<br><span class="heading-muted">Traga para seu estúdio.</span></h2>
-        <p>Pesquise imagens e vídeos de acervos com licenças abertas, explore filmes clássicos e encontre vídeos Creative Commons no YouTube. Os vídeos importados ficam disponíveis para cortes.</p>
+        <p>Encontre vídeos do YouTube normal e imagens ou vídeos do Pinterest sem precisar configurar o OAuth de publicação. Outros acervos também estão disponíveis. Importe seus arquivos autorizados para usar nos cortes.</p>
       </div>
       <section class="block library-search-panel" aria-labelledby="librarySearchHeading">
         <div class="library-search-heading">
           <div><span class="eyebrow">01 / DESCOBERTA</span><h3 id="librarySearchHeading">O que você procura?</h3>
-          <p class="helper-text">Experimente “space”, “silent film”, “Batman”, “nature” ou o título de um filme antigo.</p></div>
+          <p class="helper-text">Experimente pesquisar cenas de filmes, referências de edição, personagens, memes ou paisagens.</p></div>
         </div>
         <form id="librarySearchForm" class="library-search-form">
           <div class="library-search-query"><label for="libraryQuery">Pesquisar fotos e vídeos</label>
             <input id="libraryQuery" type="search" placeholder="Ex.: vintage cinema, astronomia, filme clássico…" required maxlength="100" minlength="2" autocomplete="off">
           </div>
           <div><label for="librarySource">Fonte</label>
-            <select id="librarySource"><option value="all">Todas as fontes</option><option value="commons">Wikimedia Commons</option><option value="archive">Internet Archive</option><option value="youtube">YouTube (Creative Commons)</option></select>
+            <select id="librarySource">
+              <option value="popular" selected>⭐ YouTube + Pinterest</option>
+              <option value="youtube">YouTube (busca normal)</option>
+              <option value="pinterest">Pinterest (pins públicos)</option>
+              <option value="youtube-cc">YouTube (Creative Commons)</option>
+              <option value="all">Todas as fontes</option>
+              <option value="commons">Wikimedia Commons</option>
+              <option value="archive">Internet Archive</option>
+            </select>
           </div>
           <div><label for="libraryKind">Formato</label>
             <select id="libraryKind"><option value="all">Fotos e vídeos</option><option value="image">Imagens</option><option value="video">Vídeos</option></select>
@@ -648,10 +656,10 @@
           <button type="submit" id="librarySearchBtn" class="btn btn-primary">Pesquisar</button>
         </form>
         <div class="library-shortcuts"><span>Explorar:</span>
-          <button type="button" data-library-search="silent film">Cinema mudo</button>
-          <button type="button" data-library-search="space">Espaço</button>
-          <button type="button" data-library-search="old movies">Filmes antigos</button>
-          <button type="button" data-library-search="nature">Natureza</button>
+          <button type="button" data-library-search="cenas de filmes">Cenas de filmes</button>
+          <button type="button" data-library-search="edit anime">Edit anime</button>
+          <button type="button" data-library-search="futebol">Futebol</button>
+          <button type="button" data-library-search="wallpaper">Wallpapers</button>
         </div>
         <p class="helper-text library-search-state" id="libraryFeedback" role="status" aria-live="polite">Digite um tema para começar a busca.</p>
       </section>
@@ -659,6 +667,7 @@
         <div><span class="eyebrow">02 / RESULTADOS</span><h3>Escolha um arquivo</h3></div>
         <span id="libraryResultCount" class="helper-text"></span>
       </div>
+      <p class="helper-text" id="libraryFallback" hidden>Se o Pinterest limitar consultas automáticas, você pode <a id="libraryPinterestExternal" href="https://www.pinterest.com/search/pins/" target="_blank" rel="noopener noreferrer">abrir a mesma pesquisa diretamente no Pinterest ↗</a>.</p>
       <div id="libraryResults" class="library-results" aria-live="polite">
         <div class="library-empty">Busque acima para ver miniaturas, origem e condições de uso.</div>
       </div>
@@ -677,11 +686,11 @@
           <p id="libraryDownloadState" class="helper-text" role="status" aria-live="polite"></p>
         </div>
         <div class="library-progress" id="libraryProgress" hidden><div id="libraryProgressFill"></div></div>
-        <p class="helper-text library-license-note">As informações de licença são mantidas junto ao arquivo. O Commons e o Internet Archive têm mídias reutilizáveis, mas nem tudo na internet é de domínio público. Vídeos do YouTube são sujeitos também às regras da plataforma.</p>
+        <p class="helper-text library-license-note">YouTube e Pinterest exibem conteúdo público, mas isso não significa licença de reutilização. Confira os direitos e créditos na origem antes de baixar, cortar ou publicar.</p>
       </section>
       <section class="library-other-sources" aria-label="Outras fontes">
-        <div><strong>Pinterest e outros sites</strong><p>Para pesquisar pins e coleções, abra o Pinterest. O downloader open source gallery-dl suporta URLs da plataforma, mas essa integração ainda não está habilitada na biblioteca.</p></div>
-        <a href="https://www.pinterest.com/search/pins/" target="_blank" rel="noopener noreferrer">Abrir Pinterest ↗</a>
+        <div><strong>TikTok · pesquisa externa</strong><p>Também avaliamos projetos open source para encontrar vídeos do TikTok. A pesquisa integrada ainda não está disponível porque pode exigir sessão autenticada e ferramentas adicionais. Use o site oficial enquanto isso.</p></div>
+        <a id="libraryTikTokSearch" href="https://www.tiktok.com/search" target="_blank" rel="noopener noreferrer">Pesquisar no TikTok ↗</a>
       </section>
     </div>
 
