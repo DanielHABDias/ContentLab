@@ -50,12 +50,12 @@ QA: sem clickbait enganoso; A/B testam hipóteses diferentes, não sinônimos; t
 **Gate L1:** aprovar A/B, tags e direção descritiva. Registrar em `Videos Longos` após aprovação em linha confirmada: `TITULO`, `TAGS` e `CONTEXTO`; `DESCRIÇÃO` só quando o conteúdo estiver pronto ou em registro explicitamente marcado como rascunho. A coluna de título já aceita variantes `A / B`; preservar a convenção. Não sobrescrever informação de outro vídeo.
 
 ### L2 — Thumbnail: direção e criação
-Responsáveis: `diazverso-thumbnail`, `diazverso-nox` se necessário. Saída: 2–3 propostas que complementem os títulos, texto curto ou ausência de texto, sujeito principal, contraste, hierarquia, ângulo visual, assets necessários e opções A/B; quando o criador pedir a peça, produzir arquivo de imagem e avaliar mobile.
+Responsáveis: `diazverso-thumbnail`, `diazverso-nox` se necessário. Saída: 2–3 propostas que complementem os títulos, com padrão aprovado de personagem principal central e destacado e uma palavra grande/curta e legível; considerar contraste, hierarquia, ângulo visual, assets e opções A/B. Variações sem texto só quando solicitadas/justificadas; produzir imagem e revisar no mobile quando o criador pedir.
 QA: teste de 1 segundo, redução mobile, coerência entre título/thumb, legibilidade, identidade, direitos e rastreabilidade do arquivo.
 **Gate L2:** aprovar conceito (e arte final, quando já disponível). **Não colocar texto de conceito na coluna `THUMBNAIL`**: ela representa link de arquivo final. Se o roteiro mudar substancialmente a tese, reabrir gates L1/L2.
 
 ### L3 — Roteiro longo
-Responsáveis: `diazverso-roteiro` + `diazverso-revisao-roteiro`. Entregas: outline, hook, blocos, tese, fatos verificáveis, contrapontos, pagamento da promessa, CTA e texto narrável. QA: precisão, lacunas de evidência, sequência lógica, oralidade, retenção, proporção de duração, sem alteração da promessa aprovada sem aviso.
+Responsáveis: `diazverso-roteiro` + `diazverso-revisao-roteiro`. Entregas: outline, hook e progressão problema central → exemplos da obra → perguntas e novos problemas derivados ao longo dos blocos, com fatos verificáveis, contrapontos, pagamento da promessa, CTA e texto narrável. QA: precisão, lacunas de evidência, sequência lógica, oralidade, retenção, proporção de duração, sem alteração da promessa aprovada sem aviso.
 **Gate L3:** usuário aceita ou comenta. Após aprovar, salvar roteiro canônico e somente então registrar link na coluna `ROTEIRO`; refinar a descrição com fatos, capítulos planejados e fontes, sem inventar timecodes.
 
 ### L4 — Narração preparada e minutagem
@@ -71,6 +71,18 @@ Responsáveis: `diazverso-narracao`, `contentlab-timeline-audio`. Confirmar vers
 - `diazverso-instagram`: **P0 opcional de divulgação**, somente se o criador desejar post, Stories, carrossel ou anúncio; não obrigatório para marcar vídeo concluído.
 - `gsb-contentlab` é perfil de **outra configuração/marca**, não um filho do workflow Diazverso. É mantido para a entrada geral `contentlab-direcao` e não deve ser apagado apenas por não aparecer nas etapas L/S.
 - `diazverso-video` é perfil de marca no repositório ContentLab, carregado por `contentlab-direcao`; difere da gateway de edição do Drive e não deve ser excluído por aparente duplicidade.
+
+### Direção editorial vigente — 15/10/2026
+
+A atualização aprovada pelo criador substitui instruções anteriores que incentivavam excesso de TSX. Em longos e Shorts, o vídeo deve ser montado principalmente de cenas reais pertinentes e ilustrações completas com pan/zoom suave, alternando PNGs e quadros gráficos comedidos, sem repetição excessiva de tomadas ou spoilers. **Poucos TSX padronizados** com molduras HQ, halftone, personagem que entra em quadro, Bangers; Anton grande continua para frases de impacto sobre fundos sólidos ou clipes escurecidos. Retângulos de narrador branco/creme com etiqueta amarela e sombra preta serão recorrentes. Não criar TSX só para aplicar uma textura repetida; pode usar overlay gráfico transparente de imagem reutilizável.
+
+Longos: TSX em 16:9; cena conserva aspecto original; filtro de TV sobre filmes/animações, **não** jogos. Nox grande em cenas de opinião, oscilação suave e legenda especial abaixo. CTA HQ nova de like/inscrição/sino no canto superior direito, com hold mínimo de cinco segundos e click/sino/wooshes sincronizados; não substituir as CTAs Nox aprovadas. Cartela de capítulo apenas em vídeos que recontam jogos em capítulos, SOBRE cena com áudio original, seguida de corte para narração.
+
+Shorts: gancho com explosão Minecraft sobreposta, metallic riser para tensão e whoosh+blur de virada, trilha entrando em seguida. Legendagem Bangers obrigatória logo abaixo do centro, contorno fino e sombra. Motion HQ leve sobre cenas, com CTA final reutilizável baseada apenas no `ComicPageCTA.tsx` aprovado do SH_0005; do `DiazversoHQEditorial.tsx`, usar apenas hook/caixas/lettering aprovados, retirando barra amarela inferior do hook. Demais experimentos TSX do SH_0005 não são padrões aprovados.
+
+SFX: whoosh variado para movimento/deslize, pop/click/bling para aparição ou interação, sino para bell; **metallic riser somente para tensão**, nunca deslize. O som útil coincide com o **meio da animação**, não antes nem no primeiro frame por padrão. QA exige escuta do render. A seleção musical de Shorts (Bully 2 temas, L's Theme A, Kuroi Light, GTA IV, GTA San Andreas e GTA V Welcome to Los Santos) é preferencial, sujeita a direito autoral; não confundir arquivo em 'NoCopyright' com licença.
+
+Consultar o documento de consolidação do Drive (ID `1R-fldN8Pni77DYIJd5yvPZCdwM1JAue-Yi_JBMW0GBQ`) e o perfil `diazverso-video`. Estes comandos orientam as especializadas ainda que seus espelhos no Drive estejam aguardando sincronização. Preservar a produção já concluída VD_0005. Não criar novos TSX/assets agora; os templates serão elaborados com Codex posteriormente.
 
 ### L5 — Direção, assets e guia de edição
 Entrada da fase: `diazverso-direcao-edicao`, que delega `diazverso-edicao-decupagem`, `contentlab-composicao`, `contentlab-motion`, música/SFX e Nox. Preparar mapa de cenas, prioridade de footage real, screenshots/PNG de personagens, fontes, trilhas, licenças e pontos de coleta. Sempre indicar **asset já disponível / reutilizável / precisa baixar / indisponível** e sua função exata no roteiro.
