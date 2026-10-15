@@ -110,10 +110,25 @@ try{
     'Library starts with a useful search prompt');
   assert.equal(await evaluate('document.getElementById("libraryDownload").disabled'),true,
     'No download without choosing content and confirming reuse rights');
-  await evaluate("(() => {\n window.__libraryOriginalFetch=window.fetch;\n window.fetch=(url,opts)=>{\n   if(!String(url).startsWith('/api/library/search'))return window.__libraryOriginalFetch(url,opts);\n   const data={items:[{provider:'commons',kind:'image',key:'opaque-media-key',title:'Foto para corte',credit:'Autora A',license:'CC BY 4.0',pageUrl:'https://commons.wikimedia.org/wiki/File:Demo.jpg',preview:'https://upload.wikimedia.org/a.jpg'}],warnings:[]};\n   return Promise.resolve(new Response(JSON.stringify(data),{status:200,headers:{'Content-Type':'application/json'}}));\n };\n})()");
+  assert.equal(await evaluate('document.getElementById("librarySource").value'),'popular',
+    'YouTube and Pinterest are the default source');
+  assert.equal(await evaluate('document.querySelector("#librarySource option[value=youtube]").textContent.includes("busca normal")'),true,
+    'Ordinary YouTube search is available without Creative Commons filter');
+  assert.equal(await evaluate('!!document.querySelector("#librarySource option[value=pinterest]")'),true,
+    'Pinterest is a first-class selectable source');
+  assert.equal(await evaluate('!!document.querySelector("#librarySource option[value=youtube-cc]")'),true,
+    'Creative Commons remains optional');
+
+  await evaluate("(() => {\n window.__libraryOriginalFetch=window.fetch;\n window.fetch=(url,opts)=>{\n   if(!String(url).startsWith('/api/library/search'))return window.__libraryOriginalFetch(url,opts);\n   const data={items:[{provider:'pinterest',kind:'image',key:'opaque-media-key',title:'Pin de cinema',credit:'Autora A',license:'Licença não verificada',pageUrl:'https://www.pinterest.com/pin/123456789/',preview:'https://i.pinimg.com/originals/aa/test.jpg'}],warnings:[]};\n   return Promise.resolve(new Response(JSON.stringify(data),{status:200,headers:{'Content-Type':'application/json'}}));\n };\n})()");
   await evaluate('document.getElementById("libraryQuery").value="cinema";document.getElementById("librarySearchBtn").click()');
   await wait(()=>evaluate('document.querySelectorAll(".library-result").length===1'),
     'Library renders image results from local search API');
+  assert.equal(await evaluate('document.querySelector(".library-provider").textContent'),'Pinterest',
+    'Pinterest media appears as a previewable result');
+  assert.equal(await evaluate('document.getElementById("libraryFallback").hidden'),false,
+    'Fallback to official Pinterest search is available');
+  assert.equal(await evaluate('document.getElementById("libraryTikTokSearch").href.includes("cinema")'),true,
+    'TikTok external discovery retains the search term');
   await evaluate('document.querySelector(".library-result .library-card-actions button").click()');
   assert.equal(await evaluate('document.getElementById("libraryDownload").disabled'),true,
     'Selecting an asset alone does not enable download');
