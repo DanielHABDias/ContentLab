@@ -3,6 +3,10 @@ name: contentlab-revisao
 description: Faz controle de qualidade visual e sonoro em planos e renders do Content Lab por checkpoints, detectando clipping, timing, inconsistências e problemas de continuidade.
 ---
 
+
+## Gate Diazverso — biblioteca TSX oficial
+Consultar [Custom Cenas Diasverso](https://drive.google.com/drive/folders/1yWogLK6bRWXunvdJxTHBMIqB4ibSN44f) e README/TSX específicos. Rejeitar TSX novo/variante ou alteração de código sem pedido explícito do criador; componentes oficiais (7) em 16:9/9:16, escolhidos com parcimônia. Conferir `overlay` (QuadroHQSobreCena, CaixinhaCTAHQ) versus `replace` (demais), assets/fontes e props reais, textos legíveis, safe areas e camadas, além de áudio **externo** ao TSX. Revisar `transcript.words` versus legendas (não aproximar tempo), `sourceStart` de continuidade Página/Linha do Tempo, e diferenças de layout por formato. PNG atual como referência visual; MP4 histórico pode anteceder ajustes. Não considerar mixagem validada só por imagem/MP4 de demonstração.
+
 # Content Lab — Revisão e qualidade
 
 ## Meta
