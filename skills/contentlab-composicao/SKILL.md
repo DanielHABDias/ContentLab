@@ -5,6 +5,10 @@ description: Planejamento de composição visual para cenas Content Lab, com hie
 
 # Content Lab — Composição visual
 
+## Diazverso — precedência da biblioteca oficial TSX
+Na marca Diazverso, os exemplos de composição deste módulo são recursos técnicos, **não** autorização para criar novas cenas TSX. Consultar [Custom Cenas Diasverso](https://drive.google.com/drive/folders/1yWogLK6bRWXunvdJxTHBMIqB4ibSN44f) (README geral, README e código de cada uma das sete subpastas). Por padrão, usar exclusivamente ComicPageCTA, QuadroHQSobreCena, TextoBangersHalftone, PaginaHQCenas, LinhaDoTempoHQ, PersonagemEspiralLegenda e CaixinhaCTAHQ, adaptados a 16:9/9:16 pela resolução. **Criar novo TSX ou alterar o código dos oficiais só mediante pedido explícito do criador.** Manter cenas reais/ilustrações/PNGs como base. A estética dos componentes é diversa: QuadroHQ usa Anton na frase/Bangers na etiqueta; TextoBangersHalftone usa letras Bangers brancas fixas, e não props fictícias para cores; respeitar geometria, camadas e modos declarados no README.
+
+
 ## Crop obrigatório de footage horizontal em Shorts Diazverso (14/10/2026)
 
 Quando o projeto for **Short 9:16 do Diazverso**, vídeo de origem 16:9 deve manter proporção e ocupar **toda a composição**: usar `background.fit: "cover"` ou `objectFit: "cover"; objectPosition: "center center"` no TSX. O espectador vê prioritariamente a **coluna central do vídeo original**; **não encaixar todo o 16:9 dentro do 9:16 com barras** (`contain`). Reenquadramento horizontal só com intenção e teste explícitos. Em painéis internos de HQ, o crop pode ser escolhido por painel, mas o fundo full-bleed conserva cover.
