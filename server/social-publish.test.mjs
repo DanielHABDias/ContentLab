@@ -36,6 +36,7 @@ test('YouTube schedule and captions are preserved, public upload is not immediat
     const fetcher=async(url,request)=>{
       calls.push({url:String(url),method:request.method,body:typeof request.body==='string'?JSON.parse(request.body):null});
       if(request.method==='POST')return {ok:true,headers:new Headers({'location':'https://www.googleapis.com/upload/youtube/v3/videos?upload_id=mock'})};
+      for await (const piece of request.body) void piece;
       return {ok:true,json:async()=>({id:'youtube-video-test',status:{privacyStatus:'private'}})};
     };
     const result=await uploadYouTube(a.file,input,{fetcher,tokenGetter:async()=> 'fake'});
@@ -51,7 +52,10 @@ test('Instagram local resumable video uses caption and chosen frame',async()=>{
     const fetcher=async(url,opts)=>{
       calls.push({url:String(url),opts});
       if(String(url).endsWith('/media'))return {ok:true,json:async()=>({id:'container-1'})};
-      if(String(url).includes('rupload.facebook.com'))return {ok:true,json:async()=>({success:true})};
+      if(String(url).includes('rupload.facebook.com')){
+        for await (const piece of opts.body) void piece;
+        return {ok:true,json:async()=>({success:true})};
+      }
       if(String(url).includes('fields=status_code'))return {ok:true,json:async()=>({status_code:'FINISHED'})};
       return {ok:true,json:async()=>({id:'published-1'})};
     };
@@ -73,6 +77,7 @@ test('TikTok requires approved privacy level and user consent, returns processin
       calls.push({url:String(url),opts});
       if(opts.method==='POST')return {ok:true,json:async()=>({error:{code:'ok'},data:{
         publish_id:'publish-123',upload_url:'https://open-upload.tiktokapis.com/video/?upload_id=123'}})};
+      for await (const piece of opts.body) void piece;
       return {ok:true,status:201};
     };
     const result=await uploadTikTok(a.file,data,{
