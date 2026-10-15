@@ -11,6 +11,16 @@ Interface original do Content Lab com linguagem editorial de software criativo: 
 
 O projeto é inspirado na clareza visual de aplicativos contemporâneos e **não** replica logotipos, ícones ou identidade comercial da Apple.
 
+## Publicações (prévia de interface)
+
+A aba **Publicações** apresenta a futura distribuição de Shorts para YouTube, Instagram e TikTok, sem autenticação nem upload nesta versão.
+
+- Seleção múltipla de MP4s locais para testar a interface; a leitura automática de `output/final/final.mp4` por projeto será implementada depois.
+- Edição de título e descrição por vídeo, seletor de frame temporal com prévia do próprio MP4 e seleção opcional de imagem externa.
+- Prévias de texto por plataforma: YouTube preserva título e descrição separados; Instagram e TikTok unem ambos com uma linha em branco e substituem `#Shorts` por `#Viral` somente na prévia dessas redes.
+- Calendário simulado de um vídeo por dia no YouTube, com data e horário definidos. Instagram e TikTok aparecem como envio imediato futuro.
+- Contas marcadas como não conectadas e botão de envio/agendamento permanentemente desabilitado. Nenhuma configuração é salva e nenhum arquivo sai do navegador.
+
 ## Editor de cenas
 
 Ao abrir um projeto, o storyboard fica dividido em duas áreas:
