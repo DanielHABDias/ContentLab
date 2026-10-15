@@ -27,8 +27,8 @@
     $("socialRedirectHint").textContent=provider==="instagram"
       ? "A Meta exige um callback HTTPS cadastrado no aplicativo, encaminhado para este Content Lab local. Para testes locais, configure um túnel HTTPS seguro."
       : provider==="tiktok"
-        ? "TikTok Desktop Login Kit: registre no painel do aplicativo o retorno "+(statuses.tiktok?.redirectUri||"http://127.0.0.1:5000/api/social/oauth/tiktok/callback")+"; solicite aprovação do escopo video.publish."
-        : "Google Cloud: registre no OAuth Client a URI de retorno "+(statuses.youtube?.redirectUri||"http://127.0.0.1:5000/api/social/oauth/youtube/callback")+".";
+        ? "TikTok Desktop Login Kit: registre no painel do aplicativo o retorno "+(statuses.tiktok?.redirectUri||"http://127.0.0.1:5000/api/social/oauth/tiktok/callback")+"; solicite os escopos video.publish e video.list para métricas."
+        : "Google Cloud: registre no OAuth Client a URI de retorno "+(statuses.youtube?.redirectUri||"http://127.0.0.1:5000/api/social/oauth/youtube/callback")+". Para a aba Métricas, autorize também youtube.readonly.";
     $("socialClientId").value="";
     $("socialClientSecret").value="";
     $("socialInstagramRedirect").value="";
