@@ -92,8 +92,8 @@ try{
   assert.equal(await evaluate('getComputedStyle(document.getElementById("loadBtn")).transitionProperty.includes("transform")'),true,
     'Buttons must provide a transform-based tactile response');
   await evaluate('document.getElementById("tab-videos").click()');
-  assert.equal(await evaluate('document.querySelectorAll(".workspace-tab").length'),6,
-    'Six workspaces include Multi-editor and Publications');
+  assert.equal(await evaluate('document.querySelectorAll(".workspace-tab").length'),7,
+    'Seven workspaces include Publications and Metrics');
   await evaluate('document.getElementById("tab-publications").click()');
   assert.equal(await evaluate('document.getElementById("panel-publications").hidden'),false,
     'Publications workspace must open');
@@ -138,6 +138,30 @@ try{
   await evaluate('document.getElementById("publishFormat").value="9:16";document.getElementById("publishFormat").dispatchEvent(new Event("change"))');
   assert.equal(await evaluate('document.getElementById("publishPlatform-tiktok").disabled'),false,
     'TikTok becomes available for vertical 9:16 media');
+
+
+  await evaluate('document.getElementById("tab-metrics").click()');
+  await wait(()=>evaluate('!document.getElementById("metricsConnectionGate").hidden'),
+    'Metrics empty state before connecting');
+  assert.equal(await evaluate('document.getElementById("metricsDashboard").hidden'),true,
+    'No metric cards appear without OAuth');
+  await evaluate('document.getElementById("metricsGoConnect").click()');
+  assert.equal(await evaluate('document.getElementById("panel-publications").hidden'),false,
+    'Connect CTA returns to Publications');
+  await evaluate("(() => {\n window.__metricsOriginalFetch=window.fetch;\n window.fetch=(url,opts)=>{\n   if(!String(url).startsWith('/api/social/metrics'))return window.__metricsOriginalFetch(url,opts);\n   const input=new URL(String(url),location.origin);\n   const selected=input.searchParams.get('platform')||'general';\n   const connected={youtube:{connected:true,configured:true},instagram:{connected:false,configured:false},tiktok:{connected:true,configured:true}};\n   const youtube={status:'ok',data:{platform:'youtube',updatedAt:new Date().toISOString(),\n     recent:[{platform:'youtube',id:'a',title:'Batman vídeo',publishedAt:new Date().toISOString(),views:120,likes:10,comments:3}],\n     scheduled:[{platform:'youtube',id:'b',title:'Agendado',scheduledAt:new Date().toISOString()}],\n     top:[{platform:'youtube',id:'a',title:'Batman vídeo',views:120}],note:'Últimos uploads públicos'}};\n   const tiktok={status:'ok',data:{platform:'tiktok',updatedAt:new Date().toISOString(),\n     recent:[{platform:'tiktok',id:'t',title:'Cultura pop',publishedAt:new Date().toISOString(),views:200,likes:30,comments:2,shares:1}],\n     scheduled:[],top:[{platform:'tiktok',id:'t',title:'Cultura pop',views:200}],note:'Últimos vídeos públicos'}};\n   const platforms=selected==='general'?{youtube,tiktok}:selected==='youtube'?{youtube}:selected==='tiktok'?{tiktok}:{};\n   return Promise.resolve(new Response(JSON.stringify({view:selected,connected,platforms}),\n     {status:200,headers:{'Content-Type':'application/json'}}));\n };\n})()");
+  await evaluate('document.getElementById("tab-metrics").click()');
+  await wait(()=>evaluate('document.getElementById("metricsStatGrid").children.length===4'),
+    'Metrics cards when OAuth is connected');
+  assert.equal(await evaluate('document.getElementById("metricsConnectionGate").hidden'),true);
+  await evaluate('document.getElementById("metricsFilter-tiktok").click()');
+  await wait(()=>evaluate('document.getElementById("metricsViewTitle").textContent.includes("TikTok")'),
+    'TikTok filter');
+  assert.equal(await evaluate('document.getElementById("metricsFilter-tiktok").getAttribute("aria-pressed")'),'true');
+  await evaluate('document.getElementById("metricsFilter-tiktok").click()');
+  await wait(()=>evaluate('document.getElementById("metricsViewTitle").textContent==="Visão geral"'),
+    'Second click returns to general metrics');
+  assert.equal(await evaluate('document.getElementById("metricsFilter-tiktok").getAttribute("aria-pressed")'),'false');
+  await evaluate('window.fetch=window.__metricsOriginalFetch');
 
   await evaluate('document.getElementById("tab-multieditor").click()');
   assert.equal(await evaluate('document.getElementById("panel-multieditor").hidden'),false);
