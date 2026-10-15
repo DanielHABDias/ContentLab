@@ -5,6 +5,10 @@ description: Planeja sincronismo com narração, transcript, SFX, música, corte
 
 # Content Lab — Timeline, voz e áudio
 
+## Diazverso — áudio e tempo nos TSX oficiais
+Consultar [Custom Cenas Diasverso](https://drive.google.com/drive/folders/1yWogLK6bRWXunvdJxTHBMIqB4ibSN44f) e README específico da cena. Os sete TSX são **visuais**: narração, música e SFX ficam no `edit_plan.json`. `timeline[].start/end` em segundos absolutos, tempos de props em segundos relativos (exceto contrato individual), `sfx.at` absoluto. Para PersonagemEspiralLegenda, usar timestamps reais de `transcript.words` + `transcriptOffset` ou `captions` em milissegundos; nunca dividir uniformemente as palavras. Ao expandir Página HQ e Linha do Tempo HQ, continuar o vídeo no sourceStart efetivamente reproduzido sem reiniciar. Teclado só durante escrita, clique no instante exato de pressão, sino durante tremida, whoosh no movimento; `trimDb` não assegura loudness. Nenhum TSX novo pode ser criado por padrão, salvo pedido explícito do criador.
+
+
 ## Fonte temporal
 A narração **preparada** é a referência para sincronizar palavras, legendas e beats. O fluxo preferido agora começa na aba **Narração**, sem `edit_plan.json`: o Content Lab remove silêncio das bordas e reduz pausas internas longas (configurável), preserva `audio/narration.original.*`, salva `audio/narration.prepared.wav` e gera o áudio final `audio/narration.wav` com grave opcional. O `transcript.json` é produzido sobre a versão limpa, **antes do pitch**. Depois o ChatGPT cria `edit_plan.json` com `audio.narration: "audio/narration.wav"` e `sources.transcript: "transcript.json"`. `silenceInserts` é etapa de edição posterior: aplique as pausas pelo JSON e deixe o renderer remapear apenas essas inserções. Não duplicar `sourceCuts` de cortes que a aba Narração já realizou.
 
