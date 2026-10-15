@@ -421,7 +421,7 @@
       <section class="block" aria-label="Situação das integrações">
         <div class="publish-note" role="status">
           <span class="publish-dot" aria-hidden="true"></span>
-          <div><strong>Modo de demonstração.</strong> Conecte suas contas pelos serviços oficiais abaixo. A autorização OAuth e os tokens passam a ser armazenados localmente; o envio e o agendamento de vídeos continuam desativados nesta etapa.</div>
+          <div><strong>Publicação com autorização.</strong> O Content Lab envia vídeos somente após sua confirmação. YouTube agenda; Instagram e TikTok publicam assim que processados. Algumas contas exigem aprovação das APIs.</div>
         </div>
         <div class="publish-platforms">
           <div class="publish-platform">
@@ -466,9 +466,9 @@
             <div><span class="eyebrow">01 / BIBLIOTECA</span><h3 id="publishLibraryHeading">Vídeos finalizados</h3></div>
             <span id="publishVideoCount" class="publish-counter">0 selecionado(s)</span>
           </div>
-          <label for="publishFiles" class="block-label">Selecione arquivos MP4 para testar a tela</label>
+          <label for="publishFiles" class="block-label">Selecione os MP4s finalizados</label>
           <input id="publishFiles" class="publish-file-input" type="file" accept="video/mp4,.mp4" multiple>
-          <p class="helper-text">No envio real, a biblioteca buscará automaticamente os vídeos de <code>output/final/final.mp4</code> de cada projeto. Por enquanto, escolha arquivos localmente. Nada será enviado.</p>
+          <p class="helper-text">Escolha os vídeos na pasta <code>output/final/final.mp4</code> dos projetos. Os MP4s são enviados apenas depois de clicar em Enviar e confirmar. O arquivo original permanece intacto.</p>
           <div class="row">
             <button id="publishSelectAll" type="button" class="btn btn-ghost btn-sm">Selecionar todos</button>
             <button id="publishSelectNone" type="button" class="btn btn-ghost btn-sm">Desmarcar todos</button>
@@ -482,6 +482,7 @@
             <span id="publishCurrentVideo" class="publish-muted">Escolha um vídeo</span>
           </div>
           <fieldset id="publishEditorFields" class="publish-fieldset" disabled>
+            <div class="publish-field"><label for="publishFormat">Formato deste vídeo</label><select id="publishFormat"><option value="9:16">9:16 · Vertical (todas as redes)</option><option value="16:9">16:9 · Horizontal (YouTube e Instagram)</option></select><p id="publishFormatHint" class="helper-text">O formato será conferido também a partir do arquivo.</p></div>
             <div class="publish-field">
               <label for="publishTitle">Título do Short</label>
               <input id="publishTitle" maxlength="150" type="text" placeholder="Escreva o título para o YouTube...">
@@ -520,15 +521,21 @@
           <div><span class="eyebrow">03 / DISTRIBUIÇÃO</span><h3 id="publishScheduleHeading">Destinos e calendário</h3></div>
           <span id="publishQueueSummary" class="publish-counter">0 vídeo(s) · 0 destino(s)</span>
         </div>
-        <p class="helper-text">Selecione os destinos. O YouTube será programado com um Short por dia, na ordem dos arquivos. Instagram e TikTok serão de publicação imediata quando as integrações forem implementadas.</p>
+        <p class="helper-text">YouTube: um envio agendado por dia na ordem dos arquivos. Instagram e TikTok: publicação após o envio. TikTok é desabilitado automaticamente para 16:9; para 9:16, as três plataformas são possíveis.</p>
         <div class="publish-choice-grid" role="group" aria-label="Redes sociais de destino">
           <label class="publish-choice"><input id="publishPlatform-youtube" type="checkbox" checked> YouTube Shorts</label>
           <label class="publish-choice"><input id="publishPlatform-instagram" type="checkbox" checked> Instagram Reels</label>
-          <label class="publish-choice"><input id="publishPlatform-tiktok" type="checkbox" checked> TikTok</label>
-        </div>
+          <label id="publishTiktokChoice" class="publish-choice"><input id="publishPlatform-tiktok" type="checkbox" checked> TikTok</label>
+        </div><p id="publishTiktokUnavailable" class="helper-text" role="status">Vídeos 16:9 não serão enviados ao TikTok.</p>
         <div class="publish-date-fields">
           <div class="publish-field"><label for="publishStartDate">Primeiro dia no YouTube</label><input id="publishStartDate" type="date"></div>
           <div class="publish-field"><label for="publishStartTime">Horário diário (local)</label><input id="publishStartTime" type="time" value="18:00"></div>
+        </div>
+        <div class="publish-publishing-controls">
+          <div class="publish-field"><label for="publishMadeForKids">YouTube · Público infantil?</label><select id="publishMadeForKids"><option value="">Selecione uma opção</option><option value="false">Não, não é feito para crianças</option><option value="true">Sim, é feito para crianças</option></select></div>
+          <div class="publish-field"><label for="publishTikTokPrivacy">TikTok · Privacidade da publicação</label><div class="publish-inline-controls"><select id="publishTikTokPrivacy"><option value="">Conecte o TikTok e consulte as opções</option></select><button type="button" id="publishTikTokLoadPrivacy" class="btn btn-secondary btn-sm">Consultar conta</button></div></div>
+          <label class="publish-consent"><input type="checkbox" id="publishRights"> Confirmo que tenho os direitos de uso dos vídeos e autorizo o envio às plataformas selecionadas.</label>
+          <p class="helper-text">TikTok exige escolha explícita de visibilidade antes do envio e pode restringir contas ou aplicativos não auditados. Vídeos enviados podem aguardar moderação.</p>
         </div>
         <div class="publish-section-heading">
           <div><span class="eyebrow">PRÉVIA POR PLATAFORMA</span><h3>Como ficará o texto</h3></div>
@@ -553,9 +560,10 @@
         </div>
         <ul id="publishScheduleList" class="publish-schedule-list" aria-live="polite"></ul>
         <p id="publishImmediateNotice" class="helper-text"></p>
+        <div class="publish-send-results" id="publishSendResults" aria-live="polite"></div>
         <div class="publish-footer">
-          <p>A integração de contas, o envio dos MP4s e os agendamentos reais serão implementados em uma próxima etapa. Nenhum dado é persistido nesta prévia.</p>
-          <button id="publishSubmit" class="btn btn-primary" type="button" disabled>Enviar e agendar · em breve</button>
+          <p id="publishRunMessage">Selecione vídeos e plataformas, conecte as contas e confirme os direitos de uso antes de enviar. O planejamento não é salvo automaticamente.</p>
+          <button id="publishSubmit" class="btn btn-primary" type="button" disabled>Enviar e agendar vídeos</button>
         </div>
       </section>
     </div>
