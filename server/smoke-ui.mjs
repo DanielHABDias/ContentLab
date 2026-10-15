@@ -92,8 +92,34 @@ try{
   assert.equal(await evaluate('getComputedStyle(document.getElementById("loadBtn")).transitionProperty.includes("transform")'),true,
     'Buttons must provide a transform-based tactile response');
   await evaluate('document.getElementById("tab-videos").click()');
-  assert.equal(await evaluate('document.querySelectorAll(".workspace-tab").length'),5,
-    'Five workspaces include the sequential Multi-editor');
+  assert.equal(await evaluate('document.querySelectorAll(".workspace-tab").length'),6,
+    'Six workspaces include Multi-editor and Publications');
+  await evaluate('document.getElementById("tab-publications").click()');
+  assert.equal(await evaluate('document.getElementById("panel-publications").hidden'),false,
+    'Publications workspace must open');
+  assert.equal(await evaluate('document.getElementById("publishSubmit").disabled'),true,
+    'Publishing remains disabled in the interface-only version');
+  await evaluate(`(() => {
+    const input = document.getElementById("publishFiles");
+    const files = new DataTransfer();
+    files.items.add(new File(["demo"], "SH_0005-final.mp4", {type: "video/mp4"}));
+    input.files = files.files;
+    input.dispatchEvent(new Event("change", {bubbles: true}));
+    const title = document.getElementById("publishTitle");
+    title.value = "Batman #Shorts";
+    title.dispatchEvent(new Event("input", {bubbles: true}));
+    const description = document.getElementById("publishDescription");
+    description.value = "Análise DC #Shorts";
+    description.dispatchEvent(new Event("input", {bubbles: true}));
+  })()`);
+  assert.equal(await evaluate('document.getElementById("publishYoutubeTitle").textContent'),
+    'Batman #Shorts','YouTube keeps the original title');
+  assert.equal(await evaluate('document.getElementById("publishInstagramText").textContent'),
+    'Batman #Viral\n\nAnálise DC #Viral','Instagram combines title and description');
+  assert.equal(await evaluate('document.getElementById("publishTiktokText").textContent'),
+    'Batman #Viral\n\nAnálise DC #Viral','TikTok combines title and description');
+  assert.equal(await evaluate('document.getElementById("publishVideoList").children.length'),1,
+    'Selected video appears in the mock library');
   await evaluate('document.getElementById("tab-multieditor").click()');
   assert.equal(await evaluate('document.getElementById("panel-multieditor").hidden'),false);
   assert.equal(await evaluate('!!document.querySelector("#panel-multieditor #queueFolders")'),true,
