@@ -707,6 +707,13 @@
               <code id="settingsSetupRedirect" tabindex="0">127.0.0.1</code>
               <button id="settingsSetupCopyRedirect" type="button" class="btn btn-ghost btn-sm">Copiar</button>
             </div>
+            <div id="settingsInstagramBridge" class="settings-google-import" hidden>
+              <strong>Conectar Instagram com a ponte local</strong>
+              <p>Não é necessário publicar o Content Lab. Execute os comandos em terminais separados e cadastre na Meta a URL HTTPS estável do túnel com o caminho <code>/api/social/oauth/instagram/callback</code>. Encaminhe <strong>somente a porta 5151</strong>.</p>
+              <p><code>node server/instagram-bridge.mjs</code></p>
+              <p><code>ngrok http 5151</code></p>
+              <a class="settings-guide-docs" href="https://ngrok.com/docs" target="_blank" rel="noopener noreferrer">Como instalar e usar o túnel HTTPS</a>
+            </div>
             <div id="settingsGoogleImport" class="settings-google-import" hidden>
               <strong>Atalho para YouTube</strong>
               <p>Depois de criar um cliente OAuth do tipo <b>App para computador</b> no Google Cloud, baixe o arquivo JSON. Importe aqui para preencher a configuração automaticamente e abrir a tela do Google.</p>
