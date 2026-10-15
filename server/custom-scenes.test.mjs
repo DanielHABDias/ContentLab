@@ -63,6 +63,12 @@ test('custom modules work without environment configuration and stay under custo
       assert.match(root,/registerRoot\(Root\)/);
       assert.match(root,/import UserScene/);
       assert.match(root,/config.mode==='overlay'/);
+      assert.match(root,/item.type==='overlay' && item.z>=900/);
+      assert.match(root,/elements:baseElements/);
+      assert.match(root,/elements:foreground/);
+      assert.match(root,/zIndex:0/);
+      assert.match(root,/zIndex:1/);
+      assert.match(root,/zIndex:2/);
     }finally{
       if(staged)fs.rmSync(staged.directory,{recursive:true,force:true});
     }
