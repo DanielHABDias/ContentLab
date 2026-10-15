@@ -25,6 +25,14 @@ Inspecione início de cena, primeiro estado legível, pico de movimento, hold, s
 - frames vazios/pretos inesperados e sobreposição de cenas;
 - diferenças negativas entre versão 9:16 e 16:9.
 
+## QA específico da edição Diazverso (15/10/2026)
+
+Sem impor regras de marca ao perfil genérico: conferir em projetos **Diazverso** que a base do vídeo é montagem de cenas e ilustrações, não excesso de TSX; revisar repetição de tomadas, spoilers e correspondência editorial sem exigir literalidade a cada palavra. Ilustrações completas devem ter zoom/pan suave e tamanho maior que a janela durante todo o slide, sem borda preta inesperada. PNGs entram/saem com animação e SFX e possuem balanço sutil; figuras inteiras legíveis. Em longos, TSX horizontal 16:9, clips preservando aspecto original, CRT em filmes/animações/séries (não games), Anton forte, caixas de narrador branco/amarelo com sombra, Nox grande/opinião e CTAs HQ com permanência >=5 s. Título de capítulo integrado a cena com áudio original SOMENTE para recontagem de história de jogo em capítulos.
+
+Em Shorts, confirmar explosão Minecraft por cima do gancho, riser de tensão, whoosh+blur e música posterior, **legendas Bangers obrigatórias** abaixo do centro com sombra e contorno fino e CTA final baseada no componente aprovado `ComicPageCTA.tsx` (thumb e headline específicas). Não aprovar automaticamente experimentos descartados `DiazversoFlowHQ` e variantes. Fonte Avengers para TSX quando houver asset carregado; Bangers para lettering HQ/legendas, Anton para frases fortes.
+
+No QA de efeitos, verificar a família e o relógio: WHOOSH diferente para deslizes, CLICK/POP/BLING para aparições e interações; Metallic Riser apenas TENSÃO e nunca slide. A parte sonora relevante deve cair idealmente **no meio da animação**, não antes, no início automático ou depois. Conferir janela real do gesto, trim do sample e vídeo renderizado. Esta política de marca aprovada substitui a antiga preferência por muitos TSX de 14/10.
+
 ## QA de cenas programáveis TSX
 Em uma cena contínua, inspecione frames na abertura, trajeto do objeto, movimento de câmera, revelação de tipografia e composição final. Confirmar que o arquivo `custom-scenes/*.tsx` existe, `customComponent.module` aponta corretamente, as dependências instaladas compilam e os assets nomeados resolvem. Verificar `replace` vs `overlay`, clipping de SVG e que o HUD não se move junto da câmera. A validação do schema não executa TSX; só afirmar sucesso após render real e checkpoints. Proteger o cache quando arquivos TSX locais mudarem.
 
