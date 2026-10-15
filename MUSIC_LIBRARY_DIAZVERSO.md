@@ -49,7 +49,7 @@ O script valida estrutura inicial MP3 e SHA para não substituir silenciosamente
 - Algo existir no YouTube Audio Library não obriga usá-lo em todos os vídeos nem comprova licença cross-platform. Selecionar pela emoção da narração, não para preencher uma playlist.
 ## Playlist preferencial de Shorts Diazverso — 15/10/2026
 
-Esta seção registra **gosto editorial** do criador; NÃO equivale a certificado de uso livre. Os arquivos abaixo foram identificados no Drive em `Diazverso/Musicas/NoCopyright/Muito usadas no YouTube` (pasta ID `1iYBvTpLpzuMOlqNZSl4Y9R0AM-T5RPr1`). Verificar a licença/atribuição/Content ID ANTES de usar ou redistribuir:
+Esta seção registra **gosto editorial** do criador; NÃO equivale a certificado de uso livre. Os arquivos abaixo foram identificados no Drive em `Diazverso/Musicas/NoCopyright/Muito usadas no YouTube` (pasta ID `pasta privada da biblioteca musical`). Verificar a licença/atribuição/Content ID ANTES de usar ou redistribuir:
 
 - **Bully — Main Theme**: `Bully - Soundtrack Main Theme(MP3_320K).mp3`.
 - **Bully — Walk Theme**: `Bully - Walk Theme - [Music] (HD)(MP3_320K).mp3`.
