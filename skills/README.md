@@ -1,5 +1,10 @@
 # Skills de autoria do Content Lab
 
+## Entrada de produção completa (Diazverso)
+**Diazverso — Criação de Vídeo** (`skills/diazverso-criacao-video/SKILL.md`) é a skill principal para orquestrar **todo o ciclo**: tema → títulos A/B, tags e descrição → thumbnail → roteiro/revisão → narração → assets/direção → `edit_plan.json`/render e revisão → finalização do longo → Shorts derivados. Em cada etapa há **QA interno antes da aprovação do criador**, registro privado de estado e retomada onde parou. Consultar também `skills/diazverso-criacao-video/references/ESTADO_E_GATES.md`.
+
+Ela **não substitui** os módulos de execução nem a entrada de edição. Para uma tarefa restrita à edição, continua valendo `diazverso-direcao-edicao` no Drive; para trabalho genérico do ContentLab, usar `contentlab-direcao`. As skills de pesquisa/títulos/thumb/roteiro/Shorts do Diazverso podem estar em **IA/Skills do Google Drive** e são lidas conforme a fase, não copiadas para dentro da orquestradora.
+
 ## Entrada única
 **Content Lab — Direção** (`skills/contentlab-direcao/SKILL.md`) é a porta de entrada. Recebe o objetivo e lê apenas os módulos necessários. A skill antiga monolítica `contentlab-edicao`, antes embutida em `server/skill.mjs`, foi substituída por arquivo canônico e módulos para evitar divergências.
 
