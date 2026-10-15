@@ -249,7 +249,11 @@
     const query=new URLSearchParams(location.search);
     const outcome=query.get('authStatus'),provider=query.get('provider')||'';
     if(outcome==='connected')notice('Conta '+(names[provider]||'')+' autorizada! Publicações e Métricas já podem utilizar a conexão.');
-    if(outcome==='failed')notice('Falha na autorização. Verifique as permissões e o callback cadastrado para '+(names[provider]||'a conta')+'.',true);
+    if(outcome==='failed'){
+      if(onboarding[provider])openConfiguration(provider);
+      notice('O login não foi concluído. Confira o guia oficial de '+(names[provider]||'conexão')+
+        ', a URL de retorno e as permissões liberadas para o aplicativo. Não copie tokens.',true);
+    }
     if(outcome==='cancelled')notice('Autorização cancelada. Nenhuma nova credencial foi salva.',true);
     if(outcome)history.replaceState(null,'',location.pathname+'#settings');
     else notice('Escolha a rede social para autorizar. As configurações técnicas ficam em Configuração avançada.');
