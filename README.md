@@ -13,6 +13,18 @@ Editor automático e utilitários de vídeo para projetos de conteúdo e motion 
 
 Remotion concentra a renderização visual; o FFmpeg continua responsável por áudio, cortes e composição final. O código de servidor utiliza exclusivamente Node.js.
 
+## Métricas — painel de desempenho conectado
+
+A aba **Métricas**, localizada após Publicações, começa com um convite para conectar contas OAuth. Assim que pelo menos uma rede estiver autorizada, apresenta uma **Visão geral** com dados das plataformas conectadas. Clique no ícone de YouTube, Instagram ou TikTok para filtrar; clique novamente no ícone selecionado para voltar ao geral.
+
+- **YouTube:** últimos 50 uploads do canal (até 20 vídeos públicos mostrados), visualizações, curtidas, comentários e possíveis publicações futuras retornadas por `status.publishAt`. O app solicita também o escopo `youtube.readonly` além de `youtube.upload`.
+- **Instagram:** até 20 mídias recentes, com foco em vídeos, legendas, curtidas/comentários quando fornecidos e tentativa de consultar `views` para até oito vídeos. Métricas indisponíveis ficam como `—` em vez de zero. Não exibe agendamentos do Instagram.
+- **TikTok:** até 20 vídeos públicos recentes da Display API, com views, curtidas, comentários e compartilhamentos. Exige o escopo adicional `video.list` habilitado no aplicativo TikTok. Não apresenta rascunhos nem vídeos programados no TikTok Studio.
+- **Resumo:** últimas publicações, indicadores dos itens retornados, agendamentos disponíveis no YouTube e barras comparativas. Os totais são apenas da **amostra recente**, não do histórico inteiro dos perfis; nenhuma métrica é inventada.
+- **Atualização:** o backend conserva respostas por 2 minutos para economizar quotas. O botão Atualizar força nova leitura. Cada plataforma falha isoladamente e sugere reconexão quando faltarem permissões.
+
+Se você autorizou YouTube ou TikTok antes de incluir Métricas, use **Publicações → Conectar novamente** para conceder os novos escopos. O Content Lab guarda os tokens no `.env` local ignorado pelo Git e **não** envia tokens ao frontend do painel. A aba consulta `GET /api/social/metrics?platform=general|youtube|instagram|tiktok`; `refresh=1` ignora o cache temporário. Nenhuma informação fica agendada para atualização em segundo plano.
+
 ## Publicações — envio e agendamento
 
 A aba **Publicações** permite selecionar vários MP4s locais, editar título/descrição por vídeo e publicar com OAuth nas três redes. Para Instagram e TikTok, título e descrição são unidos por uma linha vazia e `#Shorts` vira `#Viral`.
