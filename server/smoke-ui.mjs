@@ -130,6 +130,15 @@ try{
     'Batman #Viral\n\nAnálise DC #Viral','TikTok combines title and description');
   assert.equal(await evaluate('document.getElementById("publishVideoList").children.length'),1,
     'Selected video appears in the mock library');
+  await evaluate('document.getElementById("publishFormat").value="16:9";document.getElementById("publishFormat").dispatchEvent(new Event("change"))');
+  assert.equal(await evaluate('document.getElementById("publishPlatform-tiktok").disabled'),true,
+    'TikTok must be unavailable when horizontal 16:9 is selected');
+  assert.equal(await evaluate('document.getElementById("publishTiktokChoice").classList.contains("is-unavailable")'),true,
+    'TikTok must be visually muted for horizontal media');
+  await evaluate('document.getElementById("publishFormat").value="9:16";document.getElementById("publishFormat").dispatchEvent(new Event("change"))');
+  assert.equal(await evaluate('document.getElementById("publishPlatform-tiktok").disabled'),false,
+    'TikTok becomes available for vertical 9:16 media');
+
   await evaluate('document.getElementById("tab-multieditor").click()');
   assert.equal(await evaluate('document.getElementById("panel-multieditor").hidden'),false);
   assert.equal(await evaluate('!!document.querySelector("#panel-multieditor #queueFolders")'),true,
