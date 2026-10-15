@@ -27,8 +27,8 @@
       docs:'https://www.postman.com/meta/instagram/folder/6raa77c/instagram-api-with-instagram-login',
       steps:[
         'No Meta for Developers, crie ou selecione um aplicativo e configure Instagram API with Instagram Login.',
-        'Use uma conta Instagram profissional (Criador ou Empresa) e habilite instagram_business_basic e instagram_business_content_publish.',
-        'Registre uma URL HTTPS de retorno que encaminhe com segurança para o callback do Content Lab local; a Meta não aceita o retorno HTTP local deste fluxo.',
+        'Use uma conta Instagram profissional (Criador ou Empresa) e habilite instagram_business_basic, instagram_business_content_publish e instagram_business_manage_insights para métricas.',
+        'Registre uma URL HTTPS de retorno de um domínio ou túnel sob seu controle, encaminhando somente o callback OAuth ao Content Lab local. Não use redirecionadores de terceiros para códigos de acesso.',
         'Em Configuração avançada, informe o App ID, App Secret e essa URL HTTPS. Depois clique em Conectar Instagram e autorize no site oficial.'
       ]},
     tiktok:{
@@ -38,7 +38,7 @@
       steps:[
         'Entre no TikTok for Developers, abra Manage apps e crie ou selecione seu aplicativo.',
         'Adicione o Login Kit para Desktop e registre o retorno localhost indicado ao lado.',
-        'Para vídeos e métricas, configure os produtos e solicite video.publish e video.list; a liberação depende da aprovação do TikTok.',
+        'Para vídeos e métricas, configure os produtos e solicite video.publish, video.list, user.info.profile e user.info.stats; a liberação depende da aprovação do TikTok.',
         'Em Configuração avançada, informe Client Key e Client Secret do aplicativo. Depois clique em Conectar TikTok para autorizar pelo site oficial.'
       ]}
   };
@@ -95,15 +95,30 @@
       const label=$('socialStatus-'+provider);
       const button=$('socialConnect-'+provider);
       const disconnect=$('socialDisconnect-'+provider);
+      const verify=$('socialVerify-'+provider);
+      const identity=$('socialIdentity-'+provider);
+      const permissions=$('socialPermissions-'+provider);
+      const missing=item.missingScopes||[];
+      const identityName=item.accountName||item.accountUsername||'';
+      identity.hidden=!ready||!identityName;
+      identity.textContent=identityName+(item.accountUsername&&item.accountUsername!==identityName?' · @'+item.accountUsername.replace(/^@/,''):'');
+      permissions.hidden=!ready||!missing.length;
+      permissions.textContent=missing.length?'Permissões pendentes: '+missing.map(x=>x.split('/').pop()).join(', ')+'. Reconecte para tentar liberá-las.':'';
+      verify.hidden=!ready;
       card.classList.toggle('is-connected',ready);
       label.classList.toggle('is-connected',ready&&!item.needsRenewal);
-      label.classList.toggle('is-warning',!!item.needsRenewal);
-      label.textContent=item.needsRenewal?'Renovar autorização':ready?'Conectado':
+      label.classList.toggle('is-warning',!!item.needsRenewal||!!item.needsReauth||missing.length>0);
+      label.textContent=item.needsReauth?'Reconectar conta':item.needsRenewal?'Sessão a renovar':
+        ready?missing.length?'Permissões parciais':'Conectado':
         item.configured?'Pronto para conectar':'Configurar primeiro';
+      if(item.needsReauth&&item.authError){
+        permissions.hidden=false;
+        permissions.textContent='Sessão expirada ou revogada: '+item.authError;
+      }
       button.textContent=ready?'Reconectar '+names[provider]:originalLabels[provider];
       button.title=item.configured?'Abrir a autorização oficial de '+names[provider]:
         'Iniciar o assistente de primeira configuração para '+names[provider];
-      disconnect.hidden=!ready;
+      disconnect.hidden=!ready&&!item.needsReauth;
     }
     applyGates();
     updateProviderForm();
@@ -197,6 +212,21 @@
     $('socialConnect-'+provider).addEventListener('click',()=>{
       if(!status[provider]?.configured){openConfiguration(provider);return;}
       window.location.assign('/api/social/oauth/'+provider+'/start');
+    });
+    $('socialVerify-'+provider).addEventListener('click',async()=>{
+      const button=$('socialVerify-'+provider);
+      button.disabled=true;
+      try{
+        notice('Verificando a conta '+names[provider]+' com o provedor oficial...');
+        await request('/api/social/verify/'+provider,{
+          method:'POST',headers:{'Content-Type':'application/json'},body:'{}'
+        });
+        await loadStatus();
+        notice(names[provider]+' verificado com sucesso. Perfil e permissões atualizados.');
+      }catch(error){
+        await loadStatus().catch(()=>{});
+        notice(names[provider]+': '+error.message+' Use Reconectar se a sessão não estiver mais válida.',true);
+      }finally{button.disabled=false;}
     });
     $('socialDisconnect-'+provider).addEventListener('click',async()=>{
       if(!window.confirm('Desconectar '+names[provider]+' neste computador? Os tokens locais serão removidos.'))return;
