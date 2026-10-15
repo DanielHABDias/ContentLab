@@ -27,15 +27,15 @@ jobs:
                 candidates.add(pr.head.ref);
             }
             if (context.eventName === 'push') {
-              // Limpa as duas branches já integradas nesta migração.
-              for (const number of [30, 31]) {
+              // Também remove branches integradas antes da atualização desta regra.
+              for (const number of [30, 31, 39]) {
                 const {data: pr} = await github.rest.pulls.get({...repo, pull_number: number});
                 if (pr.merged_at && pr.head.repo?.full_name === context.payload.repository.full_name)
                   candidates.add(pr.head.ref);
               }
             }
             for (const name of candidates) {
-              if (!/^feat\/[a-z0-9][a-z0-9/_-]+$/i.test(name) || ['main','develop'].includes(name)) continue;
+              if (!/^(?:feat|fix)\/[a-z0-9][a-z0-9/_-]+$/i.test(name) || ['main','develop'].includes(name)) continue;
               try {
                 await github.rest.git.deleteRef({...repo, ref:'heads/'+name});
                 core.info('Branch removida: '+name);
