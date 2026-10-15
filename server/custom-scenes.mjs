@@ -66,9 +66,20 @@ const sample:any={width:1920,height:1080,fps:30,durationInFrames:90,
 const Combined=(props:any)=>{
   const config=props.scene.customComponent||{};
   const assets=Object.fromEntries(Object.entries(props.customAssets||{}).map(([name,file])=>[name,staticFile(String(file))]));
+  // Editorial TSX is composited ABOVE the ordinary Scene. Elements with high
+  // z (e.g. Minecraft green-screen intro z=900) need a separate foreground
+  // pass AFTER UserScene; otherwise z only orders elements INSIDE Scene.
+  const isForeground=(element:any)=>element.type==='overlay' &&
+    (Number(element.z)>=900 || element.data?.alwaysOnTop===true);
+  const foreground=(props.scene.elements||[]).filter(isForeground);
+  const normal=(props.scene.elements||[]).filter((element:any)=>!isForeground(element));
+  const baseProps={...props,scene:{...props.scene,elements:normal}};
+  const overlayProps={...props,scene:{...props.scene,elements:foreground,
+    background:{color:'transparent'},backgroundSrc:null,camera:{keyframes:[]}}};
   return <AbsoluteFill>
-    {config.mode==='overlay' && <Scene {...props}/>}
+    {config.mode==='overlay' && <Scene {...baseProps}/>}
     <UserScene {...(config.props||{})} assets={assets} />
+    {foreground.length>0 && <Scene {...overlayProps}/>}
   </AbsoluteFill>;
 };
 const Root=()=> <Composition id="Scene" component={Combined}
