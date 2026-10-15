@@ -17,7 +17,7 @@ export function mountSocialMetricsRoutes(app,api,{statusGetter=providerStatus,re
     const tasks=visible.filter(name=>connected[name].connected);
     await Promise.all(tasks.map(async name=>{
       try {
-        report.platforms[name]={status:'ok',data:await reader(name)};
+        report.platforms[name]={status:'ok',data:await reader(name,{useCache:req.query.refresh!=='1'})};
       }catch(error) {
         report.platforms[name]={status:'error',
           message:String(error?.message||'Não foi possível consultar a plataforma.').slice(0,260)};
