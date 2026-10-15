@@ -27,7 +27,7 @@ const failMessage=(name,response,payload)=>{
     (typeof payload?.error==='string'?payload.error:null);
   const code=response.status;
   return (code===401||code===403)?
-    name+': acesso negado. Reconecte em Publicações e confira os escopos do aplicativo.':
+    name+': acesso negado. Reconecte em Configurações e confira as permissões do aplicativo.':
     name+': consulta indisponível (HTTP '+code+(reason?' · '+String(reason).slice(0,90):'')+').';
 };
 async function getJSON(name,url,{fetcher=fetch,token,method='GET',body}={}){
@@ -44,13 +44,47 @@ async function getJSON(name,url,{fetcher=fetch,token,method='GET',body}={}){
   }
   return data;
 }
-function summarize(platform,items,{channel=null,note=null}={}){
+const ymd=date=>date.toISOString().slice(0,10);
+export async function readYouTubeAnalytics(token,fetcher=fetch,{now=Date.now(),days=28}={}){
+  const end=new Date(now-86400000);
+  const start=new Date(now-(days+2)*86400000);
+  const params=new URLSearchParams({
+    ids:'channel==MINE',startDate:ymd(start),endDate:ymd(end),
+    metrics:'views,estimatedMinutesWatched,averageViewDuration,subscribersGained,subscribersLost,likes',
+    dimensions:'day',sort:'day'
+  });
+  const response=await getJSON('YouTube Analytics',
+    'https://youtubeanalytics.googleapis.com/v2/reports?'+params,{fetcher,token});
+  const headers=(response.columnHeaders||[]).map(c=>c.name);
+  const daysData=(response.rows||[]).map(row=>Object.fromEntries(
+    headers.map((name,i)=>[name,row[i]])
+  )).filter(row=>/^\d{4}-\d{2}-\d{2}$/.test(row.day||''));
+  const records=daysData.map(day=>({
+    day:day.day,views:numberOrNull(day.views),
+    minutesWatched:numberOrNull(day.estimatedMinutesWatched),
+    averageDurationSeconds:numberOrNull(day.averageViewDuration),
+    subscribersGained:numberOrNull(day.subscribersGained),
+    subscribersLost:numberOrNull(day.subscribersLost),
+    likes:numberOrNull(day.likes)
+  }));
+  const sum=key=>records.reduce((total,row)=>total+(row[key]||0),0);
+  return {
+    period:{start:ymd(start),end:ymd(end)},
+    available:records.length>0,daily:records,
+    views:records.length?sum('views'):null,
+    minutesWatched:records.length?sum('minutesWatched'):null,
+    subscribersGained:records.length?sum('subscribersGained'):null,
+    subscribersLost:records.length?sum('subscribersLost'):null,
+    note:'Relatório oficial do YouTube Analytics, independente da amostra de vídeos recentes.'
+  };
+}
+function summarize(platform,items,{channel=null,note=null,analytics=null}={}){
   const published=sortRecent(items.filter(x=>x.status==='published'));
   const scheduled=items.filter(x=>x.status==='scheduled')
     .sort((a,b)=>Date.parse(a.scheduledAt||0)-Date.parse(b.scheduledAt||0));
   const sampled=published.filter(v=>v.views!==null);
   return {
-    platform,channel,note,updatedAt:new Date().toISOString(),
+    platform,channel,note,analytics,updatedAt:new Date().toISOString(),
     sampleSize:published.length,scheduledCount:scheduled.length,
     totalViews:sampled.length?sampled.reduce((n,v)=>n+v.views,0):null,
     totalLikes:published.some(v=>v.likes!==null)?
@@ -67,6 +101,9 @@ async function youtube(token,fetcher){
     part:'snippet,contentDetails,statistics',mine:'true'}),auth);
   const current=channel.items?.[0];
   if(!current)throw Error('YouTube: nenhum canal encontrado na conta autorizada.');
+  let analytics=null;
+  try {analytics=await readYouTubeAnalytics(token,fetcher);}
+  catch{ /* Analytics pode exigir escopos ou API habilitada; vídeos seguem disponíveis. */ }
   const playlist=current.contentDetails?.relatedPlaylists?.uploads;
   if(!playlist)throw Error('YouTube: playlist de uploads não disponível neste canal.');
   const uploads=await getJSON('YouTube',root+'playlistItems?'+new URLSearchParams({
@@ -74,7 +111,7 @@ async function youtube(token,fetcher){
   const ids=[...new Set((uploads.items||[]).map(x=>x.contentDetails?.videoId).filter(Boolean))];
   if(!ids.length)return summarize('youtube',[],{
     channel:{name:current.snippet?.title||'Meu canal',
-      subscribers:numberOrNull(current.statistics?.subscriberCount)},
+      subscribers:numberOrNull(current.statistics?.subscriberCount)},analytics,
     note:'Últimos 50 uploads do canal; inclui agendados quando retornados pela API.'});
   const details=await getJSON('YouTube',root+'videos?'+new URLSearchParams({
     part:'snippet,statistics,status',id:ids.slice(0,50).join(',')}),auth);
@@ -94,7 +131,7 @@ async function youtube(token,fetcher){
   });
   return summarize('youtube',items,{
     channel:{name:current.snippet?.title||'Meu canal',
-      subscribers:numberOrNull(current.statistics?.subscriberCount)},
+      subscribers:numberOrNull(current.statistics?.subscriberCount)},analytics,
     note:'Métricas dos vídeos públicos entre os 50 uploads mais recentes; não representam o histórico completo do canal.'});
 }
 async function instagram(token,fetcher){
@@ -137,11 +174,28 @@ async function instagram(token,fetcher){
       thumbnail:entry.thumbnail_url,status:'published'
     });
   }));
+  let insights=null;
+  try {
+    const response=await getJSON('Instagram',base+'me/insights?'+new URLSearchParams({
+      metric:'reach,views',metric_type:'total_value',period:'day'
+    }),auth);
+    insights=Object.fromEntries((response.data||[]).map(item=>[
+      item.name,numberOrNull(item.total_value?.value??item.values?.[0]?.value)
+    ]));
+  }catch{ /* Estatísticas da conta exigem permissões ou elegibilidade. */ }
   return summarize('instagram',items,{
+    analytics:insights?{account:insights}:null,
     channel:{name:profile.username?'@'+profile.username:'Instagram',followers:numberOrNull(profile.followers_count)},
     note:'Vídeos recentes da conta profissional; views consultadas apenas nos oito vídeos mais recentes e exibidas quando a Meta as fornece. Agendamentos feitos pelo Instagram não são listados.'});
 }
 async function tiktok(token,fetcher){
+  let user=null;
+  try{
+    const result=await getJSON('TikTok','https://open.tiktokapis.com/v2/user/info/?'+
+      new URLSearchParams({fields:'open_id,display_name,username,follower_count,following_count,likes_count,video_count'}),{
+      fetcher,token});
+    user=result.data?.user||null;
+  }catch{ /* Escopos de estatísticas do TikTok são opcionais e podem não estar aprovados. */ }
   const fields='id,title,video_description,create_time,view_count,like_count,comment_count,share_count,share_url,cover_image_url';
   const result=await getJSON('TikTok','https://open.tiktokapis.com/v2/video/list/?'+
     new URLSearchParams({fields}),{
@@ -154,6 +208,9 @@ async function tiktok(token,fetcher){
     url:v.share_url,thumbnail:v.cover_image_url,status:'published'
   }));
   return summarize('tiktok',items,{
+    channel:user?{name:user.display_name||user.username||'TikTok',
+      followers:numberOrNull(user.follower_count),videos:numberOrNull(user.video_count),
+      likes:numberOrNull(user.likes_count)}:null,
     note:'Últimos 20 vídeos públicos retornados pelo TikTok. Rascunhos e vídeos agendados no TikTok Studio não são disponibilizados por esta API.'});
 }
 const readers={youtube,instagram,tiktok};
