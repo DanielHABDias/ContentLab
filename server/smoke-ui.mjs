@@ -92,8 +92,15 @@ try{
   assert.equal(await evaluate('getComputedStyle(document.getElementById("loadBtn")).transitionProperty.includes("transform")'),true,
     'Buttons must provide a transform-based tactile response');
   await evaluate('document.getElementById("tab-videos").click()');
-  assert.equal(await evaluate('document.querySelectorAll(".workspace-tab").length'),4,
-    'Exactly four tabs must remain');
+  assert.equal(await evaluate('document.querySelectorAll(".workspace-tab").length'),5,
+    'Five workspaces include the sequential Multi-editor');
+  await evaluate('document.getElementById("tab-multieditor").click()');
+  assert.equal(await evaluate('document.getElementById("panel-multieditor").hidden'),false);
+  assert.equal(await evaluate('!!document.querySelector("#panel-multieditor #queueFolders")'),true,
+    'Multi-editor must accept ordered folder paths');
+  assert.equal(await evaluate('!!document.querySelector("#panel-multieditor #editorPlanText")'),false,
+    'The batch workspace must not expose the individual JSON editor');
+  await evaluate('document.getElementById("tab-videos").click()');
   assert.equal(await evaluate('document.querySelectorAll("#tab-guide, #panel-guide").length'),0,
     'Obsolete project guide must not be rendered');
   await send('Page.navigate',{url:'http://127.0.0.1:'+appPort+'/?legacy-guide=1#guide'});
