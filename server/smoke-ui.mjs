@@ -115,9 +115,9 @@ try{
   assert.equal(await evaluate('document.getElementById("publishYoutubeTitle").textContent'),
     'Batman #Shorts','YouTube keeps the original title');
   assert.equal(await evaluate('document.getElementById("publishInstagramText").textContent'),
-    'Batman #Viral\\n\\nAnálise DC #Viral','Instagram combines title and description');
+    'Batman #Viral\n\nAnálise DC #Viral','Instagram combines title and description');
   assert.equal(await evaluate('document.getElementById("publishTiktokText").textContent'),
-    'Batman #Viral\\n\\nAnálise DC #Viral','TikTok combines title and description');
+    'Batman #Viral\n\nAnálise DC #Viral','TikTok combines title and description');
   assert.equal(await evaluate('document.getElementById("publishVideoList").children.length'),1,
     'Selected video appears in the mock library');
   await evaluate('document.getElementById("tab-multieditor").click()');
