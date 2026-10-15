@@ -1,5 +1,9 @@
 # Skills de autoria do Content Lab
 
+## Biblioteca oficial de cenas Diazverso — sete TSX responsivos
+**Fonte de verdade para uso em vídeos:** [Custom Cenas Diasverso, no Drive](https://drive.google.com/drive/folders/1yWogLK6bRWXunvdJxTHBMIqB4ibSN44f) → README geral → README específico → código TSX. Componentes: `ComicPageCTA` (encerramento), `QuadroHQSobreCena` (caixas Anton/Bangers sobre cena), `TextoBangersHalftone` (letra Bangers branca fixa), `PaginaHQCenas` (quatro quadros), `LinhaDoTempoHQ` (cronologia), `PersonagemEspiralLegenda` (PNG + legenda em timestamps reais) e `CaixinhaCTAHQ` (CTA por canto). Todos têm composição 16:9/9:16, escolhida por resolução. **Para o canal, gerar novos TSX ou modificar os aprovados SOMENTE mediante pedido explícito do criador**, prevalecendo sobre exemplos genéricos abaixo. O uso normal copia componentes da biblioteca para `custom-scenes/` e os configura por `edit_plan.json`, com sons separados; não ressuscitar decupagem editorial antiga nem forçar TSX em toda cena.
+
+
 ## Entrada de produção completa (Diazverso)
 **Diazverso — Criação de Vídeo** (`skills/diazverso-criacao-video/SKILL.md`) é a skill principal para orquestrar **todo o ciclo**: tema → títulos A/B, tags e descrição → thumbnail → roteiro/revisão → narração → assets/direção → `edit_plan.json`/render e revisão → finalização do longo → Shorts derivados. Em cada etapa há **QA interno antes da aprovação do criador**, registro privado de estado e retomada onde parou. Consultar também `skills/diazverso-criacao-video/references/ESTADO_E_GATES.md`.
 
