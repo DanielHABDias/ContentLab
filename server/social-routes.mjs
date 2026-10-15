@@ -38,13 +38,13 @@ export function mountSocialRoutes(app,api){
   app.get('/api/social/oauth/:provider/callback',api(async(req,res)=>{
     if(!safeProvider(req.params.provider))return res.status(404).end();
     res.set('Cache-Control','no-store').set('Referrer-Policy','no-referrer');
-    if(req.query.error)return res.redirect('/?authStatus=cancelled#publications');
+    if(req.query.error)return res.redirect('/?authStatus=cancelled#settings');
     try{
       await completeAuthorization(req.params.provider,String(req.query.state||''),String(req.query.code||''));
-      res.redirect('/?authStatus=connected&provider='+encodeURIComponent(req.params.provider)+'#publications');
+      res.redirect('/?authStatus=connected&provider='+encodeURIComponent(req.params.provider)+'#settings');
     }catch(error){
       // Não colocar tokens ou códigos OAuth em URL, HTML ou logs.
-      res.redirect('/?authStatus=failed&provider='+encodeURIComponent(req.params.provider)+'#publications');
+      res.redirect('/?authStatus=failed&provider='+encodeURIComponent(req.params.provider)+'#settings');
     }
   }));
 }
