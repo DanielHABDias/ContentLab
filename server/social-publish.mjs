@@ -8,7 +8,7 @@ const MAX_BYTES=1024*1024*1024;
 const captionText=(title,description)=>[title.trim(),description.trim()].filter(Boolean).join('\n\n').replace(/#shorts\b/gi,'#Viral');
 const ms=seconds=>Math.max(0,Math.floor((Number(seconds)||0)*1000));
 const pause=amount=>new Promise(resolve=>setTimeout(resolve,amount));
-const isTikTokURL=url=>{const u=new URL(url);return u.protocol==='https:'&&u.hostname==='open-upload.tiktokapis.com';};
+const isTikTokURL=url=>{const u=new URL(url);return u.protocol==='https:'&&/^(?:open-upload|upload(?:\.[a-z0-9-]+)?)\.tiktokapis\.com$/.test(u.hostname);};
 const parseApi=async(response,service)=>{
   const result=await response.json().catch(()=>({}));
   if(!response.ok||result.error?.code&&result.error.code!=='ok'||result.error&&typeof result.error==='string')
@@ -92,9 +92,9 @@ export async function uploadYouTube(file,data,{fetcher=fetch,tokenGetter=usableA
   return {state:'scheduled',id:uploaded.id,url:'https://www.youtube.com/watch?v='+encodeURIComponent(uploaded.id),
     scheduledAt:data.scheduledAt,visibility:uploaded.status?.privacyStatus||'private'};
 }
-export async function uploadInstagram(file,data,{fetcher=fetch,tokenGetter=usableAccessToken,wait=pause}={}){
+export async function uploadInstagram(file,data,{fetcher=fetch,tokenGetter=usableAccessToken,wait=pause,accountId=socialValue('CONTENTLAB_INSTAGRAM_ACCOUNT_ID')}={}){
   const size=requireFile(file);
-  const token=await tokenGetter('instagram'),id=socialValue('CONTENTLAB_INSTAGRAM_ACCOUNT_ID');
+  const token=await tokenGetter('instagram'),id=accountId;
   if(!id||!/^\d{1,30}$/.test(id))throw Error('ID da conta profissional Instagram não encontrado. Reconecte.');
   const root='https://graph.instagram.com/v24.0/';
   const params=new URLSearchParams({media_type:'REELS',upload_type:'resumable',caption:data.caption,
@@ -177,6 +177,18 @@ export async function uploadTikTok(file,data,{fetcher=fetch,tokenGetter=usableAc
   return {state:'processing',id:ticket.data.publish_id,
     message:'Upload aceito. A publicação final depende do processamento e das permissões TikTok.'};
 }
+export async function checkTikTokStatus(publishId,{fetcher=fetch,tokenGetter=usableAccessToken}={}){
+  if(typeof publishId!=='string'||publishId.length>128||!publishId)throw Error('ID de publicação TikTok inválido.');
+  const token=await tokenGetter('tiktok');
+  const response=await fetcher('https://open.tiktokapis.com/v2/post/publish/status/fetch/',{
+    method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json; charset=UTF-8'},
+    body:JSON.stringify({publish_id:publishId}),signal:AbortSignal.timeout(20000)
+  });
+  const result=await parseApi(response,'TikTok (estado)');
+  return {state:result.data?.status||'PROCESSING_UPLOAD',failure:result.data?.fail_reason||null,
+    publicPostIds:result.data?.publicaly_available_post_id||[]};
+}
+
 export async function publishFile(file,input,dependencies={}){
   const meta=await inspectVideo(file,dependencies);
   const data=validatePublishRequest(input,meta);
