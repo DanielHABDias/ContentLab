@@ -11,6 +11,14 @@ Interface original do Content Lab com linguagem editorial de software criativo: 
 
 O projeto é inspirado na clareza visual de aplicativos contemporâneos e **não** replica logotipos, ícones ou identidade comercial da Apple.
 
+## Métricas — dashboard conectado
+
+A aba **Métricas** abre depois de Publicações. Sem OAuth, exibe somente o convite para conectar as contas. Com ao menos uma conta, exibe a visão geral e botões de filtro YouTube, Instagram e TikTok. Um segundo clique no botão selecionado retorna à visão geral.
+
+O painel apresenta últimos vídeos, views/curtidas disponíveis, agendamentos retornados pelo YouTube, destaques em barras e avisos sobre limites das APIs. Números são calculados somente sobre a amostra de vídeos recentes e **nunca inventados**; informação indisponível aparece como `—`.
+
+YouTube exige `youtube.readonly`, TikTok exige `video.list`, além das permissões de publicação anteriores. A API de métricas é apenas leitura, mantém tokens no servidor e faz cache de 2 minutos. Cada rede com falha é exibida separadamente, preservando as que responderam. Não há relatórios históricos persistidos nem monitoramento em segundo plano.
+
 ## Publicações — distribuição de vídeos
 
 A aba **Publicações** agora inclui login OAuth, seleção de MP4s, preparo de metadados e envio com confirmação explícita. Login grava apenas tokens e configuração de aplicativos em `.env` local, ignorado pelo Git.
