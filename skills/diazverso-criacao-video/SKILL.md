@@ -62,6 +62,16 @@ Responsáveis: `diazverso-roteiro` + `diazverso-revisao-roteiro`. Entregas: outl
 Responsáveis: `diazverso-narracao`, `contentlab-timeline-audio`. Confirmar versão gravada, duração real, `transcript.json` e timing de palavras/segmentos antes de definir beats. Narração é feita/fornecida pelo criador conforme seu processo, não presumir TTS. QA: correspondência áudio/texto e pausas; não regenerar falas aprovadas.
 **Gate L4:** criador confirma áudio preparado e eventuais retrabalhos.
 
+### Especialistas transversais (roteamento explícito)
+- `diazverso-musica-pesquisa`: **L5-A**, quando trilha não foi definida, pesquisa opções, biblioteca do Drive, origem, licenças e necessidade de créditos. Não confundir com composição sonora.
+- `diazverso-musica-sfx`: **L5/L6/S4**, define função da música, transições, SFX por gesto, timing, ducking, fades e mix. Encaminha direitos à skill de pesquisa musical.
+- `diazverso-revisao-edicao`: **gate obrigatório L6/S4** antes e depois do render, cumulativo à `contentlab-revisao`; nenhuma aprovação final sem inspeção visual e escuta.
+- `diazverso-nox`: L2/L5/S4 quando Nox aparece, aplicando Character Lock e asset aprovado.
+- `diazverso-analise-performance`: **P1 opcional pós-publicação**, usa Analytics efetivos para retroalimentar a próxima pesquisa de temas; nunca inferir números.
+- `diazverso-instagram`: **P0 opcional de divulgação**, somente se o criador desejar post, Stories, carrossel ou anúncio; não obrigatório para marcar vídeo concluído.
+- `gsb-contentlab` é perfil de **outra configuração/marca**, não um filho do workflow Diazverso. É mantido para a entrada geral `contentlab-direcao` e não deve ser apagado apenas por não aparecer nas etapas L/S.
+- `diazverso-video` é perfil de marca no repositório ContentLab, carregado por `contentlab-direcao`; difere da gateway de edição do Drive e não deve ser excluído por aparente duplicidade.
+
 ### L5 — Direção, assets e guia de edição
 Entrada da fase: `diazverso-direcao-edicao`, que delega `diazverso-edicao-decupagem`, `contentlab-composicao`, `contentlab-motion`, música/SFX e Nox. Preparar mapa de cenas, prioridade de footage real, screenshots/PNG de personagens, fontes, trilhas, licenças e pontos de coleta. Sempre indicar **asset já disponível / reutilizável / precisa baixar / indisponível** e sua função exata no roteiro.
 **Gate L5-A:** criador aprova direção e lista de coleta. Esperar confirmação de assets coletados ou propor alternativas verificadas; não inventar paths `project://`.
@@ -89,6 +99,11 @@ Criar catálogo `asset_origem → Short(s) → caminho no projeto local` com fon
 ### S4 — Direção, edit_plan, QA e aceite
 Usar a mesma cadeia especializada L5/L6, respeitando o padrão **9:16** e as regras atuais de abertura/overlay Minecraft/riser, transição, trilha e CTA (não transplantar essas regras para longo). Revisar por Short, renderizar/inspecionar quando possível e repetir correções até aceite explícito.
 **Gate S4:** usuário aprova cada Short como concluído, podendo aprovar lote, e somente então o workflow encerra e registra `SH_XXXX` na planilha correspondente. Não marcar `FINALIZADO` por JSON/TSX compilarem.
+
+## Etapas opcionais após publicação
+- **P0 — divulgação complementar (opt-in)**: quando o criador optar por Instagram, acionar `diazverso-instagram` para post, Stories ou carrossel com título/thumb e link do vídeo já aprovados. Aplicar QA interno, pedir aceite humano e **não presumir publicação automática**. Esta etapa pode acontecer depois do longo, durante Shorts ou ao final.
+- **P1 — análise de performance (opt-in ou revisão posterior)**: quando houver estatísticas reais após publicação, acionar `diazverso-analise-performance` para CTR por contexto, retenção, distribuição, hipóteses e aprendizados. Relacionar a `Temas futuros` e packaging futuro somente depois de revisão e aprovação; não alterar decisões históricas com base em poucos dados.
+As etapas P0/P1 não bloqueiam a finalização do longo ou dos Shorts; podem ter estados próprios de `not_started`, `awaiting_user`, `approved`, `skipped`.
 
 ## Contrato da planilha e persistência
 Abas observadas: `Temas futuros`, `Videos Longos`, `Shorts`.
