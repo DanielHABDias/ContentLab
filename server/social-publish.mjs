@@ -16,8 +16,8 @@ const parseApi=async(response,service)=>{
       String(result.error?.message||result.error?.code||result.error?.error_user_msg||result.error||'erro desconhecido').slice(0,200));
   return result;
 };
-const streamUpload=(url,file,headers={},fetcher=fetch,signal)=>fetcher(url,{
-  method:'PUT',headers,body:fs.createReadStream(file),duplex:'half',redirect:'error',
+const streamUpload=(url,file,headers={},fetcher=fetch,signal,method='PUT')=>fetcher(url,{
+  method,headers,body:fs.createReadStream(file),duplex:'half',redirect:'error',
   signal:signal||AbortSignal.timeout(20*60*1000)
 });
 const requireFile=(file)=>{
@@ -103,9 +103,14 @@ export async function uploadInstagram(file,data,{fetcher=fetch,tokenGetter=usabl
     'Content-Type':'application/x-www-form-urlencoded'},body:params,signal:AbortSignal.timeout(30000)});
   const container=await parseApi(create,'Instagram (contêiner)');
   if(!container.id)throw Error('Instagram não retornou o contêiner.');
-  const response=await streamUpload('https://rupload.facebook.com/ig-api-upload/'+encodeURIComponent(container.id),
+  const uploadUri=container.uri||'https://rupload.facebook.com/ig-api-upload/v24.0/'+encodeURIComponent(container.id);
+  const uploadTarget=new URL(uploadUri);
+  if(uploadTarget.protocol!=='https:'||uploadTarget.hostname!=='rupload.facebook.com'||
+    !uploadTarget.pathname.startsWith('/ig-api-upload/'))
+    throw Error('Instagram retornou uma URL de upload inesperada.');
+  const response=await streamUpload(uploadTarget.toString(),
     file,{Authorization:'OAuth '+token,'offset':'0','file_size':String(size),'Content-Type':'video/mp4',
-      'Content-Length':String(size)},fetcher);
+      'Content-Length':String(size)},fetcher,undefined,'POST');
   await parseApi(response,'Instagram (vídeo)');
   let ready=false;
   for(let n=0;n<30;n++){
