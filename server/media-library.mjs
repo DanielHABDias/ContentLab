@@ -13,10 +13,12 @@ const IMAGE_EXT=new Set(['.jpg','.jpeg','.png','.webp','.gif']);
 const VIDEO_EXT=new Set(['.mp4','.webm','.mov','.mkv']);
 const SOURCES=['commons','archive','youtube'];
 const allowedLicense=value=>{
-  const s=String(value||'').toLowerCase();
-  return /(?:^|[/:\s])(?:cc0|publicdomain|public.domain|pd-old|pd-us|cc.by|cc.by.sa)(?:[/\s-]|$)/i.test(s)||
-    /^cc by(?:-sa)?(?: |$)/i.test(String(value||''))||
-    /^public domain\b/i.test(String(value||''));
+  const s=String(value||'').toLowerCase().trim();
+  if(/^https?:\/\/creativecommons\.org\/(?:licenses\/(?:by|by-sa)\/|publicdomain\/(?:zero|mark)\/)/.test(s))return true;
+  if(/^https?:\/\/creativecommons\.org\/publicdomain\b/.test(s))return true;
+  return /(?:^|[\/\s])(?:cc0|publicdomain|public.domain|pd-old|pd-us)(?:[\/\s-]|$)/i.test(s)||
+    /^cc by(?:-sa)?(?: |$)/i.test(s)||
+    /^public domain\b/i.test(s);
 };
 const licenceText=(shortName,url)=>[shortName,url].filter(Boolean).join(' · ');
 const attribute=value=>String(value||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim().slice(0,240);
