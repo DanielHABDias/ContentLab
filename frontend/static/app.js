@@ -7,13 +7,14 @@ let currentSourceMode = "youtube";
 let currentSourceUrl = "";
 let currentCacheKey = "";
 let selectedLocalPath = "";
+let importedMediaCacheKey = "";
 let localImportPoll = null;
 let sourceRequestId = 0;
 
 const $ = (id) => document.getElementById(id);
 
 // Areas de trabalho isoladas: trocar de aba preserva o trabalho em andamento.
-const workspaces = ["videos", "transcription", "editor", "multieditor", "publications", "metrics", "settings", "docs"];
+const workspaces = ["videos", "transcription", "editor", "multieditor", "publications", "metrics", "library", "settings", "docs"];
 const workspaceGroups = {
   editor: ["editor", "multieditor"],
   social: ["publications", "metrics"]
@@ -377,10 +378,24 @@ function updateSourceModeUI() {
   $("localSourceBlock").classList.toggle("hidden", currentSourceMode !== "local");
   $("loadError").classList.add("hidden");
   resetLoadedVideo();
-  if (currentSourceMode === "cache") refreshCacheList();
+  if (currentSourceMode === "cache") {
+    const importedKey=importedMediaCacheKey;
+    importedMediaCacheKey="";
+    refreshCacheList(importedKey);
+  }
 }
 
 sourceModeInputs.forEach((el) => el.addEventListener("change", updateSourceModeUI));
+document.addEventListener("contentlab:library-video-imported",(event)=>{
+  const key=String(event.detail?.key||"");
+  if(!key)return;
+  importedMediaCacheKey=key;
+  const radio=document.querySelector('input[name="sourceMode"][value="cache"]');
+  if(radio){
+    radio.checked=true;
+    radio.dispatchEvent(new Event("change",{bubbles:true}));
+  }
+});
 
 $("loadBtn").addEventListener("click", loadVideo);
 $("url").addEventListener("keydown", (e) => { if (e.key === "Enter") loadVideo(); });

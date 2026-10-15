@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="/static/publications.css">
 <link rel="stylesheet" href="/static/social-connections.css">
 <link rel="stylesheet" href="/static/metrics.css">
+<link rel="stylesheet" href="/static/media-library.css">
 </head>
 <body>
 
@@ -46,8 +47,9 @@
         </div>
       </div>
 
-      <button class="workspace-tab" id="tab-settings" role="tab" aria-selected="false" aria-controls="panel-settings" type="button" data-workspace="settings"><span>05</span> Configurações</button>
-      <button class="workspace-tab" id="tab-docs" role="tab" aria-selected="false" aria-controls="panel-docs" type="button" data-workspace="docs"><span>06</span> Documentação</button>
+      <button class="workspace-tab" id="tab-library" role="tab" aria-selected="false" aria-controls="panel-library" type="button" data-workspace="library"><span>05</span> Banco de mídia</button>
+      <button class="workspace-tab" id="tab-settings" role="tab" aria-selected="false" aria-controls="panel-settings" type="button" data-workspace="settings"><span>06</span> Configurações</button>
+      <button class="workspace-tab" id="tab-docs" role="tab" aria-selected="false" aria-controls="panel-docs" type="button" data-workspace="docs"><span>07</span> Documentação</button>
   </nav><div class="sidebar-foot"><span class="sidebar-foot-icon">✦</span><strong>Faça a ideia ganhar movimento.</strong><small>Node.js · Remotion · Local</small></div></aside>
   <main class="panel">
     <div id="panel-videos" class="workspace-panel" role="tabpanel" aria-labelledby="tab-videos">
@@ -622,6 +624,67 @@
       </div>
     </div>
 
+    <div id="panel-library" class="workspace-panel hidden" role="tabpanel" aria-labelledby="tab-library" hidden>
+      <div class="workspace-intro">
+        <span class="eyebrow">ACERVO / PESQUISAR E IMPORTAR</span>
+        <h2>Encontre a cena.<br><span class="heading-muted">Traga para seu estúdio.</span></h2>
+        <p>Pesquise imagens e vídeos de acervos com licenças abertas, explore filmes clássicos e encontre vídeos Creative Commons no YouTube. Os vídeos importados ficam disponíveis para cortes.</p>
+      </div>
+      <section class="block library-search-panel" aria-labelledby="librarySearchHeading">
+        <div class="library-search-heading">
+          <div><span class="eyebrow">01 / DESCOBERTA</span><h3 id="librarySearchHeading">O que você procura?</h3>
+          <p class="helper-text">Experimente “space”, “silent film”, “Batman”, “nature” ou o título de um filme antigo.</p></div>
+        </div>
+        <form id="librarySearchForm" class="library-search-form">
+          <div class="library-search-query"><label for="libraryQuery">Pesquisar fotos e vídeos</label>
+            <input id="libraryQuery" type="search" placeholder="Ex.: vintage cinema, astronomia, filme clássico…" required maxlength="100" minlength="2" autocomplete="off">
+          </div>
+          <div><label for="librarySource">Fonte</label>
+            <select id="librarySource"><option value="all">Todas as fontes</option><option value="commons">Wikimedia Commons</option><option value="archive">Internet Archive</option><option value="youtube">YouTube (Creative Commons)</option></select>
+          </div>
+          <div><label for="libraryKind">Formato</label>
+            <select id="libraryKind"><option value="all">Fotos e vídeos</option><option value="image">Imagens</option><option value="video">Vídeos</option></select>
+          </div>
+          <button type="submit" id="librarySearchBtn" class="btn btn-primary">Pesquisar</button>
+        </form>
+        <div class="library-shortcuts"><span>Explorar:</span>
+          <button type="button" data-library-search="silent film">Cinema mudo</button>
+          <button type="button" data-library-search="space">Espaço</button>
+          <button type="button" data-library-search="old movies">Filmes antigos</button>
+          <button type="button" data-library-search="nature">Natureza</button>
+        </div>
+        <p class="helper-text library-search-state" id="libraryFeedback" role="status" aria-live="polite">Digite um tema para começar a busca.</p>
+      </section>
+      <div class="library-results-header">
+        <div><span class="eyebrow">02 / RESULTADOS</span><h3>Escolha um arquivo</h3></div>
+        <span id="libraryResultCount" class="helper-text"></span>
+      </div>
+      <div id="libraryResults" class="library-results" aria-live="polite">
+        <div class="library-empty">Busque acima para ver miniaturas, origem e condições de uso.</div>
+      </div>
+      <section class="block library-transfer-panel" aria-labelledby="libraryTransferHeading">
+        <div class="library-search-heading">
+          <div><span class="eyebrow">03 / DOWNLOAD</span><h3 id="libraryTransferHeading">Importar para o Content Lab</h3>
+            <p id="librarySelected" class="helper-text">Selecione um resultado para importar.</p></div>
+        </div>
+        <label class="library-rights-label" for="libraryRights">
+          <input id="libraryRights" type="checkbox">
+          <span>Confirmei na página original que tenho autorização para baixar, reutilizar e publicar este conteúdo, respeitando sua licença e os créditos exigidos.</span>
+        </label>
+        <div class="library-transfer-actions">
+          <button id="libraryDownload" type="button" class="btn btn-primary" disabled>Importar mídia</button>
+          <button id="libraryOpenVideos" type="button" class="btn btn-secondary" hidden>Ir para Vídeos e cortes →</button>
+          <p id="libraryDownloadState" class="helper-text" role="status" aria-live="polite"></p>
+        </div>
+        <div class="library-progress" id="libraryProgress" hidden><div id="libraryProgressFill"></div></div>
+        <p class="helper-text library-license-note">As informações de licença são mantidas junto ao arquivo. O Commons e o Internet Archive têm mídias reutilizáveis, mas nem tudo na internet é de domínio público. Vídeos do YouTube são sujeitos também às regras da plataforma.</p>
+      </section>
+      <section class="library-other-sources" aria-label="Outras fontes">
+        <div><strong>Pinterest e outros sites</strong><p>Para pesquisar pins e coleções, abra o Pinterest. O downloader open source gallery-dl suporta URLs da plataforma, mas essa integração ainda não está habilitada na biblioteca.</p></div>
+        <a href="https://www.pinterest.com/search/pins/" target="_blank" rel="noopener noreferrer">Abrir Pinterest ↗</a>
+      </section>
+    </div>
+
     <div id="panel-settings" class="workspace-panel hidden" role="tabpanel" aria-labelledby="tab-settings" hidden>
       <div class="workspace-intro">
         <span class="eyebrow">CONTENT LAB / PREFERÊNCIAS</span>
@@ -803,5 +866,6 @@
 <script src="/static/publications.js"></script>
 <script src="/static/social-connections.js"></script>
 <script src="/static/metrics.js"></script>
+<script src="/static/media-library.js"></script>
 </body>
 </html>

@@ -92,15 +92,36 @@ try{
   assert.equal(await evaluate('getComputedStyle(document.getElementById("loadBtn")).transitionProperty.includes("transform")'),true,
     'Buttons must provide a transform-based tactile response');
   await evaluate('document.getElementById("tab-videos").click()');
-  assert.equal(await evaluate('document.querySelectorAll(".workspace-tab[data-workspace]").length'),8,
-    'All eight original workspaces remain available');
-  assert.equal(await evaluate('document.querySelectorAll(".workspace-tabs > .workspace-tab, .workspace-tabs > .workspace-group").length'),6,
-    'Sidebar shows six top-level choices rather than eight');
+  assert.equal(await evaluate('document.querySelectorAll(".workspace-tab[data-workspace]").length'),9,
+    'All eight original workspaces plus the media library remain available');
+  assert.equal(await evaluate('document.querySelectorAll(".workspace-tabs > .workspace-tab, .workspace-tabs > .workspace-group").length'),7,
+    'Sidebar shows seven top-level choices with the media library');
   assert.equal(await evaluate('document.getElementById("workspace-group-editor-items").hidden'),true,
     'Editor submenu starts collapsed');
   assert.equal(await evaluate('document.getElementById("workspace-group-social-items").hidden'),true,
     'Social submenu starts collapsed');
 
+  await evaluate('document.getElementById("tab-library").click()');
+  assert.equal(await evaluate('document.getElementById("panel-library").hidden'),false,
+    'Online media library is a dedicated workspace');
+  assert.equal(await evaluate('location.hash'),'#library',
+    'Media library preserves deep links');
+  assert.equal(await evaluate('document.getElementById("libraryResults").textContent.includes("Busque acima")'),true,
+    'Library starts with a useful search prompt');
+  assert.equal(await evaluate('document.getElementById("libraryDownload").disabled'),true,
+    'No download without choosing content and confirming reuse rights');
+  await evaluate("(() => {\n window.__libraryOriginalFetch=window.fetch;\n window.fetch=(url,opts)=>{\n   if(!String(url).startsWith('/api/library/search'))return window.__libraryOriginalFetch(url,opts);\n   const data={items:[{provider:'commons',kind:'image',key:'opaque-media-key',title:'Foto para corte',credit:'Autora A',license:'CC BY 4.0',pageUrl:'https://commons.wikimedia.org/wiki/File:Demo.jpg',preview:'https://upload.wikimedia.org/a.jpg'}],warnings:[]};\n   return Promise.resolve(new Response(JSON.stringify(data),{status:200,headers:{'Content-Type':'application/json'}}));\n };\n})()");
+  await evaluate('document.getElementById("libraryQuery").value="cinema";document.getElementById("librarySearchBtn").click()');
+  await wait(()=>evaluate('document.querySelectorAll(".library-result").length===1'),
+    'Library renders image results from local search API');
+  await evaluate('document.querySelector(".library-result .library-card-actions button").click()');
+  assert.equal(await evaluate('document.getElementById("libraryDownload").disabled'),true,
+    'Selecting an asset alone does not enable download');
+  await evaluate('document.getElementById("libraryRights").click()');
+  assert.equal(await evaluate('document.getElementById("libraryDownload").disabled'),false,
+    'Only confirmed rights allow starting an import');
+  await evaluate('window.fetch=window.__libraryOriginalFetch');
+  await evaluate('document.getElementById("tab-videos").click()');
   await evaluate('document.getElementById("workspace-group-editor-trigger").click()');
   assert.equal(await evaluate('document.getElementById("workspace-group-editor-trigger").getAttribute("aria-expanded")'),'true',
     'Editor category expands on click');
