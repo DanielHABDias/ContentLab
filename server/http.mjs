@@ -26,8 +26,9 @@ app.disable('x-powered-by');
 app.use(express.json({limit:'5mb'}));
 app.use('/static',express.static(path.join(APP_ROOT,'frontend','static'),{index:false}));
 const singleRenderActive=root=>[...jobs.values()].some(job=>job.projectRoot===root&&job.status==='running');
+const anySingleRenderActive=()=>[...jobs.values()].some(job=>job.status==='running');
 const runningTranscription=root=>[...transcriptions.values()].find(job=>job.projectRoot===root&&job.status==='running');
-const renderQueue=createRenderQueue({loadProject,renderProject,isSingleRenderBusy:singleRenderActive,
+const renderQueue=createRenderQueue({loadProject,renderProject,isSingleRenderBusy:anySingleRenderActive,
   isTranscribing:root=>!!runningTranscription(root)});
 const activeRender=root=>singleRenderActive(root)||renderQueue.isQueued(root);
 function startPreparedTranscript(root,options={}){
@@ -165,6 +166,7 @@ app.post('/api/editor/render',api(async(req,res)=>{
   if(transcriptStatus(root,JSON.parse(project.planText)).status==='stale')
     return res.status(409).json({error:'Transcrição desatualizada. Regenere a partir da narração processada.'});
   if(activeRender(root))return res.status(409).json({error:'Já há um render deste projeto.'});
+  if(renderQueue.latest()?.status==='running')return res.status(409).json({error:'Aguarde a fila do Multi-editor terminar antes de iniciar um render individual.'});
   const id=crypto.randomUUID(),controller=new AbortController();
   const job={status:'running',stage:'prepare',percent:0,message:'Preparando render...',projectRoot:root,
     mode:'final',cacheMode,sceneId:null,error:null,filepath:null,controller,startedAt:Date.now()};
