@@ -5,6 +5,7 @@ import crypto from 'node:crypto';
 import {pipeline} from 'node:stream/promises';
 import {Readable} from 'node:stream';
 import {run} from './exec.mjs';
+import {classifyVideoLink,getExternalVideoInfo,downloadExternalAsset} from './video-external.mjs';
 
 export const SOURCE_CACHE=process.env.CONTENTLAB_SOURCE_CACHE||
   (process.platform==='win32'?path.join(process.env.LOCALAPPDATA||os.homedir(),'ContentLab','cache','videos'):
@@ -98,9 +99,40 @@ export async function downloadYoutube(url,update=()=>{}){
     for(const file of [video,audio])if(fs.existsSync(file))fs.rmSync(file,{force:true});
   }
 }
+export async function getSourceInfo(url){
+  const kind=classifyVideoLink(url);
+  if(kind.provider==='youtube')return getYoutubeInfo(kind.url);
+  return getExternalVideoInfo(kind.url);
+}
+export async function downloadInternetVideo(url,update=()=>{},{
+  downloader=downloadExternalAsset,metadata=getExternalVideoInfo
+}={}){
+  const link=classifyVideoLink(url);
+  if(link.provider==='youtube')return downloadYoutube(link.url,update);
+  const key='web-'+hash(link.url),folder=entryFolder(key);
+  if(fs.existsSync(path.join(folder,'meta.json')))return cachedSource(key);
+  fs.mkdirSync(folder,{recursive:true});
+  try{
+    update(2,'Preparando vídeo da internet…');
+    const info=await metadata(link.url);
+    await downloader(link.url,folder,{update});
+    const media=await probeVideo(path.join(folder,'video.mp4'));
+    if(!media.width||!media.duration)throw Error('O arquivo não contém um vídeo válido.');
+    const item={title:info.title,origin:'internet',sourceUrl:link.url,
+      filename:'video.mp4',duration:media.duration,thumbnail:info.thumbnail,
+      width:media.width,height:media.height,createdAt:new Date().toISOString()};
+    fs.writeFileSync(path.join(folder,'meta.json'),JSON.stringify(item,null,2));
+    update(100,'Vídeo da internet disponível no cache.');
+    return cachedSource(key);
+  }catch(error){
+    // Nunca deixe downloads parciais aparecendo no cache.
+    fs.rmSync(folder,{recursive:true,force:true});
+    throw error;
+  }
+}
 export async function resolveSource(url,update){
   if(String(url).startsWith('contentlab-cache://'))return cachedSource(url.slice('contentlab-cache://'.length));
-  return downloadYoutube(url,update);
+  return downloadInternetVideo(url,update);
 }
 export async function exportCut(source,{folder,filename,mode='video',full=true,start,end}={}){
   const dest=fs.realpathSync(folder);

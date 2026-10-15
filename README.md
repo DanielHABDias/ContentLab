@@ -2,6 +2,16 @@
 
 Editor automático e utilitários de vídeo para projetos de conteúdo e motion design, com servidor Node.js, interface JavaScript, Remotion e FFmpeg. Os testes automatizados Linux e Windows estão disponíveis no GitHub Actions. A validação estética final continua dependendo dos arquivos e objetivos de cada projeto real.
 
+## Vídeos e cortes — link da internet
+
+A aba **Vídeos e cortes** aceita **Link da internet**. O YouTube continua usando exatamente o carregador existente (biblioteca `youtubei.js`); nenhum JSON do Google ou OAuth de publicação é necessário para esse fluxo. Para links públicos de outras plataformas compatíveis (por exemplo, TikTok, Pinterest, Instagram, Vimeo, X/Twitter, Reddit, Facebook, Twitch e Dailymotion), o backend usa o executável open source [yt-dlp](https://github.com/yt-dlp/yt-dlp).
+
+**Preparação para sites fora do YouTube:** instale o `yt-dlp` a partir dos [releases oficiais](https://github.com/yt-dlp/yt-dlp/releases) e disponibilize `yt-dlp` (Linux/macOS) ou `yt-dlp.exe` (Windows) no PATH. Alternativamente, configure a variável de ambiente `CONTENTLAB_YT_DLP` com o caminho completo do executável. O FFmpeg/FFprobe usados pelo Content Lab continuam necessários. Para conferir a instalação, execute `yt-dlp --version` no terminal (ou o caminho completo do executável).
+
+Ao colar um link suportado e clicar **Carregar**, o Content Lab consulta o título, a duração e a miniatura; depois, importa o vídeo para o mesmo cache da fonte e libera prévia, cortes e exportação. O download externo gera MP4 quando possível, admite vídeos de até 1 GB e seleciona apenas um vídeo por URL. Links já importados reutilizam o cache.
+
+**Limites:** nenhum programa baixa literalmente de todo site. O aplicativo só encaminha URLs HTTPS de domínios de vídeo conhecidos; não baixa arquivos de endereços internos/locais ou URLs arbitrárias, não contorna DRM e não autentica contas privadas. Sites podem deixar de funcionar, exigir consentimento ou ter restrições nos seus termos. O `yt-dlp` é opcional e não altera o YouTube original. Respeite os direitos de uso e publicação do material.
+
 ## Banco de mídia — pesquisar, baixar e criar cortes
 
 A aba **Banco de mídia** agora prioriza **YouTube normal + Pinterest** (seleção inicial), com busca por palavras-chave, miniaturas, autores, formatos, seleção e importação para o cache existente de Vídeos e cortes. É possível escolher cada fonte separadamente, todas as fontes ou o YouTube com filtro Creative Commons.

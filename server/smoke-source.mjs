@@ -7,7 +7,7 @@ import {run} from './exec.mjs';
 const root=fs.mkdtempSync(path.join(os.tmpdir(),'contentlab-local-source-'));
 process.env.CONTENTLAB_SOURCE_CACHE=path.join(root,'cache');
 try{
-  const {importLocalSource,cachedSource,listSources,exportCut,removeSource}=await import('./source.mjs');
+  const {importLocalSource,downloadInternetVideo,resolveSource,cachedSource,listSources,exportCut,removeSource}=await import('./source.mjs');
   const input=path.join(root,'local-video.mp4');
   await run('ffmpeg',['-hide_banner','-loglevel','error','-y',
     '-f','lavfi','-i','color=c=red:s=320x180:r=15:d=2',
@@ -26,6 +26,27 @@ try{
     full:false,start:0.4,end:1.4});
   assert.ok(fs.statSync(full).size>2000);
   assert.ok(fs.statSync(audio).size>500);
+  const internetUrl='https://vimeo.com/12345';
+  let downloaderCalled=0;
+  const web=await downloadInternetVideo(internetUrl,()=>{},{
+    metadata:async()=>({title:'Teste Vimeo',thumbnail:'',duration:2}),
+    downloader:async(url,folder,{update})=>{
+      assert.equal(url,internetUrl);
+      downloaderCalled++;
+      await fs.promises.copyFile(input,path.join(folder,'video.mp4'));
+      update(85,'Importado');
+    }
+  });
+  assert.equal(web.origin,'internet');
+  assert.equal(web.title,'Teste Vimeo');
+  assert.ok(web.duration>1.8);
+  assert.equal(downloaderCalled,1);
+  assert.equal((await resolveSource(internetUrl)).key,web.key,
+    'O download externo em cache não deve chamar o yt-dlp novamente.');
+  const webCut=await exportCut(web,{folder,filename:'Trecho importado',mode:'video',
+    full:false,start:0.3,end:1.3});
+  assert.ok(fs.statSync(webCut).size>500);
+  removeSource(web.key);
   removeSource(first.key);
   assert.equal(listSources().length,0);
   console.log(JSON.stringify({status:'passed',cached:true,videoBytes:fs.statSync(full).size,

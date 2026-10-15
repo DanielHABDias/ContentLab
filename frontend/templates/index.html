@@ -61,7 +61,7 @@
       <div class="source-tabs" role="radiogroup" aria-label="Fonte do vídeo">
         <label class="source-tab">
           <input type="radio" name="sourceMode" value="youtube" checked>
-          <span>Link do YouTube</span>
+          <span>Link da internet</span>
         </label>
         <label class="source-tab">
           <input type="radio" name="sourceMode" value="cache">
@@ -74,11 +74,12 @@
       </div>
 
       <div id="youtubeSourceBlock">
-        <label class="block-label source-sub-label" for="url">Link do YouTube</label>
+        <label class="block-label source-sub-label" for="url">Link da internet</label>
         <div class="row">
-          <input id="url" type="text" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off">
+          <input id="url" type="url" placeholder="Cole o link do YouTube, TikTok, Instagram, Vimeo, Pinterest…" autocomplete="off" spellcheck="false">
           <button id="loadBtn" class="btn btn-primary">Carregar</button>
         </div>
+        <p class="helper-text">YouTube continua com o carregador atual. Outros sites públicos compatíveis usam yt-dlp (instalação adicional). Links privados, playlists e vídeos com DRM não são suportados.</p>
       </div>
 
       <div id="cacheSourceBlock" class="hidden">

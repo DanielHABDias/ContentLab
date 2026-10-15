@@ -11,6 +11,12 @@ Interface original do Content Lab com linguagem editorial de software criativo: 
 
 O projeto é inspirado na clareza visual de aplicativos contemporâneos e **não** replica logotipos, ícones ou identidade comercial da Apple.
 
+## Vídeos e cortes — links da internet
+
+O campo **Link da internet** usa o carregador original para YouTube e o `yt-dlp` para vídeos públicos de outras plataformas reconhecidas, mantendo as mesmas rotas `/api/info`, `/api/preview`, `/api/download` e `/api/batch-download`. O vídeo externo é convertido para MP4 quando possível e salvo no mesmo cache; assim preview, cortes, áudio, transcrição e exportação continuam disponíveis.
+
+O downloader externo é opcional: instale o `yt-dlp` e coloque o executável no PATH ou configure `CONTENTLAB_YT_DLP`. Domínios HTTPS de vídeo conhecidos são aceitos; listas de reprodução, URLs internas, conteúdo com DRM e mídia privada não são importados. Os sites suportados podem mudar sem aviso. O carregador do YouTube não foi substituído.
+
 ## Banco de mídia e acervo online
 
 **Banco de mídia** é uma área própria de pesquisa de mídia com filtros, prévia, créditos e licença, além de download protegido por confirmação de direitos. Prioriza a busca comum do **YouTube e Pinterest**; o filtro Creative Commons do YouTube e os acervos Wikimedia Commons/Internet Archive são seleções adicionais. A pesquisa Pinterest usa o endpoint público de busca de pins inspirado no projeto pinterest-dl e fornece resultados de imagem/vídeo quando o CDN pinimg.com disponibiliza mídia direta. Resultados de fontes indisponíveis não bloqueiam as demais. Fotos são armazenadas em Downloads/ContentLab/Imagens e vídeos utilizam o cache existente para cortes. Pins de fotos e vídeos MP4 públicos podem ser importados (desde que o usuário confirme seus direitos); consultas podem ser bloqueadas ou exigir login e a interface oferece o link para pesquisar diretamente no Pinterest. TikTok permanece com pesquisa externa, sem download integrado.

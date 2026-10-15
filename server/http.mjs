@@ -10,7 +10,7 @@ import {renderProject} from './render.mjs';
 import {createRenderQueue} from './render-queue.mjs';
 import {run} from './exec.mjs';
 import {instanceIdentity} from './instance-identity.mjs';
-import {SOURCE_CACHE,listSources,cachedSource,importLocalSource,removeSource,getYoutubeInfo,resolveSource,exportCut} from './source.mjs';
+import {SOURCE_CACHE,listSources,cachedSource,importLocalSource,removeSource,getSourceInfo,resolveSource,exportCut} from './source.mjs';
 import {transcribeAudio} from './transcribe.mjs';
 import {voiceStudioFolder,voiceStudioState,prepareStandaloneNarration} from './voice-studio.mjs';
 import {prepareAndTranscribeProject,narrationStamp,transcriptStatus} from './narration-pipeline.mjs';
@@ -329,7 +329,7 @@ app.post('/api/local-source/import',api(async(req,res)=>{
   });
   res.status(202).json({job_id:id});
 }));
-app.post('/api/info',api(async(req,res)=>res.json(await getYoutubeInfo(req.body.url))));
+app.post('/api/info',api(async(req,res)=>res.json(await getSourceInfo(req.body.url))));
 app.post('/api/preview',api(async(req,res)=>{
   const source=await resolveSource(req.body.url);
   const id=crypto.randomUUID();previews.set(id,source.key);
