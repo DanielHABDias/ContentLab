@@ -5,6 +5,14 @@ description: Cria cenas Remotion complexas como arquivos TSX dentro da subpasta 
 
 # Content Lab — Cenas programáveis TSX
 
+## TSX contínuo e design sonoro mínimo — FlowHQ (15/10/2026)
+
+Em Shorts com 3 cenas estruturais (gancho, desenvolvimento e CTA), renderizar UM TSX no desenvolvimento, alimentado por props.beats=[{at,until,title,kicker,layout,main,next}]. Os tempos at/until são relativos ao começo da cena contínua. customComponent.assets fornece mídia por chave. SFX em edit_plan.json permanecem absolutos. Câmera, retícula, vinheta e linha compartilhadas atravessam beats; próximo plano começa antes da saída do anterior, sem remontar o mesmo preset. Não empilhar textos simultâneos, não usar cartões cinza genéricos, não transformar a estética HQ em UI stock.
+
+Referência: vídeo comparativo do editor, animação de BAIXO (Claude Opus 5.5), com formas/partículas tornando-se novos planos; HQ adapta tinta, retícula, planos e fontes. Trocar só cor/título do componente antigo não basta. Preferir 3–4 acentos SFX realmente ligados a gestos num Short de 30–50s como ponto de partida, em vez de sinos em todo beat. Manter musicalidade, voz e CTA. Novo DiazversoFlowHQ.tsx em SH_0005 a SH_0009; retirar somente módulos sem referências, conservando o CTA e dependências de outros projetos. Validar o movimento em MP4.
+
+
+
 ## Prioridade do overlay Minecraft sobre TSX e diversidade visual de Shorts (14/10/2026)
 
 Na abertura do Short 9:16 Diazverso, a explosão `project://assets/overlays/explosaoMinecraft.mp4` deve aparecer **em cima de TODO o TSX** entre 0 e 3 s. No JSON, marcar o elemento `type:"overlay"` com `z:900`, `config.alwaysOnTop:true`, `style:"green_screen"`, `loop:false` e `muted:false`. No ContentLab, `server/custom-scenes.mjs` agora desenha uma segunda passagem transparente de overlays prioritários **depois** de `<UserScene />`; o z ordenado apenas dentro de `<Scene />` NÃO é suficiente contra a composição TSX. Renderizar e conferir primeiro frame e 0–3s; nunca declarar correção só com JSON.
