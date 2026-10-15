@@ -8,7 +8,7 @@
   const fmt=new Intl.NumberFormat('pt-BR',{notation:'compact',maximumFractionDigits:1});
   const full=new Intl.NumberFormat('pt-BR');
   const dateFmt=new Intl.DateTimeFormat('pt-BR',{dateStyle:'medium',timeStyle:'short'});
-  let focus=null,results={},connection={},busy=false,loaded=false,sequence=0;
+  let focus=null,results={},connection={},busy=false,queuedRequest=null,sequence=0;
 
   const message=(text)=>{$('metricsFeedback').textContent=text||'';};
   const isConnected=name=>Boolean(connection[name]?.connected);
@@ -58,8 +58,18 @@
       'Apenas '+full.format(validViews.length)+' vídeo(s) com dados disponíveis'));
     place(grid,stat('Curtidas',validLikes.length?number(sumLikes):'—',
       'Nos '+full.format(validLikes.length)+' vídeo(s) com contagem retornada'));
-    place(grid,stat('Agendados no YouTube',String(scheduled.length),
-      'Identificados nos uploads recentes do YouTube'));
+    const ytVisible=!focus||focus==='youtube';
+    const ytLoaded=ytVisible&&results.youtube?.status==='ok';
+    place(grid,stat('Agendados no YouTube',ytLoaded?String(scheduled.length):'—',
+      ytLoaded?'Identificados nos uploads recentes do YouTube':
+        'Selecione ou conecte o YouTube para consultar'));
+    if(focus&&datasets[0]?.channel){
+      const channel=datasets[0].channel;
+      if(channel.subscribers!==null&&channel.subscribers!==undefined)
+        place(grid,stat('Inscritos',number(channel.subscribers),'Canal: '+channel.name));
+      if(channel.followers!==null&&channel.followers!==undefined)
+        place(grid,stat('Seguidores',number(channel.followers),'Perfil: '+channel.name));
+    }
     if(!datasets.length)message('Não há dados disponíveis dessas contas no momento.');
   }
   function renderVideoList(id,items,{scheduled=false,emptyText}={}){
@@ -155,7 +165,10 @@
     renderTop();renderNotes();
   }
   async function load({refresh=false}={}){
-    if(busy)return;
+    if(busy){
+      queuedRequest=queuedRequest===null?refresh:(queuedRequest||refresh);
+      return;
+    }
     const call=++sequence;
     busy=true;$('metricsRefresh').disabled=true;
     message('Consultando os dados disponíveis...');
@@ -168,12 +181,18 @@
       connection=body.connected||{};
       if(refresh||!focus)results={...body.platforms};
       else results={...results,...body.platforms};
-      loaded=true;render();
+      render();
       const errors=Object.entries(body.platforms||{}).filter(([,v])=>v.status==='error').length;
       message(errors?'Algumas plataformas não retornaram dados. Confira as mensagens abaixo.':
         'Dados carregados das contas autorizadas.');
     }catch(error){message(error.message||'Erro inesperado na consulta.');}
-    finally{busy=false;$('metricsRefresh').disabled=false;}
+    finally{
+      busy=false;$('metricsRefresh').disabled=false;
+      if(queuedRequest!==null){
+        const pending=queuedRequest;queuedRequest=null;
+        load({refresh:pending});
+      }
+    }
   }
   for(const name of networks){
     $('metricsFilter-'+name).addEventListener('click',()=>{
