@@ -5,6 +5,16 @@ description: Planeja coreografia de motion design no Content Lab: keyframes, eas
 
 # Content Lab — Movimento e coreografia
 
+## Motion contínuo de referência inferior — Diazverso Shorts (15/10/2026)
+
+Nos Shorts Diazverso SH_0005 a SH_0009, a referência autoral é a metade INFERIOR do vídeo comparativo de 15 segundos enviado pelo editor. Não copiar nomes/cores/layout do exemplo; reinterpretar gramática de movimento: texto que desmonta/recompõe, perspectiva, parallax, câmera espacial, formas e retícula que levam ao próximo assunto, máscara de tinta e continuidade. Não é suficiente repetir sete cartões TSX com o mesmo ciclo.
+
+Para esta produção, usar gancho + cena TSX única do desenvolvimento (beats em segundos RELATIVOS, at e until) + CTA. As mudanças de narrativa tornam-se transições internas sobrepostas, com uma camada espacial compartilhada. Alternar vídeo real, PNG de personagem, duelos, lettering e respiros. PNG em contain; vídeo horizontal em cover central. Sem painéis cinza e sem texto sobre texto.
+
+Fonte indicada pelo editor: Avengers com contorno ~1,4px e sombra escura; não inventar arquivo de fonte, fallback para Anton embutida até existir asset Avengers. Ritmo avaliado em MP4 real, não só TSX. Blocos longos necessitam microtransformações internas e respiros, não cortes extras. Sons raros, ligados a deslocamentos reais: remover repetição do Ting curto e outros sinos. Manter explosão Minecraft prioritária com áudio próprio, metallic riser completo antes do primeiro whoosh, blur forte nas transições estruturais.
+
+
+
 ## Whip blur forte e riser completo — Diazverso Shorts (14/10/2026)
 
 Para **Shorts Diazverso** especificamente, a duração recomendada do `blur_left/right/up/down` passou a ser `transitionDuration:0.20` segundo a 30 fps (6 frames). O compositor `server/compose.mjs` aplica um blur gaussiano anisotrópico **ao quadro inteiro**, com `sigma=56:sigmaV=22` para deslocamento horizontal e `22:56` para vertical, e peso máximo de 99,5% no centro do efeito. O arquivo do compositor recebeu nova assinatura de cache para invalidar frames de transições antigas. Nunca presumir que apenas alterar o JSON torna o blur mais forte: usar a versão mais recente do ContentLab e validar frames centrais do render.
