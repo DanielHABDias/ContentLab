@@ -94,8 +94,9 @@ test('API gate never fetches networks when disconnected; isolates provider error
   });
   let result;
   const fakeRes=()=>({
-    set:()=>({json:data=>{result=data;}}),
-    status:()=>({json:data=>{result=data;}})
+    set(){return this;},
+    json(data){result=data;return this;},
+    status(){return this;}
   });
   await handler({query:{}},fakeRes());
   assert.deepEqual(calls,[]);
