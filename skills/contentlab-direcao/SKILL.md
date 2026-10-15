@@ -11,13 +11,15 @@ Em Shorts Diazverso, rejeitar a sequência em que várias cenas consecutivas rea
 
 
 
-## Perfil Diazverso: direção consolidada em 14/10/2026
+## Perfil Diazverso: direção revisada em 15/10/2026
 
-Quando a marca for **Diazverso**, a direção visual aprovada é **motion design moderno/cinematográfico + linguagem HQ editorial sóbria**, não UI minimalista pura e não gibi infantil. Combinar retícula/halftone discreta, painéis/gutters, páginas espaciais, câmera transitando entre trechos reais de filmes/jogos, quadro dessaturado que ganha cor ao receber foco e caixas retangulares de narração. Evitar balões de fala/pensamento por padrão. **Anton** para palavras enormes e fundo sólido com cores mutáveis, **Bangers** para lettering HQ e Comic Sans pontual em caixas editoriais; Inter/sans apenas quando a função pedir. Usar bastante TSX em explicações e comparações, preservando cenas reais citadas — em tela cheia ou incorporadas ao motion. Baixa interferência significa movimentos justificados, não escassez de motion. Padrões TSX novos só entram no catálogo depois de implementação, render e QA.
+Em projetos Diazverso, a edição é **HQ simples com baixa interferência**: base de cenas pertinentes e ilustrações completas em movimento (pan/zoom suave), sem repetir continuamente o mesmo clipe nem adiantar spoilers; PNGs com entrada + balanço sutil + saída; caixas de narrador retangulares (etiqueta amarela sobre caixa branca/creme, sombra preta), halftone e grandes frases Anton. A antiga preferência por muitos TSX foi SUPERADA: criar poucos componentes-padrão reaproveitáveis em 16:9 para longos, com painéis HQ, Bangers e personagem entrando na moldura. Não converter cada frase em motion. Para textura gráfica recorrente, permitir overlay de imagem transparente em vez de TSX novo. Preservar Nox e a edição tradicional.
 
-**Shorts Diazverso** conservam a assinatura própria: gancho forte com voz imediata, vídeo 0–3s `explosaoMinecraft.mp4` com chroma/áudio, riser metálico antes da primeira virada, blur direcional acompanhado de woosh durante o movimento, música apenas após o blur e CTA final. Não aplicar essa vinheta a longos nem a outras marcas. **VD_0005 continua fechado.**
+Filmes/séries/animações com overlay de televisão/CRT e proporção original; JOGOS sem CRT por padrão. Longos podem usar Nox grande em opinião, legenda especial embaixo, Anton sobre clipe escurecido e CTAs HQ no canto superior direito com hold >=5 s, whooshes de entrada/saída, clique visual/sonoro e sino quando aplicável. Títulos de capítulo entre cenas só em vídeos que recontam história de jogo capítulo a capítulo, sobre cena com áudio original — não cartela avulsa.
 
+Shorts: gancho com explosão Minecraft por cima, riser metálico EXCLUSIVAMENTE para tensão, whoosh+blur direcional após gancho, música depois, legendas Bangers obrigatórias logo abaixo do centro com contorno/sombra, cenas e ilustrações com movimento, motion HQ pontual, CTA final baseada no `ComicPageCTA.tsx` do SH_0005. Apenas os visuais de hook/caixas/tipografia do `DiazversoHQEditorial.tsx` do SH_0005 também foram aprovados; o resto dos experimentos não é padrão.
 
+Efeitos: variar WHOOSHs nos slides/transições; POP/CLICK/BLING para aparições e interação; riser para tensão, NÃO deslize. Alinhar ataque audível ao MEIO do gesto, não disparar antes ou automaticamente no primeiro frame. Preservar recursos genéricos do ContentLab para outras marcas e não alterar VD_0005 concluído. Fonte editorial atual: documento de consolidação Diazverso no Drive, ID `1R-fldN8Pni77DYIJd5yvPZCdwM1JAue-Yi_JBMW0GBQ`, e `skills/diazverso-video/SKILL.md`.
 
 Esta é a skill central para qualquer trabalho de edição automatizada no Content Lab. A função dela é compreender o objetivo, escolher quais competências especializadas utilizar, integrar as decisões e produzir instruções de edição coesas. **Não** é uma biblioteca de presets nem substitui a documentação técnica.
 
@@ -64,13 +66,9 @@ Quando o usuário citar **visual moderno, estilo Apple, minimalismo premium, car
 ## Hierarquia e entrega
 Pedido explícito > contexto de marca fornecido pelo usuário > skill de perfil > diretrizes gerais do Content Lab. O schema e o renderer real determinam a **validade técnica** do JSON; o objetivo criativo não autoriza campos inventados. Caso uma capacidade pedida ainda não tenha implementação, identifique a lacuna para a etapa de engenharia em vez de disfarçá-la com configurações sem efeito. Não afirmar renderização, paridade ou validação sem executar os testes. Preserve decisões aprovadas e não recomece do zero sem necessidade.
 
-## Nova prioridade criativa — TSX na edição autoral
+## Escolha parcimoniosa entre montagem e TSX
 
-Para edições do Diazverso, a experiência do VD_0005 validou o valor de **considerar TSX primeiro para motion de explicação original** com cenário contínuo, texto espacial, câmera, mídia em perspectiva e separação de camadas. Isso não transforma o vídeo inteiro em UI nem invalida a baixa interferência: footage real relevante, pausas, cortes secos e Nox com função continuam fundamentais.
-
-Encaminhar à `contentlab-cenas-tsx` quando a cena exige autoria espacial, ainda que seja relativamente curta; consultar `contentlab-composicao` e `contentlab-motion` para direção. Exigir âncoras de narração preparada: conteúdo focal completamente pronto preferencialmente no começo da palavra, **obrigatoriamente até o final da palavra**, com hold real. A câmera deve estar no alvo quando o nome/ideia é pronunciado. Não criar tempos estimados como se fossem transcrição verificada.
-
-Para variar, experimentar deslocamento da câmera por palavras em diagonal, vídeo como placa inclinada, explosão de camadas, parallax de fundo/meio/frente, galerias em profundidade, nó para rede e painéis de HQ no espaço. CSS/React/SVG geram 2.5D e parallax; sem recortes reais não existe separação semântica de um clipe plano. Ver catálogo na referência da skill TSX.
+Para o perfil Diazverso, a prioridade é montar bem as cenas, as imagens e o áudio; TSX apenas quando um componente HQ reutilizável ajudar realmente. Recursos avançados de câmera e espaço continuam POSSÍVEIS em outras marcas ou pedidos pontuais, mas não são prescrição. Preservar clips, cortes secos e variações de imagem, em vez de prolongar TSX por hábito.
 
 ## Gate obrigatório para edição automática
 
@@ -79,8 +77,6 @@ A criação do `edit_plan.json`, guia e componentes `custom-scenes/*.tsx` **não
 Se houver falhas, corrigir plano/TSX e refazer QA antes de liberar; caso ainda não exista render, classificar apenas `APROVADO PRÉ-RENDER`, nunca `APROVADO FINAL`. O revisor especializado da marca Diazverso (`diazverso-revisao-edicao` no Drive) adiciona identidade/Nox/CRT/estilo sem substituir a validação geral do ContentLab.
 
 
-## Componentes derivados de produção e direção futura HQ
+## Exemplos técnicos versus presets aprovados
 
-Consultar `VD0005_REUSABLE_REVIEW.md` para escolher padrões comprovados por **inspeção de código** do VD_0005, mas **não certificados por render**: `examples/custom-scenes/NarrativePath.tsx`, `EvidenceConstellation.tsx`, `PixelNotification.tsx` e `ComicMotionKit.tsx`. Modelos de exemplos não se tornam presets da UI ou campos novos no JSON. Configurar `props`, `assets` e sincronismo de cada novo roteiro; manter tempo de cena, SFX absolutos e assets reais.
-
-Para futuros vídeos Diazverso, considerar teste criativo de *HQ em movimento*: quadros/gutters, tinta desenhada, halftone discreto, balões, lettering Anton/Bangers, máscaras entre painéis e parallax 2.5D com recortes. Não afetar o VD_0005 aprovado. Fonte e licença da música devem ser verificadas antes de promover localmente; ver `MUSIC_LIBRARY_DIAZVERSO.md` e skill `contentlab-timeline-audio`.
+Componentes como `NarrativePath`, `EvidenceConstellation`, `PixelNotification` e `ComicMotionKit` são exemplos técnicos, não padrões automaticamente aprovados do Diazverso. A biblioteca futura de HQ será testada com Codex, com poucos TSX e motion simples. Não trocar cenas reais por templates sofisticados sem motivo; não inserir balões de fala como padrão. Validar MP4 e direitos de áudio/mídia. VD_0005 permanece intocado.
