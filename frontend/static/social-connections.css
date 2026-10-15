@@ -72,3 +72,9 @@
 #panel-settings .settings-setup-assistant[hidden],#panel-settings .settings-google-import[hidden]{display:none}
 @media(max-width:760px){#panel-settings .settings-guide-grid{grid-template-columns:1fr}
 #panel-settings .settings-guide-head{flex-direction:column}}
+
+
+#panel-settings .settings-account-identity{min-height:0!important;margin:0 0 6px!important;font-size:12px!important;color:#2b527c!important;font-weight:750;overflow-wrap:anywhere}
+#panel-settings .settings-account-permissions{min-height:0!important;margin:0 0 14px!important;font-size:11px!important;color:#986423!important;line-height:1.5}
+#panel-settings .settings-account-identity[hidden],#panel-settings .settings-account-permissions[hidden]{display:none!important}
+#panel-settings .settings-disconnect:disabled{opacity:.45;cursor:wait}
