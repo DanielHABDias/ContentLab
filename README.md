@@ -13,6 +13,18 @@ Editor automático e utilitários de vídeo para projetos de conteúdo e motion 
 
 Remotion concentra a renderização visual; o FFmpeg continua responsável por áudio, cortes e composição final. O código de servidor utiliza exclusivamente Node.js.
 
+## Login com um clique e configuração assistida
+
+O uso normal não pede tokens nem senhas pessoais. Em **Configurações**, clique em **Conectar com Google**, **Conectar Instagram** ou **Conectar TikTok**. Se o aplicativo OAuth já tiver sido registrado, o Content Lab redireciona diretamente para a página oficial da rede; depois da autorização, recebe e renova credenciais de sessão automaticamente no servidor local.
+
+**Se ainda não estiver configurado**, o botão abre um assistente da própria plataforma com instruções passo a passo, links para o portal e a documentação oficiais, permissões necessárias e URL de retorno para copiar quando aplicável. Os campos técnicos só aparecem se você clicar em **Já tenho as credenciais do aplicativo** (ou expandir a Configuração avançada).
+
+- **YouTube / Google:** abra [Google Cloud Console](https://console.cloud.google.com/apis/credentials), ative YouTube Data API v3, configure a tela de consentimento e crie um cliente OAuth **App para computador**. Baixe o JSON da aplicação e selecione **Importar JSON do Google** no assistente. O Content Lab lê apenas o Client ID/Secret desse arquivo, salva localmente e abre a escolha de conta Google automaticamente. O fluxo usa PKCE. Não se importa um JSON de conta de serviço ou um token.
+- **Instagram:** abra [Meta for Developers](https://developers.facebook.com/apps/), configure **Instagram API with Instagram Login** para uma conta profissional e solicite as permissões `instagram_business_basic` e `instagram_business_content_publish`. É obrigatória uma URL de retorno **HTTPS**, encaminhada com segurança para o callback local do Content Lab; configure-a no portal e no assistente. Veja também a [documentação da Meta](https://www.postman.com/meta/instagram/folder/6raa77c/instagram-api-with-instagram-login).
+- **TikTok:** abra [TikTok for Developers](https://developers.tiktok.com/) e adicione **Login Kit Desktop**, registrando a URL local `127.0.0.1` exibida pelo assistente. Configure `video.publish` e `video.list` onde aprovados, e preencha Client Key/Secret **do aplicativo** uma vez. Consulte o [guia Desktop](https://developers.tiktok.com/docs/en/login-kit-desktop).
+
+**Limitações:** não existe OAuth universal do Google que autorize automaticamente as APIs do Instagram e TikTok. Mesmo usando Google para entrar nessas redes, cada uma apresenta sua própria autorização. Os fornecedores exigem registro de um aplicativo OAuth para permitir publicação; não há um caminho legítimo para pular essa etapa se o Content Lab ainda não tiver credenciais de aplicativo configuradas. Também não é necessário buscar ou copiar tokens pessoais manualmente: o OAuth troca o código de autorização por tokens nos bastidores. A liberação de publicação pública pode exigir auditoria da Meta/Google/TikTok.
+
 ## Configurações — contas e integrações
 
 A aba **Configurações**, depois de Métricas, é o único local para conectar/desconectar YouTube, Instagram e TikTok. O usuário encontra três cartões com indicadores de status e botões diretos: **Conectar com Google**, **Conectar Instagram** e **Conectar TikTok**. Com um aplicativo OAuth já configurado, basta clicar no botão e autorizar a conta no site oficial. Para YouTube, o Google solicita explicitamente a seleção de conta.
