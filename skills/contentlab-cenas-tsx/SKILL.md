@@ -3,6 +3,10 @@ name: contentlab-cenas-tsx
 description: Cria cenas Remotion complexas como arquivos TSX dentro da subpasta custom-scenes de cada projeto de vídeo, integrados ao edit_plan.json por customComponent.
 ---
 
+
+## Restrição obrigatória para Diazverso — biblioteca oficial
+Este módulo é uma ferramenta técnica de TSX genéricos, **mas não é autorização para gerar novos TSX no Diazverso**. Em vídeos do canal, consultar o [README geral da biblioteca oficial](https://drive.google.com/drive/folders/1yWogLK6bRWXunvdJxTHBMIqB4ibSN44f) e os READMEs/arquivos das sete subpastas: ComicPageCTA, QuadroHQSobreCena, TextoBangersHalftone, PaginaHQCenas, LinhaDoTempoHQ, PersonagemEspiralLegenda, CaixinhaCTAHQ. **Reutilizar exclusivamente um desses sete por padrão**; desenvolver um oitavo, criar variantes ou alterar implementações somente diante de **pedido explícito do criador**. Caso os sete não atendam, usar composição/corte/elementos nativos quando possível ou pedir direção. A orientação é derivada de `project.resolution` (16:9 ou 9:16) e os exemplos não são contratos de assets obrigatórios. A skill pode continuar explicando COMO programar TSX caso essa autorização seja concedida. Os tempos, props, fontes, `overlay`/`replace` e SFX reais são definidos no README individual e reproduzidos no `edit_plan.json`; render e áudio requerem QA.
+
 # Content Lab — Cenas programáveis TSX
 
 ## Remotion 4.0.530 — vídeos repetidos em TSX
