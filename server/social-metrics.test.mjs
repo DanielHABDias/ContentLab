@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readMetrics,clearMetricsCache} from './social-metrics.mjs';
+import {readMetrics,clearMetricsCache,readYouTubeAnalytics} from './social-metrics.mjs';
 import {mountSocialMetricsRoutes} from './social-metrics-routes.mjs';
 
 const later=()=>new Date(Date.now()+86400000).toISOString();
@@ -79,6 +79,48 @@ test('TikTok public videos include views, likes and shares from Display API',asy
   assert.equal(data.latest.views,800);
   assert.equal(data.latest.shares,5);
   assert.equal(data.scheduledCount,0);
+});
+test('YouTube Analytics reads official daily report without mixing with video sample counts',async()=>{
+  const fetched=[];
+  const data=await readYouTubeAnalytics('yt-token',async(url,options)=>{
+    fetched.push({url:String(url),options});
+    return reply({
+      columnHeaders:[
+        {name:'day'},{name:'views'},{name:'estimatedMinutesWatched'},
+        {name:'averageViewDuration'},{name:'subscribersGained'},
+        {name:'subscribersLost'},{name:'likes'}
+      ],rows:[
+        ['2026-10-10',100,120,72,3,1,8],
+        ['2026-10-11',70,60,50,2,0,4]
+      ]
+    });
+  },{now:Date.parse('2026-10-14T12:00:00Z')});
+  assert.equal(fetched.length,1);
+  const query=new URL(fetched[0].url);
+  assert.equal(query.hostname,'youtubeanalytics.googleapis.com');
+  assert.equal(query.searchParams.get('ids'),'channel==MINE');
+  assert.equal(query.searchParams.get('dimensions'),'day');
+  assert.equal(data.views,170);
+  assert.equal(data.minutesWatched,180);
+  assert.equal(data.subscribersGained,5);
+  assert.equal(data.daily[0].averageDurationSeconds,72);
+  assert.equal(fetched[0].options.headers.Authorization,'Bearer yt-token');
+});
+test('TikTok optional profile counts are returned without disrupting published media',async()=>{
+  clearMetricsCache();
+  const data=await readMetrics('tiktok',{useCache:false,tokenGetter:async()=>'profile-token',
+    fetcher:async(url,options)=>{
+      if(String(url).includes('/user/info/'))return reply({data:{user:{
+        display_name:'Canal de vídeos',follower_count:432,likes_count:812,video_count:21
+      }}});
+      return reply({error:{code:'ok'},data:{videos:[{
+        id:'video-new',title:'Novo vídeo',view_count:55,like_count:12
+      }]}});
+    }
+  });
+  assert.equal(data.channel.followers,432);
+  assert.equal(data.channel.videos,21);
+  assert.equal(data.latest.views,55);
 });
 test('API gate never fetches networks when disconnected; isolates provider errors',async()=>{
   let handler;
