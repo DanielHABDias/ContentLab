@@ -13,6 +13,20 @@ Editor automático e utilitários de vídeo para projetos de conteúdo e motion 
 
 Remotion concentra a renderização visual; o FFmpeg continua responsável por áudio, cortes e composição final. O código de servidor utiliza exclusivamente Node.js.
 
+## Conexões sociais gerenciadas e métricas ampliadas
+
+Inspirado no desenho de provedores do projeto Postiz, mas com implementação original para o servidor Node local:
+
+- **Configurações:** cada cartão apresenta a identidade do perfil conectado (quando devolvida pelo serviço), suas permissões de acesso e o botão **Verificar conexão**, que consulta a API oficial para validar o perfil.
+- **Sessões:** YouTube, Instagram e TikTok renovam a autorização quando necessário, com deduplicação de solicitações de renovação simultâneas. Falhas que exigem novo consentimento ficam identificadas para reconexão; os tokens permanecem somente no backend local.
+- **Permissões:** novo consentimento inclui `yt-analytics.readonly` (YouTube), `instagram_business_manage_insights` (Instagram), `user.info.profile` e `user.info.stats` (TikTok). Se uma plataforma não conceder tudo, Configurações mostra o que faltou. Para atualizar permissões de contas conectadas anteriormente, clique **Reconectar**.
+- **YouTube Analytics:** dados diários do canal (visualizações, tempo assistido e inscrições), com gráfico histórico separado das visualizações dos vídeos recentes. A YouTube Analytics API precisa estar habilitada no projeto Google Cloud e a permissão aprovada.
+- **Instagram:** continua usando Instagram Login oficial; pede acesso a insights, tenta coletar estatísticas da conta e dos vídeos, mas não mostra números não concedidos pela Meta.
+- **TikTok:** complementa métricas de vídeos recentes com informações do perfil quando a API autoriza. Permissões extras dependem da aprovação do aplicativo TikTok; a falha dos dados opcionais não interrompe o restante do painel.
+- **Instagram em computador local:** adicionado `node server/instagram-bridge.mjs`, um servidor loopback restrito a um único callback, destinado a receber exclusivamente um túnel HTTPS na porta 5151. Veja [guia completo de conexão Instagram local](docs/INSTAGRAM_OAUTH_LOCAL.md). Não faça túnel para a porta 5000 do Content Lab.
+
+As plataformas ainda exigem aplicativos OAuth cadastrados e permissões concedidas pelos portais oficiais. Código aberto não transfere as credenciais comerciais nem as aprovações do Postiz. Não usamos web scraping nem importamos código AGPL do Postiz. Nenhuma autorização real ou publicação foi executada pelos testes automatizados.
+
 ## Login com um clique e configuração assistida
 
 O uso normal não pede tokens nem senhas pessoais. Em **Configurações**, clique em **Conectar com Google**, **Conectar Instagram** ou **Conectar TikTok**. Se o aplicativo OAuth já tiver sido registrado, o Content Lab redireciona diretamente para a página oficial da rede; depois da autorização, recebe e renova credenciais de sessão automaticamente no servidor local.
