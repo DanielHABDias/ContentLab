@@ -75,7 +75,7 @@
     $('socialClientSecret').placeholder=configured?'Secret já configurado — preencha apenas para trocar':'Secret do aplicativo (não é sua senha)';
     $('socialInstagramRedirect').placeholder=configured?'Retorno HTTPS já configurado':'https://seu-dominio/api/social/oauth/instagram/callback';
     $('socialRedirectHint').textContent=provider==='instagram'
-      ? 'A Meta exige uma conta profissional e uma URI HTTPS válida, cadastrada no aplicativo e encaminhada ao Content Lab local.'
+      ? 'Use a ponte OAuth local na porta 5151 com um túnel HTTPS de confiança e registre a mesma URL na Meta. Nunca exponha a porta 5000.'
       : provider==='tiktok'
         ? 'TikTok Login Kit: registre o callback '+(status.tiktok?.redirectUri||'http://127.0.0.1:5000/api/social/oauth/tiktok/callback')+
           ' e solicite as permissões video.publish e video.list.'
@@ -148,9 +148,10 @@
       'HTTPS público necessário — configure um domínio ou túnel seguro';
     $('settingsSetupCopyRedirect').disabled=!usable;
     $('settingsSetupRedirectHint').textContent=provider==='instagram'?
-      'Para o Instagram, registre uma URL HTTPS válida com seu domínio/túnel e informe-a na configuração avançada.':
+      'Use uma URL HTTPS do túnel apontando para a ponte local na porta 5151; registre-a na Meta e no Content Lab. Não exponha a porta 5000.':
       'Copie esta URL de retorno e cadastre-a no produto OAuth / Login Kit do aplicativo.';
     $('settingsGoogleImport').hidden=provider!=='youtube';
+    $('settingsInstagramBridge').hidden=provider!=='instagram';
     $('socialProvider').value=provider;
     updateProviderForm();
     $('settingsSetupMessage').textContent='';
