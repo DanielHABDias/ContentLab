@@ -56,7 +56,7 @@ test('Public Pinterest search queries the known search resource without login or
 });
 test('Pinterest blocked/search changed errors are user-friendly, not empty successful results',async()=>{
   await assert.rejects(searchPinterest('cinema','image',{fetcher:async()=>new Response('',{status:403})}),
-    /não liberou/);
+    /bloqueou/);
   await assert.rejects(searchPinterest('cinema','image',{fetcher:async(url)=>{
     return String(url).includes('/search/pins/')?new Response('ok'):
       new Response(JSON.stringify({wrong:true}),{status:200});
