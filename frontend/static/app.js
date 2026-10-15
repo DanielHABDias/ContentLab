@@ -14,33 +14,82 @@ const $ = (id) => document.getElementById(id);
 
 // Areas de trabalho isoladas: trocar de aba preserva o trabalho em andamento.
 const workspaces = ["videos", "transcription", "editor", "multieditor", "publications", "metrics", "settings", "docs"];
+const workspaceGroups = {
+  editor: ["editor", "multieditor"],
+  social: ["publications", "metrics"]
+};
+const workspaceGroupFor = (name) =>
+  Object.keys(workspaceGroups).find((group) => workspaceGroups[group].includes(name)) || null;
+
+// Only one nested menu stays open at a time. The active panel remains visible
+// while a category is expanded, until the user chooses a submenu item.
+function expandWorkspaceGroup(name) {
+  for (const group of Object.keys(workspaceGroups)) {
+    const expanded = group === name;
+    const container = $("workspace-group-" + group + "-items");
+    const trigger = $("workspace-group-" + group + "-trigger");
+    container.hidden = !expanded;
+    trigger.setAttribute("aria-expanded", String(expanded));
+    trigger.setAttribute("aria-label",
+      (expanded ? "Recolher" : "Expandir") +
+      (group === "editor" ? " opções de Editor" : " opções de Redes sociais"));
+    trigger.classList.toggle("is-expanded", expanded);
+  }
+}
 function showWorkspace(name) {
+  if (!workspaces.includes(name)) return;
+  expandWorkspaceGroup(workspaceGroupFor(name));
   for (const workspace of workspaces) {
     const active = workspace === name;
-    const tab = $(`tab-${workspace}`);
-    const panel = $(`panel-${workspace}`);
+    const tab = $("tab-" + workspace);
+    const panel = $("panel-" + workspace);
     tab.classList.toggle("is-active", active);
     tab.setAttribute("aria-selected", String(active));
-    tab.tabIndex = active ? 0 : -1;
+    // Both direct tabs and expanded nested choices remain keyboard-accessible.
+    tab.tabIndex = 0;
     panel.hidden = !active;
     panel.classList.toggle("hidden", !active);
   }
-  if(name === "docs") {
-    const manual = $("docsManual");
-    if(manual && !manual.hasAttribute("src")) manual.src = manual.dataset.src;
+  for (const group of Object.keys(workspaceGroups)) {
+    const trigger = $("workspace-group-" + group + "-trigger");
+    trigger.classList.toggle("is-group-active", workspaceGroups[group].includes(name));
   }
-  history.replaceState(null, "", `#${name}`);
+  if (name === "docs") {
+    const manual = $("docsManual");
+    if (manual && !manual.hasAttribute("src")) manual.src = manual.dataset.src;
+  }
+  history.replaceState(null, "", "#" + name);
 }
-document.querySelectorAll(".workspace-tab").forEach((tab) => {
+document.querySelectorAll(".workspace-tab[data-workspace]").forEach((tab) => {
   tab.addEventListener("click", () => showWorkspace(tab.dataset.workspace));
   tab.addEventListener("keydown", (event) => {
-    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
     event.preventDefault();
-    const index = workspaces.indexOf(tab.dataset.workspace);
-    const next = event.key === "Home" ? 0 : event.key === "End" ? workspaces.length - 1 : (index + (event.key === "ArrowRight" ? 1 : -1) + workspaces.length) % workspaces.length;
-    showWorkspace(workspaces[next]);
-    $(`tab-${workspaces[next]}`).focus();
+    const visible = [...document.querySelectorAll(".workspace-tab[data-workspace]")]
+      .filter(item => !item.closest(".workspace-subtabs[hidden]"));
+    const index = visible.indexOf(tab);
+    const next = event.key === "Home" ? 0 : event.key === "End" ? visible.length - 1 :
+      (index + (["ArrowRight", "ArrowDown"].includes(event.key) ? 1 : -1) + visible.length) % visible.length;
+    const destination = visible[next];
+    showWorkspace(destination.dataset.workspace);
+    destination.focus();
   });
+});
+for (const group of Object.keys(workspaceGroups)) {
+  const trigger = $("workspace-group-" + group + "-trigger");
+  trigger.addEventListener("click", () => {
+    expandWorkspaceGroup(trigger.getAttribute("aria-expanded") === "true" ? null : group);
+  });
+  trigger.addEventListener("keydown", (event) => {
+    if (event.key !== "ArrowDown") return;
+    event.preventDefault();
+    expandWorkspaceGroup(group);
+    $("tab-" + workspaceGroups[group][0]).focus();
+  });
+}
+window.addEventListener("hashchange", () => {
+  const requested = location.hash.slice(1);
+  if (workspaces.includes(requested)) showWorkspace(requested);
 });
 // Lightweight DOM motion: Remotion remains dedicated to rendered video, not UI clicks.
 // Observe visible cards once, then leave the content accessible and interactive.
