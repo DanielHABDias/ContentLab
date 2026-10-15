@@ -99,6 +99,16 @@ try{
     'Publications workspace must open');
   assert.equal(await evaluate('document.getElementById("publishSubmit").disabled'),true,
     'Publishing remains disabled in the interface-only version');
+  assert.equal(await evaluate('!!document.getElementById("socialCredentialsForm")'),true,
+    'OAuth credentials form must exist in the Publications workspace');
+  assert.equal(await evaluate('!!document.getElementById("socialConnect-youtube")'),true,
+    'YouTube login must be accessible from the Publications workspace');
+  const socialStatus = await evaluate('(async () => { const r=await fetch("/api/social/status"); return {ok:r.ok,body:await r.json()}; })()');
+  assert.equal(socialStatus.ok,true);
+  assert.equal(typeof socialStatus.body.providers.youtube.configured,'boolean');
+  assert.equal(JSON.stringify(socialStatus.body).includes('access_token'),false,
+    'OAuth status must never expose tokens');
+
   await evaluate(`(() => {
     const input = document.getElementById("publishFiles");
     const files = new DataTransfer();
@@ -120,6 +130,15 @@ try{
     'Batman #Viral\n\nAnálise DC #Viral','TikTok combines title and description');
   assert.equal(await evaluate('document.getElementById("publishVideoList").children.length'),1,
     'Selected video appears in the mock library');
+  await evaluate('document.getElementById("publishFormat").value="16:9";document.getElementById("publishFormat").dispatchEvent(new Event("change"))');
+  assert.equal(await evaluate('document.getElementById("publishPlatform-tiktok").disabled'),true,
+    'TikTok must be unavailable when horizontal 16:9 is selected');
+  assert.equal(await evaluate('document.getElementById("publishTiktokChoice").classList.contains("is-unavailable")'),true,
+    'TikTok must be visually muted for horizontal media');
+  await evaluate('document.getElementById("publishFormat").value="9:16";document.getElementById("publishFormat").dispatchEvent(new Event("change"))');
+  assert.equal(await evaluate('document.getElementById("publishPlatform-tiktok").disabled'),false,
+    'TikTok becomes available for vertical 9:16 media');
+
   await evaluate('document.getElementById("tab-multieditor").click()');
   assert.equal(await evaluate('document.getElementById("panel-multieditor").hidden'),false);
   assert.equal(await evaluate('!!document.querySelector("#panel-multieditor #queueFolders")'),true,

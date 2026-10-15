@@ -13,11 +13,28 @@ Editor automático e utilitários de vídeo para projetos de conteúdo e motion 
 
 Remotion concentra a renderização visual; o FFmpeg continua responsável por áudio, cortes e composição final. O código de servidor utiliza exclusivamente Node.js.
 
-## Publicações — prévia de interface
+## Publicações — envio e agendamento
 
-A aba **Publicações** permite experimentar a preparação de envios para YouTube Shorts, Instagram Reels e TikTok. É uma **interface de demonstração**: selecione MP4s locais, configure título/descrição individuais, escolha o instante da capa (ou imagem externa), marque os destinos e confira as prévias e o calendário simulado do YouTube. Na prévia das legendas de Instagram/TikTok, título e descrição são unidos com uma linha em branco e `#Shorts` é substituído por `#Viral`.
+A aba **Publicações** permite selecionar vários MP4s locais, editar título/descrição por vídeo e publicar com OAuth nas três redes. Para Instagram e TikTok, título e descrição são unidos por uma linha vazia e `#Shorts` vira `#Viral`.
 
-**Não há envio, agendamento, persistência, conexão de contas ou leitura automática de projetos nesta fase.** O botão de publicação permanece desabilitado; o plano futuro é descobrir os arquivos `output/final/final.mp4` dos projetos.
+- **16:9 horizontal:** somente YouTube e Instagram; TikTok é desabilitado e acinzentado. O servidor confirma o formato real com FFprobe.
+- **9:16 vertical:** YouTube, Instagram e TikTok. Outros formatos são rejeitados.
+- **YouTube:** envio com agendamento futuro via `publishAt`, exigindo indicação de público infantil.
+- **Instagram:** upload resumível local, processamento e publicação posterior.
+- **TikTok:** consulta de privacidade permitida, consentimento explícito, envio por partes e processamento/moderação após o upload.
+- **Lotes:** um Short por dia no YouTube; Instagram e TikTok enviam imediatamente, sem agendamento. Cada destino tem status próprio.
+
+**Atenção:** contas reais ainda não foram validadas com apps OAuth autorizados; APIs podem exigir auditoria para publicar vídeos públicos. Nunca reenvie automaticamente quando o resultado for incerto: confira a plataforma antes. MP4s locais são enviados ao servidor via formulário e transferidos às APIs, com limite local de 1 GiB. A seleção de imagem de capa externa permanece apenas visual, sem transferência para as redes; escolha de frame é usada onde a API suporta. Arquivos finais de projetos podem ser escolhidos manualmente em `output/final/final.mp4`; busca automática na pasta ainda não está disponível.
+### Configurando o acesso às redes sociais
+
+1. Abra **Publicações → Configurar credenciais do aplicativo OAuth** e escolha YouTube, Instagram ou TikTok.
+2. Crie um aplicativo no portal de desenvolvedores da rede e copie o **Client ID/Key** e o **Client Secret** para a tela. São credenciais da integração, não a senha da sua conta.
+3. Registre no portal a **URI de retorno** informada na tela. YouTube: um cliente OAuth Google; TikTok: **Desktop Login Kit** com permissão `video.publish`; Instagram: **Instagram API with Instagram Login** (conta profissional).
+4. Para o Instagram, a Meta normalmente requer uma URI pública **HTTPS**, encaminhada com segurança para `/api/social/oauth/instagram/callback` do servidor local. Apenas `http://127.0.0.1:5000` não é suficiente para essa integração.
+5. Clique em **Conectar**. Após a autorização no site oficial, os tokens retornados ficam somente no `.env` local, ignorado pelo Git e gravado com permissões de proprietário (quando o sistema permite).
+6. Para migrar de computador, transfira o `.env` apenas de maneira segura ou refaça o login. Tokens expiram, podem ser revogados e podem precisar ser renovados. Nunca publique o arquivo nem copie senhas pessoais para ele.
+
+O servidor HTTP escuta somente em `127.0.0.1`. O callback HTTPS do Instagram requer um encaminhamento externo configurado pelo usuário; o Content Lab não instala automaticamente túnel. As permissões de publicação real dependem das aprovações dos serviços. O backend inclui as rotas de envio `POST /api/social/publish` e consulta `GET /api/social/jobs/:id`, com autorização, validação do MP4 e respostas por serviço. A publicação real depende do usuário conectar cada conta e autorizar o envio.
 
 ## Multi-editor automático: fila sequencial
 

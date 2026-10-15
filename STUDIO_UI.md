@@ -11,16 +11,17 @@ Interface original do Content Lab com linguagem editorial de software criativo: 
 
 O projeto é inspirado na clareza visual de aplicativos contemporâneos e **não** replica logotipos, ícones ou identidade comercial da Apple.
 
-## Publicações (prévia de interface)
+## Publicações — distribuição de vídeos
 
-A aba **Publicações** apresenta a futura distribuição de Shorts para YouTube, Instagram e TikTok, sem autenticação nem upload nesta versão.
+A aba **Publicações** agora inclui login OAuth, seleção de MP4s, preparo de metadados e envio com confirmação explícita. Login grava apenas tokens e configuração de aplicativos em `.env` local, ignorado pelo Git.
 
-- Seleção múltipla de MP4s locais para testar a interface; a leitura automática de `output/final/final.mp4` por projeto será implementada depois.
-- Edição de título e descrição por vídeo, seletor de frame temporal com prévia do próprio MP4 e seleção opcional de imagem externa.
-- Prévias de texto por plataforma: YouTube preserva título e descrição separados; Instagram e TikTok unem ambos com uma linha em branco e substituem `#Shorts` por `#Viral` somente na prévia dessas redes.
-- Calendário simulado de um vídeo por dia no YouTube, com data e horário definidos. Instagram e TikTok aparecem como envio imediato futuro.
-- Contas marcadas como não conectadas e botão de envio/agendamento permanentemente desabilitado. Nenhuma configuração é salva e nenhum arquivo sai do navegador.
-
+- Formato **16:9**: somente YouTube/Instagram; TikTok fica acinzentado e não recebe o vídeo. Formato **9:16**: as três redes. Backend verifica resolução com FFprobe.
+- YouTube agenda com `publishAt` e exige escolher se o vídeo é para crianças.
+- Instagram faz upload resumível e espera processamento antes de publicar.
+- TikTok exige consulta de privacidade da conta e consentimento para publicar; upload aceito não significa post moderado.
+- Legendas de Instagram/TikTok combinam título + linha em branco + descrição, convertendo `#Shorts` em `#Viral`.
+- A imagem de capa externa ainda não é transmitida; o campo de frame é usado em Instagram/TikTok.
+- A busca automática dos finais de projetos ainda não está presente; arquivos MP4 são escolhidos manualmente.
 ## Editor de cenas
 
 Ao abrir um projeto, o storyboard fica dividido em duas áreas:

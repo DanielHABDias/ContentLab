@@ -1,0 +1,14 @@
+/* OAuth account connection controls, aligned with Studio UI. */
+#panel-publications .social-auth-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:17px}
+#panel-publications .social-auth-setup{margin-top:20px;border:1px solid #DFE6EF;border-radius:15px;background:#FAFCFF;padding:16px 18px}
+#panel-publications .social-auth-setup summary{font-size:13px;font-weight:730;color:#31527C;cursor:pointer}
+#panel-publications .social-auth-setup .helper-text{margin:13px 0}
+#panel-publications .social-auth-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:18px}
+#panel-publications .social-auth-form-grid>div{min-width:0}
+#panel-publications .social-auth-form-grid label{display:block;font-size:12px;font-weight:700;color:#526076;margin-bottom:7px}
+#panel-publications .social-auth-form-grid input,#panel-publications .social-auth-form-grid select{width:100%;min-width:0;box-sizing:border-box;padding:12px;font-size:13px}
+#panel-publications .social-auth-form-grid div[hidden]{display:none}
+#panel-publications .social-auth-error{color:#BD3649}
+#panel-publications #socialAuthMessage{margin-top:12px}
+#panel-publications .social-auth-setup code{overflow-wrap:anywhere}
+@media(max-width:680px){#panel-publications .social-auth-form-grid{grid-template-columns:1fr}}
