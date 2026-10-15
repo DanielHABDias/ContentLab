@@ -224,7 +224,8 @@ async function renewAccess(provider){
     return data.access_token;
   }catch(error){
     const permanent=[400,401,403].includes(error.status)||
-      /invalid_grant|invalid_token|unauthorized_client|revoked/i.test(error.providerCode||'');
+      /invalid_grant|invalid_token|unauthorized_client|revoked/i.test(error.providerCode||'')||
+      /Instagram exige uma nova autorização/i.test(error.message||'');
     if(permanent)
       writeSocialEnv({[field(provider,'AUTH_ERROR')]:statusMessage(error)});
     throw Error(permanent?
