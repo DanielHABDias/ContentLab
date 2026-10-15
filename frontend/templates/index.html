@@ -654,14 +654,48 @@
         </div>
       </section>
 
+      <section class="block settings-setup-assistant" id="settingsSetupGuide" aria-labelledby="settingsSetupTitle" hidden>
+        <div class="settings-guide-head">
+          <div>
+            <span class="eyebrow">ASSISTENTE DE CONEXÃO · SÓ NA PRIMEIRA VEZ</span>
+            <h3 id="settingsSetupTitle">Preparar conexão</h3>
+            <p id="settingsSetupIntro" class="helper-text">Acompanhe o cadastro inicial do aplicativo. Depois, o login será feito pelo botão da rede social.</p>
+          </div>
+          <button id="settingsSetupClose" type="button" class="btn btn-ghost btn-sm" aria-label="Fechar o guia">Fechar</button>
+        </div>
+        <div class="settings-guide-grid">
+          <div class="settings-guide-instructions">
+            <ol id="settingsSetupSteps" class="settings-guide-steps"></ol>
+            <a id="settingsSetupPortal" class="btn btn-secondary btn-sm" href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer">Abrir portal oficial <span aria-hidden="true">↗</span></a>
+            <a id="settingsSetupDocs" class="settings-guide-docs" href="https://developers.google.com/identity/protocols/oauth2/native-app" target="_blank" rel="noopener noreferrer">Ver orientações oficiais</a>
+          </div>
+          <div class="settings-guide-return">
+            <span class="eyebrow">RETORNO AO CONTENT LAB</span>
+            <p id="settingsSetupRedirectHint" class="helper-text">A plataforma precisa saber para onde voltar após o login.</p>
+            <div class="settings-guide-copy">
+              <code id="settingsSetupRedirect" tabindex="0">127.0.0.1</code>
+              <button id="settingsSetupCopyRedirect" type="button" class="btn btn-ghost btn-sm">Copiar</button>
+            </div>
+            <div id="settingsGoogleImport" class="settings-google-import" hidden>
+              <strong>Atalho para YouTube</strong>
+              <p>Depois de criar um cliente OAuth do tipo <b>App para computador</b> no Google Cloud, baixe o arquivo JSON. Importe aqui para preencher a configuração automaticamente e abrir a tela do Google.</p>
+              <label for="settingsGoogleJSON" class="btn btn-primary btn-sm settings-import-label">Importar JSON do Google</label>
+              <input type="file" id="settingsGoogleJSON" accept=".json,application/json" hidden>
+            </div>
+            <button id="settingsSetupManual" type="button" class="settings-guide-manual">Já tenho as credenciais do aplicativo →</button>
+          </div>
+        </div>
+        <p id="settingsSetupMessage" class="helper-text" role="status" aria-live="polite"></p>
+      </section>
+
       <section class="block settings-advanced-panel" aria-labelledby="settingsAdvancedHeading">
         <div class="settings-panel-heading">
           <div><span class="eyebrow">02 / INTEGRAÇÕES</span><h3 id="settingsAdvancedHeading">Configuração do aplicativo</h3>
-          <p class="helper-text">Só é necessária quando o Content Lab ainda não possui as credenciais OAuth de desenvolvedor.</p></div>
+          <p class="helper-text">Último recurso: configuração do aplicativo exigida pelas plataformas quando ele ainda não está registrado. O login comum nunca pede tokens.</p></div>
         </div>
         <details class="social-auth-setup" id="settingsOAuthAdvanced">
           <summary>Configuração avançada <span>Client ID, chave do aplicativo e retorno OAuth</span></summary>
-          <p class="helper-text">Para que os botões de conexão funcionem, cada rede exige um aplicativo OAuth registrado. Se as credenciais já estiverem no <code>.env</code> local, basta clicar em Conectar na conta acima. Não coloque aqui sua senha do Google, Instagram ou TikTok.</p>
+          <p class="helper-text">O portal oficial fornece as credenciais do <strong>aplicativo OAuth</strong> uma única vez. Elas não são senhas da sua conta. Depois de configurar, basta clicar em Conectar e autorizar a plataforma. Os tokens de sessão são obtidos automaticamente; nunca é necessário copiar um token manualmente.</p>
           <form id="socialCredentialsForm">
             <div class="social-auth-form-grid">
               <div><label for="socialProvider">Plataforma</label>
