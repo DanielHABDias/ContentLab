@@ -70,6 +70,14 @@
       if(channel.followers!==null&&channel.followers!==undefined)
         place(grid,stat('Seguidores',number(channel.followers),'Perfil: '+channel.name));
     }
+    const yt=results.youtube?.status==='ok'&&(!focus||focus==='youtube')?
+      results.youtube.data?.analytics:null;
+    if(yt?.available){
+      place(grid,stat('YouTube · 28 dias',number(yt.views)+' views',
+        'Relatório histórico do canal, não apenas os últimos vídeos'));
+      place(grid,stat('Tempo assistido',yt.minutesWatched===null?'—':number(Math.round(yt.minutesWatched/60))+' h',
+        'Tempo de exibição do canal nos últimos 28 dias'));
+    }
     if(!datasets.length)message('Não há dados disponíveis dessas contas no momento.');
   }
   function renderVideoList(id,items,{scheduled=false,emptyText}={}){
@@ -117,21 +125,48 @@
       root.append(row);
     }
   }
+  function renderHistory(){
+    const section=$('metricsHistorySection');
+    const report=results.youtube?.status==='ok'&&(!focus||focus==='youtube')?
+      results.youtube.data?.analytics:null;
+    section.hidden=!report?.available||!report.daily?.length;
+    if(section.hidden)return;
+    const root=$('metricsHistoryBars');root.replaceChildren();
+    const daily=report.daily.slice(-28);
+    const max=Math.max(1,...daily.map(v=>v.views||0));
+    $('metricsHistorySummary').textContent='Relatório oficial: '+report.period.start+' a '+
+      report.period.end+' · '+number(report.views)+' visualizações · '+
+      (report.minutesWatched===null?'tempo não informado':
+        number(Math.round(report.minutesWatched/60))+' horas assistidas')+
+      ' · '+number(report.subscribersGained)+' inscritos ganhos.';
+    for(const item of daily){
+      const col=el('div','metrics-history-day');
+      const bar=el('span','metrics-history-fill');
+      bar.style.height=Math.max(2,Math.round((item.views||0)/max*100))+'%';
+      col.title=item.day+': '+full.format(item.views||0)+' visualizações';
+      col.setAttribute('aria-label',col.title);
+      col.append(bar,el('small','',item.day.slice(5)));
+      root.append(col);
+    }
+  }
   function renderNotes(){
     const root=$('metricsNotes');root.replaceChildren();
     const chosen=focus?[focus]:networks;
     for(const name of chosen){
       if(!isConnected(name)){
-        place(root,el('div','metrics-note',tag(name)+': conta não conectada. Abra Publicações para configurar e autorizar o acesso.'));
+        place(root,el('div','metrics-note',tag(name)+': conta não conectada. Abra Configurações para autorizar o acesso.'));
         continue;
       }
       const result=results[name];
       if(result?.status==='error'){
         const note=el('div','metrics-note is-warning',tag(name)+': '+result.message+
-          ' Se faltar permissão de leitura, reconecte a conta em Publicações.');
+          ' Se faltar permissão de leitura, reconecte a conta em Configurações.');
         place(root,note);
       }else if(result?.status==='ok'&&result.data?.note){
         place(root,el('div','metrics-note',tag(name)+': '+result.data.note));
+        if(name==='youtube'&&!result.data.analytics?.available)
+          place(root,el('div','metrics-note',
+            'YouTube Analytics: histórico indisponível. Ative a YouTube Analytics API no Google Cloud e reconecte em Configurações com a permissão yt-analytics.readonly.'));
       }
     }
     if(!root.childElementCount)place(root,el('div','metrics-note','As contagens dependem das APIs e podem levar algum tempo para refletir novas publicações.'));
@@ -162,7 +197,7 @@
     renderVideoList('metricsScheduled',planned,{scheduled:true,
       emptyText:focus&&focus!=='youtube'?'Os agendamentos disponíveis são exclusivos do YouTube.':
         'Nenhum agendamento encontrado nos uploads recentes do YouTube.'});
-    renderTop();renderNotes();
+    renderTop();renderHistory();renderNotes();
   }
   async function load({refresh=false}={}){
     if(busy){

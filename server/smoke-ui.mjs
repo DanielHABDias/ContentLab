@@ -192,12 +192,20 @@ try{
   assert.equal(JSON.stringify(socialStatus.body).includes('access_token'),false,
     'OAuth status must never expose tokens');
 
-  await evaluate("(() => {\n window.__statusOriginalFetch=window.fetch;\n window.fetch=(url,opts)=>{\n   if(String(url)==='/api/social/status'){\n     const value={providers:{\n       youtube:{connected:true,configured:true,needsRenewal:false},\n       instagram:{connected:true,configured:true,needsRenewal:false},\n       tiktok:{connected:true,configured:true,needsRenewal:false}\n     }};\n     return Promise.resolve(new Response(JSON.stringify(value),{\n       status:200,headers:{'Content-Type':'application/json'}\n     }));\n   }\n   return window.__statusOriginalFetch(url,opts);\n };\n})()");
+  await evaluate("(() => {\n window.__statusOriginalFetch=window.fetch;\n window.fetch=(url,opts)=>{\n   if(String(url)==='/api/social/status'){\n     const value={providers:{\n       youtube:{connected:true,configured:true,needsRenewal:false,accountName:'Diazverso YouTube',accountUsername:'@diazverso',missingScopes:[]},\n       instagram:{connected:true,configured:true,needsRenewal:false,accountName:'Diazverso',accountUsername:'diazverso',missingScopes:['instagram_business_manage_insights']},\n       tiktok:{connected:true,configured:true,needsRenewal:false}\n     }};\n     return Promise.resolve(new Response(JSON.stringify(value),{\n       status:200,headers:{'Content-Type':'application/json'}\n     }));\n   }\n   return window.__statusOriginalFetch(url,opts);\n };\n})()");
   await evaluate('document.getElementById("tab-publications").click()');
   await wait(()=>evaluate('document.getElementById("publishConnectionGate").hidden && !document.getElementById("publishConnectedContent").hidden'),
     'Publishing workspace opens after OAuth connection');
   await wait(()=>evaluate('!document.getElementById("publishPlatform-tiktok").disabled'),
     'Connected TikTok becomes selectable');
+  await evaluate('document.getElementById("tab-settings").click()');
+  await wait(()=>evaluate('document.getElementById("socialIdentity-youtube").textContent.includes("Diazverso YouTube")'),
+    'Connected provider displays real account identity in Settings');
+  assert.equal(await evaluate('document.getElementById("socialVerify-youtube").hidden'),false,
+    'Connected provider exposes Verify Connection action');
+  assert.equal(await evaluate('document.getElementById("socialPermissions-instagram").textContent.includes("instagram_business_manage_insights")'),true,
+    'Missing Instagram insights permission is explained');
+  await evaluate('document.getElementById("tab-publications").click()');
 
   await evaluate(`(() => {
     const input = document.getElementById("publishFiles");
@@ -247,10 +255,14 @@ try{
   await evaluate('document.getElementById("metricsGoConnect").click()');
   assert.equal(await evaluate('document.getElementById("panel-settings").hidden'),false,
     'Metrics connection CTA returns to Settings');
-  await evaluate("(() => {\n window.__metricsOriginalFetch=window.fetch;\n window.fetch=(url,opts)=>{\n   if(!String(url).startsWith('/api/social/metrics'))return window.__metricsOriginalFetch(url,opts);\n   const input=new URL(String(url),location.origin);\n   const selected=input.searchParams.get('platform')||'general';\n   const connected={youtube:{connected:true,configured:true},instagram:{connected:false,configured:false},tiktok:{connected:true,configured:true}};\n   const youtube={status:'ok',data:{platform:'youtube',updatedAt:new Date().toISOString(),\n     recent:[{platform:'youtube',id:'a',title:'Batman vídeo',publishedAt:new Date().toISOString(),views:120,likes:10,comments:3}],\n     scheduled:[{platform:'youtube',id:'b',title:'Agendado',scheduledAt:new Date().toISOString()}],\n     top:[{platform:'youtube',id:'a',title:'Batman vídeo',views:120}],note:'Últimos uploads públicos'}};\n   const tiktok={status:'ok',data:{platform:'tiktok',updatedAt:new Date().toISOString(),\n     recent:[{platform:'tiktok',id:'t',title:'Cultura pop',publishedAt:new Date().toISOString(),views:200,likes:30,comments:2,shares:1}],\n     scheduled:[],top:[{platform:'tiktok',id:'t',title:'Cultura pop',views:200}],note:'Últimos vídeos públicos'}};\n   const platforms=selected==='general'?{youtube,tiktok}:selected==='youtube'?{youtube}:selected==='tiktok'?{tiktok}:{};\n   return Promise.resolve(new Response(JSON.stringify({view:selected,connected,platforms}),\n     {status:200,headers:{'Content-Type':'application/json'}}));\n };\n})()");
+  await evaluate("(() => {\n window.__metricsOriginalFetch=window.fetch;\n window.fetch=(url,opts)=>{\n   if(!String(url).startsWith('/api/social/metrics'))return window.__metricsOriginalFetch(url,opts);\n   const input=new URL(String(url),location.origin);\n   const selected=input.searchParams.get('platform')||'general';\n   const connected={youtube:{connected:true,configured:true},instagram:{connected:false,configured:false},tiktok:{connected:true,configured:true}};\n   const youtube={status:'ok',data:{platform:'youtube',updatedAt:new Date().toISOString(),\n     recent:[{platform:'youtube',id:'a',title:'Batman vídeo',publishedAt:new Date().toISOString(),views:120,likes:10,comments:3}],\n     scheduled:[{platform:'youtube',id:'b',title:'Agendado',scheduledAt:new Date().toISOString()}],\n     top:[{platform:'youtube',id:'a',title:'Batman vídeo',views:120}],analytics:{available:true,\n       views:900,minutesWatched:500,subscribersGained:15,period:{start:'2026-09-15',end:'2026-10-14'},\n       daily:[{day:'2026-10-10',views:250},{day:'2026-10-11',views:650}]},note:'Últimos uploads públicos'}};\n   const tiktok={status:'ok',data:{platform:'tiktok',updatedAt:new Date().toISOString(),\n     recent:[{platform:'tiktok',id:'t',title:'Cultura pop',publishedAt:new Date().toISOString(),views:200,likes:30,comments:2,shares:1}],\n     scheduled:[],top:[{platform:'tiktok',id:'t',title:'Cultura pop',views:200}],note:'Últimos vídeos públicos'}};\n   const platforms=selected==='general'?{youtube,tiktok}:selected==='youtube'?{youtube}:selected==='tiktok'?{tiktok}:{};\n   return Promise.resolve(new Response(JSON.stringify({view:selected,connected,platforms}),\n     {status:200,headers:{'Content-Type':'application/json'}}));\n };\n})()");
   await evaluate('document.getElementById("tab-metrics").click()');
-  await wait(()=>evaluate('document.getElementById("metricsStatGrid").children.length===4'),
-    'Metrics cards when OAuth is connected');
+  await wait(()=>evaluate('document.getElementById("metricsStatGrid").children.length===6'),
+    'Metrics cards include authorized YouTube Analytics');
+  assert.equal(await evaluate('document.getElementById("metricsHistorySection").hidden'),false,
+    'The YouTube history is visible only with provider Analytics data');
+  assert.equal(await evaluate('document.querySelectorAll("#metricsHistoryBars .metrics-history-day").length'),2,
+    'History chart shows reported daily values');
   assert.equal(await evaluate('document.getElementById("metricsConnectionGate").hidden'),true);
   await evaluate('document.getElementById("metricsFilter-tiktok").click()');
   await wait(()=>evaluate('document.getElementById("metricsViewTitle").textContent.includes("TikTok")'),

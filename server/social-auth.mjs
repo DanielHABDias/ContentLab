@@ -1,6 +1,8 @@
 import crypto from 'node:crypto';
 import {ensureSocialEnv,readSocialEnv,socialValue,writeSocialEnv} from './social-env.mjs';
 import {createOAuthAuthorizeUrl} from './social-oauth-url.mjs';
+import {fetchSocialProfile} from './social-profile.mjs';
+import {OAUTH_SCOPES,parseGrantedScopes,missingScopes} from './social-scopes.mjs';
 
 const PROVIDERS=['youtube','instagram','tiktok'];
 const CLIENT_KEYS={
@@ -8,15 +10,24 @@ const CLIENT_KEYS={
   instagram:['CONTENTLAB_INSTAGRAM_CLIENT_ID','CONTENTLAB_INSTAGRAM_CLIENT_SECRET'],
   tiktok:['CONTENTLAB_TIKTOK_CLIENT_KEY','CONTENTLAB_TIKTOK_CLIENT_SECRET']
 };
-const TOKEN_KEYS={
-  youtube:['CONTENTLAB_YOUTUBE_ACCESS_TOKEN','CONTENTLAB_YOUTUBE_REFRESH_TOKEN','CONTENTLAB_YOUTUBE_EXPIRES_AT'],
-  instagram:['CONTENTLAB_INSTAGRAM_ACCESS_TOKEN','CONTENTLAB_INSTAGRAM_EXPIRES_AT','CONTENTLAB_INSTAGRAM_ACCOUNT_ID'],
-  tiktok:['CONTENTLAB_TIKTOK_ACCESS_TOKEN','CONTENTLAB_TIKTOK_REFRESH_TOKEN','CONTENTLAB_TIKTOK_EXPIRES_AT','CONTENTLAB_TIKTOK_SCOPE','CONTENTLAB_TIKTOK_OPEN_ID']
-};
+const TOKEN_KEYS=Object.fromEntries(Object.keys(CLIENT_KEYS).map(provider=>{
+  const prefix='CONTENTLAB_'+provider.toUpperCase()+'_';
+  return [provider,[
+    prefix+'ACCESS_TOKEN',prefix+'EXPIRES_AT',
+    prefix+'SCOPE',prefix+'ACCOUNT_ID',prefix+'ACCOUNT_NAME',
+    prefix+'ACCOUNT_USERNAME',prefix+'AUTH_ERROR',
+    ...(provider!=='instagram'?[prefix+'REFRESH_TOKEN']:[]),
+    ...(provider==='tiktok'?[prefix+'OPEN_ID']:[])
+  ]];
+}));
+const refreshRequests=new Map();
 const inFlight=new Map();
 const expKey=provider=>'CONTENTLAB_'+provider.toUpperCase()+'_EXPIRES_AT';
 const accessKey=provider=>'CONTENTLAB_'+provider.toUpperCase()+'_ACCESS_TOKEN';
 const refreshKey=provider=>'CONTENTLAB_'+provider.toUpperCase()+'_REFRESH_TOKEN';
+const field=(provider,suffix)=>'CONTENTLAB_'+provider.toUpperCase()+'_'+suffix;
+const statusMessage=error=>String(error?.message||'Erro ao renovar sessão.')
+  .replace(/[\r\n\0]/g,' ').slice(0,170);
 const value=key=>socialValue(key);
 const PORT=()=>Number(process.env.PORT||5000);
 const callback=provider=>'http://127.0.0.1:'+PORT()+'/api/social/oauth/'+provider+'/callback';
@@ -30,15 +41,26 @@ export function providerStatus() {
     const expiresAt=Number(value(expKey(provider))||0);
     const hasToken=!!value(accessKey(provider)) &&
       (provider==='instagram'||!!value(refreshKey(provider)));
+    const authError=value(field(provider,'AUTH_ERROR'));
+    const scopes=parseGrantedScopes(value(field(provider,'SCOPE')));
     return [provider,{
-      configured,connected:hasToken && (!expiresAt || expiresAt>Date.now()),
-      needsRenewal:hasToken&&!!expiresAt&&expiresAt<=Date.now(),
+      configured,
+      connected:hasToken&&(!expiresAt||expiresAt>Date.now())&&!authError,
+      needsRenewal:hasToken&&!!expiresAt&&expiresAt<=Date.now()&&!authError,
+      needsReauth:hasToken&&!!authError,
+      authError:authError||null,
+      expiresAt:expiresAt||null,
+      grantedScopes:scopes,
+      missingScopes:missingScopes(provider,scopes),
+      requestedScopes:OAUTH_SCOPES[provider],
       redirectUri:provider==='instagram'?
         (value('CONTENTLAB_INSTAGRAM_REDIRECT_URI')||'Configure uma URL HTTPS com encaminhamento para o servidor local'):
         callback(provider),
       supportsUpload:true,
-      accountId:provider==='instagram'?value('CONTENTLAB_INSTAGRAM_ACCOUNT_ID')||
-        null:provider==='tiktok'?value('CONTENTLAB_TIKTOK_OPEN_ID')||null:null
+      accountId:value(field(provider,'ACCOUNT_ID'))||
+        (provider==='tiktok'?value('CONTENTLAB_TIKTOK_OPEN_ID'):null)||null,
+      accountName:value(field(provider,'ACCOUNT_NAME'))||null,
+      accountUsername:value(field(provider,'ACCOUNT_USERNAME'))||null
     }];
   }));
 }
@@ -56,6 +78,8 @@ export function configureProvider(provider,changes) {
       throw Error('A URI de retorno do Instagram deve ser HTTPS e sem parâmetros.');
     if(!url.pathname.endsWith('/api/social/oauth/instagram/callback'))
       throw Error('A URL precisa apontar para /api/social/oauth/instagram/callback.');
+    if(!['localhost','127.0.0.1'].includes(url.hostname)&&url.hostname.endsWith('.local'))
+      throw Error('Informe um domínio HTTPS válido para o callback.');
     patch.CONTENTLAB_INSTAGRAM_REDIRECT_URI=url.toString();
   }
   if(!Object.keys(patch).length)throw Error('Informe as credenciais do aplicativo OAuth.');
@@ -89,8 +113,14 @@ const tokenRequest=async(url,params)=>{
   const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
     body:new URLSearchParams(params),signal:AbortSignal.timeout(20000)});
   const data=await response.json().catch(()=>({}));
-  if(!response.ok||data.error)throw Error('O provedor recusou a autenticação ('+
-    String(data.error?.code||data.error||response.status).slice(0,70)+').');
+  const code=data.error?.code??(typeof data.error==='string'?data.error:response.status);
+  const rejected=!response.ok||(data.error&&code!==0&&code!=='ok');
+  if(rejected){
+    const error=Error('O provedor recusou a autenticação ('+String(code).slice(0,70)+').');
+    error.status=response.status;
+    error.providerCode=String(code);
+    throw error;
+  }
   return data;
 };
 const expires=seconds=>String(Date.now()+Math.max(0,Number(seconds)||0)*1000);
@@ -140,38 +170,86 @@ export async function completeAuthorization(provider,state,code) {
       CONTENTLAB_TIKTOK_SCOPE:String(data.scope||''),
       CONTENTLAB_TIKTOK_OPEN_ID:String(data.open_id||'')};
   }
+  patch[field(provider,'SCOPE')]=
+    parseGrantedScopes(provider==='instagram'?data.permissions:data.scope).join(' ');
+  patch[field(provider,'AUTH_ERROR')]='';
+  try{
+    const profile=await fetchSocialProfile(provider,patch[accessKey(provider)]);
+    patch[field(provider,'ACCOUNT_ID')]=profile.id;
+    patch[field(provider,'ACCOUNT_NAME')]=profile.name;
+    patch[field(provider,'ACCOUNT_USERNAME')]=profile.username;
+  }catch{
+    // O login pode funcionar mesmo se o perfil não vier da API; confira depois.
+    patch[field(provider,'ACCOUNT_NAME')]='';
+    patch[field(provider,'ACCOUNT_USERNAME')]='';
+  }
   writeSocialEnv(patch);
   return providerStatus()[provider];
 }
-export async function usableAccessToken(provider) {
-  if(!PROVIDERS.includes(provider))throw Error('Plataforma não reconhecida.');
-  const token=value(accessKey(provider)),exp=Number(value(expKey(provider))||0);
+async function renewAccess(provider){
+  const token=value(accessKey(provider));
+  const exp=Number(value(expKey(provider))||0);
   if(!token)throw Error('Conta não conectada.');
   if(!exp||exp>Date.now()+120000)return token;
+  const refresh=value(refreshKey(provider));
+  if(provider!=='instagram'&&!refresh)throw Error('Reconecte sua conta para renovar a sessão.');
   let data,patch={};
-  if(provider==='youtube'){
-    const refresh=value(refreshKey(provider));
-    if(!refresh)throw Error('Conecte sua conta Google novamente.');
-    data=await tokenRequest('https://oauth2.googleapis.com/token',{
-      client_id:value(CLIENT_KEYS.youtube[0]),client_secret:value(CLIENT_KEYS.youtube[1]),
-      grant_type:'refresh_token',refresh_token:refresh
-    });
-  }else if(provider==='tiktok'){
-    data=await tokenRequest('https://open.tiktokapis.com/v2/oauth/token/',{
-      client_key:value(CLIENT_KEYS.tiktok[0]),client_secret:value(CLIENT_KEYS.tiktok[1]),
-      grant_type:'refresh_token',refresh_token:value(refreshKey(provider))
-    });
-    if(data.refresh_token)patch.CONTENTLAB_TIKTOK_REFRESH_TOKEN=data.refresh_token;
-  }else{
-    const url=new URL('https://graph.instagram.com/refresh_access_token');
-    url.search=new URLSearchParams({grant_type:'ig_refresh_token',access_token:token}).toString();
-    const r=await fetch(url,{signal:AbortSignal.timeout(20000)});
-    data=await r.json().catch(()=>({}));
-    if(!r.ok||!data.access_token)throw Error('Instagram exige um novo login.');
+  try{
+    if(provider==='youtube'){
+      data=await tokenRequest('https://oauth2.googleapis.com/token',{
+        client_id:value(CLIENT_KEYS.youtube[0]),client_secret:value(CLIENT_KEYS.youtube[1]),
+        grant_type:'refresh_token',refresh_token:refresh
+      });
+    }else if(provider==='tiktok'){
+      data=await tokenRequest('https://open.tiktokapis.com/v2/oauth/token/',{
+        client_key:value(CLIENT_KEYS.tiktok[0]),client_secret:value(CLIENT_KEYS.tiktok[1]),
+        grant_type:'refresh_token',refresh_token:refresh
+      });
+      if(data.refresh_token)patch.CONTENTLAB_TIKTOK_REFRESH_TOKEN=data.refresh_token;
+      if(data.scope)patch.CONTENTLAB_TIKTOK_SCOPE=parseGrantedScopes(data.scope).join(' ');
+    }else{
+      const url=new URL('https://graph.instagram.com/refresh_access_token');
+      url.search=new URLSearchParams({grant_type:'ig_refresh_token',access_token:token}).toString();
+      const response=await fetch(url,{
+        signal:AbortSignal.timeout(20000),redirect:'error'
+      });
+      data=await response.json().catch(()=>({}));
+      if(!response.ok||!data.access_token)throw Error('Instagram exige uma nova autorização.');
+    }
+    if(!data.access_token)throw Error('A plataforma não devolveu uma sessão renovada.');
+    patch[accessKey(provider)]=data.access_token;
+    patch[expKey(provider)]=expires(data.expires_in);
+    patch[field(provider,'AUTH_ERROR')]='';
+    writeSocialEnv(patch);
+    return data.access_token;
+  }catch(error){
+    const permanent=[400,401,403].includes(error.status)||
+      /invalid_grant|invalid_token|unauthorized_client|revoked/i.test(error.providerCode||'')||
+      /Instagram exige uma nova autorização/i.test(error.message||'');
+    if(permanent)
+      writeSocialEnv({[field(provider,'AUTH_ERROR')]:statusMessage(error)});
+    throw Error(permanent?
+      'A sessão do '+provider+' precisa ser reconectada em Configurações.':
+      'Falha temporária ao renovar '+provider+'. Verifique sua conexão e tente novamente.');
   }
-  if(!data.access_token)throw Error('Renovação da sessão falhou.');
-  patch[accessKey(provider)]=data.access_token;
-  patch[expKey(provider)]=expires(data.expires_in);
-  writeSocialEnv(patch);
-  return data.access_token;
+}
+export async function usableAccessToken(provider){
+  if(!PROVIDERS.includes(provider))throw Error('Plataforma não reconhecida.');
+  if(value(field(provider,'AUTH_ERROR')))throw Error('Reconecte sua conta em Configurações.');
+  if(refreshRequests.has(provider))return refreshRequests.get(provider);
+  const pending=renewAccess(provider).finally(()=>refreshRequests.delete(provider));
+  refreshRequests.set(provider,pending);
+  return pending;
+}
+export async function verifySocialConnection(provider,{profileGetter=fetchSocialProfile}={}){
+  if(!PROVIDERS.includes(provider))throw Error('Plataforma não reconhecida.');
+  const token=await usableAccessToken(provider);
+  const profile=await profileGetter(provider,token);
+  writeSocialEnv({
+    [field(provider,'ACCOUNT_ID')]:profile.id||'',
+    [field(provider,'ACCOUNT_NAME')]:profile.name||'',
+    [field(provider,'ACCOUNT_USERNAME')]:profile.username||'',
+    [field(provider,'AUTH_ERROR')]:''
+  });
+  return providerStatus()[provider];
 }

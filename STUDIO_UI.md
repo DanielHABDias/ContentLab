@@ -17,6 +17,14 @@ O menu apresenta seis opções de primeiro nível: **Vídeos e cortes**, **Narra
 
 Os IDs originais `tab-editor`, `tab-multieditor`, `tab-publications` e `tab-metrics` e as respectivas seções `panel-*` foram preservados. Links por fragmento `#editor`, `#multieditor`, `#publications` e `#metrics` abrem a área correta e expandem automaticamente o seu grupo. O grupo ativo recebe uma marca visual mesmo quando recolhido. Os botões são acessíveis por teclado e os submenus têm `aria-expanded` e identificação própria; a navegação móvel respeita a mesma estrutura.
 
+## Conexões sociais — gerenciamento centralizado
+
+Os provedores sociais mantêm identidade da conta, permissões concedidas, data de expiração e diagnóstico de reconexão. O botão **Verificar conexão** consulta o perfil pela API oficial e atualiza os dados não sensíveis da interface. Renovação simultânea é deduplicada no backend e falhas na renovação permitem voltar ao consentimento OAuth, sem solicitar senhas pessoais.
+
+YouTube solicita também `yt-analytics.readonly` e disponibiliza relatório diário independente da amostra recente. Instagram solicita `instagram_business_manage_insights` e pode retornar estatísticas opcionais de conta e mídia; TikTok solicita `user.info.profile` e `user.info.stats`, mas o acesso depende da liberação do provedor. Quando informações opcionais falham, vídeos e métricas das demais redes permanecem acessíveis.
+
+Para o Instagram local, `server/instagram-bridge.mjs` aceita exclusivamente o callback e redireciona ao Content Lab em `127.0.0.1`. Aponte seu túnel HTTPS **somente para a porta 5151**, nunca para a porta da API 5000, e cadastre a URL exata no aplicativo Meta e em Configurações. Detalhes em [docs/INSTAGRAM_OAUTH_LOCAL.md](docs/INSTAGRAM_OAUTH_LOCAL.md).
+
 ## Assistente para login social
 
 O fluxo preferencial é um clique no cartão e autorização no provedor oficial. Quando falta cadastro do aplicativo OAuth, o botão abre um assistente com passos da rede, link para portal oficial, documentação e URL de callback. Os campos Client ID/Secret estão em **Configuração avançada** e aparecem apenas ao optar por preenchê-los.

@@ -571,7 +571,7 @@
         <div class="metrics-gate-icon" aria-hidden="true">↗</div>
         <span class="eyebrow">PRIMEIRO PASSO</span>
         <h3>Conecte suas contas para ver os resultados.</h3>
-        <p>Autorize YouTube, Instagram ou TikTok na aba Publicações. As estatísticas aparecerão aqui após a conexão.</p>
+        <p>Autorize YouTube, Instagram ou TikTok em Configurações. As estatísticas aparecerão aqui após a conexão.</p>
         <button id="metricsGoConnect" class="btn btn-primary" type="button">Ir para Configurações e conectar</button>
       </section>
       <div id="metricsDashboard" class="metrics-dashboard" hidden>
@@ -608,6 +608,11 @@
             <p class="helper-text">Somente agendamentos que a API do YouTube disponibiliza. O TikTok Studio e o Instagram não disponibilizam aqui seus próprios calendários.</p>
           </section>
         </div>
+        <section class="block" id="metricsHistorySection" aria-labelledby="metricsHistoryTitle" hidden>
+          <div class="metrics-heading"><span class="eyebrow">YOUTUBE ANALYTICS</span><h3 id="metricsHistoryTitle">Desempenho diário do canal</h3></div>
+          <p class="helper-text" id="metricsHistorySummary">Dados oficiais de visualizações, tempo assistido e inscritos no período.</p>
+          <div id="metricsHistoryBars" class="metrics-history-bars" role="img" aria-label="Visualizações por dia do YouTube"></div>
+        </section>
         <section class="block" aria-labelledby="metricsTopTitle">
           <div class="metrics-heading"><span class="eyebrow">MAIS ASSISTIDOS</span><h3 id="metricsTopTitle">Destaques dos vídeos recentes</h3></div>
           <p class="helper-text">Comparação de visualizações dos vídeos retornados pelas APIs, não de todo o histórico dos perfis.</p>
@@ -641,6 +646,9 @@
             <h4>YouTube</h4>
             <p>Escolha sua conta Google e autorize publicações e métricas do canal.</p>
             <button type="button" class="btn btn-primary settings-connect-btn" id="socialConnect-youtube">Conectar com Google</button>
+            <p class="settings-account-identity" id="socialIdentity-youtube" hidden></p>
+            <p class="settings-account-permissions" id="socialPermissions-youtube" hidden></p>
+            <button type="button" class="settings-disconnect" id="socialVerify-youtube" hidden>Verificar conexão</button>
             <button type="button" class="settings-disconnect" id="socialDisconnect-youtube" hidden>Desconectar YouTube</button>
           </article>
           <article class="settings-account-card" id="settingsAccount-instagram">
@@ -651,6 +659,9 @@
             <h4>Instagram</h4>
             <p>Autorize sua conta profissional do Instagram para publicar e ver resultados.</p>
             <button type="button" class="btn btn-secondary settings-connect-btn" id="socialConnect-instagram">Conectar Instagram</button>
+            <p class="settings-account-identity" id="socialIdentity-instagram" hidden></p>
+            <p class="settings-account-permissions" id="socialPermissions-instagram" hidden></p>
+            <button type="button" class="settings-disconnect" id="socialVerify-instagram" hidden>Verificar conexão</button>
             <button type="button" class="settings-disconnect" id="socialDisconnect-instagram" hidden>Desconectar Instagram</button>
           </article>
           <article class="settings-account-card" id="settingsAccount-tiktok">
@@ -661,6 +672,9 @@
             <h4>TikTok</h4>
             <p>Abra a autorização oficial do TikTok para seus vídeos e estatísticas.</p>
             <button type="button" class="btn btn-secondary settings-connect-btn" id="socialConnect-tiktok">Conectar TikTok</button>
+            <p class="settings-account-identity" id="socialIdentity-tiktok" hidden></p>
+            <p class="settings-account-permissions" id="socialPermissions-tiktok" hidden></p>
+            <button type="button" class="settings-disconnect" id="socialVerify-tiktok" hidden>Verificar conexão</button>
             <button type="button" class="settings-disconnect" id="socialDisconnect-tiktok" hidden>Desconectar TikTok</button>
           </article>
         </div>
@@ -692,6 +706,13 @@
             <div class="settings-guide-copy">
               <code id="settingsSetupRedirect" tabindex="0">127.0.0.1</code>
               <button id="settingsSetupCopyRedirect" type="button" class="btn btn-ghost btn-sm">Copiar</button>
+            </div>
+            <div id="settingsInstagramBridge" class="settings-google-import" hidden>
+              <strong>Conectar Instagram com a ponte local</strong>
+              <p>Não é necessário publicar o Content Lab. Execute os comandos em terminais separados e cadastre na Meta a URL HTTPS estável do túnel com o caminho <code>/api/social/oauth/instagram/callback</code>. Encaminhe <strong>somente a porta 5151</strong>.</p>
+              <p><code>node server/instagram-bridge.mjs</code></p>
+              <p><code>ngrok http 5151</code></p>
+              <a class="settings-guide-docs" href="https://ngrok.com/docs" target="_blank" rel="noopener noreferrer">Como instalar e usar o túnel HTTPS</a>
             </div>
             <div id="settingsGoogleImport" class="settings-google-import" hidden>
               <strong>Atalho para YouTube</strong>
