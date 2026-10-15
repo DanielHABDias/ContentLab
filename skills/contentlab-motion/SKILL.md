@@ -7,7 +7,7 @@ description: Planeja coreografia de motion design no Content Lab: keyframes, eas
 
 ## Motion contínuo de referência inferior — Diazverso Shorts (15/10/2026)
 
-Nos Shorts Diazverso SH_0005 a SH_0009, a referência autoral é a metade INFERIOR do vídeo comparativo de 15 segundos enviado pelo editor. Não copiar nomes/cores/layout do exemplo; reinterpretar gramática de movimento: texto que desmonta/recompõe, perspectiva, parallax, câmera espacial, formas e retícula que levam ao próximo assunto, máscara de tinta e continuidade. Não é suficiente repetir sete cartões TSX com o mesmo ciclo.
+Nos Shorts Diazverso SH_0005 a SH_0010, a referência autoral é a metade INFERIOR do vídeo comparativo de 15 segundos enviado pelo editor. Não copiar nomes/cores/layout do exemplo; reinterpretar gramática de movimento: texto que desmonta/recompõe, perspectiva, parallax, câmera espacial, formas e retícula que levam ao próximo assunto, máscara de tinta e continuidade. Não é suficiente repetir sete cartões TSX com o mesmo ciclo.
 
 Para esta produção, usar gancho + cena TSX única do desenvolvimento (beats em segundos RELATIVOS, at e until) + CTA. As mudanças de narrativa tornam-se transições internas sobrepostas, com uma camada espacial compartilhada. Alternar vídeo real, PNG de personagem, duelos, lettering e respiros. PNG em contain; vídeo horizontal em cover central. Sem painéis cinza e sem texto sobre texto.
 
