@@ -51,7 +51,7 @@ export async function getExternalVideoInfo(input,{runner=run,env=process.env}={}
   let result;
   try{
     result=await runner(externalToolPath({env}),[
-      ...cliOptions(),'--skip-download','--dump-single-json',url
+      ...cliOptions(),'--skip-download','--print','%(.{id,title,duration,thumbnail})j',url
     ],{signal:AbortSignal.timeout(60000)});
   }catch(error){throw ytDlpError(error);}
   let info;
