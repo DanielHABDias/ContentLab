@@ -35,7 +35,7 @@ export function providerStatus() {
       redirectUri:provider==='instagram'?
         (value('CONTENTLAB_INSTAGRAM_REDIRECT_URI')||'Configure uma URL HTTPS com encaminhamento para o servidor local'):
         callback(provider),
-      supportsUpload:provider==='youtube',
+      supportsUpload:true,
       accountId:provider==='instagram'?value('CONTENTLAB_INSTAGRAM_ACCOUNT_ID')||
         null:provider==='tiktok'?value('CONTENTLAB_TIKTOK_OPEN_ID')||null:null
     }];
