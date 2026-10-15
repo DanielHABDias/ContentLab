@@ -4,7 +4,7 @@
   const $=id=>document.getElementById(id);
   if(!$('panel-library'))return;
   const names={commons:'Wikimedia Commons',archive:'Internet Archive',youtube:'YouTube'};
-  let chosen=null,requestId=0,downloading=false;
+  let chosen=null,requestId=0,downloading=false,lastImportedKey=null;
   const label=(text,cls)=>{const span=document.createElement('span');span.textContent=text;span.className=cls||'';return span;};
   const feedback=(text,error=false)=>{
     $('libraryFeedback').textContent=text;
@@ -100,6 +100,7 @@
     downloading=true;$('libraryDownload').disabled=true;
     $('libraryProgress').hidden=false;$('libraryProgressFill').style.width='2%';
     $('libraryOpenVideos').hidden=true;
+    lastImportedKey=null;
     downloadState('Iniciando a importação…');
     try{
       const response=await fetch('/api/library/download',{
@@ -123,8 +124,14 @@
       downloadState((last.result?.kind==='video'?'Vídeo no cache de cortes: ':'Imagem salva: ')+
         (last.result?.filePath||'Concluído'));
       $('libraryOpenVideos').hidden=last.result?.kind!=='video';
+      lastImportedKey=last.result?.cachedKey||null;
     }catch(error){downloadState(error.message||'Importação interrompida.',true);}
     finally{downloading=false;$('libraryDownload').disabled=!$('libraryRights').checked||!chosen;}
   });
-  $('libraryOpenVideos').addEventListener('click',()=>$('tab-videos').click());
+  $('libraryOpenVideos').addEventListener('click',()=>{
+    $('tab-videos').click();
+    if(lastImportedKey)document.dispatchEvent(new CustomEvent('contentlab:library-video-imported',{
+      detail:{key:lastImportedKey}
+    }));
+  });
 })();
