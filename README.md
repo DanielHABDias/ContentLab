@@ -17,7 +17,18 @@ Remotion concentra a renderização visual; o FFmpeg continua responsável por �
 
 A aba **Publicações** permite experimentar a preparação de envios para YouTube Shorts, Instagram Reels e TikTok. É uma **interface de demonstração**: selecione MP4s locais, configure título/descrição individuais, escolha o instante da capa (ou imagem externa), marque os destinos e confira as prévias e o calendário simulado do YouTube. Na prévia das legendas de Instagram/TikTok, título e descrição são unidos com uma linha em branco e `#Shorts` é substituído por `#Viral`.
 
-**Não há envio, agendamento, persistência, conexão de contas ou leitura automática de projetos nesta fase.** O botão de publicação permanece desabilitado; o plano futuro é descobrir os arquivos `output/final/final.mp4` dos projetos.
+**A conexão de contas por OAuth está em desenvolvimento:** o formulário permite gravar Client ID/Secret do aplicativo OAuth no `.env` local e abrir o login oficial do YouTube, Instagram ou TikTok. Ainda **não há envio, agendamento nem leitura automática de projetos**; o botão de publicação permanece desabilitado. Os MP4s de teste não são persistidos.
+
+### Configurando o acesso às redes sociais
+
+1. Abra **Publicações → Configurar credenciais do aplicativo OAuth** e escolha YouTube, Instagram ou TikTok.
+2. Crie um aplicativo no portal de desenvolvedores da rede e copie o **Client ID/Key** e o **Client Secret** para a tela. São credenciais da integração, não a senha da sua conta.
+3. Registre no portal a **URI de retorno** informada na tela. YouTube: um cliente OAuth Google; TikTok: **Desktop Login Kit** com permissão `video.publish`; Instagram: **Instagram API with Instagram Login** (conta profissional).
+4. Para o Instagram, a Meta normalmente requer uma URI pública **HTTPS**, encaminhada com segurança para `/api/social/oauth/instagram/callback` do servidor local. Apenas `http://127.0.0.1:5000` não é suficiente para essa integração.
+5. Clique em **Conectar**. Após a autorização no site oficial, os tokens retornados ficam somente no `.env` local, ignorado pelo Git e gravado com permissões de proprietário (quando o sistema permite).
+6. Para migrar de computador, transfira o `.env` apenas de maneira segura ou refaça o login. Tokens expiram, podem ser revogados e podem precisar ser renovados. Nunca publique o arquivo nem copie senhas pessoais para ele.
+
+O servidor HTTP escuta somente em `127.0.0.1`. O callback HTTPS do Instagram requer um encaminhamento externo configurado pelo usuário; o Content Lab não instala automaticamente túnel. As permissões de publicação real dependem das aprovações dos serviços. Esta etapa habilita **apenas OAuth, status e armazenamento local de tokens**, não o envio.
 
 ## Multi-editor automático: fila sequencial
 
