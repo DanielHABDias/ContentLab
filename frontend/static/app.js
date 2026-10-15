@@ -367,7 +367,7 @@ function updateModeUI() {
 multiToggle.addEventListener("change", updateModeUI);
 document.querySelectorAll('input[name="mode"]').forEach((el) => el.addEventListener("change", updateModeUI));
 
-// ---------- fonte: YouTube, cache ou arquivo local ----------
+// ---------- fonte: link da internet, cache ou arquivo local ----------
 const sourceModeInputs = document.querySelectorAll('input[name="sourceMode"]');
 
 function updateSourceModeUI() {
@@ -428,7 +428,7 @@ async function loadVideo() {
   const requestId = ++sourceRequestId;
   $("loadError").classList.add("hidden");
   if (!url) {
-    $("loadError").textContent = "Cole um link do YouTube.";
+    $("loadError").textContent = "Cole um link HTTPS de um vídeo da internet.";
     $("loadError").classList.remove("hidden");
     return;
   }
