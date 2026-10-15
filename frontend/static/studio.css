@@ -420,3 +420,38 @@ input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea {
 @media(max-width:700px){.queue-options{flex-direction:column;align-items:stretch}
   .queue-options .visual-field,.queue-toggle{width:100%;max-width:none}
   .queue-item-header{align-items:flex-start;flex-direction:column;gap:4px}}
+
+
+/* Compact navigation: two expandable categories, with the original panels intact. */
+.workspace-group {min-width:0;display:flex;flex-direction:column;gap:5px}
+.workspace-group-trigger strong {font:inherit;flex:1;text-align:left;font-weight:700;min-width:0}
+.workspace-group-trigger .workspace-group-chevron {flex:none;margin-left:auto;color:#8996A9;transition:transform 180ms ease,color 180ms ease}
+.workspace-group-trigger[aria-expanded="true"] .workspace-group-chevron {transform:rotate(180deg);color:#3475D5}
+.workspace-group-trigger.is-expanded {background:#EFF4FC;color:#294D82;border-color:#DDE9FA}
+.workspace-group-trigger.is-group-active:not(.is-expanded) {background:#F2F6FC;color:#2A598F}
+.workspace-group-trigger.is-group-active > span:first-child {background:#DFEAFB;color:#2566C4}
+.workspace-subtabs {display:flex;flex-direction:column;gap:4px;margin:0 0 6px 25px;padding:1px 0 1px 12px;border-left:1px solid #D7E2F0}
+.workspace-subtabs[hidden] {display:none !important}
+.workspace-subtab {font-size:12px;line-height:1.4;font-weight:570;padding:10px 12px;border-radius:10px;gap:9px;min-height:39px}
+.workspace-subtab span,.workspace-subtab.is-active span {width:7px;height:7px;min-width:7px;border-radius:50%;background:#B5C4D9;color:transparent;font-size:0;margin:0}
+.workspace-subtab.is-active span {background:#3075DC}
+.workspace-subtab.is-active {background:#FFFFFF;box-shadow:0 3px 11px rgba(24,70,120,.04);border-color:#E3EAF4;color:#245992}
+.workspace-group-trigger:focus-visible,.workspace-subtab:focus-visible {outline:2px solid #6B9CE6;outline-offset:2px}
+@media(max-width:860px) {
+  .workspace-tabs {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;align-items:start}
+  .workspace-group {gap:4px}
+  .workspace-group-trigger {justify-content:center;align-items:center;flex-wrap:nowrap;gap:6px}
+  .workspace-group-trigger strong {flex:none;text-align:center;font-size:11px}
+  .workspace-group-trigger .workspace-group-chevron {width:13px;height:13px;margin:0}
+  .workspace-subtabs {margin:2px 0 0;padding:5px 0 0;border-left:0;border-top:1px solid #D7E2F0}
+  .workspace-subtab {font-size:11px;text-align:center;justify-content:center;padding:10px 6px;min-height:38px;white-space:normal}
+  .workspace-subtab span {display:none}
+}
+@media(max-width:640px) {
+  .workspace-tabs {grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .workspace-group-trigger strong {font-size:11px}
+  .workspace-subtab {font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){
+  .workspace-group-trigger .workspace-group-chevron {transition:none}
+}
