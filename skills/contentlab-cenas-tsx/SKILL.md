@@ -5,6 +5,11 @@ description: Cria cenas Remotion complexas como arquivos TSX dentro da subpasta 
 
 # Content Lab — Cenas programáveis TSX
 
+## Remotion 4.0.530 — vídeos repetidos em TSX
+
+NÃO passar a prop `loop` diretamente para `<OffthreadVideo />` no ContentLab. Esse componente não implementa repetição nativa; passar `loop` pode produzir `The "loop" prop of <Sequence /> requires a finite "durationInFrames" prop` no frame zero. A correção NÃO é apenas adicionar `durationInFrames` ao OffthreadVideo. Usar `<Loop durationInFrames={frames} layout="none"><OffthreadVideo src={src} muted style={style}/></Loop>`, em que `frames` é inteiro positivo e finito. Para loop sem congelamento, `frames` deve representar a duração real do clipe. Para vídeo sem repetição, usar OffthreadVideo sem `loop`. Validar a configuração de remotion em render, não só transpilar TSX.
+
+
 ## TSX contínuo e design sonoro mínimo — FlowHQ (15/10/2026)
 
 Em Shorts com 3 cenas estruturais (gancho, desenvolvimento e CTA), renderizar UM TSX no desenvolvimento, alimentado por props.beats=[{at,until,title,kicker,layout,main,next}]. Os tempos at/until são relativos ao começo da cena contínua. customComponent.assets fornece mídia por chave. SFX em edit_plan.json permanecem absolutos. Câmera, retícula, vinheta e linha compartilhadas atravessam beats; próximo plano começa antes da saída do anterior, sem remontar o mesmo preset. Não empilhar textos simultâneos, não usar cartões cinza genéricos, não transformar a estética HQ em UI stock.
