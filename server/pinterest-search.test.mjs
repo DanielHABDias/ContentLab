@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {normalizePinterest,searchPinterest,isPinMediaUrl} from './pinterest-search.mjs';
+import {normalizePinterest,searchPinterest,isPinMediaUrl,pinterestRequest} from './pinterest-search.mjs';
 import {searchMedia,importMedia,safeDownloadHost} from './media-library.mjs';
 
 const photo='https://i.pinimg.com/originals/ab/cd/pretty.jpg';
@@ -112,4 +112,82 @@ test('Pinterest video downloads the direct MP4 then uses existing local video im
     assert.equal(result.cachedKey,'local-fake');
     assert.match(fs.readFileSync(path.join(temp,'source-license.txt'),'utf8'),/pinterest/i);
   }finally{fs.rmSync(temp,{recursive:true,force:true});}
+});
+
+
+test('Follows regional Pinterest redirects, keeps guest CSRF session and searches regional endpoint',async()=>{
+  const calls=[];
+  const fetcher=async(url,options)=>{
+    const u=new URL(url);calls.push({url:u,options});
+    if(u.hostname==='www.pinterest.com'&&u.pathname==='/search/pins/')
+      return new Response(null,{status:302,headers:{Location:'https://br.pinterest.com'+u.pathname+u.search,
+        'Set-Cookie':'csrftoken=redirect-token; Path=/; Secure'}});
+    if(u.hostname==='br.pinterest.com'&&u.pathname==='/search/pins/')
+      return new Response('Pesquisa',{status:200,headers:{'Set-Cookie':'_pinterest_sess=guest; Path=/; Secure'}});
+    if(u.hostname==='br.pinterest.com'&&u.pathname==='/resource/BaseSearchResource/get/'){
+      assert.match(options.headers.Cookie,/csrftoken=redirect-token/);
+      assert.match(options.headers.Cookie,/_pinterest_sess=guest/);
+      assert.equal(options.headers['X-CSRFToken'],'redirect-token');
+      assert.equal(u.searchParams.get('source_url').startsWith('/search/pins/'),true);
+      return new Response(JSON.stringify({resource_response:{data:{results:records}}}),{status:200});
+    }
+    throw Error('Unexpected request '+url);
+  };
+  const results=await searchPinterest('cenas clássicas','image',{fetcher});
+  assert.equal(results.length,1);
+  assert.ok(calls.some(c=>c.url.hostname==='br.pinterest.com'));
+  assert.ok(calls.every(c=>c.options.redirect==='manual'));
+});
+test('Pinterest redirects never send cookies to external or non-HTTPS sites',async()=>{
+  const calls=[];
+  const fetcher=async(url)=>{
+    calls.push(url);
+    return new Response(null,{status:302,
+      headers:{Location:'https://notpinterest.example/collect?cookie=1',
+        'Set-Cookie':'csrftoken=private-test; Path=/'}});
+  };
+  await assert.rejects(searchPinterest('cinema','image',{fetcher}),/destino externo não autorizado/);
+  assert.equal(calls.length,1);
+  await assert.rejects(pinterestRequest('https://www.pinterest.com/search/pins/',{
+    fetcher:async()=>new Response(null,{status:302,headers:{Location:'http://www.pinterest.com/login/'}})
+  }),/destino externo não autorizado/);
+});
+test('Pinterest detects redirects to login, broken Location and loops',async()=>{
+  await assert.rejects(pinterestRequest('https://www.pinterest.com/search/pins/',{
+    fetcher:async()=>new Response(null,{status:302,headers:{Location:'/login/'}})
+  }),/exige login/);
+  await assert.rejects(pinterestRequest('https://www.pinterest.com/search/pins/',{
+    fetcher:async()=>new Response(null,{status:302})
+  }),/sem destino/);
+  await assert.rejects(pinterestRequest('https://www.pinterest.com/search/pins/',{
+    fetcher:async()=>new Response(null,{status:302,headers:{Location:'/search/pins/'}})
+  }),/ciclo de redirecionamentos/);
+});
+test('Pinterest retries a regional host only after network failure, then returns valid pins',async()=>{
+  const calls=[];
+  const results=await searchPinterest('videos','all',{fetcher:async(url)=>{
+    const u=new URL(url);
+    calls.push(u.hostname);
+    if(u.hostname==='www.pinterest.com'){
+      const error=new TypeError('fetch failed');
+      error.cause=Object.assign(new Error('connect ENETUNREACH'),{code:'ENETUNREACH'});
+      throw error;
+    }
+    if(u.pathname==='/search/pins/')return new Response('ok',{status:200});
+    return new Response(JSON.stringify({resource_response:{data:{results:records}}}),{status:200});
+  }});
+  assert.equal(results.length,2);
+  assert.deepEqual(calls,['www.pinterest.com','id.pinterest.com','id.pinterest.com']);
+});
+test('Pinterest network errors include actionable cause codes instead of fetch failed',async()=>{
+  const error=new TypeError('fetch failed');
+  error.cause=Object.assign(new Error('DNS failed'),{code:'ENOTFOUND'});
+  await assert.rejects(searchPinterest('cinema','all',{fetcher:async()=>{throw error;}}),
+    err=>err.message.includes('ENOTFOUND')&&err.message.includes('DNS')&&
+      err.message.includes('domínio alternativo'));
+  const tls=new TypeError('fetch failed');
+  tls.cause=Object.assign(new Error('certificate not trusted'),{code:'UNABLE_TO_VERIFY_LEAF_SIGNATURE'});
+  await assert.rejects(pinterestRequest('https://www.pinterest.com/search/pins/',{
+    fetcher:async()=>{throw tls;}
+  }),/certificado HTTPS/);
 });
