@@ -13,6 +13,12 @@ Editor automático e utilitários de vídeo para projetos de conteúdo e motion 
 
 Remotion concentra a renderização visual; o FFmpeg continua responsável por áudio, cortes e composição final. O código de servidor utiliza exclusivamente Node.js.
 
+## Publicações — prévia de interface
+
+A aba **Publicações** permite experimentar a preparação de envios para YouTube Shorts, Instagram Reels e TikTok. É uma **interface de demonstração**: selecione MP4s locais, configure título/descrição individuais, escolha o instante da capa (ou imagem externa), marque os destinos e confira as prévias e o calendário simulado do YouTube. Na prévia das legendas de Instagram/TikTok, título e descrição são unidos com uma linha em branco e `#Shorts` é substituído por `#Viral`.
+
+**Não há envio, agendamento, persistência, conexão de contas ou leitura automática de projetos nesta fase.** O botão de publicação permanece desabilitado; o plano futuro é descobrir os arquivos `output/final/final.mp4` dos projetos.
+
 ## Multi-editor automático: fila sequencial
 
 A aba **Multi-editor automático** permite programar uma lista de projetos para renderização local em sequência, sem copiar planos nem abrir o editor JSON de cada um.
