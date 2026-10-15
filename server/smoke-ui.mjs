@@ -92,8 +92,46 @@ try{
   assert.equal(await evaluate('getComputedStyle(document.getElementById("loadBtn")).transitionProperty.includes("transform")'),true,
     'Buttons must provide a transform-based tactile response');
   await evaluate('document.getElementById("tab-videos").click()');
-  assert.equal(await evaluate('document.querySelectorAll(".workspace-tab").length'),8,
-    'Eight workspaces include Settings, Publications and Metrics');
+  assert.equal(await evaluate('document.querySelectorAll(".workspace-tab[data-workspace]").length'),8,
+    'All eight original workspaces remain available');
+  assert.equal(await evaluate('document.querySelectorAll(".workspace-tabs > .workspace-tab, .workspace-tabs > .workspace-group").length'),6,
+    'Sidebar shows six top-level choices rather than eight');
+  assert.equal(await evaluate('document.getElementById("workspace-group-editor-items").hidden'),true,
+    'Editor submenu starts collapsed');
+  assert.equal(await evaluate('document.getElementById("workspace-group-social-items").hidden'),true,
+    'Social submenu starts collapsed');
+
+  await evaluate('document.getElementById("workspace-group-editor-trigger").click()');
+  assert.equal(await evaluate('document.getElementById("workspace-group-editor-trigger").getAttribute("aria-expanded")'),'true',
+    'Editor category expands on click');
+  assert.equal(await evaluate('document.getElementById("workspace-group-editor-items").hidden'),false,
+    'Editor submenu exposes automatic and multi-editor choices');
+  assert.equal(await evaluate('document.getElementById("panel-videos").hidden'),false,
+    'Expanding a group does not interrupt the current workspace');
+  await evaluate('document.getElementById("tab-editor").click()');
+  assert.equal(await evaluate('document.getElementById("panel-editor").hidden'),false,
+    'Editor automático still works through its nested item');
+  assert.equal(await evaluate('document.getElementById("workspace-group-editor-trigger").classList.contains("is-group-active")'),true,
+    'Editor group indicates an active nested workspace');
+  await evaluate('document.getElementById("tab-multieditor").click()');
+  assert.equal(await evaluate('document.getElementById("panel-multieditor").hidden'),false,
+    'Multi-editor still opens from the same group');
+  await evaluate('document.getElementById("workspace-group-editor-trigger").click()');
+  assert.equal(await evaluate('document.getElementById("workspace-group-editor-items").hidden'),true,
+    'Clicking expanded Editor collapses its submenu');
+  assert.equal(await evaluate('document.getElementById("panel-multieditor").hidden'),false,
+    'Collapsing a category preserves the active editor panel');
+
+  await evaluate('document.getElementById("workspace-group-social-trigger").click()');
+  assert.equal(await evaluate('document.getElementById("workspace-group-social-items").hidden'),false,
+    'Social category exposes Publications and Metrics');
+  assert.equal(await evaluate('document.getElementById("workspace-group-editor-items").hidden'),true,
+    'Only one category is expanded at a time');
+  await evaluate('document.getElementById("tab-publications").click()');
+  assert.equal(await evaluate('document.getElementById("workspace-group-social-trigger").getAttribute("aria-expanded")'),'true');
+  assert.equal(await evaluate('location.hash'),'#publications',
+    'Nested workspace retains its existing deep link');
+
   await evaluate('document.getElementById("tab-publications").click()');
   assert.equal(await evaluate('document.getElementById("panel-publications").hidden'),false,
     'Publications workspace must open');
@@ -193,6 +231,12 @@ try{
 
 
   await evaluate('window.fetch=window.__statusOriginalFetch');
+  await evaluate('document.getElementById("tab-videos").click()');
+  assert.equal(await evaluate('document.getElementById("workspace-group-social-items").hidden'),true,
+    'Direct workspaces close the nested menu');
+  await evaluate('location.hash="#metrics"');
+  await wait(()=>evaluate('document.getElementById("panel-metrics").hidden===false && document.getElementById("workspace-group-social-items").hidden===false'),
+    'Deep links reopen the correct nested menu');
   await evaluate('document.getElementById("tab-metrics").click()');
   await wait(()=>evaluate('!document.getElementById("metricsConnectionGate").hidden'),
     'Metrics empty state before connecting');

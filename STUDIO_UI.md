@@ -11,6 +11,12 @@ Interface original do Content Lab com linguagem editorial de software criativo: 
 
 O projeto é inspirado na clareza visual de aplicativos contemporâneos e **não** replica logotipos, ícones ou identidade comercial da Apple.
 
+## Navegação lateral agrupada
+
+O menu apresenta seis opções de primeiro nível: **Vídeos e cortes**, **Narração**, **Editor**, **Redes sociais**, **Configurações** e **Documentação**. Ao clicar em **Editor**, aparecem **Editor automático** e **Multi-editor automático**; ao clicar em **Redes sociais**, aparecem **Publicações** e **Métricas**. São submenus expansíveis que mostram uma categoria por vez; clicar novamente em uma categoria a recolhe sem fechar a tela já aberta.
+
+Os IDs originais `tab-editor`, `tab-multieditor`, `tab-publications` e `tab-metrics` e as respectivas seções `panel-*` foram preservados. Links por fragmento `#editor`, `#multieditor`, `#publications` e `#metrics` abrem a área correta e expandem automaticamente o seu grupo. O grupo ativo recebe uma marca visual mesmo quando recolhido. Os botões são acessíveis por teclado e os submenus têm `aria-expanded` e identificação própria; a navegação móvel respeita a mesma estrutura.
+
 ## Assistente para login social
 
 O fluxo preferencial é um clique no cartão e autorização no provedor oficial. Quando falta cadastro do aplicativo OAuth, o botão abre um assistente com passos da rede, link para portal oficial, documentação e URL de callback. Os campos Client ID/Secret estão em **Configuração avançada** e aparecem apenas ao optar por preenchê-los.

@@ -162,6 +162,10 @@ Detalhes: [referência do JSON](EDIT_PLAN_REFERENCE.md), [motion design](MOTION_
 
 Coloque componentes React/Remotion `.tsx` em `custom-scenes/` dentro da pasta do vídeo e referencie-os com `project://custom-scenes/Nome.tsx` no `edit_plan.json`. O Content Lab os renderiza normalmente, **sem variável de ambiente ou configuração extra**. TSX é código executável, não isolado em sandbox: abra somente projetos e componentes de origem confiável. O aplicativo restringe o caminho a `custom-scenes/` local e rejeita links simbólicos, mas isso não torna código desconhecido seguro.
 
+## Organização do menu lateral
+
+A navegação do Content Lab foi agrupada para ocupar menos espaço. **Editor → Editor automático / Multi-editor automático** e **Redes sociais → Publicações / Métricas** são categorias expansíveis; as outras áreas continuam com acesso direto. Apenas um grupo fica expandido por vez e clicar novamente no cabeçalho recolhe o submenu sem interromper a tela ativa. Os antigos links diretos `#editor`, `#multieditor`, `#publications` e `#metrics` continuam abrindo as respectivas áreas, com o grupo correto expandido. Em celulares, as categorias mantêm o mesmo comportamento, adaptadas para o menu compacto.
+
 ## Novo estúdio visual
 
 A interface foi reformulada com uma identidade própria, monograma **CT**, navegação lateral, cores suaves e um storyboard por cena. No **Editor automático**, a lista à esquerda permite localizar cenas por ID, tempo ou texto. Selecione qualquer uma para ver seu MP4 salvo em cache (ou a versão anterior, caso o JSON tenha mudado), ajustar tempos, adicionar camadas, inserir, duplicar e excluir trechos — sem começar pelo JSON.
@@ -182,7 +186,7 @@ Veja [CORRECOES_CACHE_AUDIO_TRANSICOES.md](CORRECOES_CACHE_AUDIO_TRANSICOES.md).
 
 A aba **Documentação** do site oferece o manual completo com navegação lateral, busca por campos, exemplos de JSON e diagramas SVG gerados por JavaScript. Há **somente três downloads de documentação**: **Documentação .md**, **Documentação .html** e **Skill .zip**.
 
-A interface mantém **quatro áreas de trabalho**: Vídeos e cortes, Transcrição, Editor automático e Documentação. O antigo Guia do projeto foi incorporado à Documentação, que agora inclui o primeiro acesso, uma árvore de pastas com arquivos gerados automaticamente, regras para caminhos `project://` e `builtin://`, um `edit_plan.json` completo de exemplo e a verificação de assets. Links antigos com `#guide` abrem diretamente a Documentação. Não há duplicação de abas nem de downloads.
+O menu lateral tem **seis opções principais**: Vídeos e cortes, Narração, Editor, Redes sociais, Configurações e Documentação. **Editor** expande os submenus **Editor automático** e **Multi-editor automático**; **Redes sociais** expande **Publicações** e **Métricas**. Clique em um grupo para mostrar ou recolher as opções. O grupo da tela escolhida abre automaticamente, inclusive com links como `#editor`, `#multieditor`, `#publications` ou `#metrics`. As oito telas e os seus IDs permanecem, sem perder dados dos formulários ao trocar de área. O antigo Guia do projeto foi incorporado à Documentação, que agora inclui o primeiro acesso, uma árvore de pastas com arquivos gerados automaticamente, regras para caminhos `project://` e `builtin://`, um `edit_plan.json` completo de exemplo e a verificação de assets. Links antigos com `#guide` abrem diretamente a Documentação. Não há duplicação de abas nem de downloads.
 
 A skill ZIP contém `SKILL.md`, a documentação oficial completa em Markdown e HTML, diagramas SVG, schema único e exemplos de edição. O HTML baixado é autossuficiente e inclui os diagramas sem precisar de internet para consultá-los. O Markdown referencia as figuras SVG versionadas no repositório.
 
