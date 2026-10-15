@@ -9,7 +9,7 @@ description: Cria cenas Remotion complexas como arquivos TSX dentro da subpasta 
 
 Em Shorts com 3 cenas estruturais (gancho, desenvolvimento e CTA), renderizar UM TSX no desenvolvimento, alimentado por props.beats=[{at,until,title,kicker,layout,main,next}]. Os tempos at/until são relativos ao começo da cena contínua. customComponent.assets fornece mídia por chave. SFX em edit_plan.json permanecem absolutos. Câmera, retícula, vinheta e linha compartilhadas atravessam beats; próximo plano começa antes da saída do anterior, sem remontar o mesmo preset. Não empilhar textos simultâneos, não usar cartões cinza genéricos, não transformar a estética HQ em UI stock.
 
-Referência: vídeo comparativo do editor, animação de BAIXO (Claude Opus 5.5), com formas/partículas tornando-se novos planos; HQ adapta tinta, retícula, planos e fontes. Trocar só cor/título do componente antigo não basta. Preferir 3–4 acentos SFX realmente ligados a gestos num Short de 30–50s como ponto de partida, em vez de sinos em todo beat. Manter musicalidade, voz e CTA. Novo DiazversoFlowHQ.tsx em SH_0005 a SH_0009; retirar somente módulos sem referências, conservando o CTA e dependências de outros projetos. Validar o movimento em MP4.
+Referência: vídeo comparativo do editor, animação de BAIXO (Claude Opus 5.5), com formas/partículas tornando-se novos planos; HQ adapta tinta, retícula, planos e fontes. Trocar só cor/título do componente antigo não basta. Preferir 3–4 acentos SFX realmente ligados a gestos num Short de 30–50s como ponto de partida, em vez de sinos em todo beat. Manter musicalidade, voz e CTA. Novo DiazversoFlowHQ.tsx em SH_0005 a SH_0010; retirar somente módulos sem referências, conservando o CTA e dependências de outros projetos. Validar o movimento em MP4.
 
 
 
