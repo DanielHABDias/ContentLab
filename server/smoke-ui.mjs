@@ -92,22 +92,42 @@ try{
   assert.equal(await evaluate('getComputedStyle(document.getElementById("loadBtn")).transitionProperty.includes("transform")'),true,
     'Buttons must provide a transform-based tactile response');
   await evaluate('document.getElementById("tab-videos").click()');
-  assert.equal(await evaluate('document.querySelectorAll(".workspace-tab").length'),7,
-    'Seven workspaces include Publications and Metrics');
+  assert.equal(await evaluate('document.querySelectorAll(".workspace-tab").length'),8,
+    'Eight workspaces include Settings, Publications and Metrics');
   await evaluate('document.getElementById("tab-publications").click()');
   assert.equal(await evaluate('document.getElementById("panel-publications").hidden'),false,
     'Publications workspace must open');
-  assert.equal(await evaluate('document.getElementById("publishSubmit").disabled'),true,
-    'Publishing remains disabled in the interface-only version');
-  assert.equal(await evaluate('!!document.getElementById("socialCredentialsForm")'),true,
-    'OAuth credentials form must exist in the Publications workspace');
-  assert.equal(await evaluate('!!document.getElementById("socialConnect-youtube")'),true,
-    'YouTube login must be accessible from the Publications workspace');
+  assert.equal(await evaluate('document.getElementById("publishConnectionGate").hidden'),false,
+    'Publications requires at least one connected OAuth account');
+  assert.equal(await evaluate('document.getElementById("publishConnectedContent").hidden'),true,
+    'Publishing editor must be hidden without OAuth');
+  assert.equal(await evaluate('document.querySelector("#panel-publications #socialCredentialsForm")'),null,
+    'Publications must not contain credential fields');
+  await evaluate('document.getElementById("publishGoSettings").click()');
+  assert.equal(await evaluate('document.getElementById("panel-settings").hidden'),false,
+    'Publication CTA goes to Settings');
+  assert.equal(await evaluate('!!document.querySelector("#panel-settings #socialCredentialsForm")'),true,
+    'Developer credentials are found only in Settings');
+  assert.equal(await evaluate('!!document.querySelector("#panel-settings #socialConnect-youtube")'),true,
+    'YouTube connects from Settings');
+  assert.equal(await evaluate('document.getElementById("settingsOAuthAdvanced").open'),false,
+    'Advanced OAuth setup remains collapsed by default');
+  await evaluate('document.getElementById("socialConnect-youtube").click()');
+  assert.equal(await evaluate('document.getElementById("settingsOAuthAdvanced").open'),true,
+    'Unconfigured OAuth opens setup without leaving Content Lab');
+  assert.equal(await evaluate('document.getElementById("socialProvider").value'),'youtube');
   const socialStatus = await evaluate('(async () => { const r=await fetch("/api/social/status"); return {ok:r.ok,body:await r.json()}; })()');
   assert.equal(socialStatus.ok,true);
   assert.equal(typeof socialStatus.body.providers.youtube.configured,'boolean');
   assert.equal(JSON.stringify(socialStatus.body).includes('access_token'),false,
     'OAuth status must never expose tokens');
+
+  await evaluate("(() => {\n window.__statusOriginalFetch=window.fetch;\n window.fetch=(url,opts)=>{\n   if(String(url)==='/api/social/status'){\n     const value={providers:{\n       youtube:{connected:true,configured:true,needsRenewal:false},\n       instagram:{connected:true,configured:true,needsRenewal:false},\n       tiktok:{connected:true,configured:true,needsRenewal:false}\n     }};\n     return Promise.resolve(new Response(JSON.stringify(value),{\n       status:200,headers:{'Content-Type':'application/json'}\n     }));\n   }\n   return window.__statusOriginalFetch(url,opts);\n };\n})()");
+  await evaluate('document.getElementById("tab-publications").click()');
+  await wait(()=>evaluate('document.getElementById("publishConnectionGate").hidden && !document.getElementById("publishConnectedContent").hidden'),
+    'Publishing workspace opens after OAuth connection');
+  await wait(()=>evaluate('!document.getElementById("publishPlatform-tiktok").disabled'),
+    'Connected TikTok becomes selectable');
 
   await evaluate(`(() => {
     const input = document.getElementById("publishFiles");
@@ -140,6 +160,7 @@ try{
     'TikTok becomes available for vertical 9:16 media');
 
 
+  await evaluate('window.fetch=window.__statusOriginalFetch');
   await evaluate('document.getElementById("tab-metrics").click()');
   await wait(()=>evaluate('!document.getElementById("metricsConnectionGate").hidden'),
     'Metrics empty state before connecting');
@@ -148,8 +169,8 @@ try{
   await wait(()=>evaluate('!document.getElementById("metricsRefresh").disabled'),
     'Initial disconnected metrics response must finish');
   await evaluate('document.getElementById("metricsGoConnect").click()');
-  assert.equal(await evaluate('document.getElementById("panel-publications").hidden'),false,
-    'Connect CTA returns to Publications');
+  assert.equal(await evaluate('document.getElementById("panel-settings").hidden'),false,
+    'Metrics connection CTA returns to Settings');
   await evaluate("(() => {\n window.__metricsOriginalFetch=window.fetch;\n window.fetch=(url,opts)=>{\n   if(!String(url).startsWith('/api/social/metrics'))return window.__metricsOriginalFetch(url,opts);\n   const input=new URL(String(url),location.origin);\n   const selected=input.searchParams.get('platform')||'general';\n   const connected={youtube:{connected:true,configured:true},instagram:{connected:false,configured:false},tiktok:{connected:true,configured:true}};\n   const youtube={status:'ok',data:{platform:'youtube',updatedAt:new Date().toISOString(),\n     recent:[{platform:'youtube',id:'a',title:'Batman vídeo',publishedAt:new Date().toISOString(),views:120,likes:10,comments:3}],\n     scheduled:[{platform:'youtube',id:'b',title:'Agendado',scheduledAt:new Date().toISOString()}],\n     top:[{platform:'youtube',id:'a',title:'Batman vídeo',views:120}],note:'Últimos uploads públicos'}};\n   const tiktok={status:'ok',data:{platform:'tiktok',updatedAt:new Date().toISOString(),\n     recent:[{platform:'tiktok',id:'t',title:'Cultura pop',publishedAt:new Date().toISOString(),views:200,likes:30,comments:2,shares:1}],\n     scheduled:[],top:[{platform:'tiktok',id:'t',title:'Cultura pop',views:200}],note:'Últimos vídeos públicos'}};\n   const platforms=selected==='general'?{youtube,tiktok}:selected==='youtube'?{youtube}:selected==='tiktok'?{tiktok}:{};\n   return Promise.resolve(new Response(JSON.stringify({view:selected,connected,platforms}),\n     {status:200,headers:{'Content-Type':'application/json'}}));\n };\n})()");
   await evaluate('document.getElementById("tab-metrics").click()');
   await wait(()=>evaluate('document.getElementById("metricsStatGrid").children.length===4'),
