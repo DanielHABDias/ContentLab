@@ -164,6 +164,9 @@
         place(root,note);
       }else if(result?.status==='ok'&&result.data?.note){
         place(root,el('div','metrics-note',tag(name)+': '+result.data.note));
+        if(name==='youtube'&&!result.data.analytics?.available)
+          place(root,el('div','metrics-note',
+            'YouTube Analytics: histórico indisponível. Ative a YouTube Analytics API no Google Cloud e reconecte em Configurações com a permissão yt-analytics.readonly.'));
       }
     }
     if(!root.childElementCount)place(root,el('div','metrics-note','As contagens dependem das APIs e podem levar algum tempo para refletir novas publicações.'));
