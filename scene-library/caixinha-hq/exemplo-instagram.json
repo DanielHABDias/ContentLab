@@ -53,7 +53,8 @@
       "animationDuration": 0.4,
       "action": "auto",
       "actionAt": 2.9,
-      "actionDuration": 0.45
+      "actionDuration": 0.45,
+      "instagramHandle": "@DiazVersoYT"
     },
     "assets": {
       "bangers": "builtin://fonts/Bangers-Regular.ttf"
