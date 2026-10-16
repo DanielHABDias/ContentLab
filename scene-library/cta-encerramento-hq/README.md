@@ -193,3 +193,7 @@ Na Documentação, selecione este padrão e prepare-o na pasta do projeto. A ins
 ## Identidade parametrizável
 
 assets.character é obrigatório e pode apontar para qualquer imagem fornecida pelo projeto. Nenhum personagem está incluído no padrão. channelName (padrão vazio) configura a assinatura; topTitle, subscribeText e calloutText configuram os textos de convite. headline, leftTitle e rightTitle mantêm suas funções descritas acima. A geometria foi preservada; imagens de proporções diferentes exigem inspeção visual.
+
+## Uso obrigatório no Diazverso — Nox
+
+O componente instalado no Content Lab utiliza **`customComponent.assets.character`** como chave de personagem. Para o Diazverso, essa chave deve apontar para o **PNG oficial e aprovado do Nox**, preservando o Character Lock. **Não trocar o contrato para `assets.nox`** e não copiar esse campo dos READMEs antigos do Drive. O caminho do PNG deve ser o arquivo real existente no projeto, por exemplo `"character": "project://assets/<caminho-real-do-Nox>.png"` (substituir placeholder após verificar), com `fontFamily`/fontes e thumbnails configurados pelo README. A biblioteca genérica permanece utilizável por outras marcas; no perfil Diazverso, o personagem é sempre Nox. A versão do Content Lab também oferece `channelName`, `topTitle`, `subscribeText` e `calloutText` configuráveis — não substituí-los por textos fixos de uma versão anterior do Drive.
