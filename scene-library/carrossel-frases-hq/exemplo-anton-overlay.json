@@ -1,0 +1,51 @@
+{
+  "id": "carrossel_anton_overlay",
+  "start": 0,
+  "end": 10,
+  "layout": "fullscreen",
+  "background": {
+    "color": "#111522"
+  },
+  "elements": [],
+  "customComponent": {
+    "module": "project://custom-scenes/CarrosselFrasesHQ.tsx",
+    "mode": "overlay",
+    "props": {
+      "phrases": [
+        {
+          "text": "Herói NÃO É JUIZ",
+          "at": 0.8
+        },
+        {
+          "text": "Herói NÃO É JÚRI",
+          "at": 3
+        },
+        {
+          "text": "NEM O CARRASCO",
+          "at": 5.2,
+          "color": "#EF3F49"
+        },
+        {
+          "text": "ONDE FICA O LIMITE?",
+          "at": 7.4
+        }
+      ],
+      "fontFamily": "Anton",
+      "align": "right",
+      "motionDuration": 0.45,
+      "backgroundStyle": "halftone",
+      "backgroundColor": "#10131E",
+      "activeColor": "#F4C542",
+      "inactiveColor": "#9698A2",
+      "inactiveOpacity": 0.38,
+      "inactiveScale": 0.6,
+      "backgroundOpacity": 0,
+      "activeBandColor": "#A0A0A0",
+      "activeBandOpacity": 0.12
+    },
+    "assets": {
+      "anton": "builtin://fonts/Anton-Regular.ttf"
+    }
+  },
+  "transitionOut": "cut"
+}

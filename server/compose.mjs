@@ -8,7 +8,7 @@ const fileLine=file=>"file '"+path.resolve(file).replace(/\\/g,'/').replace(/'/g
 const encoding=['-c:v','libx264','-preset','veryfast','-crf','18','-threads',String(Math.max(1,Number(process.env.CONTENTLAB_COMPOSE_THREADS||2)))];
 const D=n=>Number(n).toFixed(6);
 const durationOf=scene=>scene.end-scene.start;
-const identity=(sources,params)=>sha({sources:sources.map(statIdentity),params,code:'composer-6-resolution-aware-whip-blur'});
+const identity=(sources,params)=>sha({sources:sources.map(statIdentity),params,code:'composer-7-flip-curtain'});
 async function ffconcat(files,output,work,ffmpeg,signal,copy=false){
   const manifest=path.join(work,'segments-'+Math.random().toString(16).slice(2)+'.ffconcat');
   fs.writeFileSync(manifest,'ffconcat version 1.0\n'+files.map(fileLine).join(''));
@@ -95,6 +95,21 @@ export async function composeVisual(scenes,segments,output,settings,work,{ffmpeg
           graph=outgoing+incoming+
             '[tail][first]xfade=transition=custom:duration='+D(seconds)+
             ":offset=0:expr='A*(1-"+eased+")+B*"+eased+"',format=yuv420p[out]";
+        }else if(type==='curtain'){
+          graph=outgoing+incoming+"[first][tail]overlay=x='-"+w+"*"+phase+"':y=0:eval=frame,format=yuv420p[out]";
+        }else if(type==='flip'){
+          // Inverse-sample two faces around their vertical center axis.
+          const q=phase.replaceAll('t/', 'T/');
+          const squeeze='max(0.001,abs(cos(PI*'+q+')))';
+          const sourceX='(X-W/2)/'+squeeze+'+W/2';
+          const mask='between(X,W/2-W/2*'+squeeze+',W/2+W/2*'+squeeze+')';
+          const face=(input,name,visible)=>'['+input+']format=yuva444p,geq='+
+            "lum='lum("+sourceX+",Y)':cb='cb("+sourceX+",Y)':cr='cr("+sourceX+",Y)':"+
+            "a='255*"+mask+'*'+visible+"'["+name+'];';
+          graph=outgoing+incoming+face('tail','oldFace','lt('+q+',0.5)')+
+            face('first','newFace','gte('+q+',0.5)')+
+            'color=c=black:s='+w+'x'+h+':r='+fps+':d='+D(seconds)+'[base];'+
+            '[base][oldFace]overlay=0:0[tmp];[tmp][newFace]overlay=0:0,format=yuv420p[out]';
         }else{
           let moveOld='x=0:y=0',moveNew='x=0:y=0';
           if(['slide_left','blur_left'].includes(type)){

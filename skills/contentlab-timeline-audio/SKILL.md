@@ -51,7 +51,7 @@ Produza mapa de beats (tempo → informação → ação visual → hold → pos
 
 Entregar a composição/motion estes tempos do `transcript.json` no áudio preparado: `scene.start`, `word.start`, `word.end`, `localWordStart = word.start - scene.start`, `localWordEnd = word.end - scene.start`, `visualReadyBy`, hold e saída. O visual da palavra/ideia falada precisa **estar completamente legível até localWordEnd**, idealmente em localWordStart. O movimento de câmera para o elemento e a entrada de imagens/vídeos obedecem ao mesmo limite. Não usar o início da palavra como ordem para COMEÇAR uma animação longa; preferir chegar a tempo.
 
-Referência observada em `VD_0005/PerguntaAbertura.tsx`: a entrada do personagem termina por volta de +2,91 s e a palavra “Batman” começa por volta de +2,93 s no relógio local. Esses números não são presets, e sim demonstração da relação desejada. Se não for possível dar preroll por ser frame 0, usar o estado legível desde o primeiro frame. Conferir timestamps de fala e o MP4 final antes de afirmar sincronização.
+Referência observada em `projeto existente/PerguntaAbertura.tsx`: a entrada do personagem termina por volta de +2,91 s e a palavra “Batman” começa por volta de +2,93 s no relógio local. Esses números não são presets, e sim demonstração da relação desejada. Se não for possível dar preroll por ser frame 0, usar o estado legível desde o primeiro frame. Conferir timestamps de fala e o MP4 final antes de afirmar sincronização.
 
 ## Regra de SFX por animação/movimento — implementação do relógio
 
@@ -78,6 +78,9 @@ Para projetos Diazverso, sincronizar o ATAQUE AUDÍVEL ou PICO ÚTIL do SFX ao *
 
 ## Biblioteca local de música aprovada versus direitos de redistribuição
 
-Ver `MUSIC_LIBRARY_DIAZVERSO.md` (auditoria VD_0005). `Something is Going On - Godmode`, `The New Order - Aaron Kenny` e `Future Rennaisance - Godmode` já estão em `builtin-assets/music/`. `A Great Darkness Approaches, Can You Feel It_ - ELPHNT`, `Elegy - Asher Fulero` e `Frightmare - Jimena Contreras` estão no acervo pessoal mas **não** no repositório. Existe `scripts/import-diazverso-music.mjs` para instalar localmente somente após revisão da licença no YouTube Studio; não comitar esses MP3s no GitHub. Verificar atribuição por faixa e destino de publicação. Música marcada "NoCopyright" no Drive **não** significa domínio público. OST de GTA V e outras faixas comerciais exigem cautela especial e não devem ser promovidas como livre uso.
-
 A importação é local e não reescreve qualquer `edit_plan.json` antigo. Para projetos novos, pode-se usar `builtin://music/...` somente se o arquivo existir na instalação real; caso contrário, `project://assets/music/...` com MP3 legitimamente fornecido. Não declarar como instalado só porque o nome está no catálogo.
+
+
+## Padrões oficiais
+
+Consultar scene-library/manifest.json e o README do padrão escolhido antes de criar TSX do zero. A galeria oficial inclui contratos e exemplos. Textos Anton sem sombra; Bangers com tratamento HQ. SFX não são gerados pelos componentes. Flip/Curtain/Blur são transitionOut entre cenas, não presets de cena. Preserve cópias instaladas em projetos e valide sincronismo com transcript.words.

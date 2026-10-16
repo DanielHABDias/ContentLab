@@ -1,0 +1,45 @@
+{
+  "id": "texto_kinetic",
+  "start": 0,
+  "end": 6,
+  "layout": "fullscreen",
+  "background": {
+    "color": "#B72840"
+  },
+  "elements": [],
+  "customComponent": {
+    "module": "project://custom-scenes/TextoHQ.tsx",
+    "mode": "replace",
+    "props": {
+      "fontFamily": "Bangers",
+      "entryAnimation": "kinetic",
+      "entryDuration": 1,
+      "entryDelay": 0,
+      "kineticStagger": 0.035,
+      "kineticAccentColor": "#F7CE46",
+      "backgroundStyle": "halftone",
+      "backgroundColor": "#B72840",
+      "texts": [
+        {
+          "text": "IDEIAS EM\nMOVIMENTO",
+          "at": 0,
+          "duration": 3,
+          "kineticDirection": "up"
+        },
+        {
+          "text": "OUTRO\nCAMINHO",
+          "at": 3,
+          "duration": 3,
+          "kineticDirection": "left",
+          "backgroundColor": "#2459C9",
+          "exitAnimation": "fechar",
+          "exitDuration": 0.4
+        }
+      ]
+    },
+    "assets": {
+      "bangers": "builtin://fonts/Bangers-Regular.ttf"
+    }
+  },
+  "transitionOut": "cut"
+}

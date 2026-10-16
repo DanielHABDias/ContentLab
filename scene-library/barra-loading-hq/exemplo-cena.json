@@ -1,0 +1,66 @@
+{
+  "id": "barra_loading_hq",
+  "start": 0,
+  "end": 10,
+  "layout": "fullscreen",
+  "background": {
+    "color": "#253656"
+  },
+  "elements": [],
+  "customComponent": {
+    "module": "project://custom-scenes/BarraLoadingHQ.tsx",
+    "mode": "overlay",
+    "props": {
+      "position": "bottom",
+      "width": 86,
+      "height": 6,
+      "margin": 7,
+      "trackColor": "#FFF3D6",
+      "outlineColor": "#101018",
+      "texture": true,
+      "points": [
+        {
+          "at": 0,
+          "value": 0
+        },
+        {
+          "at": 2,
+          "value": 30
+        },
+        {
+          "at": 3.5,
+          "value": 30
+        },
+        {
+          "at": 6,
+          "value": 70,
+          "easing": "smooth"
+        },
+        {
+          "at": 7,
+          "value": 70
+        },
+        {
+          "at": 9.5,
+          "value": 100,
+          "easing": "smooth"
+        }
+      ],
+      "colors": [
+        {
+          "at": 0,
+          "color": "#2689FF"
+        },
+        {
+          "at": 4,
+          "color": "#2689FF"
+        },
+        {
+          "at": 7,
+          "color": "#FF354A"
+        }
+      ]
+    }
+  },
+  "transitionOut": "cut"
+}

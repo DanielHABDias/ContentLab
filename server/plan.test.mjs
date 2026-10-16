@@ -29,6 +29,9 @@ test('blur_down is a supported scene transition',()=>{
   assert.deepEqual(validateShape(p),[]);
   assert.deepEqual(validatePlan(p),[]);
 });
+test('Flip and Curtain are canonical transitions between scenes',()=>{
+ for(const transition of ['flip','curtain']){const p=example();p.timeline[0].transitionOut=transition;p.timeline[0].transitionDuration=.4;assert.deepEqual(validateShape(p),[]);assert.deepEqual(validatePlan(p),[]);}
+});
 test('scene IDs are stable and duplicates rejected',()=>{
   const p=example();p.timeline.push({...p.timeline[0],start:3,end:6});
   assert.ok(validatePlan(p).some(e=>e.message.includes('duplicado')));

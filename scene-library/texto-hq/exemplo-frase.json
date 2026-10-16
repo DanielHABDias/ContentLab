@@ -1,0 +1,30 @@
+{
+  "id": "texto_hq_frase",
+  "start": 0,
+  "end": 5,
+  "layout": "fullscreen",
+  "background": {
+    "color": "#000000"
+  },
+  "elements": [],
+  "customComponent": {
+    "module": "project://custom-scenes/TextoHQ.tsx",
+    "mode": "replace",
+    "props": {
+      "text": "UMA IDEIA MUDA TUDO",
+      "fontFamily": "Bangers",
+      "textColor": "#FFFFFF",
+      "backgroundStyle": "paper",
+      "paperTone": "dark",
+      "textScale": 0.9,
+      "entryAnimation": "escrita",
+      "entryDuration": 1.1,
+      "exitAnimation": "fechar",
+      "exitDuration": 0.4
+    },
+    "assets": {
+      "bangers": "builtin://fonts/Bangers-Regular.ttf"
+    }
+  },
+  "transitionOut": "cut"
+}

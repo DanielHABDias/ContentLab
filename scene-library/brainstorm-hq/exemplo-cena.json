@@ -1,0 +1,70 @@
+{
+  "id": "brainstorm_hq",
+  "start": 0,
+  "end": 14,
+  "layout": "fullscreen",
+  "background": {
+    "color": "#18243C"
+  },
+  "elements": [],
+  "customComponent": {
+    "module": "project://custom-scenes/BrainstormHQ.tsx",
+    "mode": "replace",
+    "props": {
+      "backgroundColor": "#18243C",
+      "cardColor": "#273E65",
+      "textColor": "#FFFFFF",
+      "lineColor": "#FF435A",
+      "zoomOutDuration": 1.4,
+      "nodes": [
+        {
+          "id": "regra",
+          "text": "A regra",
+          "asset": "escudo"
+        },
+        {
+          "id": "escolha",
+          "text": "Uma escolha"
+        },
+        {
+          "id": "legado",
+          "text": "O legado",
+          "asset": "escudo"
+        },
+        {
+          "id": "consequencia",
+          "asset": "escudo"
+        }
+      ],
+      "steps": [
+        {
+          "node": "regra",
+          "hold": 2
+        },
+        {
+          "node": "escolha",
+          "from": "regra",
+          "moveDuration": 0.9,
+          "hold": 2
+        },
+        {
+          "node": "legado",
+          "from": "regra",
+          "moveDuration": 1.1,
+          "hold": 2
+        },
+        {
+          "node": "consequencia",
+          "from": "escolha",
+          "moveDuration": 0.9,
+          "hold": 2
+        }
+      ]
+    },
+    "assets": {
+      "escudo": "project://assets/exemplos/imagem.svg",
+      "bangers": "builtin://fonts/Bangers-Regular.ttf"
+    }
+  },
+  "transitionOut": "cut"
+}

@@ -15,12 +15,15 @@ export function streamSkillZip(response){
   zip.append(instruction,{name:'SKILL.md'});
   for(const skill of [
     'contentlab-composicao','contentlab-motion','contentlab-cenas-tsx','contentlab-timeline-audio',
-    'contentlab-contrato','contentlab-revisao','diazverso-video','gsb-contentlab'
+    'contentlab-contrato','contentlab-revisao'
   ]){
     const relative=`skills/${skill}/SKILL.md`;
     zip.file(path.join(APP_ROOT,relative),{name:relative});
+    const references=path.join(APP_ROOT,'skills',skill,'references');
+    if(fs.existsSync(references))zip.directory(references,'skills/'+skill+'/references');
   }
   zip.file(path.join(APP_ROOT,'skills/README.md'),{name:'skills/README.md'});
+  zip.directory(path.join(APP_ROOT,'scene-library'),'scene-library');
   zip.append(buildMarkdown(),{name:'docs/Documentacao-ContentLab.md'});
   zip.append(buildHtml({standalone:true}),{name:'docs/Documentacao-ContentLab.html'});
   for(const figure of figureAssets())
@@ -31,7 +34,7 @@ export function streamSkillZip(response){
     'examples/minimal-edit-plan.json','examples/motion-grid.json',
     'examples/motion-storyboard.json','examples/tipografia.json',
     'examples/word-stack.json','examples/audio-phase8-edit-plan.json',
-    'examples/custom-scenes/FollowDot.tsx','examples/programmatic-motion-edit-plan.json'
+    'examples/programmatic-motion-edit-plan.json'
   ]){
     const source=path.join(APP_ROOT,file);
     if(fs.existsSync(source))zip.file(source,{name:file});

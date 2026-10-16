@@ -1,0 +1,160 @@
+{
+  "id": "galeria_cartas_hq",
+  "start": 0,
+  "end": 10,
+  "layout": "fullscreen",
+  "background": {
+    "color": "#1B2943"
+  },
+  "elements": [
+    {
+      "id": "carta_som_1",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh curto 04.mp3",
+      "at": 0.455,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -28
+      }
+    },
+    {
+      "id": "carta_som_2",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh 03.mp3",
+      "at": 1.555,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -28
+      }
+    },
+    {
+      "id": "carta_som_3",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh aéreo 03.mp3",
+      "at": 2.655,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -28
+      }
+    },
+    {
+      "id": "carta_som_4",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh curto 04.mp3",
+      "at": 3.755,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -28
+      }
+    },
+    {
+      "id": "carta_som_5",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh 03.mp3",
+      "at": 4.855,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -28
+      }
+    },
+    {
+      "id": "carta_som_6",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh aéreo 03.mp3",
+      "at": 5.955,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -28
+      }
+    },
+    {
+      "id": "carta_som_7",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh curto 04.mp3",
+      "at": 7.055,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -28
+      }
+    }
+  ],
+  "customComponent": {
+    "module": "project://custom-scenes/GaleriaCartasHQ.tsx",
+    "mode": "replace",
+    "props": {
+      "title": "AS PEÇAS DESSA HISTÓRIA",
+      "subtitle": "UMA GALERIA EM MOVIMENTO",
+      "backgroundColor": "#1B2943",
+      "cardColor": "#F6EDD8",
+      "textColor": "#FFFFFF",
+      "cardTextColor": "#111723",
+      "accentColor": "#F4C542",
+      "entryDuration": 0.65,
+      "textDuration": 0.2,
+      "stackOffset": 16,
+      "items": [
+        {
+          "asset": "escudo",
+          "title": "A REGRA",
+          "caption": "Preservar o princípio",
+          "at": 0.25
+        },
+        {
+          "asset": "lampada",
+          "title": "A ESCOLHA",
+          "caption": "Buscar outra saída",
+          "at": 1.35
+        },
+        {
+          "asset": "balanca",
+          "title": "O LIMITE",
+          "caption": "Pesar as consequências",
+          "at": 2.45
+        },
+        {
+          "asset": "caminho",
+          "title": "A EXCEÇÃO",
+          "caption": "Um novo caminho",
+          "at": 3.55,
+          "accentColor": "#79AFE9"
+        },
+        {
+          "asset": "escudo",
+          "title": "O PREÇO",
+          "caption": "Quem paga a conta?",
+          "at": 4.65,
+          "accentColor": "#E88882"
+        },
+        {
+          "asset": "lampada",
+          "title": "O RETORNO",
+          "caption": "De volta ao começo",
+          "at": 5.75,
+          "accentColor": "#B79AE4"
+        },
+        {
+          "asset": "balanca",
+          "title": "A CONSEQUÊNCIA",
+          "caption": "Tudo deixa uma marca",
+          "at": 6.85,
+          "accentColor": "#8ACCB1"
+        }
+      ]
+    },
+    "assets": {
+      "bangers": "builtin://fonts/Bangers-Regular.ttf",
+      "escudo": "project://assets/exemplos/imagem.svg",
+      "lampada": "project://assets/exemplos/imagem.svg",
+      "balanca": "project://assets/exemplos/imagem.svg",
+      "caminho": "project://assets/exemplos/imagem.svg"
+    }
+  },
+  "transitionOut": "cut"
+}

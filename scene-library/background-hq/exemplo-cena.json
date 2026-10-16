@@ -1,0 +1,21 @@
+{
+  "id": "background_hq",
+  "start": 0,
+  "end": 8,
+  "layout": "fullscreen",
+  "background": {
+    "color": "#18243C"
+  },
+  "elements": [],
+  "customComponent": {
+    "module": "project://custom-scenes/BackgroundHQ.tsx",
+    "mode": "overlay",
+    "props": {
+      "backgroundStyle": "grid",
+      "backgroundOpacity": 50,
+      "gridBackgroundColor": "#10101A",
+      "gridLineColor": "#858595"
+    }
+  },
+  "transitionOut": "cut"
+}

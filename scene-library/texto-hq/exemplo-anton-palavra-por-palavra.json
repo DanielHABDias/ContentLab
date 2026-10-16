@@ -1,0 +1,58 @@
+{
+  "id": "anton_palavra_por_palavra",
+  "start": 0,
+  "end": 5.6,
+  "layout": "fullscreen",
+  "background": {
+    "color": "#FFFFFF"
+  },
+  "elements": [],
+  "customComponent": {
+    "module": "project://custom-scenes/TextoHQ.tsx",
+    "mode": "replace",
+    "props": {
+      "fontFamily": "Anton",
+      "backgroundStyle": "solid",
+      "entryAnimation": "none",
+      "exitAnimation": "none",
+      "texts": [
+        {
+          "text": "NÃO",
+          "at": 0,
+          "duration": 1.4,
+          "backgroundColor": "#FFFFFF",
+          "textColor": "#E63040",
+          "textScale": 1
+        },
+        {
+          "text": "PODE",
+          "at": 1.4,
+          "duration": 1.4,
+          "backgroundColor": "#175AE8",
+          "textColor": "#FFFFFF",
+          "textScale": 0.5
+        },
+        {
+          "text": "FALTAR",
+          "at": 2.8,
+          "duration": 1.4,
+          "backgroundColor": "#F4C542",
+          "textColor": "#080A11",
+          "textScale": 0.8
+        },
+        {
+          "text": "ATITUDE",
+          "at": 4.2,
+          "duration": 1.4,
+          "backgroundColor": "#E63040",
+          "textColor": "#FFFFFF",
+          "textScale": 1
+        }
+      ]
+    },
+    "assets": {
+      "anton": "builtin://fonts/Anton-Regular.ttf"
+    }
+  },
+  "transitionOut": "cut"
+}

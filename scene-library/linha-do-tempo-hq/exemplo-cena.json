@@ -1,0 +1,91 @@
+{
+  "id": "linha_do_tempo_hq",
+  "start": 0,
+  "end": 7,
+  "layout": "fullscreen",
+  "background": {
+    "color": "#E8C64F"
+  },
+  "elements": [
+    {
+      "id": "movimento_1",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh curto 04.mp3",
+      "at": 1.93,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -26
+      }
+    },
+    {
+      "id": "movimento_2",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh aéreo 03.mp3",
+      "at": 4.08,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -26
+      }
+    },
+    {
+      "id": "entrada",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh Cinemático.mp3",
+      "at": 6.355,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -25
+      }
+    }
+  ],
+  "customComponent": {
+    "module": "project://custom-scenes/LinhaDoTempoHQ.tsx",
+    "mode": "replace",
+    "props": {
+      "direction": "forward",
+      "backgroundColor": "#E8C64F",
+      "accentColor": "#2676E8",
+      "textColor": "#FFFFFF",
+      "startDelay": 0.3,
+      "moveDuration": 0.8,
+      "enterDuration": 1.05,
+      "enterLast": true,
+      "clips": [
+        {
+          "asset": "clip1",
+          "title": "2010",
+          "subtitle": "Rival",
+          "sourceStart": 0.1,
+          "hold": 1.35,
+          "crt": true
+        },
+        {
+          "asset": "clip2",
+          "title": "2015",
+          "subtitle": "ARKHAM KNIGHT",
+          "sourceStart": 4.5,
+          "hold": 1.35,
+          "crt": false
+        },
+        {
+          "asset": "clip3",
+          "title": "2016",
+          "subtitle": "A PIADA MORTAL",
+          "sourceStart": 5,
+          "hold": 1.35,
+          "crt": true
+        }
+      ]
+    },
+    "assets": {
+      "clip1": "project://assets/exemplos/video.mp4",
+      "clip2": "project://assets/exemplos/video.mp4",
+      "clip3": "project://assets/exemplos/video.mp4",
+      "bangers": "builtin://fonts/Bangers-Regular.ttf"
+    }
+  },
+  "transitionOut": "cut"
+}

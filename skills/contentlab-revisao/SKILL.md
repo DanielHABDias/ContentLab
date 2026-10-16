@@ -67,10 +67,15 @@ Em TSX espaciais, inspecionar o frame 0, os destinos de câmera, clipping, másc
 1. Movimento editorial intencional sem cobertura sonora (SFX ou áudio original embutido verificado); em TSX ler eventos internos, não olhar só `scene.customComponent`.
 2. Início **audível** do SFX anterior à animação ou posterior ao fim do movimento: exigir `motionStart <= audibleSfxStart < motionEnd`, salvo ambiguidades de resolução de um frame a conferir manualmente. SFX maior/menor não é erro; apenas garantir o evento principal dentro do gesto, com cauda natural e final suave.
 3. Arquivo SFX alongado/deslocado que invade outra narração/ação de maneira inadequada; se corte é necessário, `config.duration` + `fadeOut` realmente suportados e confirmados no render. Nunca corte seco com estalo nem fade fictício em campo desconhecido.
-4. SFX sempre repetido na mesma função por automatismo, ou audivelmente abafando voz; duplicidade com áudio embutido Nox/CTA/mídia; áudio com peak/clipping ou fora da timeline.
+4. SFX sempre repetido na mesma função por automatismo, ou audivelmente abafando voz; duplicidade com áudio embutido personagem/CTA/mídia; áudio com peak/clipping ou fora da timeline.
 5. Palavra/imagem/nó/câmera ainda entrando após a locução terminar: cruzar palavra do áudio preparado com frame de assentamento/hold; reprovar temporização tardia, revelação antecipada com spoiler, vídeo/PNG incorreto e asset/TSX inexistente.
 6. Campos fora do schema, IDs inválidos, cenas com lacunas não intencionais, clipes sem fonte, overlays fora da área segura, fontes incorretas, tela preta, transição sem continuidade, música disputando a voz, formato/crop incompatíveis.
 
 **Confiabilidade:** validação de JSON e existência de arquivos confirma apenas pré-condições. Analisar janelas de keyframes e tempos relativos TSX com `fps` declarado; se eventos TSX não puderem ser inferidos estaticamente, exigir mapa explícito por `scene.id` e marcar `NÃO VERIFICADO`, não fabricar cobertura. No pós-render, checar frames imediatamente antes/durante/depois de cada evento, waveform/escuta do arquivo final e sincronização por percepção; não presumir que arquivo de SFX encontrado está audível. Identificar duração real depois do corte/auto-trim, fade, `at` e asset real. Corrigir menor conjunto possível e repetir auditoria de cenas alteradas e pontos adjacentes.
 
 **Saída obrigatória:** relatório por `scene.id`, `beat/event`, posição temporal, janela de movimento, SFX/pico, resultado `OK|BLOQUEANTE|ALERTA|NÃO VERIFICADO`, causa e correção; matriz com contagem total de movimentos, cobertura válida, ausências, atrasos, repetições, fadings e inconsistências visuais/áudio. Estado geral: `REPROVADO` (há bloqueante), `PENDENTE DE VERIFICAÇÃO` (faltam dados/render/escuta), `APROVADO PRÉ-RENDER` (etapa A completa), `APROVADO FINAL` (etapas A+B completas). **Não liberar edição automática diante de bloqueantes** nem afirmar `APROVADO FINAL` sem escuta do MP4.
+
+
+## Padrões oficiais
+
+Consultar scene-library/manifest.json e o README do padrão escolhido antes de criar TSX do zero. A galeria oficial inclui contratos e exemplos. Textos Anton sem sombra; Bangers com tratamento HQ. SFX não são gerados pelos componentes. Flip/Curtain/Blur são transitionOut entre cenas, não presets de cena. Preserve cópias instaladas em projetos e valide sincronismo com transcript.words.

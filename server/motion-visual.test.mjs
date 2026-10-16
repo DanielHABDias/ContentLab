@@ -24,7 +24,7 @@ test('0.1-second fade / slide / blur transitions remain 0.1 seconds and end on t
         '-c:v','libx264','-pix_fmt','yuv420p',video]);
       videos.push(video);
     }
-    for(const type of ['fade','slide_left','blur_left','blur_right','blur_up','blur_down']){
+    for(const type of ['fade','slide_left','blur_left','blur_right','blur_up','blur_down','flip','curtain']){
       const output=path.join(folder,type+'.mp4');
       const scenes=[{id:'red',start:0,end:0.5,transitionOut:type,transitionDuration:0.1},
         {id:'blue',start:0.5,end:1,transitionOut:'cut'}];
@@ -62,4 +62,30 @@ test('0.1-second fade / slide / blur transitions remain 0.1 seconds and end on t
       }
     }
   }finally{fs.rmSync(folder,{recursive:true,force:true});}
+});
+
+test('Flip compresses two faces and Curtain reveals a stationary incoming shot, in both formats',
+ {skip:!available&&!required,timeout:120000},async()=>{
+ const folder=fs.mkdtempSync(path.join(os.tmpdir(),'cl-flip-curtain-'));
+ try{for(const [w,h]of [[160,90],[90,160]]){
+  const videos=[];
+  for(const color of ['red','blue']){const file=path.join(folder,color+w+'.mp4');await run('ffmpeg',['-v','error','-y','-f','lavfi','-i',`color=c=${color}:s=${w}x${h}:r=30:d=1`,'-c:v','libx264','-pix_fmt','yuv420p',file]);videos.push(file);}
+  const pixel=(file,frame,x,y)=>{
+   const r=spawnSync('ffmpeg',['-v','error','-i',file,'-vf',`select=eq(n\\,${frame})`,'-frames:v','1','-f','rawvideo','-pix_fmt','rgb24','-'],{maxBuffer:w*h*4});
+   assert.equal(r.status,0,String(r.stderr));assert.equal(r.stdout.length,w*h*3);return [...r.stdout.subarray((y*w+x)*3,(y*w+x)*3+3)];
+  };
+  for(const type of ['flip','curtain']){
+   const out=path.join(folder,type+w+'.mp4');await composeVisual([{id:'a',start:0,end:1,transitionOut:type,transitionDuration:.4},{id:'b',start:1,end:2,transitionOut:'cut'}],videos,out,{width:w,height:h,fps:30},folder);
+   const first=pixel(out,30,Math.floor(w/2),Math.floor(h/2)),last=pixel(out,41,Math.floor(w/2),Math.floor(h/2));
+   assert.ok(first[0]>150&&first[2]<60,type+' starts on outgoing');assert.ok(last[2]>150&&last[0]<60,type+' settles on incoming');
+   if(type==='flip'){
+    const middle=pixel(out,34,Math.floor(w/2),Math.floor(h/2)),edge=pixel(out,34,2,Math.floor(h/2));
+    assert.ok(middle[0]>100,'front face visible before half-turn');assert.ok(Math.max(...edge)<45,'face narrows during flip');
+    const back=pixel(out,37,Math.floor(w/2),Math.floor(h/2));assert.ok(back[2]>100,'incoming face visible after half-turn');
+   }else{
+    const left=pixel(out,35,5,Math.floor(h/2)),right=pixel(out,35,w-6,Math.floor(h/2));
+    assert.ok(left[0]>100&&right[2]>100,'curtain slides the old shot off the stationary new shot');
+   }
+  }
+ }}finally{fs.rmSync(folder,{recursive:true,force:true});}
 });

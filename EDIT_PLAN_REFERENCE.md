@@ -48,7 +48,7 @@
 - Arquivos são `project://` (raiz do projeto) ou `builtin://` (biblioteca instalada). O resolver bloqueia `..`, symlinks externos e URI inválida. Não use caminhos absolutos em `asset`.
 - `audio.narration` informa um arquivo dentro do projeto. `sourceCuts` lista trechos `{start,end}` da narração original, aplicados antes da mixagem.
 - `audio.music[]` aceita `asset`, `start`, `end`, `trimDb`, `fadeIn`, `fadeOut`, `preset`. A voz pode usar `normalize`, `targetLufs`, `truePeakDb`, `highpassHz` e `trimDb`. Também há configuração `ducking`; confirme o comportamento audiovisual final nos testes.
-- `timeline[].transitionOut`: `cut`, `fade`, `slide_left`, `blur_left`, `blur_right`, `blur_up`, `blur_down` com `transitionDuration`. Transições dependem das cenas adjacentes.
+- `timeline[].transitionOut`: `cut`, `fade`, `slide_left`, `blur_left`, `blur_right`, `blur_up`, `blur_down`, `flip`, `curtain` com `transitionDuration`. Transições dependem das cenas adjacentes.
 
 As transições não encurtam cenas: os quadros misturados/deslizados ocupam o **começo da cena seguinte**. Para um whoosh centralizado em `blur_*`, posicione `sfx.at` na cena entrante, em segundos absolutos, aproximadamente em `cena_entrante.start + (duração_visual - duração_audível_do_whoosh)/2`. O mixer remove silêncio nas bordas do SFX antes de posicioná-lo, então meça a duração audível e confirme uma prévia curta com áudio.
 - `background` recebe `color` ou `asset`; `fit: contain` preserva conteúdo inteiro, `cover` só quando o recorte for intencional; `loop` repete vídeo curto. Vídeo 16:9 já no formato final não deve ser ampliado implicitamente.
@@ -159,3 +159,7 @@ A composição possui três faixas na vertical. **A linha central ativa ocupa 10
 Exemplo pronto: `examples/word-stack.json`, que ocupa duas colunas em `cells:[1,2,4,5,7,8]` **mas renderiza a faixa do carrossel na largura completa do quadro**. O teste `node server/smoke-word-stack.mjs` renderiza frames reais no Remotion e confere a faixa central inteira, opacidade das vizinhas e presença de texto nos três slots.
 
 **Correção do highlight de captions:** `bangers_highlight_block` agora suaviza a troca do background entre palavras, sem alterar o texto nem os timestamps. `config.highlightTransitionDuration:0.1` define 100 ms de crossfade; a passagem fica limitada ao intervalo real da palavra. Fade de cenas foi corrigido para misturar da cena anterior para a próxima, finalizando no último frame da transição.
+
+## Biblioteca oficial de cenas
+
+Consulte a Galeria de cenas especiais da documentação e scene-library/manifest.json. Prepare uma cópia local e use project://custom-scenes/Nome.tsx. O catálogo descreve os tipos de props, assets, tempos, sons e os exemplos; não use mais os templates removidos de examples/custom-scenes. word_stack_vertical e word_stream_horizontal são compatibilidade de planos anteriores, não os padrões para novas edições: use CarrosselFrasesHQ e TextoHQ.

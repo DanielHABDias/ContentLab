@@ -121,7 +121,7 @@ A fila valida previamente os projetos e narrações e executa um render por vez,
 
 **API local:** `POST /api/render-queue` com `projectRoots: string[]`, `cacheMode: "reuse" | "rebuild"`, `hardwareAccel: boolean`, `continueOnError: boolean`; `GET /api/render-queue/latest`, `GET /api/render-queue/:id` e `POST /api/render-queue/:id/cancel`.
 
-**Compatibilidade do TSX Diazverso:** na versão do Remotion 4.0.530, ao usar `<OffthreadVideo loop />` é necessário indicar `durationInFrames` finito. Os projetos SH_0005 a SH_0010 devem usar o `DiazversoFlowHQ.tsx` corrigido em suas pastas `custom-scenes/`. Alterações no Drive não são transferidas automaticamente para o computador local; copie o arquivo atualizado ou substitua pelo ZIP de correção.
+
 
 ## Instalação automática e inicialização
 
@@ -301,8 +301,32 @@ Ao criar um projeto no Studio e selecionar sua narração, o Content Lab vincula
 `sources.transcript` aponta automaticamente para `transcript.json`. Alterações no relógio da voz (cortes, pausas, troca do áudio) tornam a transcrição desatualizada e disparam uma nova geração após salvar; há também botão **Atualizar transcrição**. O render não aplica `sourceCuts`/`silenceInserts` novamente sobre timestamps de uma transcrição já gerada da narração preparada. Caso haja correções manuais, o Content Lab preserva um backup antes de substituir o arquivo numa regeneração. Textos podem ser normalizados manualmente ou com IA, mas os tempos devem continuar ligados à gravação real.
 
 
-## Novos exemplos de motion reutilizável e música (outubro de 2026)
+## Cenas especiais oficiais
 
-A auditoria do VD_0005 resultou em quatro **exemplos TSX agnósticos ao roteiro** dentro de [`examples/custom-scenes/`](examples/custom-scenes): `NarrativePath.tsx` (travelling por argumento), `EvidenceConstellation.tsx` (rede de personagens/evidências), `PixelNotification.tsx` (notificação com contador visual SVG sem fonte externa) e `ComicMotionKit.tsx` (linguagem HQ: painéis, tinta, balão, impacto, split). Referência: [`VD0005_REUSABLE_REVIEW.md`](VD0005_REUSABLE_REVIEW.md). **São exemplos copiáveis para `<projeto>/custom-scenes/`, não presets nativos da interface, nem parte do vídeo já finalizado.** Ainda requerem render de prova para homologação visual.
+Oferecimento do DiasVerso.
 
-A [auditoria musical](MUSIC_LIBRARY_DIAZVERSO.md) confirma três músicas do vídeo já internas e três candidatas a importação **local**. O script [`scripts/import-diazverso-music.mjs`](scripts/import-diazverso-music.mjs) instala os MP3s obtidos legitimamente no ContentLab do operador após confirmação da licença; não baixa nem comita músicas para distribuição pública. Para novos vídeos Diazverso, a direção HQ em movimento é **opção experimental**, sem alterar o edit_plan ou cenas do VD_0005.
+Os 15 padrões em [scene-library](scene-library/manifest.json) substituem os templates TSX antigos. Na aba Documentação, abra **Galeria de cenas especiais** para ver exemplos 16:9/9:16, parâmetros, sons e trechos JSON. Use **Preparar no projeto** para copiar o TSX para custom-scenes; não sobrescreve outra versão nem altera o plano/render automaticamente.
+
+Os guias completos acompanham cada preset. Anton não usa sombra; Bangers mantém o acabamento HQ. As sete técnicas adaptadas são variantes de BrainstormHQ, PaginaHQCenas e TextoHQ, sem duplicação. Fontes e mídia são configuradas em customComponent.assets; SFX continuam explícitos no plano. As cópias já presentes nos projetos antigos permanecem intactas.
+
+Flip e Curtain são transições nativas entre duas cenas: transitionOut: flip ou curtain, com transitionDuration em segundos, e não cenas TSX. Blur continua disponível nas quatro direções.
+
+### Catálogo dos 15 presets
+
+| Padrão | Função |
+| --- | --- |
+| [Fundo HQ](scene-library/background-hq/README.md) | Fundos sólido, retícula, papel, grade, estrelas e filme. |
+| [Barra de progresso HQ](scene-library/barra-loading-hq/README.md) | Progresso com pausas e mudanças de cor. |
+| [Brainstorm HQ](scene-library/brainstorm-hq/README.md) | Nós, percursos, narrativa e evidências com câmera. |
+| [Caixinha HQ](scene-library/caixinha-hq/README.md) | Caixas livres e presets sociais com entradas e gestos. |
+| [Carrossel de frases HQ](scene-library/carrossel-frases-hq/README.md) | Próxima frase acima, ativa central e anterior abaixo. |
+| [Comparativo de ideias HQ](scene-library/comparativo-ideias-hq/README.md) | Compare de duas a quatro imagens e textos. |
+| [Encerramento HQ](scene-library/cta-encerramento-hq/README.md) | Indicação de vídeo no vertical; dois vídeos e canal no horizontal. |
+| [Diálogo HQ](scene-library/dialogo-hq/README.md) | Dois participantes alternam destaque e falas. |
+| [Galeria de cartas HQ](scene-library/galeria-cartas-hq/README.md) | Imagens entram e se empilham por coluna. |
+| [Imagem e frases HQ](scene-library/imagem-frases-hq/README.md) | Imagem com brilho e frases sincronizadas ao lado. |
+| [Linha do tempo HQ](scene-library/linha-do-tempo-hq/README.md) | Clipes percorridos em ordem ou reverso, com expansão. |
+| [Página HQ Cenas](scene-library/pagina-hq-cenas/README.md) | Grid, dois painéis, divisão de escolhas e Parallax. |
+| [Personagem, espiral e legenda](scene-library/personagem-espiral-legenda/README.md) | Personagem sobe sobre espiral pixelada e legenda por palavra. |
+| [Quadro HQ sobre cena](scene-library/quadro-hq-sobre-cena/README.md) | Etiqueta e caixa de narração sobre mídia externa. |
+| [Texto HQ](scene-library/texto-hq/README.md) | Frases/palavras com Anton ou Bangers, escrita e Kinetic. |

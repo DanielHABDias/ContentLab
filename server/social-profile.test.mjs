@@ -17,12 +17,12 @@ test('YouTube account resolver identifies authorized channel',async()=>{
   const result=await fetchSocialProfile('youtube','fake-token',{
     fetcher:async(url,options)=>{
       got.push({url,authorization:options.headers.Authorization});
-      return reply({items:[{id:'UC-channel',snippet:{title:'Diazverso',customUrl:'@diazverso'}}]});
+      return reply({items:[{id:'UC-channel',snippet:{title:'Canal Exemplo',customUrl:'@Canal Exemplo'}}]});
     }
   });
-  assert.equal(result.name,'Diazverso');
+  assert.equal(result.name,'Canal Exemplo');
   assert.equal(result.id,'UC-channel');
-  assert.equal(result.username,'@diazverso');
+  assert.equal(result.username,'@Canal Exemplo');
   assert.ok(got[0].url.includes('mine=true'));
   assert.equal(got[0].authorization,'Bearer fake-token');
 });
@@ -32,11 +32,11 @@ test('Instagram resolver falls back to basic profile fields without breaking con
     fetcher:async(url)=>{
       urls.push(url);
       return urls.length===1?reply({error:{code:10}},403):
-        reply({id:'ig-001',username:'diazverso'});
+        reply({id:'ig-001',username:'Canal Exemplo'});
     }
   });
   assert.equal(urls.length,2);
-  assert.equal(result.name,'diazverso');
+  assert.equal(result.name,'Canal Exemplo');
   assert.equal(result.id,'ig-001');
 });
 test('TikTok resolver reads display name from Display API',async()=>{
@@ -44,10 +44,10 @@ test('TikTok resolver reads display name from Display API',async()=>{
     fetcher:async(url)=>{
       assert.ok(url.includes('open.tiktokapis.com/v2/user/info'));
       return reply({error:{code:'ok'},data:{user:{
-        open_id:'user-12',display_name:'Diazverso',username:'diazverso'
+        open_id:'user-12',display_name:'Canal Exemplo',username:'Canal Exemplo'
       }}});
     }
   });
-  assert.equal(result.name,'Diazverso');
+  assert.equal(result.name,'Canal Exemplo');
   assert.equal(result.id,'user-12');
 });

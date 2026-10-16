@@ -778,7 +778,8 @@
           }
         },
         "transitionOut": {
-          "type": "string"
+          "type": "string",
+          "enum": ["cut", "fade", "blur_left", "blur_right", "blur_up", "blur_down", "slide_left", "flip", "curtain"]
         },
         "transitionDuration": {
           "type": "number",

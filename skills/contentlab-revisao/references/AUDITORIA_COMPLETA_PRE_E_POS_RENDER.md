@@ -16,15 +16,15 @@ Este protocolo é a referência operacional de `contentlab-revisao`. A liberaç�
 4. Construir *inventário sonoro*: `scene.id`, `movementStart`, `movementEnd`, `sfxAsset`, `sfxAudibleStart`, `audibleDuration`, `fadeOut`, `gain`, `sourceOriginalAudio`, observações.
 5. **Bloquear** movimento intencional sem cobertura ou com início audível fora de `[movementStart,movementEnd)`. O efeito deve começar **dentro** da ação; nem antes, nem depois. Caudas maiores/menores que a animação são aceitas se úteis; o ataque/reconhecimento deve coincidir com o gesto.
 6. Se o trecho sonoro invadir o próximo beat de modo ruim, limitar `config.duration` e aplicar `fadeOut` de elemento SFX. Conferir se o arquivo escolhido tem material audível suficiente e se não há estalo. O mixer mede e remove silêncio nas bordas do SFX, então não usar o silêncio da fonte como parte da sincronização.
-7. Verificar variedade: evitar sequência sistemática de whooshes iguais, casar pop/click/glitch/riser/hit/swish com a natureza do movimento e emoção; proteger a inteligibilidade da voz. Se CTA/Nox já tem SFX, não duplicar. Não inventar paths de SFX da biblioteca.
-8. Conferir legibilidade, área segura, Nox, CRT se perfil requer, música, fades, clip/audio original, escala, z-order, formatos e transições sem blackout.
+7. Verificar variedade: evitar sequência sistemática de whooshes iguais, casar pop/click/glitch/riser/hit/swish com a natureza do movimento e emoção; proteger a inteligibilidade da voz. Se CTA/personagem já tem SFX, não duplicar. Não inventar paths de SFX da biblioteca.
+8. Conferir legibilidade, área segura, personagem, CRT se perfil requer, música, fades, clip/audio original, escala, z-order, formatos e transições sem blackout.
 9. Gerar `relatorio_qa_edicao.md` junto ao vídeo com achados por evento, evidência ou limitação e correção mínima. Qualquer bloqueante = `REPROVADO`. Informação insuficiente = `PENDENTE DE VERIFICAÇÃO`. Apenas sem bloqueantes e com todas as verificações prévias realizadas = `APROVADO PRÉ-RENDER`.
 
 ## Gate B: após o render
 1. Abrir/escutar MP4 final, não só storyboard. Inspecionar frames em início/meio/fim de cada movimento relevante e também nas palavras.
 2. Confirmar `sfx.at` perceptual por escuta e forma de onda: início/pico audível corresponde ao movimento, sem antecipação/atraso. Efeitos longos cortados fazem fade real no áudio ouvido.
 3. Conferir cortes indesejados, clicks, mudos, clipping, loops, sequência repetitiva de SFX, volumes relativos, música e áudio original.
-4. Conferir imagens/textos presentes ao pronunciar palavras, hold, legibilidade de dispositivos menores, clipes corretos, Nox/CTA/CRT, transição completa e fim do vídeo.
+4. Conferir imagens/textos presentes ao pronunciar palavras, hold, legibilidade de dispositivos menores, clipes corretos, personagem/CTA/CRT, transição completa e fim do vídeo.
 5. Documentar gravação/frames realmente verificados e reabrir cenas bloqueadas para patch mínimo. Um patch visual ou de áudio requer nova auditoria dos trechos afetados e vizinhos.
 6. **`APROVADO FINAL` somente após MP4+áudio realmente inspecionados**; caso contrário manter status pré-render ou pendente.
 
@@ -38,9 +38,9 @@ Indicadores obrigatórios: total de cenas; cenas com motion; eventos de moviment
 ## Exceções permitidas explicitamente
 - Cena parada ou corte realmente seco sem transformação: não exige efeito por convenção.
 - Loop gráfico ambiental de fundo sem evento focal pode estar coberto por textura ambiente **verificada** e não exige “whoosh por oscilação”.
-- Som nativo de clipe Nox/CTA ou footage pode cumprir o papel, desde que seja audível naquele movimento.
+- Som nativo de clipe personagem/CTA ou footage pode cumprir o papel, desde que seja audível naquele movimento.
 - Um SFX contínuo pode cobrir um travelling contínuo com várias curvas; diferentes revelações editoriais normalmente pedem eventos separados.
-- Qualquer decisão de silêncio intencional deve ser autorizada pelo pedido atual; no Diazverso prevalece regra de SFX em motion editorial.
+- Qualquer decisão de silêncio intencional deve ser autorizada pelo pedido atual; no marca do projeto prevalece regra de SFX em motion editorial.
 
 ## Limite técnico
 A skill descreve QA a executar pelo Codex/agente ou operador; não afirma que ContentLab já tenha um botão que executa toda auditoria automaticamente. Schema e mixer suportam `type:"sfx"`, `at`, `config.duration`, `fadeOut`. Análise perceptual de áudio e render é obrigatória e depende de arquivos/acesso real.

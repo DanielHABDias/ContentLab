@@ -1,132 +1,18 @@
 ---
 name: contentlab-cenas-tsx
-description: Cria cenas Remotion complexas como arquivos TSX dentro da subpasta custom-scenes de cada projeto de vídeo, integrados ao edit_plan.json por customComponent.
+description: Escolher e configurar presets TSX do Content Lab ou criar uma cena Remotion quando a biblioteca não contempla o objetivo visual.
 ---
 
+# Cenas especiais
 
-## Restrição obrigatória para Diazverso — biblioteca oficial
-Este módulo é uma ferramenta técnica de TSX genéricos, **mas não é autorização para gerar novos TSX no Diazverso**. Em vídeos do canal, consultar o [README geral da biblioteca oficial](https://drive.google.com/drive/folders/1yWogLK6bRWXunvdJxTHBMIqB4ibSN44f) e os READMEs/arquivos das sete subpastas: ComicPageCTA, QuadroHQSobreCena, TextoBangersHalftone, PaginaHQCenas, LinhaDoTempoHQ, PersonagemEspiralLegenda, CaixinhaCTAHQ. **Reutilizar exclusivamente um desses sete por padrão**; desenvolver um oitavo, criar variantes ou alterar implementações somente diante de **pedido explícito do criador**. Caso os sete não atendam, usar composição/corte/elementos nativos quando possível ou pedir direção. A orientação é derivada de `project.resolution` (16:9 ou 9:16) e os exemplos não são contratos de assets obrigatórios. A skill pode continuar explicando COMO programar TSX caso essa autorização seja concedida. Os tempos, props, fontes, `overlay`/`replace` e SFX reais são definidos no README individual e reproduzidos no `edit_plan.json`; render e áudio requerem QA.
+Consultar scene-library/manifest.json e ler o README do padrão. Cada entrada inclui arquivo, hash, exemplos, prévias 16:9/9:16 e contratos completos. A Galeria do manual usa a mesma origem.
 
-# Content Lab — Cenas programáveis TSX
+BrainstormHQ inclui cards/path/narrative/evidence; PaginaHQCenas inclui grid/asymmetric/split/parallax; TextoHQ inclui escrita/abrir/kinetic/none. Reutilizar antes de duplicar. Os templates antigos de examples/custom-scenes foram retirados.
 
-## Remotion 4.0.530 — vídeos repetidos em TSX
+Preparar pelo aplicativo ou copiar scene-library/<id>/<arquivo> para custom-scenes/<arquivo>. Não sobrescrever cópias diferentes. Usar project://custom-scenes/Nome.tsx e mode replace/overlay. assets é mapa externo a props. Fontes via builtin://fonts; mídia própria via project://assets. Para os exemplos neutros, copiar scene-library/demo-assets para assets/exemplos. Os snippets são cenas, não planos completos.
 
-NÃO passar a prop `loop` diretamente para `<OffthreadVideo />` no ContentLab. Esse componente não implementa repetição nativa; passar `loop` pode produzir `The "loop" prop of <Sequence /> requires a finite "durationInFrames" prop` no frame zero. A correção NÃO é apenas adicionar `durationInFrames` ao OffthreadVideo. Usar `<Loop durationInFrames={frames} layout="none"><OffthreadVideo src={src} muted style={style}/></Loop>`, em que `frames` é inteiro positivo e finito. Para loop sem congelamento, `frames` deve representar a duração real do clipe. Para vídeo sem repetição, usar OffthreadVideo sem `loop`. Validar a configuração de remotion em render, não só transpilar TSX.
+Tempos de props são normalmente relativos; SFX do plano são absolutos. Captions podem usar milissegundos. Conferir o significado de at no guia e usar transcript.words real. Anton sem sombra/contorno, Bangers com acabamento HQ. Opacidade do fundo não apaga o conteúdo da frente; replace não preserva a base descartada. Há um customComponent por cena, não combinação arbitrária de vários.
 
+Encerramento usa assets.character e channelName/títulos opcionais, sem personagem fixo. Caixinha Instagram recebe o perfil via text. Sons não são embutidos; os vídeos internos de Página/Timeline são mudos. Ler os controles de som e colocar SFX no plano. Flip/Curtain/Blur são transitionOut entre cenas reais, não presets TSX.
 
-## Perfil Diazverso — poucos TSX padronizados (15/10/2026)
-
-A direção nova do canal **abandona** o experimento de Short com desenvolvimento inteiro em um TSX FlowHQ. Em Shorts, priorizar clipes da obra e ilustrações completas com pan/zoom, usar overlays HQ leves e TSX pontuais; não copiar `DiazversoFlowHQ.tsx` ou outros testes descartados como presets. No SH_0005, preservar apenas os visuais aprovados de `DiazversoHQEditorial.tsx` (hook sem linha amarela inferior, caption e lettering) e `ComicPageCTA.tsx` (CTA com thumb/título variáveis). Seus demais modos não recebem aprovação implícita.
-
-Para longos, TSX na proporção 16:9, escolhidos de uma biblioteca PEQUENA, futura e reutilizável: halftone, painéis/quadrados HQ que entram primeiro e recebem PNG animado depois, fonte Avengers quando disponível/verificada (distinta de Bangers), sombras e balanço suave. A cena da obra ou imagem real permanece a base da narrativa, não há obrigação de converter cada beat em composição programada. Uma textura recorrente pode ser overlay de imagem transparente, não TSX. Os novos modelos serão concebidos/testados com Codex. Preservar comportamento genérico de outros perfis.
-
-## Prioridade do overlay Minecraft sobre TSX e diversidade visual de Shorts (14/10/2026)
-
-Na abertura do Short 9:16 Diazverso, a explosão `project://assets/overlays/explosaoMinecraft.mp4` deve aparecer **em cima de TODO o TSX** entre 0 e 3 s. No JSON, marcar o elemento `type:"overlay"` com `z:900`, `config.alwaysOnTop:true`, `style:"green_screen"`, `loop:false` e `muted:false`. No ContentLab, `server/custom-scenes.mjs` agora desenha uma segunda passagem transparente de overlays prioritários **depois** de `<UserScene />`; o z ordenado apenas dentro de `<Scene />` NÃO é suficiente contra a composição TSX. Renderizar e conferir primeiro frame e 0–3s; nunca declarar correção só com JSON.
-
-**Evitar reuso mecânico do MESMO clip:** considerar a fonte realmente exibida pelo TSX (`customComponent.assets.main/next`), não apenas `scene.background.asset`, porque muitas variantes TSX ocultam quase todo o fundo. Planejar alternância conforme o argumento: imagens reais e múltiplas cenas distintas da obra, recortes transparentes de personagens, painéis HQ, texto gigantesco puro e transições visuais. Para PNGs de personagem, `Img objectFit:"contain"` (corpo inteiro visível). Para vídeo horizontal 16:9 em Short, manter `OffthreadVideo objectFit:"cover"` central. A alternância não autoriza assets inexistentes; seguir o mapa de assets e validar clipes/nomes. Preservar o áudio Minecraft, riser integral, whoosh no blur de 0,20s, música pós-blur e CTA.
-
-
-
-## Coreografia sonora perceptível — Diazverso Shorts (14/10/2026)
-
-Para cada `customComponent` editorial de Shorts, identificar **os tempos reais dos gestos** no TSX (p.ex., chegada de painel, texto, máscara, fechamento de página, impacto e destaque de personagem) e posicionar SFX em `edit_plan.json` nos respectivos tempos absolutos. Evitar cues fixos em segundos sem compensar a duração da cena e os fatores de aceleração internos da animação. Animação visual sem efeito audível suficiente é falha de direção, mas não duplicar áudio que já está no vídeo. Preferir whoosh/swish no deslocamento, click/snap em surgimento, hit no assentamento e chime em destaque. Nível deve permanecer perceptível mesmo com voz e música, validado no MP4. Ao cortar os movimentos externos usar `blur_*` rápido (~0,20 s) com blur forte aplicado globalmente pelo compositor, e whoosh no início da cena entrante. O Metallic Riser da abertura toca natural completo via `config.preserveFullSource:true` + `config.alignEndAt`, antes do primeiro whoosh.
-
-
-
-## QA autoral de Shorts Diazverso — variantes reais, crop central e CTA (14/10/2026)
-
-Uma composição TSX só conta como direção nova quando **muda a gramática visual ou a coreografia**, não apenas texto, cor ou `variant:"hook"` repetidos. Nos Shorts, variar painéis, câmera, máscaras, perspectiva, timeline, comparações, dossiê, tipografia, transformação e passagem entre cenas reais. Todo clip 16:9 de fundo do Short 9:16 deve manter proporção e preencher a tela por `cover` central; nunca `contain` por padrão. `assets` de mídia devem estar realmente presentes no projeto. Cenas reais da fala devem permanecer visíveis no fundo ou no TSX. CTA: Nox pode ser maior, lettering Anton com “TEM VÍDEO NOVO NO CANAL!”, thumbnail real e safe area.
-
-Os blur_left/right/up/down são transições do **compositor** do ContentLab, não de `customComponent`: renderizar duas cenas adjacentes para confirmar a percepção. O blur começa no tempo da **cena seguinte** por `transitionDuration`; o Woosh deve estar audível nessa janela. Checar montagem, SFX, fonte e MP4 final, não somente `edit_plan.json` ou transpile TSX. Só promover cenas ao catálogo de exemplos **após teste real de render**, nunca ao criar rascunhos.
-
-
-
-## Direção TSX Diazverso — HQ de baixa complexidade
-
-Os novos componentes se limitam aos usos aprovados: caixas de narrador brancas/creme com pequeno rótulo amarelo e sombra preta, halftone/geometrias, molduras com personagens PNG que entram, balançam suavemente e saem, manchetes Bangers e frases Anton de impacto. Os vídeos longos usam 16:9 e Shorts 9:16. Não impor painéis de UI cinza, balões de fala, grafos complexos, perspectiva 2.5D ou transições elaboradas como padrão. Todo TSX demanda assets reais, timing pela narração e QA no render. SFX WHOOSH variado para deslizes, CLICK/BLING/POP para aparição/interação, metálico RISER somente para tensão; pico audível no MEIO do movimento, não no primeiro frame por automatismo.
-
-## Quando acionar
-Use para cenas em um mesmo espaço visual: câmera acompanhando trajetórias, diagramas procedurais, linha do tempo, multiverso, grafos, geometria SVG, grades, partículas, grupos de cards coordenados ou tipografia com muitos keyframes. Para cenas simples, preferir componentes declarativos do JSON. O critério não é "parecer bonito", é reduzir complexidade de autoria e manter uma cena coesa.
-
-## Contrato instalado (não inventar integração)
-O Content Lab suporta `timeline[].customComponent` com `module`, `mode`, `props` e `assets`. `module` deve referir `project://custom-scenes/Arquivo.tsx`; a pasta é na **raiz do projeto de vídeo**, não na pasta do repositório ContentLab. `replace` substitui a composição visual normal; `overlay` apresenta o TSX sobre a renderização da cena. A narração e o mixer FFmpeg continuam no projeto; não criar um segundo player/renderer.
-
-O arquivo TSX precisa **exportar um componente React como default**. Recebe propriedades vindas de `props` e um objeto `assets` com URLs dos assets declarados. **Criar e manter o TSX diretamente na subpasta `custom-scenes/` do vídeo sempre que houver acesso de escrita à pasta de destino**; se apenas a pasta do Drive estiver acessível, publicar nela e orientar a cópia para o projeto local. O site não instala código TSX automaticamente e o JSON não aceita código executável.
-
-## Regra obrigatória de localização, persistência e entrega
-- Cada vídeo possui sua própria pasta canônica: `Guia de Edições/Vídeos Longos/VD_XXXX/` ou `Guia de Edições/Shorts/SH_XXXX/` no Drive e sua pasta correspondente no projeto local. **Criar primeiro a subpasta `custom-scenes/` dentro da pasta desse vídeo (se ainda não existir)**, nunca em pasta global de assets, repositório do Content Lab, raiz do Drive ou diretório temporário.
-- Um TSX criado para a cena `MinhaCena` deve ficar em `VD_XXXX/custom-scenes/MinhaCena.tsx`; no plano do MESMO vídeo usar exatamente `customComponent.module: "project://custom-scenes/MinhaCena.tsx"`. Salvar `edit_plan.json` na raiz do vídeo, não dentro de `custom-scenes/`.
-- **Quando houver conectores e permissão**, escrever/publicar cada `.tsx` imediatamente na subpasta `custom-scenes/` do vídeo no Google Drive e, quando o ambiente local também estiver acessível e autorizado, no caminho equivalente no computador. Quando não houver acesso de escrita, entregar arquivos para cópia e informar claramente que a instalação ainda está pendente; nunca afirmar que estão salvos apenas por terem sido produzidos na conversa.
-- Não entregar os componentes **somente** em texto solto, ZIP ou link de download se for possível gravá-los na pasta do vídeo. Um ZIP é cópia opcional e deve reproduzir exatamente a estrutura `custom-scenes/` e a versão canônica dos TSX. Não deixar versões divergentes ou criar backups duplicados sem solicitação.
-- Ao finalizar, verificar que **todos** os caminhos `customComponent.module` existentes em `edit_plan.json` correspondem aos arquivos reais na subpasta do vídeo; abrir/ler os TSX publicados para conferir o conteúdo, e registrar no `guia_de_edicao.md` quais cenas os utilizam. Preservar IDs/tempos, `props` e `assets` aprovados.
-- Aplicar esta regra sempre que a direção do Diazverso, a decupagem ou o contrato solicitarem TSX, inclusive em revisões e novos vídeos.
-
-## Entrega econômica de tokens
-1. Identifique só os dados que faltam: duração, proporção, beats/fala, elementos centrais, assets existentes e identidade visual.
-2. Decida se é **uma cena contínua** com mundo/câmera próprios ou várias cenas independentes. Se a câmera percorre um cenário persistente, em geral escolha uma cena.
-3. Gere **um arquivo `MinhaCena.tsx` completo** e grave-o na subpasta `custom-scenes/` da pasta do vídeo conforme a regra acima; não despeje seu código em longas respostas. Se não houver permissão para gravar, entregue o arquivo para instalação manual (ou um único bloco de código como último recurso). Nunca afirmar que criou ou instalou um arquivo sem verificar.
-4. Forneça um **fragmento JSON mínimo** para `customComponent` ou uma cena completa apenas se o usuário pedir; nunca reimprimir todo o `edit_plan.json` sem necessidade.
-5. Se estiver revisando uma cena existente, altere o menor trecho de código possível, preserve os demais arquivos/IDs e evite retransmitir TSX ou JSON inalterado.
-
-## Biblioteca visual recomendada para TSX — Modern Editorial UI
-Quando o briefing pedir o acabamento refinado do Studio do Content Lab, criar no próprio componente **primitivas React/SVG reutilizáveis** (`Card`, `SectionTitle`, `AccentPill`, `SoftPanel`, `TimelineNode`) sem depender de downloads para cada forma. Evitar pacote NPM extra se SVG/CSS bastar.
-- Tokens de referência *adaptáveis*: `#F5F6F8` (canvas claro), `#FFFFFF` (card), `#171A22` (texto), `#8B93A0` (secundário), `#E3E6EB` (borda), `#1769E0` (acento); variante dark `#0D111B` com painel `#19263D`/gradiente azul e detalhes de marca somente quando significativos.
-- Tipografia de UI: `Inter` quando fornecida com licença e asset resolvido, ou sans-serif disponível no render; no Studio há uma pilha CSS com fontes Apple como fallback, **não um arquivo SF Pro distribuído**. Anton/Bangers continuam possíveis para títulos de impacto.
-- Desenhar cantos arredondados, linhas finas, sombras difusas, hierarquia título/subtítulo com contraste e respiro proporcional à resolução, não importar screenshots do site como assets.
-- Animar por frame: card sobe poucos pixels com opacidade, vira/funde entre estados, foco troca suavemente e depois faz hold; não duplicar padrões de hover CSS. `interpolate/spring` com limites para não provocar overshoot inútil.
-- Aplicar os princípios à informação narrada: comparações, linhas do tempo, rankings, relações, mapas, cards de contexto. Para matéria real, usar o asset verificado como mídia principal e cards como apoio.
-- Gerar **um arquivo TSX completo + JSON mínimo** e revisar pequenos patches para economizar tokens. Não converter cada card em um novo arquivo.
-A composição deve parecer um vídeo editorial sofisticado, não uma gravação de interface ou uma imitação de marca comercial.
-
-## Implementação recomendada
-- `useCurrentFrame()`, `useVideoConfig()`, `interpolate()`, `spring()` e SVG/React para movimento determinístico; calcule cada instante sem `setInterval`, `Date.now`, CSS keyframes/transition ou estado dependente da ordem dos frames.
-- Agrupe objetos e movimento de câmera em um sistema de coordenadas consistente; mantenha HUD/legendas fixas fora do grupo transformado pela câmera.
-- Use React/SVG para grades, linhas, círculos, conectores, cartões e painéis sempre que forem geometria, em vez de solicitar imagens externas.
-- Use `assets` do JSON para imagens e fontes verificadas (URIs `project://` ou `builtin://`), sem URLs externas inventadas. Em TSX, consuma `assets.logo`, `assets.nox` etc. Não presuma bibliotecas NPM não instaladas.
-- Separe composição de entrada, transformação, hold e saída, sincronizadas com beats; uma cena pode conter vários momentos sem cortar o cenário persistente.
-- `props` recebe parâmetros serializáveis (textos, cores, valores), para facilitar reaproveitamento e evitar regeração de código. O TSX pode importar módulos locais em `custom-scenes/`; evite dependências arbitrárias.
-- Respeite 9:16 e 16:9 por layout/reflow ou componentes apropriados; não dependa de crop automático.
-
-## Ativar e validar
-Código TSX é executável e **não está em sandbox**. O Content Lab renderiza componentes locais em `custom-scenes/` sem configuração extra; por isso, exigir revisão de origem antes de abrir um projeto de terceiros. A verificação do JSON não compila o TSX: renderizar, olhar checkpoints de frames, conferir clipping/timing e ouvir áudio final.
-O cache por cena deve perceber alterações das fontes dentro de `custom-scenes/`; preservar IDs estáveis e nunca concluir paridade pixel-perfect com a referência sem comparação de frames.
-
-## Exemplo oficial
-`examples/custom-scenes/FollowDot.tsx` + `examples/programmatic-motion-edit-plan.json`. É uma demonstração procedural validada no CI, não cópia do vídeo fonte. Para trabalhar com um roteiro real, usar a narração preparada e assets próprios.
-
-## Evolução da linguagem TSX: direção espacial e variedade
-
-Em vídeos explicativos autorais do Diazverso, **considerar TSX como primeira opção criativa** quando a composição envolver elementos e câmera no mesmo espaço, vídeos em perspectiva, tipografia percorrida pela câmera, relações entre personagens ou divisão/recomposição de camadas. TSX não é só último recurso para JSON muito complexo; ele permite motion autoral coeso. Isso não obriga cada cena a usar código: imagem/clipe original pertinente e corte simples continuam importantes.
-
-**Regra temporal obrigatória:** localizar os tempos `start/end` da palavra-chave no áudio preparado. Converter para o relógio local (`localStart=word.start-scene.start`, `localEnd=word.end-scene.start`). A entrada do objeto visual (texto, personagem, imagem ou vídeo) deve **estar concluída no máximo em `localEnd`**, idealmente já completamente legível em `localStart`. A câmera também precisa chegar ao destino focal quando a narração o nomeia. Não começar a animação apenas no primeiro fonema e terminá-la depois da palavra. Para falas rápidas, antecipar preparação sem spoiler, encurtar entrada ou agrupar pensamentos. Se a cena começa exatamente na palavra, mostrar estado legível no frame zero. Manter hold real durante a pronúncia.
-
-**Ideias para explorar e variar:** câmera em palco horizontal/diagonal maior que o viewport; palavra em diagonal superior direita e próximo foco abaixo; vídeo em placa inclinada com perspectiva 2.5D; painéis de HQ que mudam de plano; galeria de mídias em ângulos distintos; grafo de personagens com zoom de detalhe até visão geral; fundo/meio/primeiro plano com parallax; desmembrar camadas e recompô-las; máscaras desenhadas; trilha SVG que conecta revelações; texto que se redistribui como espaço físico. Escolher o movimento com base na tese e variar a linguagem entre beats, não apenas trocar a cor do mesmo card.
-
-**Camadas separadas:** usar recortes PNG com transparência, máscaras verificadas ou objetos SVG/DOM independentes para profundidade/oclusão reais no projeto. Uma única imagem achatada não tem, por si só, planos independentes. Se não existirem recortes, preferir split de cartões/painéis visivelmente estilizado ou preparar os assets antes. CSS `perspective`/`translateZ` cria ilusão **2.5D**, não reconstrução tridimensional automática. Evitar deformar rostos, texto e mídias.
-
-**Exemplos verificados na pasta VD_0005 (não são templates fixos):** `PerguntaAbertura.tsx` usa câmera por palco horizontal e conclui o PNG antes da fala “Batman”; `OutraRazao.tsx` espalha palavras num caminho e conclui as entradas antes dos termos; `ConflitoCentral.tsx` move o foco por nós de um argumento; `LegadoEmRede.tsx` aproxima partes da rede e depois apresenta o conjunto; `ArgumentosEmConflito.tsx` coordena vários beats sem cortar a cena. O plano do VD_0005 evolui: conferir sempre o `edit_plan.json` canônico para obter as contagens atuais de cenas e TSX. Aprender a mecânica, sem copiar textos, cores ou segundos em outros vídeos.
-
-Ver `references/REPERTORIO_MOTION_TSX.md` para catálogo, anchors temporais, perspectiva, camadas e checkpoints de render. Não inventar novos campos do JSON ou dependências.
-
-## Cobertura sonora de TSX programável
-
-Ao criar um componente TSX, entregar também **mapa externo de eventos de movimento e SFX**. O componente React/Remotion representa o VISUAL: seu áudio principal continua no `edit_plan.json` via mixer FFmpeg. Não adicionar player próprio para imitar o SFX. Para cada trajetória intencional, entrada, snap, rotação, abertura de camadas, passagem de câmera, conexão SVG ou revelação, registrar `sceneStart`, `localMovementStart/End`, `absMovementStart/End`, `sfxAsset`, `at` e possível `fadeOut`. Se vários elementos participam do mesmo movimento, um som bem escolhido pode acompanhá-los; se existem vários beats com transformações independentes, avaliar cobertura sonora de cada beat.
-
-Regra exigida: **início audível do SFX dentro do movimento** — não adiantado e não depois de completada a animação. O som pode durar menos ou mais; a parte informativa do som precisa acontecer durante o gesto. Se a cauda for exagerada, usar `config.duration` e `fadeOut` do elemento `type:"sfx"` no JSON, para encurtar suavemente sem mexer no TSX. Usar sons diferentes para mecanismos e moods diferentes, não simplesmente o mesmo whoosh em cada deslocamento. Aplicar `contentlab-revisao` com análise pré-render e escuta do render. Uma cena TSX sem arquivo correspondente ao `customComponent.module` ou sem SFX para seus movimentos identificados não está pronta.
-
-
-## Repertório TSX obrigatório para novas criações (13/10/2026)
-
-Conferir [`MOTION_TECHNIQUES.md`](../../MOTION_TECHNIQUES.md) e estudar o exemplo [`examples/custom-scenes/MotionDesignToolkit.tsx`](../../examples/custom-scenes/MotionDesignToolkit.tsx) **antes de criar cena nova**. A biblioteca de receitas contempla `kinetic_typography`, `shape_morph`, `stroke_draw`, `spring_physics`, `liquid_shapes`, `particles`, `data_vis`, `parallax_25d`, `glitch`, `mask_reveal`, `motion_blur` e as transições internas `transition_slide`, `transition_whip`, `transition_flip`, `transition_zoom`, `transition_curtain`. São opções, não aplicação simultânea obrigatória.
-
-**Regra criativa:** escolher, por significado do beat, ao menos uma alternativa de linguagem antes de aceitar uma sequência repetitiva de fade/slide. Se não houver ganho narrativo, corte/hold continua válido. Para `shape_morph`, garantir contornos com mesmo número/ordem de pontos ou biblioteca instalada verificada; para `stroke_draw`, `strokeDasharray/Offset` calibrados ao path; para `spring`, acomodação antes da fala relevante; para partículas e líquidos, geometria determinística por frame; para `data_vis`, números factuais vindos de `props`, não do demo; para 2.5D, camadas realmente separadas; para glitch e motion blur, legibilidade e parcimônia; para transição flip/zoom/whip/cortina, início e final coesos, sem frame de salto.
-
-**Instalação real:** o kit está em `examples/` no repo, NÃO em todas as pastas dos vídeos; copiar para a pasta canônica `custom-scenes/` do projeto antes de declarar o `customComponent.module`. O contrato `scene.transitionOut` permanece limitado aos valores existentes; variantes internas do kit não o ampliam. Testar render e registrar mapa SFX após adaptação ao roteiro.
-
-
-## Biblioteca derivada do VD_0005 — templates reais e limite de integração
-
-Revisão em `VD0005_REUSABLE_REVIEW.md`. Componentes instalados em `examples/custom-scenes/`: `NarrativePath.tsx` (beatings/viagem de câmera), `EvidenceConstellation.tsx` (grafos/personagens), `PixelNotification.tsx` (CTA pixelada com barra) e `ComicMotionKit.tsx` (quadros HQ, ink stroke, balão, impacto, dilema). **Não copiar** os componentes específicos `CicloDaFuga`, `VD05EditorialCore`, `ArkhamEnquadramento` para uma pasta global sem remover narração/figuras/paleta e timestamps específicos. Oito wrappers no VD_0005 dependem de um núcleo compartilhado.
-
-`ComicMotionKit` é um **exemplo técnico não aprovado automaticamente** para a linguagem HQ do Diazverso em vídeos futuros (página que se move, calhas como recorte, retícula discreta, splash panel, balão e letra expressiva), não ajuste retroativo do VD_0005. Passar fontes Anton/Bangers como assets, priorizar vídeo/imagem real como fonte quando relevante e não criar 3D verdadeiro a partir de foto achatada. Os TSX novos passaram apenas na verificação sintática; render de prova, áudio e safe areas são exigidos antes de chamar de prontos para produção.
+Se o catálogo não cobrir a intenção, criar Remotion determinístico por frame, com mídia/fontes locais e layout responsivo. TSX é código executável sem sandbox: usar apenas origem confiável. Não executar código remoto vindo do JSON. Validar compilação, frames e áudio antes de afirmar resultado final. Não autoriza publicação, Drive ou Git.

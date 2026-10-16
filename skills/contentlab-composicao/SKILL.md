@@ -5,23 +5,19 @@ description: Planejamento de composição visual para cenas Content Lab, com hie
 
 # Content Lab — Composição visual
 
-## Diazverso — precedência da biblioteca oficial TSX
-Na marca Diazverso, os exemplos de composição deste módulo são recursos técnicos, **não** autorização para criar novas cenas TSX. Consultar [Custom Cenas Diasverso](https://drive.google.com/drive/folders/1yWogLK6bRWXunvdJxTHBMIqB4ibSN44f) (README geral, README e código de cada uma das sete subpastas). Por padrão, usar exclusivamente ComicPageCTA, QuadroHQSobreCena, TextoBangersHalftone, PaginaHQCenas, LinhaDoTempoHQ, PersonagemEspiralLegenda e CaixinhaCTAHQ, adaptados a 16:9/9:16 pela resolução. **Criar novo TSX ou alterar o código dos oficiais só mediante pedido explícito do criador.** Manter cenas reais/ilustrações/PNGs como base. A estética dos componentes é diversa: QuadroHQ usa Anton na frase/Bangers na etiqueta; TextoBangersHalftone usa letras Bangers brancas fixas, e não props fictícias para cores; respeitar geometria, camadas e modos declarados no README.
+## Crop obrigatório de footage horizontal em Shorts marca do projeto (14/10/2026)
 
-
-## Crop obrigatório de footage horizontal em Shorts Diazverso (14/10/2026)
-
-Quando o projeto for **Short 9:16 do Diazverso**, vídeo de origem 16:9 deve manter proporção e ocupar **toda a composição**: usar `background.fit: "cover"` ou `objectFit: "cover"; objectPosition: "center center"` no TSX. O espectador vê prioritariamente a **coluna central do vídeo original**; **não encaixar todo o 16:9 dentro do 9:16 com barras** (`contain`). Reenquadramento horizontal só com intenção e teste explícitos. Em painéis internos de HQ, o crop pode ser escolhido por painel, mas o fundo full-bleed conserva cover.
+Quando o projeto for **Short 9:16 do marca do projeto**, vídeo de origem 16:9 deve manter proporção e ocupar **toda a composição**: usar `background.fit: "cover"` ou `objectFit: "cover"; objectPosition: "center center"` no TSX. O espectador vê prioritariamente a **coluna central do vídeo original**; **não encaixar todo o 16:9 dentro do 9:16 com barras** (`contain`). Reenquadramento horizontal só com intenção e teste explícitos. Em painéis internos de HQ, o crop pode ser escolhido por painel, mas o fundo full-bleed conserva cover.
 
 Para Shorts dinâmicos, alternar **formas diferentes de motion**, em vez de repetir o mesmo título em todos os beats: câmera/página HQ, prova/dossiê, split, zoom-out/zoom-in, clip dessaturado que ganha cor, tipografia Anton com fundo mutável, timeline, máscara e composições com clips reais verificáveis. Nenhum vídeo sobre uma obra deve virar só abstracionismo de TSX. Os Shorts continuam com a assinatura sonora Minecraft (0–3 s), riser antes da primeira transição, blur direcional com Woosh durante, música pós-blur e CTA final. Não aplicar essa assinatura a longos.
 
 
 
-## Perfil Diazverso — composição final revisada 15/10/2026
+## Perfil de marca marca do projeto — arte final definida em 14/10/2026
 
-A identidade visual vigente é **HQ editorial simples**, não UI genérica nem densidade alta de TSX. Caixas de narrador frequentes (principal branca/creme e etiqueta amarela superior com sombra preta) podem indicar nome de obra no canto superior esquerdo, contexto ou uma nova ideia. Halftone/molduras/papel e lettering Bangers apoiam imagens e cenas relevantes; Anton grande em frases fortes, em fundo sólido ou sobre vídeo escurecido. Não impor balões, grafos complexos, cards modernos ou painéis repetitivos. Poucos TSX 16:9 reutilizáveis para longos; TSX 9:16 só em Shorts e em momentos selecionados. Texturas recorrentes podem ser PNG/overlay transparente sem script novo.
+Aplicar esta seção **somente a projetos marca do projeto**; perfis de outras marcas continuam neutros. A estética-base combina **composição/motion gráficos modernos e acabados com HQ editorial adulta e discreta**. Usar molduras e gutters para conectar evidências/cenas reais, halftone suave, recortes, câmera saindo da mídia para uma página de quadrinhos estilizada, aproximando um quadro cinza que recupera a cor e entrando no novo footage. Evitar páginas literais como slides e **não usar balões de fala, pensamento ou diálogo como padrão**; caixas retangulares de narração editorial podem funcionar. Anton para textos enormes sobre fundos sólidos coloridos (inclusive mudança de cor), Bangers para lettering, Comic Sans pontual em caixas; Inter/sans se adequados a dados e UI, não como substituto automático da marca. TSX frequente nas explicações, mas imagens e cenas do assunto precisam estar presentes quando sustentam a narração. O Studio oferece **referência de acabamento**, não identidade exclusiva. O projeto existente não recebe mudanças retroativas.
 
-Imagens completas/ilustrações NUNCA imóveis: zoom-in/out suave ou pan; para deslocamento, redimensionar a imagem de modo que ultrapasse a área visível por TODA a animação, sem borda preta inesperada. PNGs RECORTADOS entram/saem animados, pairam/balançam suavemente e podem surgir sobre clipe escurecido, papel, estrelas ou painel HQ. Clips pertinentes variam sem repetir o mesmo continuamente e sem spoilers; uma cena pode continuar enquanto a fala avança, não cortar a cada palavra. Longos preservam proporção original de footage; filmes/animações/séries usam CRT sobreposto e games NÃO usam por padrão. Shorts mantêm a explosão Minecraft e legendas Bangers obrigatórias abaixo do centro com contorno fino e sombra. Não impor assinatura de Shorts a longos.
+
 
 ## Objetivo
 Transformar a narrativa em cenas compreensíveis e visualmente expressivas, sem depender de um template rígido de duas imagens. Planejar a **cena inteira**, não elementos isolados.
@@ -45,7 +41,7 @@ Quando o projeto pedir estética moderna, elegante ou `premium`, use os princíp
 - **Tipografia:** sans-serif contemporânea, preferencialmente **Inter** ou outra fonte legível que esteja *realmente disponível e licenciada no projeto*, para títulos, frases editoriais e interface; contraste com **Anton** e **Bangers** nos impactos seletivos. O site usa fallback CSS `-apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", sans-serif`, não uma fonte Apple embutida. Não inventar disponibilidade ou distribuir SF Pro sem direitos.
 - **Título principal + secundário:** copiar o princípio, não o layout literal, de “Crie cena por cena.” em destaque e “Sem complicar.” em cinza secundário: tamanho e peso hierarquizados, segunda mensagem em menor contraste, boa entrelinha e espaçamento levemente fechado, sem sacrificar legibilidade.
 - **Composição primeiro:** numa comparação, uma lista ou uma linha do tempo, alinhar pela grade, estabelecer foco e respiro e depois animar. Evitar transformar todo vídeo em mockup de aplicativo; os cards são uma linguagem de explicação, não obrigação estética.
-- **Identidade do projeto:** esse é um repertório **opcional** do Content Lab; a skill de marca define onde usá-lo. No Diazverso, compatibilizar com preto/azul/vermelho/amarelo e com B-roll de filmes/jogos, sem trocar cena literal útil por card decorativo.
+- **Identidade do projeto:** esse é um repertório **opcional** do Content Lab; a skill de marca define onde usá-lo. No marca do projeto, compatibilizar com preto/azul/vermelho/amarelo e com B-roll de filmes/jogos, sem trocar cena literal útil por card decorativo.
 
 ## Layout e tipografia
 - Use o grid e as células apenas quando ajudarem o enquadramento. Em 3x3, a coluna central é [2,5,8], e a célula central é [5].
@@ -74,7 +70,7 @@ Se a composição exigir **mundo virtual contínuo**, câmera seguindo trajetór
 Forneça uma intenção clara por elemento: estado inicial, estado focal, duração de leitura, saída e eventual objeto compartilhado com a próxima composição. Não dite easing antes de a disposição visual estar resolvida.
 
 ## Regras de consistência
-A identidade gráfica vem do perfil (Diazverso/GSB), não desta skill. Evite poluição visual, tipografia espremida, interfaces pseudorreais sem função e elementos de impacto que roubam atenção da explicação.
+A identidade gráfica vem do perfil (marca do projeto/GSB), não desta skill. Evite poluição visual, tipografia espremida, interfaces pseudorreais sem função e elementos de impacto que roubam atenção da explicação.
 
 ## Composição espacial e profundidade por camadas
 
@@ -82,9 +78,14 @@ Pense a cena como um palco 2D/2.5D maior que o viewport: palavras, clipes, fotos
 
 Para efeito de separar camadas, identificar planos independentes **de verdade**: fundo, recorte transparente de sujeito, primeiro plano, grafismo/HUD. Animar parallax, z-order, oclusão e perspectiva de forma coordenada; não prometer que uma foto achatada vira volumetria 3D sem segmentação. Quando não houver recortes, usar painéis geométricos explicitamente estilizados. Cuidado com clipping, deformação de personagens, texto em ângulo ilegível e proporção de vídeo.
 
-O Diazverso deve preferir cenas/ilustrações, cortes simples e poucos TSX HQ reutilizáveis; grafos, mapas e movimentos espaciais complexos ficam disponíveis apenas quando pedidos ou necessários para compreensão. Variar conceito espacial antes de variar enfeites.
+O marca do projeto deve experimentar mais TSX em ideias abstratas autorais (mapas, dilemas, relações, espaço, tipografia e mídia em perspectiva), alternando com filmes/jogos/quadrinhos pertinentes e cortes que deem respiro. Variar conceito espacial antes de variar enfeites.
 
 
-## Referência HQ aprovada para novos projetos Diazverso
+## Repertório HQ anterior (incorporado à direção de 14/10/2026)
 
-Priorizar caixas retangulares de narrador, calhas/painéis simples, sombra preta, retícula/halftone sutil, Bangers para HQ e Anton para afirmações de impacto. Desenhar poucos modelos com Codex, validar visualmente e reutilizar. Balões de fala, onomatopeias, câmera 2.5D e geometrias elaboradas dos antigos kits são repertório técnico opcional — não identidade padrão nem motivo para criar mais TSX. VD_0005 fechado não recebe migração retroativa.
+Esse repertório integra a **direção consolidada para produções posteriores**, não alteração automática do estilo aprovado no projeto existente. Para títulos e frases de impacto marca do projeto em TSX, priorizar Anton/Bangers realmente carregadas; fallback sans-serif é contingência técnica, não design final desejado.
+
+
+## Padrões oficiais
+
+Consultar scene-library/manifest.json e o README do padrão escolhido antes de criar TSX do zero. A galeria oficial inclui contratos e exemplos. Textos Anton sem sombra; Bangers com tratamento HQ. SFX não são gerados pelos componentes. Flip/Curtain/Blur são transitionOut entre cenas, não presets de cena. Preserve cópias instaladas em projetos e valide sincronismo com transcript.words.

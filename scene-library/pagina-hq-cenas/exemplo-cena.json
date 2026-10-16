@@ -1,0 +1,135 @@
+{
+  "id": "pagina_hq_cenas",
+  "start": 0,
+  "end": 9,
+  "layout": "fullscreen",
+  "background": {
+    "color": "#E8C64F"
+  },
+  "elements": [
+    {
+      "id": "foco_1",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh curto 04.mp3",
+      "at": 0.35,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -26
+      }
+    },
+    {
+      "id": "foco_2",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh 03.mp3",
+      "at": 2.1,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -26
+      }
+    },
+    {
+      "id": "foco_3",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh aéreo 03.mp3",
+      "at": 3.85,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -26
+      }
+    },
+    {
+      "id": "foco_4",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh curto 04.mp3",
+      "at": 5.6,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -26
+      }
+    },
+    {
+      "id": "entrar_no_quadro",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh Cinemático.mp3",
+      "at": 7.58,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -25
+      }
+    }
+  ],
+  "customComponent": {
+    "module": "project://custom-scenes/PaginaHQCenas.tsx",
+    "mode": "replace",
+    "props": {
+      "backgroundColor": "#E8C64F",
+      "accentColor": "#2676E8",
+      "panels": [
+        {
+          "asset": "clip1",
+          "label": "Rival",
+          "sourceStart": 0.1,
+          "crt": true
+        },
+        {
+          "asset": "clip2",
+          "label": "Aliada",
+          "sourceStart": 5,
+          "crt": true
+        },
+        {
+          "asset": "clip3",
+          "label": "JOKER JR.",
+          "sourceStart": 15,
+          "crt": true
+        },
+        {
+          "asset": "clip4",
+          "label": "ARKHAM KNIGHT",
+          "sourceStart": 4.5,
+          "crt": false
+        }
+      ],
+      "focus": [
+        {
+          "panel": 1,
+          "at": 0.35,
+          "until": 2.1
+        },
+        {
+          "panel": 2,
+          "at": 2.1,
+          "until": 3.85
+        },
+        {
+          "panel": 3,
+          "at": 3.85,
+          "until": 5.6
+        },
+        {
+          "panel": 4,
+          "at": 5.6,
+          "until": 9
+        }
+      ],
+      "enter": {
+        "panel": 4,
+        "at": 7.1,
+        "duration": 1.2
+      }
+    },
+    "assets": {
+      "clip1": "project://assets/exemplos/video.mp4",
+      "clip2": "project://assets/exemplos/video.mp4",
+      "clip3": "project://assets/exemplos/video.mp4",
+      "clip4": "project://assets/exemplos/video.mp4",
+      "bangers": "builtin://fonts/Bangers-Regular.ttf"
+    }
+  },
+  "transitionOut": "cut"
+}

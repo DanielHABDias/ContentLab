@@ -1,0 +1,30 @@
+{
+  "id": "caixinha_centro_livre",
+  "start": 0,
+  "end": 6,
+  "layout": "fullscreen",
+  "background": {
+    "color": "#18243C"
+  },
+  "elements": [],
+  "customComponent": {
+    "module": "project://custom-scenes/CaixinhaHQ.tsx",
+    "mode": "overlay",
+    "props": {
+      "preset": "livre",
+      "corner": "centro",
+      "text": "UMA IDEIA IMPORTANTE",
+      "boxColor": "#F4C542",
+      "textColor": "#080A11",
+      "fontFamily": "Bangers",
+      "animation": "pop",
+      "exitAnimation": "pop",
+      "holdDuration": 5,
+      "animationDuration": 0.4
+    },
+    "assets": {
+      "bangers": "builtin://fonts/Bangers-Regular.ttf"
+    }
+  },
+  "transitionOut": "cut"
+}

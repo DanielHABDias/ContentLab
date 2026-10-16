@@ -16,6 +16,7 @@ import {voiceStudioFolder,voiceStudioState,prepareStandaloneNarration} from './v
 import {prepareAndTranscribeProject,narrationStamp,transcriptStatus} from './narration-pipeline.mjs';
 import {streamSkillZip} from './skill.mjs';
 import {buildMarkdown,buildHtml} from './docs.mjs';
+import {sceneLibrary,libraryFile,installScenePreset} from './scene-library.mjs';
 import {diagramNames,diagramSvg} from './docs-diagrams.mjs';
 import {sceneCacheOverview,savedSceneFile} from './scene-browser.mjs';
 import {mountSocialRoutes} from './social-routes.mjs';
@@ -272,6 +273,15 @@ app.get('/api/docs/view',api(async(req,res)=>{
   res.setHeader('Cache-Control','no-store');
   res.setHeader('X-Content-Type-Options','nosniff');
   res.type('html').send(buildHtml());
+}));
+app.get('/api/scene-library',api(async(req,res)=>res.json(sceneLibrary())));
+app.get('/api/scene-library/:id/:name',api(async(req,res)=>{
+ try{res.sendFile(libraryFile(req.params.id,req.params.name));}
+ catch{res.status(404).json({error:'Arquivo do preset não encontrado.'});}
+}));
+app.post('/api/scene-library/install',api(async(req,res)=>{
+ try{res.json(installScenePreset(req.body.projectRoot,req.body.id));}
+ catch(e){res.status(409).json({error:e.message});}
 }));
 app.get('/api/docs/download',api(async(req,res)=>{
   const format=req.query.format;

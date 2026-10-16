@@ -22,7 +22,7 @@ Este perfil é a ponte entre instruções específicas do GSB e a gramática ger
 - Rever cada saída com os critérios de marca e QA.
 
 ## Cenas complexas
-Quando houver instruções originais de GSB que justifiquem animação programável, roteie a parte técnica a `skills/contentlab-cenas-tsx/SKILL.md`. Solicite um único TSX reutilizável para cena complexa e apenas o JSON mínimo de `customComponent`, com cópia manual do arquivo ao projeto. Preservar a identidade GSB verificada sem importar visual de Diazverso. Nunca assumir que o site instala automaticamente arquivos TSX nem executar código externo não revisado.
+Quando houver instruções originais de GSB que justifiquem animação programável, roteie a parte técnica a `skills/contentlab-cenas-tsx/SKILL.md`. Solicite um único TSX reutilizável para cena complexa e apenas o JSON mínimo de `customComponent`, com cópia manual do arquivo ao projeto. Preservar a identidade GSB verificada sem importar visual de Canal Exemplo. Nunca assumir que o site instala automaticamente arquivos TSX nem executar código externo não revisado.
 
 ## Limites
-Não assumir que GSB significa Diazverso. Não transportar características de Nox, quadrinhos, paleta ou voz para o GSB sem evidência explícita. Não inventar regras ausentes. Não migrar nem excluir a skill anterior de GSB sem acesso ao seu texto completo. O sistema de edição continua sendo o mesmo Content Lab, com schema único.
+Não assumir que GSB significa Canal Exemplo. Não transportar características de Nox, quadrinhos, paleta ou voz para o GSB sem evidência explícita. Não inventar regras ausentes. Não migrar nem excluir a skill anterior de GSB sem acesso ao seu texto completo. O sistema de edição continua sendo o mesmo Content Lab, com schema único.

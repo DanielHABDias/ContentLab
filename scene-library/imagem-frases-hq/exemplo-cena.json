@@ -1,0 +1,51 @@
+{
+  "id": "imagem_frases_hq",
+  "start": 0,
+  "end": 6,
+  "layout": "fullscreen",
+  "background": {
+    "color": "#111522"
+  },
+  "elements": [],
+  "customComponent": {
+    "module": "project://custom-scenes/ImagemFrasesHQ.tsx",
+    "mode": "replace",
+    "props": {
+      "label": "UMA ESCOLHA MORAL",
+      "imageSide": "right",
+      "backgroundColor": "#111522",
+      "textColor": "#FFFFFF",
+      "mutedColor": "#A6A9B1",
+      "accentColor": "#EF3F49",
+      "glowIntensity": 0.65,
+      "imageScale": 1,
+      "phrases": [
+        {
+          "text": "ELE VOLTA.",
+          "at": 0.5,
+          "size": 0.7
+        },
+        {
+          "text": "CAPUZ",
+          "at": 1.4,
+          "size": 1.1
+        },
+        {
+          "text": "VERMELHO",
+          "at": 2.2,
+          "size": 1.1
+        },
+        {
+          "text": "A MESMA HISTÓRIA. UMA RESPOSTA DIFERENTE.",
+          "at": 3.5,
+          "size": 0.4
+        }
+      ]
+    },
+    "assets": {
+      "image": "project://assets/exemplos/imagem.svg",
+      "bangers": "builtin://fonts/Bangers-Regular.ttf"
+    }
+  },
+  "transitionOut": "cut"
+}

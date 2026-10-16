@@ -1,0 +1,39 @@
+{
+  "id": "quadro_hq_sobre_cena",
+  "start": 4,
+  "end": 8,
+  "layout": "fullscreen",
+  "background": {
+    "asset": "project://assets/exemplos/video.mp4",
+    "fit": "cover",
+    "muted": true
+  },
+  "elements": [
+    {
+      "id": "crt_no_clipe",
+      "type": "filter",
+      "style": "crt_tv",
+      "start": 4,
+      "end": 8,
+      "z": 0,
+      "config": {
+        "scanlineOpacity": 0.23,
+        "vignette": 0.38
+      }
+    }
+  ],
+  "customComponent": {
+    "module": "project://custom-scenes/QuadroHQSobreCena.tsx",
+    "mode": "overlay",
+    "props": {
+      "upperText": "A TESE",
+      "lowerText": "UM DIA RUIM?",
+      "tagColor": "#5CA5AD"
+    },
+    "assets": {
+      "anton": "builtin://fonts/Anton-Regular.ttf",
+      "bangers": "builtin://fonts/Bangers-Regular.ttf"
+    }
+  },
+  "transitionOut": "cut"
+}

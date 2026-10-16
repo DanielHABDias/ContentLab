@@ -1,0 +1,80 @@
+{
+  "id": "pagina_split_choice",
+  "start": 0,
+  "end": 7,
+  "layout": "fullscreen",
+  "background": {
+    "color": "#EEE9DD"
+  },
+  "elements": [
+    {
+      "id": "painel_whoosh_0",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh curto 04.mp3",
+      "at": 0.155,
+      "fadeOut": 0.04,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -28
+      }
+    },
+    {
+      "id": "painel_whoosh_1",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh 03.mp3",
+      "at": 0.905,
+      "fadeOut": 0.04,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -28
+      }
+    }
+  ],
+  "customComponent": {
+    "module": "project://custom-scenes/PaginaHQCenas.tsx",
+    "mode": "replace",
+    "props": {
+      "panelLayout": "split",
+      "heading": "UMA ESCOLHA. DOIS CAMINHOS.",
+      "fontFamily": "Bangers",
+      "backgroundStyle": "halftone",
+      "paperTone": "light",
+      "backgroundColor": "#EEE9DD",
+      "accentColor": "#EF3F49",
+      "headingColor": "#FFFFFF",
+      "entryDuration": 0.55,
+      "panels": [
+        {
+          "asset": "primeiro",
+          "mediaType": "image",
+          "label": "UMA ESCOLHA",
+          "fit": "contain",
+          "at": 0,
+          "accentColor": "#EF3F49"
+        },
+        {
+          "asset": "segundo",
+          "mediaType": "image",
+          "label": "OUTRO CAMINHO",
+          "fit": "contain",
+          "at": 0.75,
+          "accentColor": "#2676E8"
+        }
+      ],
+      "focus": [],
+      "splitColors": [
+        "#C8253C",
+        "#2459C9"
+      ],
+      "dividerColor": "#111723"
+    },
+    "assets": {
+      "bangers": "builtin://fonts/Bangers-Regular.ttf",
+      "primeiro": "project://assets/exemplos/imagem.svg",
+      "segundo": "project://assets/exemplos/imagem.svg"
+    }
+  },
+  "transitionOut": "cut"
+}

@@ -1,0 +1,52 @@
+{
+  "id": "caixinha_livre",
+  "start": 0,
+  "end": 5.8,
+  "layout": "fullscreen",
+  "background": {
+    "color": "#293442"
+  },
+  "elements": [
+    {
+      "id": "cta_entrada_som",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh curto 04.mp3",
+      "at": 0.08,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -28
+      }
+    },
+    {
+      "id": "cta_saida_som",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh curto 04.mp3",
+      "at": 5.48,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -28
+      }
+    }
+  ],
+  "customComponent": {
+    "module": "project://custom-scenes/CaixinhaHQ.tsx",
+    "mode": "overlay",
+    "props": {
+      "preset": "livre",
+      "corner": "inferior-direito",
+      "animation": "vertical",
+      "at": 0,
+      "holdDuration": 5,
+      "animationDuration": 0.4,
+      "text": "UMA INFORMAÇÃO IMPORTANTE",
+      "boxColor": "#8154C9",
+      "textColor": "#FFFFFF"
+    },
+    "assets": {
+      "bangers": "builtin://fonts/Bangers-Regular.ttf"
+    }
+  },
+  "transitionOut": "cut"
+}

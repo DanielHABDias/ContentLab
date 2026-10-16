@@ -1,0 +1,124 @@
+{
+  "id": "brainstorm_narrativo",
+  "start": 0,
+  "end": 14,
+  "layout": "fullscreen",
+  "background": {
+    "color": "#EEE9DD"
+  },
+  "elements": [
+    {
+      "id": "narrativa_whoosh_0",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh curto 04.mp3",
+      "at": 2.48,
+      "fadeOut": 0.04,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -28
+      }
+    },
+    {
+      "id": "narrativa_whoosh_1",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh 03.mp3",
+      "at": 5.48,
+      "fadeOut": 0.04,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -28
+      }
+    },
+    {
+      "id": "narrativa_whoosh_2",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh aéreo 03.mp3",
+      "at": 8.48,
+      "fadeOut": 0.04,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -28
+      }
+    }
+  ],
+  "customComponent": {
+    "module": "project://custom-scenes/BrainstormHQ.tsx",
+    "mode": "replace",
+    "props": {
+      "presentation": "narrative",
+      "heading": "UM CAMINHO, QUATRO IDEIAS",
+      "fontFamily": "Bangers",
+      "backgroundStyle": "paper",
+      "paperTone": "light",
+      "backgroundColor": "#EEE9DD",
+      "textColor": "#172338",
+      "lineColor": "#EF3F49",
+      "dotColor": "#F4C542",
+      "pathBend": -0.16,
+      "dotSize": 14,
+      "zoomOutDuration": 1.4,
+      "nodes": [
+        {
+          "id": "ideia",
+          "text": "UMA IDEIA",
+          "subtitle": "TUDO COMEÇA COM UMA PERGUNTA",
+          "x": 0,
+          "y": 0,
+          "color": "#175AE8"
+        },
+        {
+          "id": "escolha",
+          "text": "UMA ESCOLHA",
+          "subtitle": "A DECISÃO MUDA O RUMO",
+          "x": 620,
+          "y": -260,
+          "color": "#D93443"
+        },
+        {
+          "id": "marca",
+          "text": "UMA CONSEQUÊNCIA",
+          "subtitle": "CADA AÇÃO DEIXA UMA MARCA",
+          "x": 1240,
+          "y": 100,
+          "color": "#175AE8"
+        },
+        {
+          "id": "conjunto",
+          "text": "UM NOVO OLHAR",
+          "subtitle": "AGORA DÁ PARA VER O CONJUNTO",
+          "x": 620,
+          "y": 590,
+          "color": "#D93443"
+        }
+      ],
+      "steps": [
+        {
+          "node": "ideia",
+          "hold": 2.2
+        },
+        {
+          "node": "escolha",
+          "moveDuration": 0.8,
+          "hold": 2.2
+        },
+        {
+          "node": "marca",
+          "moveDuration": 0.8,
+          "hold": 2.2
+        },
+        {
+          "node": "conjunto",
+          "moveDuration": 0.8,
+          "hold": 2.2
+        }
+      ]
+    },
+    "assets": {
+      "bangers": "builtin://fonts/Bangers-Regular.ttf"
+    }
+  },
+  "transitionOut": "cut"
+}

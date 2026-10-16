@@ -35,14 +35,6 @@ O projeto pode conter `custom-scenes/MinhaCena.tsx` e uma cena declarativa com `
 {"id":"grafico","start":0,"end":8,"layout":"fullscreen","background":{"color":"#080a10"},"elements":[],"customComponent":{"module":"project://custom-scenes/MinhaCena.tsx","mode":"replace","props":{"titulo":"Exemplo","cor":"#ff4444"},"assets":{}}}
 ```
 
-- `module` é obrigatório: **`project://custom-scenes/...tsx`**, na raiz do projeto de edição. TSX não vai dentro do JSON.
-- `mode`: `replace` para cena inteira em TSX (não desenha as camadas tradicionais) ou `overlay` para sobreposição.
-- `props`: objeto JSON de conteúdo reutilizável. `assets`: mapa de nomes para URIs locais `project://` ou `builtin://`; os URLs resolvidos ficam em `assets` do componente.
-- O TSX exporta **default** de um componente React e usa `useCurrentFrame/useVideoConfig` para quadros determinísticos.
-- **Destino canônico obrigatório:** criar cada TSX na subpasta `custom-scenes/` da pasta específica do vídeo (Drive: `Guia de Edições/Vídeos Longos/VD_XXXX/custom-scenes/` ou `Shorts/SH_XXXX/custom-scenes/`; computador: `<pasta-do-vídeo>/custom-scenes/`). O `edit_plan.json` permanece na raiz do mesmo vídeo e referencia `project://custom-scenes/Nome.tsx`. Se o Drive estiver conectado com escrita, publicar ali imediatamente e verificar; se o projeto local estiver acessível e autorizado, copiar para a mesma estrutura local. Não deixar os arquivos apenas em ZIP, conversa ou pasta temporária, nem afirmar instalação inexistente. O site não instala código do chat automaticamente.
-- Componentes TSX em `custom-scenes/` renderizam sem configuração extra, mas são código executável sem sandbox: usar somente projetos confiáveis. JSON válido não garante compilação TSX: inspecionar MP4.
-- Exemplo versionado: `examples/custom-scenes/FollowDot.tsx` + `examples/programmatic-motion-edit-plan.json`. Para montagem em um plano existente pedir só o fragmento, economizando tokens.
-
 Para planejamento de uma cena complexa, carregar `skills/contentlab-cenas-tsx/SKILL.md` antes de gerar o componente.
 
 ## Revisão de plano
@@ -60,3 +52,8 @@ Ao converter mapa de narração em TSX, subtrair `timeline[].start` dos timestam
 Para cada `element.type="sfx"` usar `element.at` (início audível absoluto), `element.asset` existente, `element.config.duration` opcional e `element.fadeOut` opcional, campos presentes no schema/código do ContentLab. O mixer remove silêncio nas bordas do SFX, calcula `audibleLength` e aplica `fadeOut` **no final do trecho efetivamente usado**. Não colocar `fadeOut` dentro de `config`; não presumir `audio.sfx` ou timestamps relativos para `at`. Um corte em `config.duration` só é aceitável se seu `fadeOut` evitar truncamento audível.
 
 Validar no guia/mapeamento de eventos que cada animação editorial (inclusive câmera e TSX) tenha som correspondente ou áudio original verificado; o início audível deve ocorrer dentro do evento visual, a duração do áudio pode divergir, e a cauda pode continuar suavemente. Schema válido não prova cobertura, coerência, variedade, presença audível ou sincronização: executar `contentlab-revisao` antes de exportar para edição automática e depois do render.
+
+
+## Padrões oficiais
+
+Consultar scene-library/manifest.json e o README do padrão escolhido antes de criar TSX do zero. A galeria oficial inclui contratos e exemplos. Textos Anton sem sombra; Bangers com tratamento HQ. SFX não são gerados pelos componentes. Flip/Curtain/Blur são transitionOut entre cenas, não presets de cena. Preserve cópias instaladas em projetos e valide sincronismo com transcript.words.

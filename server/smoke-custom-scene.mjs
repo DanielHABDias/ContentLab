@@ -9,12 +9,12 @@ const root=fs.mkdtempSync(path.join(os.tmpdir(),'contentlab-programmable-smoke-'
 try{
   const scenes=path.join(root,'custom-scenes');
   fs.mkdirSync(scenes,{recursive:true});
-  const module_path=path.join(scenes,'FollowDot.tsx');
-  fs.copyFileSync(path.join(APP_ROOT,'examples/custom-scenes/FollowDot.tsx'),module_path);
+  const module_path=path.join(scenes,'TextoHQ.tsx');
+  fs.copyFileSync(path.join(APP_ROOT,'scene-library/texto-hq/TextoHQ.tsx'),module_path);
   const scene={
     id:'follow-dot',start:0,end:17.7,background:{color:'#090a0e'},camera:{keyframes:[]},
     elements:[],customComponent:{module_path,mode:'replace',
-      props:{title:'DIAZVERSO',subtitle:'EVERY MOVE, WRITTEN IN CODE'},assets:{},assetPaths:{}}
+      props:{text:'IDEIAS EM MOVIMENTO',entryAnimation:'kinetic'},assets:{bangers:'builtin://fonts/Bangers-Regular.ttf'},assetPaths:{bangers:path.join(APP_ROOT,'builtin-assets/fonts/Bangers-Regular.ttf')}}
   };
   const settings={width:576,height:1024,fps:30};
   const target=path.join(root,'custom.mp4');

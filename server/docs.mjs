@@ -4,6 +4,7 @@ import {chapters,exampleCases,projectFolderTree} from './docs-content.mjs';
 import {descriptions} from './docs-fields.mjs';
 import {documentationCss} from './docs-theme.mjs';
 import {diagramNames,diagramSvg} from './docs-diagrams.mjs';
+import {libraryMarkdown,libraryHtml,libraryScript,libraryCss} from './library-docs.mjs';
 
 const bt=String.fromCharCode(96);
 const esc=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -123,7 +124,7 @@ export function buildMarkdown(){
  for(const section of model.resources){
   out.push('### '+section.name,'',section.items.map(inline).join(' · '),'');
  }
- out.push('## Referência completa dos campos do JSON','',
+ out.push(libraryMarkdown(),'','## Referência completa dos campos do JSON','',
  'Obrigatório significa exigido dentro do objeto pai. Um bloco opcional pode ter campos obrigatórios quando preenchido.','');
  for(const [title,fields] of Object.entries(model.grouped)){
   out.push('### '+title,'','| Caminho | Tipo | Obrigatório | Restrições | Exemplo | Significado |',
@@ -150,7 +151,7 @@ export function buildHtml({standalone=false}={}){
  const model=documentationModel();
  const figures=name=>'<figure>'+diagramSvg(name)+'<figcaption>'+esc(figureAlt(name))+'</figcaption></figure>';
  const links=chapters.map(c=>'<a href="#'+c.id+'">'+esc(c.title)+'</a>').join('')+
-  '<a href="#catalogo">Catálogo</a><a href="#campos">Campos do JSON</a><a href="#exemplos">Exemplos</a><a href="#validacao">Validação</a>';
+  '<a href="#catalogo">Catálogo</a><a href="#cenas-especiais">Galeria de cenas especiais</a><a href="#campos">Campos do JSON</a><a href="#exemplos">Exemplos</a><a href="#validacao">Validação</a>';
  const intro='<section class="hero"><span class="tag">CONTENT LAB / DOCUMENTAÇÃO OFICIAL</span>'+
   '<h1>Crie. Ajuste.<br>Faça acontecer.</h1>'+
   '<p>Guia completo da ferramenta, recursos já implementados, exemplos de JSON e diagramas gerados com JavaScript.</p>'+
@@ -183,12 +184,12 @@ export function buildHtml({standalone=false}={}){
  '<p>Respeite os tipos, IDs, intervalos, nomes de campos e caminhos de assets. Considere avisos de textos sobrepostos, tempos do áudio e o alinhamento dos efeitos sonoros. A primeira renderização após uma alteração no motor pode revalidar o cache.</p></section>';
  const js='<script>document.getElementById("fieldSearch").addEventListener("input",function(){'+
  'const q=this.value.trim().toLowerCase();document.querySelectorAll("[data-field]").forEach(function(row){'+
- 'row.classList.toggle("hidden-row",!row.dataset.field.includes(q));});});</script>';
+ 'row.classList.toggle("hidden-row",!row.dataset.field.includes(q));});});'+libraryScript+'</script>';
  return '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">'+
   '<meta name="viewport" content="width=device-width, initial-scale=1">'+
-  '<title>Documentação oficial — Content Lab</title><style>'+documentationCss+'</style></head><body>'+
+  '<title>Documentação oficial — Content Lab</title><style>'+documentationCss+libraryCss+'</style></head><body>'+
   '<div class="layout"><nav aria-label="Navegação da documentação"><strong>GUIA DE REFERÊNCIA</strong>'+links+
-  '</nav><main>'+intro+sections+catalog+fields+examples+validation+
+  '</nav><main>'+intro+sections+catalog+libraryHtml(standalone)+fields+examples+validation+
   '<p class="small" style="text-align:center">Content Lab · documentação gerada por JavaScript a partir do schema instalado</p>'+
   '</main></div>'+js+'</body></html>';
 }

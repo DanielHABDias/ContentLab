@@ -1,0 +1,91 @@
+{
+  "id": "pagina_dois_videos",
+  "start": 0,
+  "end": 9,
+  "layout": "fullscreen",
+  "background": {
+    "color": "#EEE9DD"
+  },
+  "elements": [
+    {
+      "id": "painel_whoosh_0",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh curto 04.mp3",
+      "at": 0.155,
+      "fadeOut": 0.04,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -28
+      }
+    },
+    {
+      "id": "painel_whoosh_1",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh 03.mp3",
+      "at": 0.905,
+      "fadeOut": 0.04,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -28
+      }
+    }
+  ],
+  "customComponent": {
+    "module": "project://custom-scenes/PaginaHQCenas.tsx",
+    "mode": "replace",
+    "props": {
+      "panelLayout": "asymmetric",
+      "heading": "DOIS LADOS DA MESMA HISTÓRIA",
+      "fontFamily": "Bangers",
+      "backgroundStyle": "paper",
+      "paperTone": "light",
+      "backgroundColor": "#EEE9DD",
+      "accentColor": "#EF3F49",
+      "headingColor": "#111723",
+      "entryDuration": 0.55,
+      "panels": [
+        {
+          "asset": "primeiro",
+          "mediaType": "video",
+          "label": "CENA PRINCIPAL",
+          "sourceStart": 0,
+          "crt": true,
+          "at": 0
+        },
+        {
+          "asset": "segundo",
+          "mediaType": "video",
+          "label": "A CONSEQUÊNCIA",
+          "sourceStart": 1,
+          "crt": true,
+          "at": 0.75
+        }
+      ],
+      "focus": [
+        {
+          "panel": 1,
+          "at": 0,
+          "until": 3.6
+        },
+        {
+          "panel": 2,
+          "at": 3.6,
+          "until": 7.4
+        }
+      ],
+      "enter": {
+        "panel": 2,
+        "at": 7.4,
+        "duration": 0.6
+      }
+    },
+    "assets": {
+      "bangers": "builtin://fonts/Bangers-Regular.ttf",
+      "primeiro": "project://assets/exemplos/video.mp4",
+      "segundo": "project://assets/exemplos/video.mp4"
+    }
+  },
+  "transitionOut": "cut"
+}

@@ -1,0 +1,49 @@
+{
+  "id": "cta_encerramento_hq",
+  "start": 44.24,
+  "end": 49.6,
+  "layout": "fullscreen",
+  "background": {
+    "color": "#111217"
+  },
+  "elements": [
+    {
+      "id": "cta_page_whoosh",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh 03.mp3",
+      "at": 44.3,
+      "fadeOut": 0.035,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -27
+      }
+    },
+    {
+      "id": "cta_page_pop",
+      "type": "sfx",
+      "asset": "builtin://sfx/Pop 01.mp3",
+      "at": 44.35,
+      "fadeOut": 0.08,
+      "config": {
+        "duration": 0.35,
+        "preset": "subtle",
+        "trimDb": -25
+      }
+    }
+  ],
+  "customComponent": {
+    "module": "project://custom-scenes/ComicPageCTA.tsx",
+    "mode": "replace",
+    "props": {
+      "headline": "A REGRA DO Herói E O Antagonista",
+      "stripeColor": "#EF3F49"
+    },
+    "assets": {
+      "thumbnail": "project://assets/exemplos/imagem.svg",
+      "character": "project://assets/exemplos/imagem.svg",
+      "bangers": "builtin://fonts/Bangers-Regular.ttf"
+    }
+  },
+  "transitionOut": "cut"
+}

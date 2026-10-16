@@ -12,7 +12,7 @@ test('YouTube aggregates only public videos, and exposes actual scheduled upload
   const fetcher=async(url)=>{
     requests.push(String(url));
     if(String(url).includes('/channels?'))return reply({items:[{
-      snippet:{title:'Diazverso'},statistics:{subscriberCount:'123'},
+      snippet:{title:'Canal Exemplo'},statistics:{subscriberCount:'123'},
       contentDetails:{relatedPlaylists:{uploads:'UP-1'}}}]});
     if(String(url).includes('/playlistItems?'))return reply({items:[
       {contentDetails:{videoId:'a'}},{contentDetails:{videoId:'b'}}]});
@@ -38,7 +38,7 @@ test('Instagram retrieves video summaries, optionally views, no invented schedul
   clearMetricsCache();
   const fetcher=async(url)=>{
     const u=String(url);
-    if(u.includes('me?'))return reply({id:'123',username:'diazversoyt',followers_count:88});
+    if(u.includes('me?'))return reply({id:'123',username:'Canal Exemployt',followers_count:88});
     if(u.includes('/me/media?'))return reply({data:[
       {id:'video-1',media_type:'VIDEO',caption:'Reels de hoje',
        timestamp:recent(),permalink:'https://www.instagram.com/reel/abc/',

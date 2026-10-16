@@ -1,0 +1,106 @@
+{
+  "id": "brainstorm_percurso",
+  "start": 0,
+  "end": 12,
+  "layout": "fullscreen",
+  "background": {
+    "color": "#173451"
+  },
+  "elements": [
+    {
+      "id": "percurso_whoosh_0",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh curto 04.mp3",
+      "at": 1.68,
+      "fadeOut": 0.04,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -28
+      }
+    },
+    {
+      "id": "percurso_whoosh_1",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh 03.mp3",
+      "at": 3.98,
+      "fadeOut": 0.04,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -28
+      }
+    },
+    {
+      "id": "percurso_whoosh_2",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh aéreo 03.mp3",
+      "at": 6.28,
+      "fadeOut": 0.04,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -28
+      }
+    }
+  ],
+  "customComponent": {
+    "module": "project://custom-scenes/BrainstormHQ.tsx",
+    "mode": "replace",
+    "props": {
+      "presentation": "path",
+      "fontFamily": "Bangers",
+      "backgroundStyle": "halftone",
+      "backgroundColor": "#173451",
+      "textColor": "#FFF5D7",
+      "lineColor": "#F04A50",
+      "dotColor": "#F4C542",
+      "dotSize": 14,
+      "pathBend": 0.18,
+      "zoomOutDuration": 1.5,
+      "nodes": [
+        {
+          "id": "ideia",
+          "text": "UMA IDEIA"
+        },
+        {
+          "id": "escolha",
+          "text": "UMA ESCOLHA"
+        },
+        {
+          "id": "consequencia",
+          "text": "UMA CONSEQUÊNCIA"
+        },
+        {
+          "id": "caminho",
+          "text": "OUTRO CAMINHO"
+        }
+      ],
+      "steps": [
+        {
+          "node": "ideia",
+          "hold": 1.3
+        },
+        {
+          "node": "escolha",
+          "moveDuration": 1,
+          "hold": 1.3
+        },
+        {
+          "node": "consequencia",
+          "moveDuration": 1,
+          "hold": 1.3
+        },
+        {
+          "node": "caminho",
+          "moveDuration": 1,
+          "hold": 1.3
+        }
+      ]
+    },
+    "assets": {
+      "bangers": "builtin://fonts/Bangers-Regular.ttf"
+    }
+  },
+  "transitionOut": "cut"
+}

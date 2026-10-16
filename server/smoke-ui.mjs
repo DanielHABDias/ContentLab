@@ -234,14 +234,14 @@ try{
   assert.equal(JSON.stringify(socialStatus.body).includes('access_token'),false,
     'OAuth status must never expose tokens');
 
-  await evaluate("(() => {\n window.__statusOriginalFetch=window.fetch;\n window.fetch=(url,opts)=>{\n   if(String(url)==='/api/social/status'){\n     const value={providers:{\n       youtube:{connected:true,configured:true,needsRenewal:false,accountName:'Diazverso YouTube',accountUsername:'@diazverso',missingScopes:[]},\n       instagram:{connected:true,configured:true,needsRenewal:false,accountName:'Diazverso',accountUsername:'diazverso',missingScopes:['instagram_business_manage_insights']},\n       tiktok:{connected:true,configured:true,needsRenewal:false}\n     }};\n     return Promise.resolve(new Response(JSON.stringify(value),{\n       status:200,headers:{'Content-Type':'application/json'}\n     }));\n   }\n   return window.__statusOriginalFetch(url,opts);\n };\n})()");
+  await evaluate("(() => {\n window.__statusOriginalFetch=window.fetch;\n window.fetch=(url,opts)=>{\n   if(String(url)==='/api/social/status'){\n     const value={providers:{\n       youtube:{connected:true,configured:true,needsRenewal:false,accountName:'Canal Exemplo YouTube',accountUsername:'@Canal Exemplo',missingScopes:[]},\n       instagram:{connected:true,configured:true,needsRenewal:false,accountName:'Canal Exemplo',accountUsername:'Canal Exemplo',missingScopes:['instagram_business_manage_insights']},\n       tiktok:{connected:true,configured:true,needsRenewal:false}\n     }};\n     return Promise.resolve(new Response(JSON.stringify(value),{\n       status:200,headers:{'Content-Type':'application/json'}\n     }));\n   }\n   return window.__statusOriginalFetch(url,opts);\n };\n})()");
   await evaluate('document.getElementById("tab-publications").click()');
   await wait(()=>evaluate('document.getElementById("publishConnectionGate").hidden && !document.getElementById("publishConnectedContent").hidden'),
     'Publishing workspace opens after OAuth connection');
   await wait(()=>evaluate('!document.getElementById("publishPlatform-tiktok").disabled'),
     'Connected TikTok becomes selectable');
   await evaluate('document.getElementById("tab-settings").click()');
-  await wait(()=>evaluate('document.getElementById("socialIdentity-youtube").textContent.includes("Diazverso YouTube")'),
+  await wait(()=>evaluate('document.getElementById("socialIdentity-youtube").textContent.includes("Canal Exemplo YouTube")'),
     'Connected provider displays real account identity in Settings');
   assert.equal(await evaluate('document.getElementById("socialVerify-youtube").hidden'),false,
     'Connected provider exposes Verify Connection action');

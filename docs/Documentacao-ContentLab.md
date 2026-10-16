@@ -91,11 +91,11 @@ Limitação física: uma transição de 0.1 s em 30 fps tem apenas 3 frames; em 
 
 Legenda bangers_highlight_block: o fundo colorido da palavra anterior desaparece enquanto o da próxima cresce suavemente, sem mover ou apagar as letras. O tempo padrão é 0.10 segundo e pode ser ajustado via config.highlightTransitionDuration:0.1 (sem mudança dos timestamps nem da duração da fala). Para transições de cena, o fade agora preserva corretamente a direção: cena anterior no início, próxima cena no final, inclusive quando restam somente três frames.
 
-O motor possui estilos impact, impact_yellow, paper_word, versus_big, word_pop, anton, bangers, word_stack_vertical e word_stream_horizontal, além de estilos de legendas anton_karaoke e bangers_highlight_block.
+Estilos tradicionais de texto e legendas continuam disponíveis para camadas simples. Para novas composições especiais, use TextoHQ e CarrosselFrasesHQ; word_stream_horizontal e word_stack_vertical não são mais oferecidos como presets do catálogo público. Permanecem como compatibilidade de planos existentes.
 
-O carrossel word_stack_vertical usa três faixas horizontais: a frase ativa ocupa a linha CENTRAL em toda a largura do vídeo, mesmo que cells indique somente duas colunas. A frase seguinte fica acima, menor, com transparência reduzida e alinhada à borda inferior do slot superior; a anterior fica abaixo, menor, semitransparente e alinhada ao topo do slot inferior. A transição padrão direction:down faz o texto de cima assumir o centro enquanto o centro desce. Todo o texto fica à esquerda por padrão, com quebras de linha automáticas para frases longas.
+Para novas edições, use CarrosselFrasesHQ: próxima frase menor acima, ativa central e anterior abaixo. O componente inclui faixa horizontal central e pode ocupar a largura integral da tela. word_stack_vertical é aceito somente para projetos anteriores; seus parâmetros não são intercambiáveis com as props do preset.
 
-O painel cinza opcional de word_stack_vertical pertence SOMENTE à faixa horizontal central e cobre a largura integral da tela. panelOpacity:0 (padrão) desativa a faixa; panelColor e panelOpacity permitem destaque sutil, sem card curto nem fundo atrás de toda a pilha. Para frases inteiras, use config.items com text/start/end por item, não elementos text independentes. config.align:center e direction:up continuam disponíveis em projetos antigos, mas a composição editorial padrão é align:left e direction:down.
+No novo CarrosselFrasesHQ, activeBandColor e activeBandOpacity controlam a faixa central. Use phrases com text/at; at representa a chegada, não o começo do movimento. A documentação do preset descreve os limites de tempo.
 
 Campos específicos de config já usados pelo render: maxWords, highlightColors, highlightPaddingX/Y, highlightRadius, transitionDuration, items, inactiveOpacity, slotGap, activeScale, inactiveScale, direction, align, inactiveColor, panelColor, panelOpacity, panelRadius, panelPaddingX/Y, opacity, scanlineOpacity, vignette, flicker e jitter. config aceita outras chaves sintaticamente, mas elas só produzem efeito se o componente as interpretar.
 
@@ -117,7 +117,7 @@ A música tem start/end na timeline e pode escolher um trecho do arquivo usando 
 
 Quando a composição precisar de uma câmera virtual que percorre um espaço maior, SVGs procedurais, partículas, tipografia coreografada, grades reativas ou outros movimentos complexos, use uma cena programável TSX. Não precisa fragmentar uma animação contínua em dezenas de cenas: uma cena da timeline pode conter a composição React inteira. Para imagens simples, textos e cartões comuns, continue usando os elementos existentes.
 
-Fluxo econômico de tokens: descreva o objetivo e os tempos e peça ao ChatGPT um ÚNICO arquivo .tsx completo, export default, pronto para o Remotion do Content Lab. Solicite alterações futuras como patches ao mesmo arquivo, preservando os nomes e a estrutura, em vez de reescrever o código todo. Peça também apenas o fragmento JSON da cena, não o plano completo quando já existir.
+Primeiro escolha entre os padrões da Galeria de cenas especiais. Só gere um TSX novo quando a intenção não for coberta pela biblioteca. Para alterações, preserve o módulo, IDs, tempo e assets; não reescreva o plano inteiro por mudanças pontuais.
 
 Baixe ou salve o arquivo TSX gerado pelo ChatGPT em seu computador e coloque-o dentro da pasta do projeto: custom-scenes/MinhaCena.tsx. A interface atual não baixa nem instala automaticamente o código produzido no chat; essa cópia é manual. Use project://custom-scenes/MinhaCena.tsx em timeline[].customComponent.module. A geração e o download do arquivo dependem das ferramentas que estiverem disponíveis no ChatGPT.
 
@@ -131,7 +131,7 @@ Cenas TSX dentro de custom-scenes/ são renderizadas sem configuração adiciona
 
 Depois de copiar TSX e atualizar o JSON, clique Validar JSON, salve, renderize e confira o MP4. A validação do JSON não comprova que o TSX compilou: importações, fonte, layout, clipping e comportamento de frames exigem render. O cache da cena identifica mudanças nos arquivos da pasta custom-scenes; mantenha IDs estáveis e repita a inspeção de quadros após modificar o TSX.
 
-Exemplo de código e plano de edição versionados no repositório: examples/custom-scenes/FollowDot.tsx e examples/programmatic-motion-edit-plan.json. O exemplo mostra câmera e geometria contínua em uma cena de 17,7 s; não é cópia pixel a pixel do vídeo de referência. Para reproduzir a cena no próprio projeto, copie o TSX, prepare uma narração válida e adapte seu JSON, duração e resolução.
+O catálogo oficial de 15 cenas está na Galeria de cenas especiais. Prepare um preset na pasta do projeto; o aplicativo copia uma versão local para custom-scenes sem sobrescrever código existente. O JSON aponta project://custom-scenes/Nome.tsx. As instruções e parâmetros de cada padrão acompanham a galeria e a skill.
 
 ![Composição das camadas z](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/docs/figures/layers.svg)
 
@@ -139,7 +139,7 @@ Exemplo de código e plano de edição versionados no repositório: examples/cus
 
 A lista timeline é ordenada pelo start absoluto. Cada cena possui ID estável; cenas não se sobrepõem. A duração real resulta da diferença entre end e start.
 
-Transições disponíveis: cut, fade, blur_left, blur_right, blur_up, blur_down e slide_left. O compositor utiliza frames em movimento da cena entrante sem ampliar o tempo total do vídeo.
+Transições disponíveis: cut, fade, blur_left, blur_right, blur_up, blur_down, flip e curtain; slide_left é aceito apenas para compatibilidade. Flip gira um quadro no eixo vertical e troca sua face; Curtain move o quadro anterior para a esquerda e revela a próxima cena fixa por baixo. Usam mídia real da cena entrante, não textos de demonstração, sem encurtar a timeline. A passagem ocupa o início da próxima cena. Não são TSX do catálogo de cenas.
 
 O cache mantém MP4s individuais por ID. A montagem e o áudio final continuam sendo etapas necessárias mesmo quando todas as cenas visuais são reaproveitadas.
 
@@ -199,7 +199,7 @@ Primeiro render após atualizar o motor pode recalcular assinaturas do cache. N�
 
 ### Transições
 
-`cut` · `fade` · `blur_left` · `blur_right` · `blur_up` · `blur_down` · `slide_left`
+`cut` · `fade` · `blur_left` · `blur_right` · `blur_up` · `blur_down` · `slide_left` · `flip` · `curtain`
 
 ### Animações de entrada
 
@@ -215,7 +215,7 @@ Primeiro render após atualizar o motor pode recalcular assinaturas do cache. N�
 
 ### Estilos de texto
 
-`impact` · `impact_yellow` · `paper_word` · `versus_big` · `word_pop` · `anton` · `bangers` · `word_stack_vertical` · `word_stream_horizontal`
+`impact` · `impact_yellow` · `paper_word` · `versus_big` · `word_pop` · `anton` · `bangers`
 
 ### Estilos de legenda
 
@@ -228,6 +228,457 @@ Primeiro render após atualizar o motor pode recalcular assinaturas do cache. N�
 ### Estilos de overlay
 
 `green_screen` · `green_screen_default` · `green_screen_soft`
+
+## Galeria de cenas especiais
+
+Oferecimento do DiasVerso.
+
+Os 15 padrões são genéricos e aceitam 16:9/9:16. Na documentação do aplicativo, escolha uma pasta de projeto e prepare o preset. O TSX é copiado para custom-scenes/ sem sobrescrever uma versão diferente; o plano não é alterado nem renderizado automaticamente. Alternativamente copie o arquivo indicado abaixo. Leia os parâmetros e exemplos antes de usar. Fontes e mídias pertencem a customComponent.assets; props recebe apenas dados JSON. SFX continuam na timeline.
+
+### Fundo HQ
+
+Fundos sólido, retícula, papel, grade, estrelas e filme.
+
+Módulo: `project://custom-scenes/BackgroundHQ.tsx`. Fontes: Anton ou Bangers quando há texto; Anton sem sombra.
+
+![Exemplo de Fundo HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/background-hq/preview-0-16x9.png)
+![Exemplo de Fundo HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/background-hq/preview-0-9x16.png)
+
+Guia: [background-hq](../scene-library/background-hq/README.md). Exemplos: [exemplo-cena.json](../scene-library/background-hq/exemplo-cena.json)
+
+```ts
+type HQBackgroundOptions = {
+  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundColor?: string;
+  backgroundOpacity?: number;
+  paperTone?: 'light' | 'dark';
+  gridBackgroundColor?: string;
+  gridLineColor?: string;
+};
+```
+
+### Barra de progresso HQ
+
+Progresso com pausas e mudanças de cor.
+
+Módulo: `project://custom-scenes/BarraLoadingHQ.tsx`. Fontes: Anton ou Bangers quando há texto; Anton sem sombra.
+
+![Exemplo de Barra de progresso HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/barra-loading-hq/preview-0-16x9.png)
+![Exemplo de Barra de progresso HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/barra-loading-hq/preview-0-9x16.png)
+
+Guia: [barra-loading-hq](../scene-library/barra-loading-hq/README.md). Exemplos: [exemplo-cena.json](../scene-library/barra-loading-hq/exemplo-cena.json)
+
+```ts
+type ProgressPoint = {at:number; value:number; easing?:'linear'|'smooth'};
+type ColorPoint = {at:number; color:string};
+type Props = {points?:ProgressPoint[]; colors?:ColorPoint[]; position?:'top'|'bottom'|'center';
+  width?:number; height?:number; margin?:number; x?:number; y?:number;
+  trackColor?:string; outlineColor?:string; texture?:boolean; opacity?:number};
+```
+
+### Brainstorm HQ
+
+Nós, percursos, narrativa e evidências com câmera.
+
+Módulo: `project://custom-scenes/BrainstormHQ.tsx`. Fontes: Anton ou Bangers quando há texto; Anton sem sombra.
+
+![Exemplo de Brainstorm HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/brainstorm-hq/preview-0-16x9.png)
+![Exemplo de Brainstorm HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/brainstorm-hq/preview-0-9x16.png)
+![Exemplo de Brainstorm HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/brainstorm-hq/preview-1-16x9.png)
+![Exemplo de Brainstorm HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/brainstorm-hq/preview-1-9x16.png)
+![Exemplo de Brainstorm HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/brainstorm-hq/preview-2-16x9.png)
+![Exemplo de Brainstorm HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/brainstorm-hq/preview-2-9x16.png)
+![Exemplo de Brainstorm HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/brainstorm-hq/preview-3-16x9.png)
+![Exemplo de Brainstorm HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/brainstorm-hq/preview-3-9x16.png)
+
+Guia: [brainstorm-hq](../scene-library/brainstorm-hq/README.md). Exemplos: [exemplo-cena.json](../scene-library/brainstorm-hq/exemplo-cena.json) · [exemplo-evidencias.json](../scene-library/brainstorm-hq/exemplo-evidencias.json) · [exemplo-narrativo.json](../scene-library/brainstorm-hq/exemplo-narrativo.json) · [exemplo-percurso.json](../scene-library/brainstorm-hq/exemplo-percurso.json)
+
+```ts
+type Node = {id:string; text?:string; subtitle?:string; asset?:string; x?:number; y?:number; color?:string};
+type Step = {node:string; from?:string; hold:number; moveDuration?:number; connect?:boolean};
+type Props = HQBackgroundOptions & {fontFamily?: HQFont; nodes:Node[]; steps:Step[]; backgroundColor?:string; cardColor?:string; textColor?:string;
+  lineColor?:string; zoomOutDuration?:number; presentation?:'cards'|'path'|'narrative'|'evidence'; heading?:string; pathBend?:number; dotColor?:string; dotSize?:number; assets?:Record<string,string>};
+type JourneyPoint={x:number;y:number};
+type HQBackgroundOptions = {
+  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundColor?: string;
+  backgroundOpacity?: number;
+  paperTone?: 'light' | 'dark';
+  gridBackgroundColor?: string;
+  gridLineColor?: string;
+};
+type HQFont = 'Bangers' | 'Anton';
+```
+
+### Caixinha HQ
+
+Caixas livres e presets sociais com entradas e gestos.
+
+Módulo: `project://custom-scenes/CaixinhaHQ.tsx`. Fontes: Anton ou Bangers quando há texto; Anton sem sombra.
+
+![Exemplo de Caixinha HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/caixinha-hq/preview-0-16x9.png)
+![Exemplo de Caixinha HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/caixinha-hq/preview-0-9x16.png)
+![Exemplo de Caixinha HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/caixinha-hq/preview-1-16x9.png)
+![Exemplo de Caixinha HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/caixinha-hq/preview-1-9x16.png)
+![Exemplo de Caixinha HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/caixinha-hq/preview-2-16x9.png)
+![Exemplo de Caixinha HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/caixinha-hq/preview-2-9x16.png)
+![Exemplo de Caixinha HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/caixinha-hq/preview-3-16x9.png)
+![Exemplo de Caixinha HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/caixinha-hq/preview-3-9x16.png)
+![Exemplo de Caixinha HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/caixinha-hq/preview-4-16x9.png)
+![Exemplo de Caixinha HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/caixinha-hq/preview-4-9x16.png)
+![Exemplo de Caixinha HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/caixinha-hq/preview-5-16x9.png)
+![Exemplo de Caixinha HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/caixinha-hq/preview-5-9x16.png)
+![Exemplo de Caixinha HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/caixinha-hq/preview-6-16x9.png)
+![Exemplo de Caixinha HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/caixinha-hq/preview-6-9x16.png)
+
+Guia: [caixinha-hq](../scene-library/caixinha-hq/README.md). Exemplos: [exemplo-cena.json](../scene-library/caixinha-hq/exemplo-cena.json) · [exemplo-centro-livre.json](../scene-library/caixinha-hq/exemplo-centro-livre.json) · [exemplo-instagram.json](../scene-library/caixinha-hq/exemplo-instagram.json) · [exemplo-like-pop.json](../scene-library/caixinha-hq/exemplo-like-pop.json) · [exemplo-livre.json](../scene-library/caixinha-hq/exemplo-livre.json) · [exemplo-produto.json](../scene-library/caixinha-hq/exemplo-produto.json) · [exemplo-sininho-vertical.json](../scene-library/caixinha-hq/exemplo-sininho-vertical.json)
+
+```ts
+type Preset = 'inscricao' | 'like' | 'sininho' | 'produto' | 'instagram' | 'livre';
+type Corner = 'superior-esquerdo' | 'superior-direito' | 'inferior-esquerdo' | 'inferior-direito' | 'centro';
+type Animation = 'lateral' | 'vertical' | 'pop';
+type IconName = 'youtube' | 'like' | 'sininho' | 'seta' | 'instagram' | 'none';
+type Action = 'auto' | 'clique' | 'sininho' | 'pulo' | 'none';
+type Props = {fontFamily?: HQFont; preset?: Preset; corner?: Corner; animation?: Animation; exitAnimation?: Animation;
+  text?: string; boxColor?: string; textColor?: string; icon?: IconName;
+  at?: number; holdDuration?: number; animationDuration?: number;
+  action?: Action; actionAt?: number; actionDuration?: number; assets?: {bangers?: string; anton?: string}};
+type HQFont = 'Bangers' | 'Anton';
+```
+
+### Carrossel de frases HQ
+
+Próxima frase acima, ativa central e anterior abaixo.
+
+Módulo: `project://custom-scenes/CarrosselFrasesHQ.tsx`. Fontes: Anton ou Bangers quando há texto; Anton sem sombra.
+
+![Exemplo de Carrossel de frases HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/carrossel-frases-hq/preview-0-16x9.png)
+![Exemplo de Carrossel de frases HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/carrossel-frases-hq/preview-0-9x16.png)
+![Exemplo de Carrossel de frases HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/carrossel-frases-hq/preview-1-16x9.png)
+![Exemplo de Carrossel de frases HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/carrossel-frases-hq/preview-1-9x16.png)
+
+Guia: [carrossel-frases-hq](../scene-library/carrossel-frases-hq/README.md). Exemplos: [exemplo-anton-overlay.json](../scene-library/carrossel-frases-hq/exemplo-anton-overlay.json) · [exemplo-cena.json](../scene-library/carrossel-frases-hq/exemplo-cena.json)
+
+```ts
+type Phrase={text:string;at:number;color?:string};
+type Props=HQBackgroundOptions & {phrases:Phrase[];fontFamily?:HQFont;align?:'left'|'right';
+  activeColor?:string;inactiveColor?:string;inactiveOpacity?:number;inactiveScale?:number;
+  activeBandColor?:string;activeBandOpacity?:number;
+  motionDuration?:number;textScale?:number;assets?:{bangers?:string;anton?:string}};
+type Layout={lines:string[];size:number;height:number};
+type HQBackgroundOptions = {
+  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundColor?: string;
+  backgroundOpacity?: number;
+  paperTone?: 'light' | 'dark';
+  gridBackgroundColor?: string;
+  gridLineColor?: string;
+};
+type HQFont = 'Bangers' | 'Anton';
+```
+
+### Comparativo de ideias HQ
+
+Compare de duas a quatro imagens e textos.
+
+Módulo: `project://custom-scenes/ComparativoIdeiasHQ.tsx`. Fontes: Anton ou Bangers quando há texto; Anton sem sombra.
+
+![Exemplo de Comparativo de ideias HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/comparativo-ideias-hq/preview-0-16x9.png)
+![Exemplo de Comparativo de ideias HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/comparativo-ideias-hq/preview-0-9x16.png)
+![Exemplo de Comparativo de ideias HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/comparativo-ideias-hq/preview-1-16x9.png)
+![Exemplo de Comparativo de ideias HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/comparativo-ideias-hq/preview-1-9x16.png)
+
+Guia: [comparativo-ideias-hq](../scene-library/comparativo-ideias-hq/README.md). Exemplos: [exemplo-2-ideias.json](../scene-library/comparativo-ideias-hq/exemplo-2-ideias.json) · [exemplo-3-ideias.json](../scene-library/comparativo-ideias-hq/exemplo-3-ideias.json) · [exemplo-4-ideias.json](../scene-library/comparativo-ideias-hq/exemplo-4-ideias.json)
+
+```ts
+type Item = {asset: string; text: string; at?: number};
+type Props = HQBackgroundOptions & {fontFamily?: HQFont; items: Item[]; title?: string; backgroundColor?: string; textColor?: string;
+  startDelay?: number; stagger?: number; entryDuration?: number; textDuration?: number; assets?: Record<string, string>};
+type Slot = {x: number; y: number; width: number; height: number; fromX: number; fromY: number};
+type Bounds = {x: number; y: number; width: number; height: number; sourceWidth: number; sourceHeight: number};
+type TextLayout = {lines: string[]; size: number};
+type HQBackgroundOptions = {
+  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundColor?: string;
+  backgroundOpacity?: number;
+  paperTone?: 'light' | 'dark';
+  gridBackgroundColor?: string;
+  gridLineColor?: string;
+};
+type HQFont = 'Bangers' | 'Anton';
+```
+
+### Encerramento HQ
+
+Indicação de vídeo no vertical; dois vídeos e canal no horizontal.
+
+Módulo: `project://custom-scenes/ComicPageCTA.tsx`. Fontes: Anton ou Bangers quando há texto; Anton sem sombra.
+
+![Exemplo de Encerramento HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/cta-encerramento-hq/preview-0-16x9.png)
+![Exemplo de Encerramento HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/cta-encerramento-hq/preview-0-9x16.png)
+
+Guia: [cta-encerramento-hq](../scene-library/cta-encerramento-hq/README.md). Exemplos: [exemplo-cena.json](../scene-library/cta-encerramento-hq/exemplo-cena.json)
+
+```ts
+type Props = {channelName?:string;topTitle?:string;subscribeText?:string;calloutText?:string;fontFamily?: HQFont;
+  /** Texto abaixo da thumbnail. */
+  headline?: string;
+  /** Somente a faixa diagonal superior; os demais detalhes vermelhos são fixos. */
+  stripeColor?: string;
+  leftTitle?: string;
+  rightTitle?: string;
+  assets?: {thumbnail?: string; character?: string; bangers?: string; anton?: string;
+    thumbnailLeft?: string; thumbnailRight?: string; channelIcon?: string};
+};
+type HQFont = 'Bangers' | 'Anton';
+```
+
+### Diálogo HQ
+
+Dois participantes alternam destaque e falas.
+
+Módulo: `project://custom-scenes/DialogoHQ.tsx`. Fontes: Anton ou Bangers quando há texto; Anton sem sombra.
+
+![Exemplo de Diálogo HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/dialogo-hq/preview-0-16x9.png)
+![Exemplo de Diálogo HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/dialogo-hq/preview-0-9x16.png)
+
+Guia: [dialogo-hq](../scene-library/dialogo-hq/README.md). Exemplos: [exemplo-cena.json](../scene-library/dialogo-hq/exemplo-cena.json)
+
+```ts
+type Speaker='left'|'right';
+type Participant={asset:string;name?:string;color?:string;scale?:number};
+type Turn={speaker:Speaker;text:string;at:number;duration:number;animation?:'escrita'|'none';writeDuration?:number;textDelay?:number;textColor?:string};
+type Props=HQBackgroundOptions & {left:Participant;right:Participant;turns:Turn[];fontFamily?:HQFont;
+  textColor?:string;motionDuration?:number;highlightOpacity?:number;assets?:Record<string,string>};
+type Bounds={x:number;y:number;width:number;height:number;sourceWidth:number;sourceHeight:number};
+type TextLayout={lines:string[];size:number};
+type HQBackgroundOptions = {
+  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundColor?: string;
+  backgroundOpacity?: number;
+  paperTone?: 'light' | 'dark';
+  gridBackgroundColor?: string;
+  gridLineColor?: string;
+};
+type HQFont = 'Bangers' | 'Anton';
+```
+
+### Galeria de cartas HQ
+
+Imagens entram e se empilham por coluna.
+
+Módulo: `project://custom-scenes/GaleriaCartasHQ.tsx`. Fontes: Anton ou Bangers quando há texto; Anton sem sombra.
+
+![Exemplo de Galeria de cartas HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/galeria-cartas-hq/preview-0-16x9.png)
+![Exemplo de Galeria de cartas HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/galeria-cartas-hq/preview-0-9x16.png)
+
+Guia: [galeria-cartas-hq](../scene-library/galeria-cartas-hq/README.md). Exemplos: [exemplo-cena.json](../scene-library/galeria-cartas-hq/exemplo-cena.json)
+
+```ts
+type Card = {asset: string; title: string; caption?: string; at?: number; cardColor?: string; accentColor?: string};
+type Props = HQBackgroundOptions & {fontFamily?: HQFont; title: string; subtitle?: string; items: Card[]; columns?: number;
+  backgroundColor?: string; cardColor?: string; textColor?: string; cardTextColor?: string; accentColor?: string;
+  startDelay?: number; stagger?: number; entryDuration?: number; textDuration?: number; stackOffset?: number;
+  assets?: Record<string, string>};
+type Bounds = {x: number; y: number; width: number; height: number; sourceWidth: number; sourceHeight: number};
+type TextLayout = {lines: string[]; size: number};
+type HQBackgroundOptions = {
+  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundColor?: string;
+  backgroundOpacity?: number;
+  paperTone?: 'light' | 'dark';
+  gridBackgroundColor?: string;
+  gridLineColor?: string;
+};
+type HQFont = 'Bangers' | 'Anton';
+```
+
+### Imagem e frases HQ
+
+Imagem com brilho e frases sincronizadas ao lado.
+
+Módulo: `project://custom-scenes/ImagemFrasesHQ.tsx`. Fontes: Anton ou Bangers quando há texto; Anton sem sombra.
+
+![Exemplo de Imagem e frases HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/imagem-frases-hq/preview-0-16x9.png)
+![Exemplo de Imagem e frases HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/imagem-frases-hq/preview-0-9x16.png)
+
+Guia: [imagem-frases-hq](../scene-library/imagem-frases-hq/README.md). Exemplos: [exemplo-cena.json](../scene-library/imagem-frases-hq/exemplo-cena.json)
+
+```ts
+type Phrase = {text: string; at: number; color?: string; size?: number};
+type Props = HQBackgroundOptions & {fontFamily?: HQFont; phrases: Phrase[]; imageSide?: 'left' | 'right'; label?: string;
+  backgroundColor?: string; textColor?: string; mutedColor?: string; accentColor?: string; glowColor?: string;
+  glowIntensity?: number; imageScale?: number; assets?: {image?: string; bangers?: string; anton?: string}};
+type Line = {text: string; size: number; height: number};
+type Bounds = {x: number; y: number; width: number; height: number; sourceWidth: number; sourceHeight: number};
+type HQBackgroundOptions = {
+  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundColor?: string;
+  backgroundOpacity?: number;
+  paperTone?: 'light' | 'dark';
+  gridBackgroundColor?: string;
+  gridLineColor?: string;
+};
+type HQFont = 'Bangers' | 'Anton';
+```
+
+### Linha do tempo HQ
+
+Clipes percorridos em ordem ou reverso, com expansão.
+
+Módulo: `project://custom-scenes/LinhaDoTempoHQ.tsx`. Fontes: Anton ou Bangers quando há texto; Anton sem sombra.
+
+![Exemplo de Linha do tempo HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/linha-do-tempo-hq/preview-0-16x9.png)
+![Exemplo de Linha do tempo HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/linha-do-tempo-hq/preview-0-9x16.png)
+
+Guia: [linha-do-tempo-hq](../scene-library/linha-do-tempo-hq/README.md). Exemplos: [exemplo-cena.json](../scene-library/linha-do-tempo-hq/exemplo-cena.json)
+
+```ts
+type Clip = {asset: string; title?: string; subtitle?: string; sourceStart?: number; hold?: number; crt?: boolean};
+type Props = HQBackgroundOptions & {fontFamily?: HQFont; clips: Clip[]; direction?: 'forward' | 'reverse'; backgroundColor?: string; accentColor?: string; textColor?: string;
+  startDelay?: number; moveDuration?: number; enterDuration?: number; enterLast?: boolean; assets?: Record<string, string>};
+type HQBackgroundOptions = {
+  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundColor?: string;
+  backgroundOpacity?: number;
+  paperTone?: 'light' | 'dark';
+  gridBackgroundColor?: string;
+  gridLineColor?: string;
+};
+type HQFont = 'Bangers' | 'Anton';
+```
+
+### Página HQ Cenas
+
+Grid, dois painéis, divisão de escolhas e Parallax.
+
+Módulo: `project://custom-scenes/PaginaHQCenas.tsx`. Fontes: Anton ou Bangers quando há texto; Anton sem sombra.
+
+![Exemplo de Página HQ Cenas](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/pagina-hq-cenas/preview-0-16x9.png)
+![Exemplo de Página HQ Cenas](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/pagina-hq-cenas/preview-0-9x16.png)
+![Exemplo de Página HQ Cenas](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/pagina-hq-cenas/preview-1-16x9.png)
+![Exemplo de Página HQ Cenas](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/pagina-hq-cenas/preview-1-9x16.png)
+![Exemplo de Página HQ Cenas](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/pagina-hq-cenas/preview-2-16x9.png)
+![Exemplo de Página HQ Cenas](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/pagina-hq-cenas/preview-2-9x16.png)
+![Exemplo de Página HQ Cenas](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/pagina-hq-cenas/preview-3-16x9.png)
+![Exemplo de Página HQ Cenas](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/pagina-hq-cenas/preview-3-9x16.png)
+![Exemplo de Página HQ Cenas](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/pagina-hq-cenas/preview-4-16x9.png)
+![Exemplo de Página HQ Cenas](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/pagina-hq-cenas/preview-4-9x16.png)
+
+Guia: [pagina-hq-cenas](../scene-library/pagina-hq-cenas/README.md). Exemplos: [exemplo-cena.json](../scene-library/pagina-hq-cenas/exemplo-cena.json) · [exemplo-dois-paineis.json](../scene-library/pagina-hq-cenas/exemplo-dois-paineis.json) · [exemplo-dois-videos.json](../scene-library/pagina-hq-cenas/exemplo-dois-videos.json) · [exemplo-parallax.json](../scene-library/pagina-hq-cenas/exemplo-parallax.json) · [exemplo-split-choice.json](../scene-library/pagina-hq-cenas/exemplo-split-choice.json)
+
+```ts
+type Panel = {asset: string; label?: string; sourceStart?: number; crt?: boolean; mediaType?:'video'|'image'; fit?:'cover'|'contain'; at?:number; accentColor?:string; backgroundColor?:string};
+type Focus = {panel: number; at: number; until: number};
+type Entry = {panel: number; at: number; duration?: number};
+type Props = HQBackgroundOptions & {fontFamily?: HQFont;
+  panels: Panel[];
+  focus: Focus[];
+  enter?: Entry;
+  backgroundColor?: string;
+  accentColor?: string;
+  panelLayout?: 'grid'|'asymmetric'|'split'|'parallax';
+  parallaxDuration?:number;
+  splitColors?: [string,string];
+  dividerColor?:string;
+  heading?:string;
+  headingColor?:string;
+  entryDuration?:number;
+  assets?: Record<string, string>;
+};
+type Interval = {at: number; until: number};
+type HQBackgroundOptions = {
+  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundColor?: string;
+  backgroundOpacity?: number;
+  paperTone?: 'light' | 'dark';
+  gridBackgroundColor?: string;
+  gridLineColor?: string;
+};
+type HQFont = 'Bangers' | 'Anton';
+```
+
+### Personagem, espiral e legenda
+
+Personagem sobe sobre espiral pixelada e legenda por palavra.
+
+Módulo: `project://custom-scenes/PersonagemEspiralLegenda.tsx`. Fontes: Anton ou Bangers quando há texto; Anton sem sombra.
+
+![Exemplo de Personagem, espiral e legenda](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/personagem-espiral-legenda/preview-0-16x9.png)
+![Exemplo de Personagem, espiral e legenda](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/personagem-espiral-legenda/preview-0-9x16.png)
+
+Guia: [personagem-espiral-legenda](../scene-library/personagem-espiral-legenda/README.md). Exemplos: [exemplo-cena.json](../scene-library/personagem-espiral-legenda/exemplo-cena.json)
+
+```ts
+type Word = {word?: string; text?: string; start: number; end: number};
+type Props = {fontFamily?: HQFont;
+  assets?: {character?: string; bangers?: string; anton?: string};
+  backgroundVariant?: 'espiral' | 'crescente';
+  captions?: Caption[]; words?: Word[]; transcriptOffset?: number;
+  entryDuration?: number; entryDelay?: number; characterScale?: number;
+  headAnchor?: {x: number; y: number}; sway?: number; maxWords?: number;
+  captionColor?: string; highlightColors?: string[];
+};
+type Bounds = {x: number; y: number; width: number; height: number; sourceWidth: number; sourceHeight: number};
+type HQFont = 'Bangers' | 'Anton';
+```
+
+### Quadro HQ sobre cena
+
+Etiqueta e caixa de narração sobre mídia externa.
+
+Módulo: `project://custom-scenes/QuadroHQSobreCena.tsx`. Fontes: Anton ou Bangers quando há texto; Anton sem sombra.
+
+![Exemplo de Quadro HQ sobre cena](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/quadro-hq-sobre-cena/preview-0-16x9.png)
+![Exemplo de Quadro HQ sobre cena](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/quadro-hq-sobre-cena/preview-0-9x16.png)
+
+Guia: [quadro-hq-sobre-cena](../scene-library/quadro-hq-sobre-cena/README.md). Exemplos: [exemplo-cena.json](../scene-library/quadro-hq-sobre-cena/exemplo-cena.json)
+
+```ts
+type Props = {fontFamily?: HQFont;
+  upperText: string;
+  lowerText: string;
+  tagColor?: string;
+  assets?: {anton?: string; bangers?: string};
+};
+type HQFont = 'Bangers' | 'Anton';
+```
+
+### Texto HQ
+
+Frases/palavras com Anton ou Bangers, escrita e Kinetic.
+
+Módulo: `project://custom-scenes/TextoHQ.tsx`. Fontes: Anton ou Bangers quando há texto; Anton sem sombra.
+
+![Exemplo de Texto HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/texto-hq/preview-0-16x9.png)
+![Exemplo de Texto HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/texto-hq/preview-0-9x16.png)
+![Exemplo de Texto HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/texto-hq/preview-1-16x9.png)
+![Exemplo de Texto HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/texto-hq/preview-1-9x16.png)
+
+Guia: [texto-hq](../scene-library/texto-hq/README.md). Exemplos: [exemplo-anton-palavra-por-palavra.json](../scene-library/texto-hq/exemplo-anton-palavra-por-palavra.json) · [exemplo-frase.json](../scene-library/texto-hq/exemplo-frase.json) · [exemplo-kinetic.json](../scene-library/texto-hq/exemplo-kinetic.json) · [exemplo-sequencia.json](../scene-library/texto-hq/exemplo-sequencia.json)
+
+```ts
+type Entrance='abrir'|'escrita'|'kinetic'|'none'|null;
+type Exit='fechar'|'none'|null;
+type TextStyle=HQBackgroundOptions & {fontFamily?:HQFont;textColor?:string;textScale?:number;
+  kineticDirection?:'up'|'down'|'left'|'right';kineticStagger?:number;kineticAccentColor?:string;
+  entryAnimation?:Entrance;exitAnimation?:Exit;entryDuration?:number;exitDuration?:number;entryDelay?:number;writeDuration?:number};
+type TextStep=TextStyle & {text:string;at:number;duration:number};
+type Props=TextStyle & {text?:string;texts?:TextStep[];assets?:{bangers?:string;anton?:string}};
+type PreparedStep=TextStep & {fontFamily:HQFont;textColor:string;textScale:number;entryAnimation:Entrance;exitAnimation:Exit;
+  entryDuration:number;exitDuration:number;entryDelay:number};
+type Layout={lines:string[];fontSize:number};
+type HQBackgroundOptions = {
+  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundColor?: string;
+  backgroundOpacity?: number;
+  paperTone?: 'light' | 'dark';
+  gridBackgroundColor?: string;
+  gridLineColor?: string;
+};
+type HQFont = 'Bangers' | 'Anton';
+```
+
 
 ## Referência completa dos campos do JSON
 
@@ -311,7 +762,7 @@ Obrigatório significa exigido dentro do objeto pai. Um bloco opcional pode ter 
 | `timeline[].layout` | texto ou objeto | Não | — | `{}` | Layout predefinido como fullscreen, 3x3 ou character_vs. |
 | `timeline[].layout.grid` | objeto | Não | fixo: 3x3 | `"3x3"` | Grade declarada na forma de objeto: atualmente 3x3. |
 | `timeline[].layout.preset` | string | Não | — | `"exemplo"` | Nome textual do layout a ser aplicado. |
-| `timeline[].transitionOut` | string | Não | — | `"fade"` | Transição: cut, fade, blur_left, blur_right, blur_up, blur_down ou slide_left. |
+| `timeline[].transitionOut` | string | Não | opções: cut, fade, blur_left, blur_right, blur_up, blur_down, slide_left, flip, curtain | `"fade"` | Transição entre cenas: cut, fade, blur_left, blur_right, blur_up, blur_down, slide_left (legado), flip ou curtain. Flip gira o quadro no eixo vertical; curtain desliza a cena anterior revelando a próxima por baixo. |
 | `timeline[].transitionDuration` | number | Não | maior que 0 | `0.35` | Duração temporal da transição que introduz a próxima cena. |
 | `timeline[].customComponent` | object | Não | — | `{}` | Composição programável Remotion/TSX; código local confiável sob custom-scenes/. |
 | `timeline[].customComponent.module` | string | Sim | — | `"exemplo"` | URI project://custom-scenes/...tsx; o componente local renderiza sem configuração extra, mas deve ser confiável. |
@@ -429,44 +880,64 @@ Obrigatório significa exigido dentro do objeto pai. Um bloco opcional pode ter 
 
 Alguns exemplos abaixo são fragmentos de cena ou áudio. Complete o projeto principal e valide os caminhos antes de renderizar.
 
-### Cena programável TSX (câmera, SVG e movimento)
+### Cena programável TSX — Texto HQ
 
-Copie examples/custom-scenes/FollowDot.tsx para custom-scenes/FollowDot.tsx na pasta do projeto e confirme narração existente. O TSX local é renderizado sem variável de ambiente; use apenas código confiável. É uma única cena contínua; sem importar JavaScript no JSON.
+Prepare Texto HQ pela galeria ou copie scene-library/texto-hq/TextoHQ.tsx para custom-scenes/TextoHQ.tsx. Exemplo completo de plano; forneça audio/narration.wav. Os demais presets possuem snippets e contratos na galeria.
 
 ```json
 {
   "project": {
-    "name": "Exemplo TSX",
-    "format": "custom",
-    "profile": "generic",
-    "resolution": {
-      "width": 576,
-      "height": 1024
-    },
-    "fps": 30
+    "name": "Exemplo de cena especial",
+    "format": "youtube_long",
+    "profile": "generic"
   },
   "audio": {
     "narration": "audio/narration.wav"
   },
   "timeline": [
     {
-      "id": "motion_world",
+      "id": "texto_kinetic",
       "start": 0,
-      "end": 17.7,
+      "end": 6,
       "layout": "fullscreen",
       "background": {
-        "color": "#090a0e"
-      },
-      "customComponent": {
-        "module": "project://custom-scenes/FollowDot.tsx",
-        "mode": "replace",
-        "props": {
-          "title": "MOTION LAB",
-          "accent": "#fa4245"
-        },
-        "assets": {}
+        "color": "#B72840"
       },
       "elements": [],
+      "customComponent": {
+        "module": "project://custom-scenes/TextoHQ.tsx",
+        "mode": "replace",
+        "props": {
+          "fontFamily": "Bangers",
+          "entryAnimation": "kinetic",
+          "entryDuration": 1,
+          "entryDelay": 0,
+          "kineticStagger": 0.035,
+          "kineticAccentColor": "#F7CE46",
+          "backgroundStyle": "halftone",
+          "backgroundColor": "#B72840",
+          "texts": [
+            {
+              "text": "IDEIAS EM\nMOVIMENTO",
+              "at": 0,
+              "duration": 3,
+              "kineticDirection": "up"
+            },
+            {
+              "text": "OUTRO\nCAMINHO",
+              "at": 3,
+              "duration": 3,
+              "kineticDirection": "left",
+              "backgroundColor": "#2459C9",
+              "exitAnimation": "fechar",
+              "exitDuration": 0.4
+            }
+          ]
+        },
+        "assets": {
+          "bangers": "builtin://fonts/Bangers-Regular.ttf"
+        }
+      },
       "transitionOut": "cut"
     }
   ]
@@ -768,58 +1239,107 @@ Recortar trechos da fonte e sobrepor fades em segundos absolutos. Narração com
 
 ### Carrossel vertical de frases em largura total
 
-Três faixas: próxima menor acima, ativa maior no centro, anterior menor abaixo. Painel do centro percorre a largura inteira mesmo com cells em duas colunas.
+Padrão atual CarrosselFrasesHQ: próxima menor acima, ativa no centro com faixa, anterior abaixo. Configure phrases/at conforme a transcrição.
 
 ```json
 {
-  "id": "pilha",
-  "type": "kinetic_text",
-  "style": "word_stack_vertical",
-  "cells": [
-    1,
-    2,
-    4,
-    5,
-    7,
-    8
-  ],
+  "id": "carrossel_frases_hq",
   "start": 0,
-  "end": 4,
-  "fontScale": 0.95,
-  "textStyle": {
-    "fontFamily": "Anton",
-    "uppercase": true,
-    "color": "#FFFFFF",
-    "outlineWidth": 0
+  "end": 10,
+  "layout": "fullscreen",
+  "background": {
+    "color": "#111522"
   },
-  "config": {
-    "items": [
-      {
-        "text": "BATMAN NÃO É JUIZ",
-        "start": 0,
-        "end": 1.3
-      },
-      {
-        "text": "BATMAN NÃO É JÚRI",
-        "start": 1.3,
-        "end": 2.6
-      },
-      {
-        "text": "BATMAN NÃO É O CARRASCO",
-        "start": 2.6,
-        "end": 4
+  "elements": [
+    {
+      "id": "carrossel_whoosh_0",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh curto 04.mp3",
+      "at": 0.455,
+      "fadeOut": 0.04,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -28
       }
-    ],
-    "direction": "down",
-    "align": "left",
-    "inactiveOpacity": 0.38,
-    "activeScale": 1.45,
-    "inactiveScale": 0.72,
-    "panelColor": "#D9D9D9",
-    "panelOpacity": 0.12,
-    "panelRadius": 0,
-    "transitionDuration": 0.18
-  }
+    },
+    {
+      "id": "carrossel_whoosh_1",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh 03.mp3",
+      "at": 2.655,
+      "fadeOut": 0.04,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -28
+      }
+    },
+    {
+      "id": "carrossel_whoosh_2",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh aéreo 03.mp3",
+      "at": 4.855,
+      "fadeOut": 0.04,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -28
+      }
+    },
+    {
+      "id": "carrossel_whoosh_3",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh 03.mp3",
+      "at": 7.055,
+      "fadeOut": 0.04,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -28
+      }
+    }
+  ],
+  "customComponent": {
+    "module": "project://custom-scenes/CarrosselFrasesHQ.tsx",
+    "mode": "replace",
+    "props": {
+      "phrases": [
+        {
+          "text": "Herói NÃO É JUIZ",
+          "at": 0.8
+        },
+        {
+          "text": "Herói NÃO É JÚRI",
+          "at": 3
+        },
+        {
+          "text": "NEM O CARRASCO",
+          "at": 5.2,
+          "color": "#EF3F49"
+        },
+        {
+          "text": "ONDE FICA O LIMITE?",
+          "at": 7.4
+        }
+      ],
+      "fontFamily": "Bangers",
+      "align": "left",
+      "motionDuration": 0.45,
+      "backgroundStyle": "halftone",
+      "backgroundColor": "#10131E",
+      "activeColor": "#F4C542",
+      "inactiveColor": "#9698A2",
+      "inactiveOpacity": 0.38,
+      "inactiveScale": 0.6,
+      "activeBandColor": "#A0A0A0",
+      "activeBandOpacity": 0.12
+    },
+    "assets": {
+      "bangers": "builtin://fonts/Bangers-Regular.ttf"
+    }
+  },
+  "transitionOut": "cut"
 }
 ```
 
@@ -834,23 +1354,6 @@ Duas modalidades que usam a transcrição temporizada.
   "end": 21,
   "layout": "3x3",
   "elements": [
-    {
-      "id": "palavras",
-      "type": "kinetic_text",
-      "text": "EU SOU A VINGANÇA",
-      "start": 15,
-      "end": 19,
-      "cells": [
-        2,
-        5,
-        8
-      ],
-      "style": "word_stream_horizontal",
-      "fontScale": 0.9,
-      "config": {
-        "transitionDuration": 0.16
-      }
-    },
     {
       "id": "legenda",
       "type": "caption",
@@ -870,7 +1373,20 @@ Duas modalidades que usam a transcrição temporizada.
         ]
       }
     }
-  ]
+  ],
+  "customComponent": {
+    "module": "project://custom-scenes/TextoHQ.tsx",
+    "mode": "overlay",
+    "props": {
+      "text": "UMA NOVA IDEIA",
+      "entryAnimation": "kinetic",
+      "entryDuration": 0.5,
+      "backgroundOpacity": 0
+    },
+    "assets": {
+      "bangers": "builtin://fonts/Bangers-Regular.ttf"
+    }
+  }
 }
 ```
 

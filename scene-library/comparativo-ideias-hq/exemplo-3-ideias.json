@@ -1,0 +1,77 @@
+{
+  "id": "comparativo_3_ideias",
+  "start": 0,
+  "end": 6,
+  "layout": "fullscreen",
+  "background": {
+    "color": "#D6AD42"
+  },
+  "elements": [
+    {
+      "id": "entrada_ideia_1",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh curto 04.mp3",
+      "at": 0.33,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -28
+      }
+    },
+    {
+      "id": "entrada_ideia_2",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh 03.mp3",
+      "at": 0.78,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -28
+      }
+    },
+    {
+      "id": "entrada_ideia_3",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh aéreo 03.mp3",
+      "at": 1.23,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -28
+      }
+    }
+  ],
+  "customComponent": {
+    "module": "project://custom-scenes/ComparativoIdeiasHQ.tsx",
+    "mode": "replace",
+    "props": {
+      "backgroundColor": "#D6AD42",
+      "textColor": "#FFFFFF",
+      "startDelay": 0.15,
+      "stagger": 0.45,
+      "entryDuration": 0.6,
+      "textDuration": 0.25,
+      "items": [
+        {
+          "asset": "ideia1",
+          "text": "PRESERVAR A REGRA"
+        },
+        {
+          "asset": "ideia2",
+          "text": "BUSCAR OUTRA SAÍDA"
+        },
+        {
+          "asset": "ideia3",
+          "text": "PESAR AS CONSEQUÊNCIAS"
+        }
+      ]
+    },
+    "assets": {
+      "bangers": "builtin://fonts/Bangers-Regular.ttf",
+      "ideia1": "project://assets/exemplos/imagem.svg",
+      "ideia2": "project://assets/exemplos/imagem.svg",
+      "ideia3": "project://assets/exemplos/imagem.svg"
+    }
+  },
+  "transitionOut": "cut"
+}

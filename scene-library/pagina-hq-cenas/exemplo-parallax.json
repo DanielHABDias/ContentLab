@@ -1,0 +1,76 @@
+{
+  "id": "pagina_parallax",
+  "start": 0,
+  "end": 10,
+  "layout": "fullscreen",
+  "background": {
+    "color": "#154B80"
+  },
+  "elements": [],
+  "customComponent": {
+    "module": "project://custom-scenes/PaginaHQCenas.tsx",
+    "mode": "replace",
+    "props": {
+      "panelLayout": "parallax",
+      "parallaxDuration": 0.65,
+      "entryDuration": 0.45,
+      "heading": "UMA HISTÓRIA. OUTRAS CAMADAS.",
+      "headingColor": "#FFFFFF",
+      "backgroundStyle": "halftone",
+      "backgroundColor": "#154B80",
+      "accentColor": "#F4C542",
+      "panels": [
+        {
+          "asset": "primeiro",
+          "label": "A ESCOLHA",
+          "mediaType": "image",
+          "fit": "contain",
+          "at": 0
+        },
+        {
+          "asset": "segundo",
+          "label": "A CONSEQUÊNCIA",
+          "mediaType": "image",
+          "fit": "contain",
+          "at": 0.2
+        },
+        {
+          "asset": "terceiro",
+          "label": "O IMPACTO",
+          "mediaType": "image",
+          "fit": "contain",
+          "at": 0.4
+        }
+      ],
+      "focus": [
+        {
+          "panel": 1,
+          "at": 0,
+          "until": 3
+        },
+        {
+          "panel": 2,
+          "at": 3,
+          "until": 6
+        },
+        {
+          "panel": 3,
+          "at": 6,
+          "until": 8
+        }
+      ],
+      "enter": {
+        "panel": 3,
+        "at": 8,
+        "duration": 1
+      }
+    },
+    "assets": {
+      "bangers": "builtin://fonts/Bangers-Regular.ttf",
+      "primeiro": "project://assets/exemplos/imagem.svg",
+      "segundo": "project://assets/exemplos/imagem.svg",
+      "terceiro": "project://assets/exemplos/imagem.svg"
+    }
+  },
+  "transitionOut": "cut"
+}

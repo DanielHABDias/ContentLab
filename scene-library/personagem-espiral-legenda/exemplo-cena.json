@@ -1,0 +1,85 @@
+{
+  "id": "personagem_espiral_legenda",
+  "start": 0,
+  "end": 5,
+  "layout": "fullscreen",
+  "background": {
+    "color": "#080808"
+  },
+  "elements": [],
+  "customComponent": {
+    "module": "project://custom-scenes/PersonagemEspiralLegenda.tsx",
+    "mode": "replace",
+    "props": {
+      "backgroundVariant": "espiral",
+      "entryDuration": 0.6,
+      "entryDelay": 0,
+      "characterScale": 1,
+      "headAnchor": {
+        "x": 0.5,
+        "y": 0.3
+      },
+      "sway": 0.65,
+      "maxWords": 5,
+      "captionColor": "#FFFFFF",
+      "highlightColors": [
+        "#175AE8",
+        "#F22932",
+        "#111111"
+      ],
+      "transcriptOffset": 0,
+      "words": [
+        {
+          "word": "O",
+          "start": 0.65,
+          "end": 0.85
+        },
+        {
+          "word": "Herói",
+          "start": 0.85,
+          "end": 1.4
+        },
+        {
+          "word": "não",
+          "start": 1.4,
+          "end": 1.7
+        },
+        {
+          "word": "mata",
+          "start": 1.7,
+          "end": 2.2
+        },
+        {
+          "word": "mas",
+          "start": 2.5,
+          "end": 2.9
+        },
+        {
+          "word": "essa",
+          "start": 2.9,
+          "end": 3.3
+        },
+        {
+          "word": "regra",
+          "start": 3.3,
+          "end": 3.8
+        },
+        {
+          "word": "tem",
+          "start": 3.8,
+          "end": 4
+        },
+        {
+          "word": "consequências",
+          "start": 4,
+          "end": 4.8
+        }
+      ]
+    },
+    "assets": {
+      "character": "project://assets/exemplos/imagem.svg",
+      "bangers": "builtin://fonts/Bangers-Regular.ttf"
+    }
+  },
+  "transitionOut": "cut"
+}

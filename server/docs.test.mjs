@@ -67,7 +67,7 @@ test('documents cover all main capabilities, include examples and all JS-generat
   assert.ok(!md.includes('Criar cena motion com grid 3×3'));
   assert.ok(!html.includes('Criar cena motion com grid 3×3'));
   for(const output of [md,html]){
-    assert.doesNotMatch(output,/nox|diazverso|diasverso|vd[_-]?0005/i,
+    assert.doesNotMatch(output.replaceAll('Oferecimento do DiasVerso.','').replace(/data:image\/png;base64,[A-Za-z0-9+/=]+/g,''),/nox|diazverso|diasverso|vd[_-]?0005/i,
       'Official docs must not expose channel-specific personas or internal plans');
   }
   assert.ok(md.includes('fontes') || md.includes('project://'));

@@ -1,82 +1,57 @@
 {
   "project": {
-    "name": "exemplo-tipografia",
+    "name": "Exemplo de preset",
     "format": "youtube_long",
     "profile": "generic"
   },
   "audio": {
-    "narration": "audio/narracao.wav"
+    "narration": "audio/narration.wav"
   },
   "timeline": [
     {
-      "id": "titulo-anton",
+      "id": "texto_kinetic",
       "start": 0,
-      "end": 4,
-      "layout": "3x3",
+      "end": 6,
+      "layout": "fullscreen",
       "background": {
-        "color": "#172033"
+        "color": "#B72840"
       },
-      "elements": [
-        {
-          "id": "pergunta",
-          "type": "text",
-          "text": "O QUE ACONTECEU?",
-          "style": "anton",
-          "cells": [
-            2,
-            5,
-            8
-          ],
-          "start": 0,
-          "end": 4,
-          "reveal": {
-            "charactersPerSecond": 9
-          },
-          "textStyle": {
-            "fontFamily": "Anton",
-            "uppercase": true,
-            "color": "#FFFFFF",
-            "outlineWidth": 0
-          }
-        }
-      ]
-    },
-    {
-      "id": "titulo-bangers",
-      "start": 4,
-      "end": 8,
-      "layout": "3x3",
-      "background": {
-        "color": "#EFE4C8"
-      },
-      "elements": [
-        {
-          "id": "resposta",
-          "type": "text",
-          "text": "UMA VIRADA!",
-          "style": "bangers",
-          "cells": [
-            2,
-            5,
-            8
-          ],
-          "start": 4,
-          "end": 8,
-          "textStyle": {
-            "fontFamily": "Bangers",
-            "uppercase": true,
-            "color": "#FFFFFF",
-            "outlineColor": "#172033",
-            "outlineWidth": 6,
-            "shadow": {
-              "color": "#000000",
-              "blur": 8,
-              "offsetX": 3,
-              "offsetY": 4
+      "elements": [],
+      "customComponent": {
+        "module": "project://custom-scenes/TextoHQ.tsx",
+        "mode": "replace",
+        "props": {
+          "fontFamily": "Bangers",
+          "entryAnimation": "kinetic",
+          "entryDuration": 1,
+          "entryDelay": 0,
+          "kineticStagger": 0.035,
+          "kineticAccentColor": "#F7CE46",
+          "backgroundStyle": "halftone",
+          "backgroundColor": "#B72840",
+          "texts": [
+            {
+              "text": "IDEIAS EM\nMOVIMENTO",
+              "at": 0,
+              "duration": 3,
+              "kineticDirection": "up"
+            },
+            {
+              "text": "OUTRO\nCAMINHO",
+              "at": 3,
+              "duration": 3,
+              "kineticDirection": "left",
+              "backgroundColor": "#2459C9",
+              "exitAnimation": "fechar",
+              "exitDuration": 0.4
             }
-          }
+          ]
+        },
+        "assets": {
+          "bangers": "builtin://fonts/Bangers-Regular.ttf"
         }
-      ]
+      },
+      "transitionOut": "cut"
     }
   ]
 }

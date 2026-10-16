@@ -1,0 +1,97 @@
+{
+  "id": "brainstorm_evidencias",
+  "start": 0,
+  "end": 12,
+  "layout": "fullscreen",
+  "background": {
+    "color": "#18364F"
+  },
+  "elements": [
+    {
+      "id": "evidencia_whoosh_0",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh curto 04.mp3",
+      "at": 2.53,
+      "fadeOut": 0.04,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -28
+      }
+    },
+    {
+      "id": "evidencia_whoosh_1",
+      "type": "sfx",
+      "asset": "builtin://sfx/Whoosh aéreo 03.mp3",
+      "at": 5.63,
+      "fadeOut": 0.04,
+      "config": {
+        "duration": 0.24,
+        "preset": "subtle",
+        "trimDb": -28
+      }
+    }
+  ],
+  "customComponent": {
+    "module": "project://custom-scenes/BrainstormHQ.tsx",
+    "mode": "replace",
+    "props": {
+      "presentation": "evidence",
+      "heading": "TRÊS PONTOS, UMA CONEXÃO",
+      "fontFamily": "Bangers",
+      "backgroundStyle": "halftone",
+      "backgroundColor": "#18364F",
+      "cardColor": "#FFF5D7",
+      "textColor": "#172338",
+      "lineColor": "#F04A50",
+      "zoomOutDuration": 1.4,
+      "nodes": [
+        {
+          "id": "regra",
+          "text": "A REGRA",
+          "subtitle": "O PONTO DE PARTIDA",
+          "asset": "escudo",
+          "color": "#2676E8"
+        },
+        {
+          "id": "escolha",
+          "text": "A ESCOLHA",
+          "subtitle": "O PESO DA DECISÃO",
+          "asset": "balanca",
+          "color": "#EF3F49"
+        },
+        {
+          "id": "resultado",
+          "text": "O RESULTADO",
+          "subtitle": "UMA NOVA PERSPECTIVA",
+          "asset": "lampada",
+          "color": "#E4AB28"
+        }
+      ],
+      "steps": [
+        {
+          "node": "regra",
+          "hold": 2.2
+        },
+        {
+          "node": "escolha",
+          "moveDuration": 0.9,
+          "hold": 2.2
+        },
+        {
+          "node": "resultado",
+          "from": "regra",
+          "moveDuration": 0.9,
+          "hold": 2.2
+        }
+      ]
+    },
+    "assets": {
+      "bangers": "builtin://fonts/Bangers-Regular.ttf",
+      "escudo": "project://assets/exemplos/imagem.svg",
+      "balanca": "project://assets/exemplos/imagem.svg",
+      "lampada": "project://assets/exemplos/imagem.svg"
+    }
+  },
+  "transitionOut": "cut"
+}
