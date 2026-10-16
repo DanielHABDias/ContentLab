@@ -8,7 +8,7 @@ type Animation = 'lateral' | 'vertical' | 'pop';
 type IconName = 'youtube' | 'like' | 'sininho' | 'seta' | 'instagram' | 'none';
 type Action = 'auto' | 'clique' | 'sininho' | 'pulo' | 'none';
 type Props = {fontFamily?: HQFont; preset?: Preset; corner?: Corner; animation?: Animation; exitAnimation?: Animation;
-  text?: string; boxColor?: string; textColor?: string; icon?: IconName;
+  text?: string; instagramHandle?: string; boxColor?: string; textColor?: string; icon?: IconName;
   at?: number; holdDuration?: number; animationDuration?: number;
   action?: Action; actionAt?: number; actionDuration?: number; assets?: {bangers?: string; anton?: string}};
 const presets: Record<Preset, {text: string; box: string; color: string; icon: IconName; gradient?: string}> = {
@@ -41,7 +41,7 @@ function Icon({name, size}: {name: IconName; size: number}) {
 
 // Transparent overlay: the footage underneath remains untouched.
 export default function CaixinhaHQ({fontFamily="Bangers", preset = 'inscricao', corner = 'inferior-direito', animation = 'lateral', exitAnimation,
-  text, boxColor, textColor, icon, at = 0, holdDuration = 5, animationDuration = .4,
+  text, instagramHandle, boxColor, textColor, icon, at = 0, holdDuration = 5, animationDuration = .4,
   action = 'auto', actionAt, actionDuration, assets = {}}: Props) {
   const fontUrl=resolveHQFont(fontFamily,assets);
   const {width: w, height: h, fps, durationInFrames} = useVideoConfig();
@@ -59,7 +59,13 @@ export default function CaixinhaHQ({fontFamily="Bangers", preset = 'inscricao', 
   const actionCenter = actionAt ?? at + animationDuration + holdDuration / 2;
   if (gesture !== 'none' && (!Number.isFinite(actionLength) || actionLength < 2 / fps || !Number.isFinite(actionCenter) || actionCenter - actionLength / 2 < at + animationDuration - 1e-8 || actionCenter + actionLength / 2 > at + animationDuration + holdDuration + 1e-8)) throw new Error('A ação deve caber no tempo de leitura, sem sobrepor entrada/saída. actionAt é seu centro, em segundos relativos à cena.');
   const style = presets[preset];
-  const phrase = (text ?? style.text).normalize('NFC').toLocaleUpperCase('pt-BR').trim();
+  // A marca define o @ via props; text continua podendo substituir a frase inteira.
+  const handle = instagramHandle?.trim();
+  if (preset === 'instagram' && text === undefined && handle && !/^@?[A-Za-z0-9._]{1,30}$/.test(handle)) {
+    throw new Error('instagramHandle deve ser um @ do Instagram válido (letras, números, ponto ou _; até 30 caracteres).');
+  }
+  const instagramText = preset === 'instagram' && handle ? `${style.text} @${handle.replace(/^@/, '')}` : style.text;
+  const phrase = (text ?? instagramText).normalize('NFC').toLocaleUpperCase('pt-BR').trim();
   const fill = boxColor ?? style.box;
   const color = textColor ?? style.color;
   const symbol = icon ?? style.icon;
