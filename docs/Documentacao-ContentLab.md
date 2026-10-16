@@ -316,6 +316,8 @@ Caixas livres e presets sociais com entradas e gestos.
 
 Módulo: `project://custom-scenes/CaixinhaHQ.tsx`. Fontes: Anton ou Bangers quando há texto; Anton sem sombra.
 
+Instagram: informe `customComponent.props.instagramHandle: "@DiazVersoYT"` para acrescentar o @ à frase padrão sem substituir tudo. A prop `text` ainda substitui a frase inteira e tem precedência. Sem `instagramHandle`, o convite fica `SIGA NO INSTAGRAM`.
+
 ![Exemplo de Caixinha HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/caixinha-hq/preview-0-16x9.png)
 ![Exemplo de Caixinha HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/caixinha-hq/preview-0-9x16.png)
 ![Exemplo de Caixinha HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/caixinha-hq/preview-1-16x9.png)
@@ -340,7 +342,7 @@ type Animation = 'lateral' | 'vertical' | 'pop';
 type IconName = 'youtube' | 'like' | 'sininho' | 'seta' | 'instagram' | 'none';
 type Action = 'auto' | 'clique' | 'sininho' | 'pulo' | 'none';
 type Props = {fontFamily?: HQFont; preset?: Preset; corner?: Corner; animation?: Animation; exitAnimation?: Animation;
-  text?: string; boxColor?: string; textColor?: string; icon?: IconName;
+  text?: string; instagramHandle?: string; boxColor?: string; textColor?: string; icon?: IconName;
   at?: number; holdDuration?: number; animationDuration?: number;
   action?: Action; actionAt?: number; actionDuration?: number; assets?: {bangers?: string; anton?: string}};
 type HQFont = 'Bangers' | 'Anton';
@@ -413,6 +415,8 @@ type HQFont = 'Bangers' | 'Anton';
 Indicação de vídeo no vertical; dois vídeos e canal no horizontal.
 
 Módulo: `project://custom-scenes/ComicPageCTA.tsx`. Fontes: Anton ou Bangers quando há texto; Anton sem sombra.
+
+No Diazverso, `customComponent.assets.character` recebe o PNG aprovado do **Nox**. Essa é a chave do Content Lab (não `assets.nox`).
 
 ![Exemplo de Encerramento HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/cta-encerramento-hq/preview-0-16x9.png)
 ![Exemplo de Encerramento HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/cta-encerramento-hq/preview-0-9x16.png)
