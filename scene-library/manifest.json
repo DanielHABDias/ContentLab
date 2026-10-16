@@ -81,8 +81,8 @@
       "16:9",
       "9:16"
     ],
-    "hash": "9fec858a5b979cc7c530d79598951f827b65078f4044a56feb2d58443c1f8c1e",
-    "contract": "type Preset = 'inscricao' | 'like' | 'sininho' | 'produto' | 'instagram' | 'livre';\ntype Corner = 'superior-esquerdo' | 'superior-direito' | 'inferior-esquerdo' | 'inferior-direito' | 'centro';\ntype Animation = 'lateral' | 'vertical' | 'pop';\ntype IconName = 'youtube' | 'like' | 'sininho' | 'seta' | 'instagram' | 'none';\ntype Action = 'auto' | 'clique' | 'sininho' | 'pulo' | 'none';\ntype Props = {fontFamily?: HQFont; preset?: Preset; corner?: Corner; animation?: Animation; exitAnimation?: Animation;\n  text?: string; boxColor?: string; textColor?: string; icon?: IconName;\n  at?: number; holdDuration?: number; animationDuration?: number;\n  action?: Action; actionAt?: number; actionDuration?: number; assets?: {bangers?: string; anton?: string}};\ntype HQFont = 'Bangers' | 'Anton';",
+    "hash": "b0328bfa4fc937f09bb6d56f9d841f4e04feb3602669a42ad753fa7a91de543b",
+    "contract": "type Preset = 'inscricao' | 'like' | 'sininho' | 'produto' | 'instagram' | 'livre';\ntype Corner = 'superior-esquerdo' | 'superior-direito' | 'inferior-esquerdo' | 'inferior-direito' | 'centro';\ntype Animation = 'lateral' | 'vertical' | 'pop';\ntype IconName = 'youtube' | 'like' | 'sininho' | 'seta' | 'instagram' | 'none';\ntype Action = 'auto' | 'clique' | 'sininho' | 'pulo' | 'none';\ntype Props = {fontFamily?: HQFont; preset?: Preset; corner?: Corner; animation?: Animation; exitAnimation?: Animation;\n  text?: string; instagramHandle?: string; boxColor?: string; textColor?: string; icon?: IconName;\n  at?: number; holdDuration?: number; animationDuration?: number;\n  action?: Action; actionAt?: number; actionDuration?: number; assets?: {bangers?: string; anton?: string}};\ntype HQFont = 'Bangers' | 'Anton';",
     "guide": "scene-library/caixinha-hq/README.md",
     "examples": [
       "scene-library/caixinha-hq/exemplo-cena.json",
