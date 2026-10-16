@@ -23,12 +23,12 @@ PNGs `previa-anton-*` antigos podem mostrar sombras anteriores à correção; s�
 | `like` | DEIXE O LIKE | Azul / branca | Joinha azul sobre disco branco para contrastar |
 | `sininho` | ATIVE O SININHO | Amarela / preta | Sino |
 | `produto` | INDICAÇÃO DE PRODUTO | Branca / preta | Seta para baixo |
-| `instagram` | SIGA NO INSTAGRAM @seu_perfil | Degradê amarelo/laranja/rosa/roxo/azul / branca | Instagram branco vetorial |
+| `instagram` | SIGA NO INSTAGRAM (adicione o @ com `instagramHandle`) | Degradê amarelo/laranja/rosa/roxo/azul / branca | Instagram branco vetorial |
 | `livre` | SEU TEXTO AQUI | Branca / preta, configuráveis | Nenhum |
 
 Todos permitem substituir `text`, `boxColor`, `textColor` e `icon`. O modo livre não exige ícone. Textos longos quebram em até duas linhas e diminuem automaticamente; prefira chamadas curtas.
 
-No Instagram, omitir `boxColor` preserva o degradê característico. Se informar uma cor #RRGGBB, ela substitui o degradê por fundo sólido, sem afetar os outros presets. O @ padrão é @seu_perfil; na arte aparece em maiúsculas, como os demais textos Bangers. Para outro perfil, substituir `text`. O ícone é desenhado no próprio TSX e não precisa de imagem adicional.
+No Instagram, omitir `boxColor` preserva o degradê característico. Se informar uma cor #RRGGBB, ela substitui o degradê por fundo sólido, sem afetar os outros presets. **Use `instagramHandle` para o @ do perfil**, por exemplo `"@DiazVersoYT"` ou `"DiazVersoYT"`; o componente acrescenta um único `@` e exibe `SIGA NO INSTAGRAM @DIAZVERSOYT`. Se a prop for omitida, conserva `SIGA NO INSTAGRAM`, evitando alterar vídeos anteriores. `text` continua substituindo toda a frase e tem precedência sobre `instagramHandle`. O nome admite letras, dígitos, ponto e _ (até 30 caracteres). O ícone é desenhado no próprio TSX.
 
 ## Parâmetros
 
@@ -44,7 +44,8 @@ No Instagram, omitir `boxColor` preserva o degradê característico. Se informar
 | `actionAt` | Centro da ação, em segundos relativos à cena. Padrão: at + animationDuration + holdDuration / 2. |
 | `actionDuration` | Duração da ação; padrão 0,45 s, limitado ao tempo de leitura disponível. Mínimo 2 frames. |
 | `preset` | inscricao / like / sininho / produto / instagram / livre. Padrão inscricao. |
-| `text` | Texto livre que substitui o preset; sempre maiúsculo. |
+| `text` | Texto livre que substitui toda a frase do preset; sempre maiúsculo. Tem precedência sobre `instagramHandle`. |
+| `instagramHandle` | Somente no preset `instagram`: @ opcional do perfil, com ou sem `@` inicial. Não fornecido: mantém `SIGA NO INSTAGRAM`; ex.: `"@DiazVersoYT"`. |
 | `boxColor` / `textColor` | Cores #RRGGBB. Se omitidas, usa as cores do preset. |
 | `icon` | youtube / like / sininho / seta / instagram / none. |
 | `assets.bangers` | Fonte padrão: builtin://fonts/Bangers-Regular.ttf; para Anton use assets.anton. |
@@ -80,7 +81,7 @@ Produto pula mesmo sem áudio: o exemplo não adiciona som à ação. Se quiser,
 
 `exemplo-cena.json`: inscrição lateral. `exemplo-like-pop.json`: like com pop. `exemplo-sininho-vertical.json`: sino entrando por cima. `exemplo-produto.json`: produto na esquerda. `exemplo-livre.json`: texto personalizado em caixa roxa.
 
-`exemplo-instagram.json`: preset pedindo para seguir @seu_perfil, degradê padrão, entrada/saída lateral com whoosh baixo e clique no meio. Funciona nos quatro cantos e com lateral/vertical/pop. A ação auto agora diminui até 88% e volta ao normal, como inscrição/like. O exemplo inclui o som no instante de pressão máxima. actionAt continua configurável; ajustar também o at do som ao mudar esse instante. action none desativa a animação; nesse caso remover também o sfx de clique.
+`exemplo-instagram.json`: preset pedindo para seguir `@DiazVersoYT` via `instagramHandle`, degradê padrão, entrada/saída lateral com whoosh baixo e clique no meio. Funciona nos quatro cantos e com lateral/vertical/pop. A ação auto agora diminui até 88% e volta ao normal, como inscrição/like. O exemplo inclui o som no instante de pressão máxima. actionAt continua configurável; ajustar também o at do som ao mudar esse instante. action none desativa a animação; nesse caso remover também o sfx de clique.
 
 ## Conferência local
 
@@ -138,7 +139,7 @@ type Animation = 'lateral' | 'vertical' | 'pop';
 type IconName = 'youtube' | 'like' | 'sininho' | 'seta' | 'instagram' | 'none';
 type Action = 'auto' | 'clique' | 'sininho' | 'pulo' | 'none';
 type Props = {fontFamily?: HQFont; preset?: Preset; corner?: Corner; animation?: Animation; exitAnimation?: Animation;
-  text?: string; boxColor?: string; textColor?: string; icon?: IconName;
+  text?: string; instagramHandle?: string; boxColor?: string; textColor?: string; icon?: IconName;
   at?: number; holdDuration?: number; animationDuration?: number;
   action?: Action; actionAt?: number; actionDuration?: number; assets?: {bangers?: string; anton?: string}};
 type HQFont = 'Bangers' | 'Anton';
@@ -155,3 +156,7 @@ Na Documentação, selecione este padrão e prepare-o na pasta do projeto. A ins
 - [exemplo-livre.json](exemplo-livre.json)
 - [exemplo-produto.json](exemplo-produto.json)
 - [exemplo-sininho-vertical.json](exemplo-sininho-vertical.json)
+
+### Regra de uso do Instagram no Diazverso
+
+Na produção do canal, usar `preset: "instagram"` e `instagramHandle: "@DiazVersoYT"` no `customComponent.props`. O @ pertence à prop, não ao ícone nem ao mapa `assets`. Não há arquivo gráfico de Instagram externo. Para outro criador, informar o @ dele; não é necessário editar o código. A frase `text` deve ser usada apenas quando se deseja trocar o convite inteiro.
