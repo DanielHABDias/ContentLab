@@ -11,7 +11,7 @@ O editor visual de thumbnails fica na aba **Thumbnails** do Content Lab. Ele é 
 5. Defina uma frase curta. O mesmo texto é desenhado na **posição exata em duas passadas**: preenchimento com glow *atrás* do personagem central, depois traço fino *à frente*. A fonte inicial é Anton; Bangers é opcional. Um subtítulo em caixa é opcional.
 6. Ajuste o degradê preto na base. Ele escurece a parte inferior do cenário e personagens laterais, mas mantém o personagem principal e o título acima.
 7. Clique **+ Novo Short**. A versão nasce com a mesma composição e herda automaticamente **o fundo global** (cor, textura, imagem contextual, transparência e sombra). Os personagens e textos são independentes nessa versão: substitua somente o PNG central e a frase, ou ajuste posições se o recorte 9:16 exigir.
-8. Gere outras versões para formatos 9:16, 1:1 ou 16:9. A aba de cada versão deixa claro o formato.
+8. Você também pode abrir **Criar vários Shorts por frases** e colar uma frase por linha: o Content Lab cria todas as versões de uma vez. Depois escolha cada Short e substitua o personagem central. Também é possível mudar o formato individual entre 9:16, 1:1 e 16:9.
 9. Use **Baixar PNG desta versão** ou **Baixar todas (ZIP)**, que contém os PNGs em resolução final mais o projeto editável JSON.
 
 ## O que é compartilhado e o que varia
