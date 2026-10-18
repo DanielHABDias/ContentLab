@@ -50,3 +50,8 @@
 @media(max-width:1100px){.thumb-grid{grid-template-columns:minmax(210px,245px) minmax(0,1fr)}}
 @media(max-width:850px){.thumb-grid{grid-template-columns:minmax(0,1fr)}.thumb-controls{max-height:none;overflow:visible}.thumb-top-actions{width:100%}.thumb-top-actions .btn{flex:1}#thumb-canvas{max-height:62vh}}
 @media(prefers-reduced-motion:reduce){.thumb-variant,.thumb-layer-button{transition:none}}
+
+.thumb-batch-entry{background:#F7FAFF;border:1px solid #E1E8F3;border-radius:11px;padding:10px 12px}
+.thumb-batch-entry summary{font-size:12px;font-weight:730;color:#456380;cursor:pointer}
+.thumb-batch-entry[open] summary{margin-bottom:8px}
+.thumb-batch-entry textarea{width:100%;min-height:65px;border:1px solid #D9E1EC;border-radius:8px;padding:8px 10px;background:white;color:#27364A;resize:vertical;font:12px/1.5 var(--font-ui);display:block;margin-bottom:8px}
