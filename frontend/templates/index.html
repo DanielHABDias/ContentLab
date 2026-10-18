@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="/static/social-connections.css">
 <link rel="stylesheet" href="/static/metrics.css">
 <link rel="stylesheet" href="/static/media-library.css">
+<link rel="stylesheet" href="/static/thumbnail-studio.css">
 </head>
 <body>
 
@@ -48,8 +49,9 @@
       </div>
 
       <button class="workspace-tab" id="tab-library" role="tab" aria-selected="false" aria-controls="panel-library" type="button" data-workspace="library"><span>05</span> Banco de mídia</button>
-      <button class="workspace-tab" id="tab-settings" role="tab" aria-selected="false" aria-controls="panel-settings" type="button" data-workspace="settings"><span>06</span> Configurações</button>
-      <button class="workspace-tab" id="tab-docs" role="tab" aria-selected="false" aria-controls="panel-docs" type="button" data-workspace="docs"><span>07</span> Documentação</button>
+      <button class="workspace-tab" id="tab-thumbnails" role="tab" aria-selected="false" aria-controls="panel-thumbnails" type="button" data-workspace="thumbnails"><span>06</span> Thumbnails</button>
+      <button class="workspace-tab" id="tab-settings" role="tab" aria-selected="false" aria-controls="panel-settings" type="button" data-workspace="settings"><span>07</span> Configurações</button>
+      <button class="workspace-tab" id="tab-docs" role="tab" aria-selected="false" aria-controls="panel-docs" type="button" data-workspace="docs"><span>08</span> Documentação</button>
   </nav><div class="sidebar-foot"><span class="sidebar-foot-icon">✦</span><strong>Faça a ideia ganhar movimento.</strong><small>Node.js · Remotion · Local</small></div></aside>
   <main class="panel">
     <div id="panel-videos" class="workspace-panel" role="tabpanel" aria-labelledby="tab-videos">
@@ -625,6 +627,81 @@
       </div>
     </div>
 
+
+    <div id="panel-thumbnails" class="workspace-panel hidden" role="tabpanel" aria-labelledby="tab-thumbnails" hidden>
+      <div class="workspace-intro">
+        <span class="eyebrow">STUDIO / DESIGN VISUAL</span>
+        <h2>Thumbnails.<br><span class="heading-muted">Uma base, vários vídeos.</span></h2>
+        <p>Monte no canvas com o mouse, reaproveite fundo, cores e iluminação do vídeo longo e personalize os personagens e textos dos Shorts. Sem precisar escrever JSON.</p>
+      </div>
+      <section class="thumb-app block" aria-label="Editor visual de thumbnails">
+        <div class="thumb-top">
+          <label>Projeto <input id="thumb-project-name" type="text" value="Diazverso" maxlength="80" placeholder="Nome da coleção"></label>
+          <div class="thumb-top-actions">
+            <button class="btn btn-secondary btn-sm" id="thumb-download-json" type="button">Baixar projeto JSON</button>
+            <button class="btn btn-secondary btn-sm" id="thumb-import-json" type="button">Abrir projeto JSON</button>
+            <button class="btn btn-primary btn-sm" id="thumb-export-all" type="button">Baixar todas (ZIP)</button>
+          </div>
+          <input id="thumb-json-file" type="file" accept=".json,application/json" hidden>
+          <input id="thumb-image-file" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+        </div>
+        <div class="thumb-grid">
+          <aside class="thumb-controls">
+            <div class="thumb-panel">
+              <h3>Fundo compartilhado</h3>
+              <label>Estilo HQ
+                <select id="thumb-bg-style">
+                  <option value="halftone">Halftone</option><option value="paper">Papel</option>
+                  <option value="film">Filme antigo</option><option value="stars">Estrelas</option>
+                  <option value="grid">Grade</option><option value="solid">Cor sólida</option>
+                  <option value="none">Sem textura</option>
+                </select>
+              </label>
+              <label>Cor base <input id="thumb-bg-color" type="color" value="#233D76"></label>
+              <label>Tom do papel <select id="thumb-paper-tone"><option value="dark">Escuro</option><option value="light">Claro</option></select></label>
+              <label>Opacidade textura <input id="thumb-texture-opacity" type="range" min="0" max="100" value="36"><output id="thumb-texture-opacity-value"></output></label>
+              <label>Imagem contextual
+                <span class="thumb-file-buttons"><button id="thumb-upload-bg" class="btn btn-secondary btn-sm" type="button">Escolher imagem</button><button id="thumb-remove-bg" class="btn btn-ghost btn-sm" type="button">Limpar</button></span>
+              </label>
+              <label>Opacidade imagem <input id="thumb-photo-opacity" type="range" min="0" max="100" value="42"><output id="thumb-photo-opacity-value"></output></label>
+              <label>Sombra inferior <input id="thumb-shadow-opacity" type="range" min="0" max="100" value="78"><output id="thumb-shadow-opacity-value"></output></label>
+              <label>Altura da sombra <input id="thumb-shadow-height" type="range" min="0" max="100" value="55"><output id="thumb-shadow-height-value"></output></label>
+            </div>
+            <div class="thumb-panel">
+              <h3>Camadas</h3>
+              <p class="thumb-hint">Selecione uma camada para alterar posição, tamanho e brilho; arraste-a diretamente na prévia.</p>
+              <div id="thumb-layer-list" class="thumb-layer-list"></div>
+              <div id="thumb-layer-properties" class="thumb-layer-properties"></div>
+            </div>
+          </aside>
+          <div class="thumb-main">
+            <div class="thumb-variants-head">
+              <h3>Versões</h3>
+              <button id="thumb-add-variant" type="button" class="btn btn-primary btn-sm">+ Novo Short</button>
+            </div>
+            <div id="thumb-variants" class="thumb-variants" role="tablist" aria-label="Versões da thumbnail"></div>
+            <div class="thumb-canvas-shell">
+              <div class="thumb-canvas-bar">
+                <span id="thumb-canvas-label">Vídeo longo · 16:9</span>
+                <span>Arraste os personagens ou o título • controles à esquerda</span>
+              </div>
+              <canvas id="thumb-canvas" width="1280" height="720" aria-label="Prévia editável da thumbnail" tabindex="0"></canvas>
+            </div>
+            <div class="thumb-actions">
+              <button class="btn btn-secondary" id="thumb-export-current" type="button">Baixar PNG desta versão</button>
+              <button class="btn btn-secondary" id="thumb-duplicate-variant" type="button">Duplicar versão</button>
+              <button class="btn btn-ghost" id="thumb-remove-variant" type="button">Excluir versão selecionada</button>
+            </div>
+            <div class="thumb-panel thumb-instructions">
+              <h3>Como funciona</h3>
+              <p>Crie a thumbnail do vídeo longo, importe PNGs recortados e posicione as camadas. O texto <strong>Anton</strong> tem preenchimento atrás e contorno alinhado na frente do personagem central. Clique em <strong>Novo Short</strong> para herdar todo o cenário e trocar somente o personagem e a frase. Tudo é salvo localmente no navegador; você também pode guardar o JSON como projeto editável.</p>
+              <p id="thumb-status" role="status" aria-live="polite">Preparando o editor...</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
     <div id="panel-library" class="workspace-panel hidden" role="tabpanel" aria-labelledby="tab-library" hidden>
       <div class="workspace-intro">
         <span class="eyebrow">ACERVO / PESQUISAR E IMPORTAR</span>
@@ -877,5 +954,6 @@
 <script src="/static/social-connections.js"></script>
 <script src="/static/metrics.js"></script>
 <script src="/static/media-library.js"></script>
+<script src="/static/thumbnail-studio.js"></script>
 </body>
 </html>
