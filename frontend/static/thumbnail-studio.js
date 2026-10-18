@@ -399,9 +399,9 @@
       cover(draw, bgImage, w, h, b.photoX, b.photoY, b.photoScale);draw.restore();
     }
     texture(draw, w, h, b);
-    light(draw, w, h, view.layers.left);
-    light(draw, w, h, view.layers.right);
-    light(draw, w, h, view.layers.center);
+    if (loaded.left) light(draw, w, h, view.layers.left);
+    if (loaded.right) light(draw, w, h, view.layers.right);
+    if (loaded.center) light(draw, w, h, view.layers.center);
     figure(draw, w, h, view.layers.left, loaded.left);
     figure(draw, w, h, view.layers.right, loaded.right);
     shadow(draw, w, h, b);
@@ -802,6 +802,23 @@
   $("thumb-export-current").onclick=exportCurrent;
   $("thumb-export-all").onclick=exportAll;
   $("thumb-add-variant").onclick=()=>{newVariant();refreshVariantControls();};
+  $("thumb-batch-create").onclick=()=>{
+    const phrases=$("thumb-batch-titles").value.split(/\r?\n/).map(v=>v.trim()).filter(Boolean);
+    if(!phrases.length)return status("Informe pelo menos uma frase.",true);
+    if(phrases.length+state.variants.length>30)return status("O projeto aceita até 30 versões.",true);
+    const now=Date.now();
+    for(const [i,phrase] of phrases.entries()){
+      const index=state.variants.length+1;
+      const layer=clone(state.base);
+      layer.title.text=phrase.slice(0,120);
+      layer.title.size=Math.min(layer.title.size,.18);
+      state.variants.push({id:"short-"+now+"-"+index+"-"+i,name:"Short "+index,format:"vertical",layers:layer});
+    }
+    state.selected=state.variants[state.variants.length-1].id;
+    $("thumb-batch-titles").value="";
+    selectedLayer="center";changed(true);drawVariants();refreshVariantControls();
+    status(phrases.length+" versões criadas. Agora substitua o personagem em cada Short e exporte o ZIP.");
+  };
   $("thumb-duplicate-variant").onclick=()=>{duplicateVariant();refreshVariantControls();};
   $("thumb-remove-variant").onclick=()=>{removeVariant();refreshVariantControls();};
   document.addEventListener("click",event=>{
