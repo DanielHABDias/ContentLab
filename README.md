@@ -2,6 +2,14 @@
 
 Editor automático e utilitários de vídeo para projetos de conteúdo e motion design, com servidor Node.js, interface JavaScript, Remotion e FFmpeg. Os testes automatizados Linux e Windows estão disponíveis no GitHub Actions. A validação estética final continua dependendo dos arquivos e objetivos de cada projeto real.
 
+## Thumbnails — editor visual e exportação em lote
+
+A aba **Thumbnails** agora oferece um editor visual integrado: importar PNGs e imagem contextual, escolher fundos no estilo `BackgroundHQ` (com halftone, papel, filme, estrelas, grade ou cor sólida), ajustar camadas por arraste no canvas, escala e opacidade, luzes e degradê preto inferior. O título Anton é composto em duas passadas alinhadas: preenchimento com glow atrás do personagem central e contorno fino à frente, criando o efeito de atravessar o texto; Bangers é alternativa.
+
+Monte primeiro a thumbnail **16:9** do vídeo longo e clique **+ Novo Short** para gerar versões 9:16 com o **mesmo fundo global**, alterando personagem, texto e enquadramento individualmente. Também há saída 1:1 ou 16:9 para versões derivadas. Baixe cada PNG ou um **ZIP com todas as versões e JSON editável**. A edição principal é visual; o JSON é opcional. O projeto é salvo automaticamente no armazenamento local do navegador e pode ser importado/exportado entre computadores; nenhuma imagem é enviada para serviço externo.
+
+Guia: [docs/THUMBNAIL_STUDIO.md](docs/THUMBNAIL_STUDIO.md). A aba usa as fontes Anton/Bangers já incluídas em `builtin-assets/fonts`. Os fundos de thumbnail reproduzem os estilos de forma **estática no canvas**; não são renders do TSX de vídeo nem mudam a biblioteca dos quinze presets.
+
 ## Vídeos e cortes — link da internet
 
 A aba **Vídeos e cortes** aceita **Link da internet**. O YouTube continua usando exatamente o carregador existente (biblioteca `youtubei.js`); nenhum JSON do Google ou OAuth de publicação é necessário para esse fluxo. Para links públicos de outras plataformas compatíveis (por exemplo, TikTok, Pinterest, Instagram, Vimeo, X/Twitter, Reddit, Facebook, Twitch e Dailymotion), o backend usa o executável open source [yt-dlp](https://github.com/yt-dlp/yt-dlp).
