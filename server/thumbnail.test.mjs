@@ -50,8 +50,10 @@ test('as versões compartilham fundo, mas conservam personagens e textos indepen
   assert.match(script,/background: state\.background/);
   assert.match(script,/layers: variant \? variant\.layers : state\.base/);
   assert.match(script,/layers:clone\(state\.base\)/);
-  assert.match(script,/state\.background\.photo=url/);
-  assert.match(script,/currentLayers\(\)\[imageTarget\]\.image=url/);
+  assert.match(script,/state\.background\.photo=assetId/);
+  assert.match(script,/currentLayers\(\)\[imageTarget\]\.image=assetId/);
+  assert.match(script,/state\.media\[assetId\]=url/);
+  assert.match(script,/function collectUnusedMedia\(\)/);
   assert.match(script,/titleDraw\(draw, w, h, view\.layers\.title, true\)/);
   assert.match(script,/figure\(draw, w, h, view\.layers\.center, loaded\.center\)/);
   assert.match(script,/titleDraw\(draw, w, h, view\.layers\.title, false\)/);
