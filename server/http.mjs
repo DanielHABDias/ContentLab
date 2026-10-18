@@ -30,6 +30,14 @@ const app=express(),jobs=new Map(),transcriptions=new Map(),sourceJobs=new Map()
 app.disable('x-powered-by');
 app.use(express.json({limit:'5mb'}));
 app.use('/static',express.static(path.join(APP_ROOT,'frontend','static'),{index:false}));
+const THUMBNAIL_FONTS=Object.freeze({anton:'Anton-Regular.ttf',bangers:'Bangers-Regular.ttf'});
+app.get('/api/thumbnails/font/:font',(req,res)=>{
+  const fileName=THUMBNAIL_FONTS[req.params.font];
+  if(!fileName)return res.status(404).end();
+  const fontFile=path.join(APP_ROOT,'builtin-assets','fonts',fileName);
+  if(!fs.existsSync(fontFile))return res.status(404).json({error:'Fonte ainda não instalada no Content Lab.'});
+  res.type('font/ttf').sendFile(fontFile);
+});
 const singleRenderActive=root=>[...jobs.values()].some(job=>job.projectRoot===root&&job.status==='running');
 const anySingleRenderActive=()=>[...jobs.values()].some(job=>job.status==='running');
 const runningTranscription=root=>[...transcriptions.values()].find(job=>job.projectRoot===root&&job.status==='running');
