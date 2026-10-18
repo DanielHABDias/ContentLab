@@ -16,6 +16,7 @@
   const freshState = () => ({
     version: 1,
     name: "Diazverso",
+    media: {},
     background: {
       style: "halftone", color: "#233D76", paperTone: "dark",
       textureOpacity: 36, photo: null, photoOpacity: 42,
@@ -78,14 +79,21 @@
   }
   function validateProject(candidate) {
     if (!candidate || candidate.version !== 1 || !candidate.base || !candidate.background ||
+        !candidate.media || typeof candidate.media !== "object" || Array.isArray(candidate.media) ||
         !candidate.base.center || !candidate.base.title || !Array.isArray(candidate.variants) ||
         candidate.variants.length > 30) throw Error("O projeto não tem o formato de thumbnails esperado.");
     if (!candidate.variants.every(v => v && typeof v.id === "string" && v.layers &&
         ["vertical", "square", "long"].includes(v.format))) throw Error("Há versões inválidas no projeto.");
     const imageOk = v => v == null || (typeof v === "string" && /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/i.test(v));
-    if (!imageOk(candidate.background.photo)) throw Error("Imagem de fundo inválida no arquivo importado.");
+    const imageReferenceOk = id => id == null || (
+      typeof id === "string" && Object.prototype.hasOwnProperty.call(candidate.media, id)
+      && imageOk(candidate.media[id])
+    );
+    if (!imageReferenceOk(candidate.background.photo)) throw Error("Imagem de fundo inválida no projeto.");
+    if (Object.keys(candidate.media).length > 110 || Object.values(candidate.media).some(v => !imageOk(v)))
+      throw Error("Há imagens inválidas no projeto importado.");
     const groups = [candidate.base, ...candidate.variants.map(v => v.layers)];
-    if (groups.some(l => !["center","left","right"].every(k => l[k] && imageOk(l[k].image))))
+    if (groups.some(l => !["center","left","right"].every(k => l[k] && imageReferenceOk(l[k].image))))
       throw Error("O projeto possui um asset inválido ou uma camada ausente.");
     return candidate;
   }
@@ -101,7 +109,17 @@
       req.onerror = () => reject(req.error || Error("Falha ao abrir o armazenamento local."));
     });
   }
+  function collectUnusedMedia() {
+    const used = new Set([state.background.photo]);
+    for (const layers of [state.base,...state.variants.map(v=>v.layers)]) {
+      for (const k of ["left","center","right"]) used.add(layers[k]?.image);
+    }
+    for (const key of Object.keys(state.media)) {
+      if (!used.has(key)) {delete state.media[key];images.delete(key);}
+    }
+  }
   async function saveLocal() {
+    collectUnusedMedia();
     const db = await openDB();
     try {
       await new Promise((resolve, reject) => {
@@ -139,12 +157,14 @@
   }
   function photo(src) {
     if (!src) return Promise.resolve(null);
+    const url = state.media?.[src];
+    if (!url) return Promise.reject(Error("Imagem referenciada não encontrada no projeto."));
     if (!images.has(src)) {
       images.set(src, new Promise((resolve, reject) => {
         const img = new Image();
         img.onload = () => resolve(img);
         img.onerror = () => reject(Error("Não foi possível carregar uma imagem. Reimporte o arquivo."));
-        img.src = src;
+        img.src = url;
       }));
     }
     return images.get(src);
@@ -683,8 +703,10 @@
       reader.onerror=()=>reject(Error("Falha na leitura da imagem."));
       reader.readAsDataURL(file);
     });
-    if(imageTarget==="background")state.background.photo=url;
-    else currentLayers()[imageTarget].image=url;
+    const assetId = "img-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,9);
+    state.media[assetId]=url;
+    if(imageTarget==="background")state.background.photo=assetId;
+    else currentLayers()[imageTarget].image=assetId;
     changed(true);status("Imagem carregada. Arraste na prévia e ajuste escala/opacidade no painel.");
   }
   fileReader.addEventListener("change",event=>imagePicked(event).catch(e=>status(e.message,true)));
@@ -751,12 +773,14 @@
         const bytes=new Uint8Array(await png.arrayBuffer());
         entries.push({name:`${String(i+1).padStart(2,"0")}-${filenames(entry.name)}.png`,bytes});
       }
+      collectUnusedMedia();
       entries.push({name:"projeto-thumbnail.json",bytes:new TextEncoder().encode(JSON.stringify(state,null,2))});
       download(zipStore(entries),filenames(state.name)+"-thumbnails.zip");
       status(`${all.length} PNG(s) e projeto editável reunidos em um ZIP.`);
     }catch(e){status(e.message,true);}finally{button.disabled=false;}
   }
   function exportJson() {
+    collectUnusedMedia();
     download(new Blob([JSON.stringify(state,null,2)],{type:"application/json"}),
       filenames(state.name)+"-thumbnails.json");status("Projeto JSON exportado com os assets incorporados.");
   }
@@ -766,7 +790,7 @@
     if(f.size>90*1024*1024)return status("Projeto excede 90 MB.",true);
     try {
       const imported=validateProject(JSON.parse(await f.text()));
-      state=imported;
+      state=imported;images.clear();
       if(state.selected!=="base"&&!state.variants.some(v=>v.id===state.selected))state.selected="base";
       selectedLayer="center";fullUi();changed();
       status("Projeto restaurado com versões e imagens.");
