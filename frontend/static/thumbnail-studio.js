@@ -79,9 +79,14 @@
   function validateProject(candidate) {
     if (!candidate || candidate.version !== 1 || !candidate.base || !candidate.background ||
         !candidate.base.center || !candidate.base.title || !Array.isArray(candidate.variants) ||
-        candidate.variants.length > 35) throw Error("O projeto não tem o formato de thumbnails esperado.");
+        candidate.variants.length > 30) throw Error("O projeto não tem o formato de thumbnails esperado.");
     if (!candidate.variants.every(v => v && typeof v.id === "string" && v.layers &&
         ["vertical", "square", "long"].includes(v.format))) throw Error("Há versões inválidas no projeto.");
+    const imageOk = v => v == null || (typeof v === "string" && /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/i.test(v));
+    if (!imageOk(candidate.background.photo)) throw Error("Imagem de fundo inválida no arquivo importado.");
+    const groups = [candidate.base, ...candidate.variants.map(v => v.layers)];
+    if (groups.some(l => !["center","left","right"].every(k => l[k] && imageOk(l[k].image))))
+      throw Error("O projeto possui um asset inválido ou uma camada ausente.");
     return candidate;
   }
   function openDB() {
@@ -352,7 +357,7 @@
     }
     draw.restore();
   }
-  async function paint(target, view, highlight = null) {
+  async function paint(target, view, highlight = null, preview = false, sequence = null) {
     await fonts();
     const assets = [...["left", "right", "center"].map(k => view.layers[k]?.image),
       view.background.photo];
@@ -360,7 +365,10 @@
     const loaded = {};
     for (const k of ["left", "right", "center"]) loaded[k] = view.layers[k]?.image ? await photo(view.layers[k].image) : null;
     const bgImage = view.background.photo ? await photo(view.background.photo) : null;
-    const {w, h} = dimensions(view.format);
+    if (sequence !== null && sequence !== currentSeq) return null;
+    const finalSize = dimensions(view.format);
+    const ratio = preview ? Math.min(1, 960 / Math.max(finalSize.w, finalSize.h)) : 1;
+    const w = Math.round(finalSize.w * ratio), h = Math.round(finalSize.h * ratio);
     target.width = w;target.height = h;
     const draw = target.getContext("2d");
     const b = view.background;
@@ -391,8 +399,8 @@
       frameRequested = false;
       const seq = ++currentSeq;
       try {
-        const loaded = await paint(canvas, viewFor(state.selected), selectedLayer);
-        if (seq === currentSeq) hitImages = loaded;
+        const loaded = await paint(canvas, viewFor(state.selected), selectedLayer, true, seq);
+        if (seq === currentSeq && loaded) hitImages = loaded;
       } catch (e) { status(e.message || "Falha na prévia.", true); }
     });
   }
@@ -645,9 +653,11 @@
       current.x=+safe(dragging.x+dx,-.5,1.5).toFixed(3);
       current.y=+safe(dragging.y+dy,-.5,1.5).toFixed(3);
     }
-    changed();drawProperties();
+    changed();
+    // Atualizar valores na lateral só no fim do arraste; não recriar dezenas
+    // de controles por frame em resoluções altas.
   });
-  const stopDrag=()=>{dragging=null;};
+  const stopDrag=()=>{if(dragging){dragging=null;drawProperties();}};
   canvas.addEventListener("pointerup",stopDrag);
   canvas.addEventListener("pointercancel",stopDrag);
   canvas.addEventListener("keydown",event=>{
