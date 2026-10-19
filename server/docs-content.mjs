@@ -1,6 +1,15 @@
 export const projectFolderTree="meu-video/\n├── edit_plan.json                     criado DEPOIS da narração\n├── audio/\n│   ├── narration.original.wav         gravação original preservada\n│   ├── narration.prepared.wav         voz limpa (antes do efeito)\n│   └── narration.wav                  voz final, com efeito opcional\n├── assets/\n│   ├── abertura.mp4\n│   └── personagens/\n│       └── heroi.png                 subpastas permitidas\n├── custom-scenes/\n│   └── MinhaCena.tsx                  componente Remotion local (opcional)\n├── transcript.json                    gerado após preparar a narração\n├── transcript.txt                     texto gerado\n├── transcript.srt                     legendas geradas\n├── transcript.build.json              origem dos timestamps\n├── narration.build.json               opções e arquivo de origem\n└── output/                            produzido após render";
 export const chapters=[
   {
+    id: 'thumbnails', title: 'Studio de thumbnails: fundos e contorno', diagram: 'grid',
+    paragraphs: [
+      'A aba Thumbnails importa/exporta um projeto JSON independente do edit_plan.json, com imagens incorporadas. Inverter cor dos efeitos (background.invertEffects: boolean, ausente=false) troca claro/escuro somente da textura. Papel, filme, grade e estrelas são derivados do próprio scene-library/background-hq/BackgroundHQ.tsx no instante fixo 1 segundo via SVG, não de frames dos vídeos. Preserva a foto, a cor base e o primeiro plano; opacidade 0 desliga a textura. Os TSX animados não são modificados.',
+      'O título usa preenchimento atrás do personagem principal e contorno à frente, fonte no peso real 400 (sem negrito artificial). Contorno fino aceita zero e frações: valor 1 = 0,15 px na largura 1280, escalado na prévia e exportação. Personagens têm saturation e brightness de 0 a 200%, ausentes=100; novas coleções deixam as laterais discretas, sem alterar coleções antigas. Leia docs/THUMBNAIL_STUDIO.md.',
+      'A coleção de thumbnails usa version:1, name, media, background, base, variants e selected. Cada variante tem id, name, format (long/vertical/square) e layers. Imagens reais são incorporadas em media como data URLs PNG/JPEG/WebP, referenciadas por chaves, não por project:// ou links remotos. O JSON exportado pelo usuário é a melhor base para preservar ajustes aprovados; não substitui nem modifica o edit_plan.json de vídeo.',
+      'O fundo global é compartilhado, enquanto personagens e textos são independentes depois de criar cada variante. Posições x/y são frações da tela, não células do grid de vídeo. A composição pode deixar laterais contextuais discretas e protagonista nítido, sem impor essas escolhas a todos os projetos. Conferir leitura mobile, rosto, alinhamento exato das duas passadas do título e enquadramento em cada formato. A skill ZIP inclui docs/THUMBNAIL_STUDIO.md com o contrato detalhado e orientações de uso; não publica imagens ou altera perfis de canal.'
+    ]
+  },
+  {
     "id": "introducao",
     "title": "Visão geral e fluxo de trabalho",
     "diagram": "structure",

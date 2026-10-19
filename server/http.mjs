@@ -23,6 +23,7 @@ import {mountSocialRoutes} from './social-routes.mjs';
 import {mountSocialPublishRoutes} from './social-publish-routes.mjs';
 import {mountSocialMetricsRoutes} from './social-metrics-routes.mjs';
 import {mountMediaLibraryRoutes} from './media-routes.mjs';
+import {thumbnailBackground} from './thumbnail-background.mjs';
 
 const PORT=Number(process.env.PORT||5000);
 const HOST='127.0.0.1';
@@ -30,6 +31,13 @@ const app=express(),jobs=new Map(),transcriptions=new Map(),sourceJobs=new Map()
 app.disable('x-powered-by');
 app.use(express.json({limit:'5mb'}));
 app.use('/static',express.static(path.join(APP_ROOT,'frontend','static'),{index:false}));
+app.get('/api/thumbnails/background', (req, res) => {
+  try {
+    const svg = thumbnailBackground({style: req.query.style, tone: req.query.tone || 'light',
+      width: Number(req.query.width || 1280), height: Number(req.query.height || 720)});
+    res.type('image/svg+xml').send(svg);
+  } catch (error) {res.status(400).json({error: error.message});}
+});
 const THUMBNAIL_FONTS=Object.freeze({anton:'Anton-Regular.ttf',bangers:'Bangers-Regular.ttf'});
 app.get('/api/thumbnails/font/:font',(req,res)=>{
   const fileName=THUMBNAIL_FONTS[req.params.font];

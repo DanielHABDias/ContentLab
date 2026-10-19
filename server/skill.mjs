@@ -29,6 +29,7 @@ export function streamSkillZip(response){
   for(const figure of figureAssets())
     zip.append(figure.content,{name:figure.name});
   for(const file of [
+    'docs/THUMBNAIL_STUDIO.md',
     'schemas/edit_plan.schema.json','EDIT_PLAN_REFERENCE.md','MOTION_DESIGN_JSON.md','SCENE_CACHE.md',
     'CORRECOES_CACHE_AUDIO_TRANSICOES.md',
     'examples/minimal-edit-plan.json','examples/motion-grid.json',

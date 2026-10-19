@@ -10,6 +10,10 @@ Monte primeiro a thumbnail **16:9** do vídeo longo e clique **+ Novo Short** pa
 
 Guia: [docs/THUMBNAIL_STUDIO.md](docs/THUMBNAIL_STUDIO.md). A aba usa as fontes Anton/Bangers já incluídas em `builtin-assets/fonts`. Os fundos de thumbnail reproduzem os estilos de forma **estática no canvas**; não são renders do TSX de vídeo nem mudam a biblioteca dos quinze presets.
 
+A **skill interna e o ZIP da Documentação** também orientam a criação desses projetos e incluem o guia completo de thumbnails, parâmetros, camadas e exportação. O JSON de imagem tem `version: 1` e imagens incorporadas; não é o `edit_plan.json` de vídeo. Preferências de canal são externas, não padrões públicos obrigatórios.
+
+O fundo oferece **Inverter cor dos efeitos**, sem inverter foto/personagens: bolinhas brancas no preto ou grade/estrelas pretas no branco. Papel/filme/grade/estrelas usam o próprio BackgroundHQ.tsx como fonte gráfica estática, não frames dos vídeos. O contorno do título aceita zero e frações; valor 1 equivale a 0,15 px na largura 1280, sem negrito artificial. Personagens têm saturação e luminosidade ajustáveis.
+
 ## Vídeos e cortes — link da internet
 
 A aba **Vídeos e cortes** aceita **Link da internet**. O YouTube continua usando exatamente o carregador existente (biblioteca `youtubei.js`); nenhum JSON do Google ou OAuth de publicação é necessário para esse fluxo. Para links públicos de outras plataformas compatíveis (por exemplo, TikTok, Pinterest, Instagram, Vimeo, X/Twitter, Reddit, Facebook, Twitch e Dailymotion), o backend usa o executável open source [yt-dlp](https://github.com/yt-dlp/yt-dlp).

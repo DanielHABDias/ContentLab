@@ -11,7 +11,7 @@
   const clone = (v) => JSON.parse(JSON.stringify(v));
   const emptyFigure = (x, scale, glowColor) => ({
     image: null, x, y: .54, scale, opacity: 100, rotate: 0,
-    flip: false, glowColor, glowOpacity: 35, glowSize: 45
+    flip: false, glowColor, glowOpacity: 35, glowSize: 45, saturation: 100, brightness: 100
   });
   const freshState = () => ({
     version: 1,
@@ -19,14 +19,14 @@
     media: {},
     background: {
       style: "halftone", color: "#233D76", paperTone: "dark",
-      textureOpacity: 36, photo: null, photoOpacity: 42,
+      textureOpacity: 36, invertEffects: false, photo: null, photoOpacity: 42,
       photoX: .5, photoY: .5, photoScale: 1,
       shadowOpacity: 78, shadowHeight: 55
     },
     base: {
       center: emptyFigure(.50, .91, "#76BFFF"),
-      left: emptyFigure(.17, .76, "#F34961"),
-      right: emptyFigure(.83, .76, "#3E9CFF"),
+      left: {...emptyFigure(.17, .76, "#F34961"), opacity: 45, saturation: 45, brightness: 65},
+      right: {...emptyFigure(.83, .76, "#3E9CFF"), opacity: 45, saturation: 45, brightness: 65},
       title: {
         text: "A VERDADE\nREVELADA", x: .50, y: .64, size: .165,
         font: "Anton", color: "#F8E568", outlineColor: "#F8E568",
@@ -48,6 +48,19 @@
   let saveTimeout = null;
   let currentSeq = 0;
   const images = new Map();
+  const textureImages = new Map();
+  async function textureImage(b, w, h) {
+    const style = b.style;
+    if (!["paper", "film", "grid", "stars"].includes(style)) return null;
+    const key = `${style}/${b.paperTone || 'light'}/${w}/${h}`;
+    if (!textureImages.has(key)) textureImages.set(key, new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => {textureImages.delete(key); reject(Error("Fundo HQ indisponível. Reinicie o Content Lab e recarregue a página."));};
+      img.src = `/api/thumbnails/background?style=${style}&tone=${b.paperTone || 'light'}&width=${w}&height=${h}`;
+    }));
+    return textureImages.get(key);
+  }
   let fontsPromise = null;
   const FONT_URLS = {
     Anton: "/api/thumbnails/font/anton",
@@ -189,12 +202,20 @@
     const rw = img.width * factor, rh = img.height * factor;
     draw.drawImage(img, (w - rw) / 2 + (x - .5) * w, (h - rh) / 2 + (y - .5) * h, rw, rh);
   }
-  function texture(draw, w, h, b) {
+  function texture(draw, w, h, b, source = null) {
     const opacity = safe(b.textureOpacity, 0, 100) / 100;
     if (!opacity || b.style === "solid" || b.style === "none") return;
     draw.save(); draw.globalAlpha = opacity;
+    // Invert only the texture, never the photo, base color or foreground.
+    const inverted = b.invertEffects === true;
+    if (source) {
+      draw.filter = inverted ? 'invert(1)' : 'none';
+      draw.drawImage(source, 0, 0, w, h);
+      draw.restore();
+      return;
+    }
     if (b.style === "halftone") {
-      draw.fillStyle = "#090E1D";
+      draw.fillStyle = inverted ? "#FFFFFF" : "#000000";
       const step = Math.max(8, Math.round(w / 80));
       for (let y = step / 2; y < h; y += step)
         for (let x = step / 2; x < w; x += step) {
@@ -203,38 +224,16 @@
           draw.fill();
         }
     } else if (b.style === "grid") {
-      draw.strokeStyle = "#F4F5FF";
+      draw.strokeStyle = inverted ? "#000000" : "#FFFFFF";
       draw.lineWidth = Math.max(1, w / 900);
       const step = w / 16;
       for (let x = 0; x < w; x += step) {draw.beginPath();draw.moveTo(x, 0);draw.lineTo(x, h);draw.stroke();}
       for (let y = 0; y < h; y += step) {draw.beginPath();draw.moveTo(0, y);draw.lineTo(w, y);draw.stroke();}
     } else if (b.style === "stars") {
-      draw.fillStyle = "#FFFFFF";
+      draw.fillStyle = inverted ? "#000000" : "#FFFFFF";
       for (let i = 0; i < 230; i++) {
         const x = rand(i + 84) * w, y = rand(i + 420) * h;
         draw.beginPath();draw.arc(x, y, .7 + rand(i + 600) * (w / 440), 0, 2 * Math.PI);draw.fill();
-      }
-    } else if (b.style === "film") {
-      for (let i = 0; i < 1900; i++) {
-        const v = rand(i * 6.1) * w, y = rand(i * 2.8) * h;
-        draw.fillStyle = i % 3 ? "#D6D1C6" : "#0D1117";
-        draw.fillRect(v, y, 1 + rand(i) * 2, 1 + rand(i + 14) * 2);
-      }
-      draw.strokeStyle = "#E2D9B9"; draw.lineWidth = w / 1400;
-      for (let i = 0; i < 8; i++) {
-        const x = rand(i + 220) * w;
-        draw.beginPath();draw.moveTo(x, 0);draw.lineTo(x + rand(i) * 10, h);draw.stroke();
-      }
-    } else if (b.style === "paper") {
-      draw.fillStyle = b.paperTone === "light" ? "#F3E9D9" : "#0A101D";
-      draw.globalAlpha = opacity * .7; draw.fillRect(0, 0, w, h);
-      draw.strokeStyle = b.paperTone === "light" ? "#574E46" : "#B8BEC9";
-      draw.lineWidth = 1.5;
-      draw.globalAlpha = opacity * .65;
-      for (let i = 0; i < 55; i++) {
-        const x = rand(i + 300) * w, y = rand(i + 600) * h;
-        draw.beginPath();draw.moveTo(x, y);
-        draw.lineTo(x + (rand(i + 800) - .5) * w * .28, y + (rand(i + 900) - .5) * h * .32);draw.stroke();
       }
     }
     draw.restore();
@@ -268,6 +267,7 @@
     const r = figureBounds(layer, img, w, h);
     draw.save();
     draw.globalAlpha = safe(layer.opacity, 0, 100) / 100;
+    draw.filter = `saturate(${safe(layer.saturation ?? 100, 0, 200)}%) brightness(${safe(layer.brightness ?? 100, 0, 200)}%)`;
     draw.translate(r.x + r.w / 2, r.y + r.h / 2);
     draw.rotate(safe(layer.rotate, -180, 180) * Math.PI / 180);
     draw.scale(layer.flip ? -1 : 1, 1);
@@ -297,7 +297,7 @@
     let size = w * safe(title.size, .04, .36);
     let lines = [];
     for (let n = 0; n < 14; n++) {
-      draw.font = `900 ${size}px ${fontName(title.font)}`;
+      draw.font = `400 ${size}px ${fontName(title.font)}`;
       lines = makeTitleLines(draw, title, w * .89);
       const largest = Math.max(...lines.map(line => draw.measureText(line).width), 0);
       if (largest <= w * .91 && lines.length * size * .89 <= h * .8) break;
@@ -306,7 +306,8 @@
     draw.textAlign = "center";draw.textBaseline = "middle";draw.lineJoin = "round";
     const lineH = size * .91;
     const top = safe(title.y, -.5, 1.5) * h - (lines.length - 1) * lineH / 2;
-    draw.lineWidth = Math.max(1, safe(title.stroke, 0, 24) * w / 1280);
+    // Hairline with the real font weight: synthetic bold thickens strokeText.
+    draw.lineWidth = safe(title.stroke, 0, 24) * .15 * w / 1280;
     for (let i = 0; i < lines.length; i++) {
       const y = top + i * lineH;
       const x = safe(title.x, -.5, 1.5) * w;
@@ -319,7 +320,7 @@
         draw.fillStyle = title.color || "#F8E568";
         draw.fillText(lines[i], x, y);
         draw.shadowBlur = 0;
-      } else {
+      } else if (Number(title.stroke) > 0) {
         draw.strokeStyle = title.outlineColor || title.color || "#F8E568";
         draw.strokeText(lines[i], x, y);
       }
@@ -379,6 +380,8 @@
   }
   async function paint(target, view, highlight = null, preview = false, sequence = null) {
     await fonts();
+    const finalDimensions = dimensions(view.format);
+    const bgTexture = await textureImage(view.background, finalDimensions.w, finalDimensions.h);
     const assets = [...["left", "right", "center"].map(k => view.layers[k]?.image),
       view.background.photo];
     await Promise.all(assets.map(src => photo(src)));
@@ -392,13 +395,13 @@
     target.width = w;target.height = h;
     const draw = target.getContext("2d");
     const b = view.background;
-    draw.fillStyle = b.style === "paper" && b.paperTone === "light" ? "#EFE6D7" : b.color || "#233D76";
+    draw.fillStyle = b.style === "paper" ? (b.paperTone === "light" ? "#F3F0E9" : "#20232A") : b.color || "#233D76";
     draw.fillRect(0, 0, w, h);
     if (bgImage) {
       draw.save();draw.globalAlpha = safe(b.photoOpacity, 0, 100) / 100;
       cover(draw, bgImage, w, h, b.photoX, b.photoY, b.photoScale);draw.restore();
     }
-    texture(draw, w, h, b);
+    texture(draw, w, h, b, bgTexture);
     if (loaded.left) light(draw, w, h, view.layers.left);
     if (loaded.right) light(draw, w, h, view.layers.right);
     if (loaded.center) light(draw, w, h, view.layers.center);
@@ -467,8 +470,8 @@
     };
     const range = (label, field, min, max, step, unit = "") => {
       const input = document.createElement("input");input.type = "range";
-      input.min = min;input.max = max;input.step = step;input.value = value[field];
-      addField(label, input, value[field] + unit, v => {
+      input.min = min;input.max = max;input.step = step;input.value = value[field] ?? (["saturation", "brightness"].includes(field) ? 100 : min);
+      addField(label, input, input.value + unit, v => {
         value[field] = +v; const o=input.parentElement.querySelector("output");if(o)o.textContent=v+unit;
         changed();
       });
@@ -502,7 +505,7 @@
       color("Cor do preenchimento","color");
       color("Cor do contorno","outlineColor");
       range("Tamanho","size",.05,.34,.005);
-      range("Contorno fino","stroke",1,15,.5);
+      range("Contorno fino (1 = 0,15 px em 1280)","stroke",0,15,.1);
       range("Brilho do preenchimento","glowOpacity",0,100,1,"%");
       range("Espalhamento glow","glowSize",0,80,1);
       range("Posição X","x",-.5,1.5,.01);
@@ -529,6 +532,8 @@
       range("Posição X","x",-.5,1.5,.01);
       range("Posição Y","y",-.5,1.5,.01);
       range("Escala","scale",.08,2.2,.01);
+      range("Saturação","saturation",0,200,1,"%");
+      range("Luminosidade","brightness",0,200,1,"%");
       range("Opacidade","opacity",0,100,1,"%");
       range("Rotação","rotate",-180,180,1);
       color("Cor da luz","glowColor");
@@ -576,6 +581,9 @@
     bind("thumb-bg-style","style");
     bind("thumb-bg-color","color");
     bind("thumb-paper-tone","paperTone");
+    const invert = $("thumb-invert-effects");
+    invert.checked = state.background.invertEffects === true;
+    invert.onchange = () => {state.background.invertEffects = invert.checked; changed();};
     bind("thumb-texture-opacity","textureOpacity",Number);
     bind("thumb-photo-opacity","photoOpacity",Number);
     bind("thumb-shadow-opacity","shadowOpacity",Number);

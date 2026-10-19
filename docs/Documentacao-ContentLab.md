@@ -12,6 +12,18 @@ Esta documentação diferencia propriedades aceitas pelo schema de comportamento
 - Exemplos de uso
 - Regras de validação
 
+## Studio de thumbnails: fundos e contorno
+
+A aba Thumbnails importa/exporta um projeto JSON independente do edit_plan.json, com imagens incorporadas. Inverter cor dos efeitos (background.invertEffects: boolean, ausente=false) troca claro/escuro somente da textura. Papel, filme, grade e estrelas são derivados do próprio scene-library/background-hq/BackgroundHQ.tsx no instante fixo 1 segundo via SVG, não de frames dos vídeos. Preserva a foto, a cor base e o primeiro plano; opacidade 0 desliga a textura. Os TSX animados não são modificados.
+
+O título usa preenchimento atrás do personagem principal e contorno à frente, fonte no peso real 400 (sem negrito artificial). Contorno fino aceita zero e frações: valor 1 = 0,15 px na largura 1280, escalado na prévia e exportação. Personagens têm saturation e brightness de 0 a 200%, ausentes=100; novas coleções deixam as laterais discretas, sem alterar coleções antigas. Leia docs/THUMBNAIL_STUDIO.md.
+
+A coleção de thumbnails usa version:1, name, media, background, base, variants e selected. Cada variante tem id, name, format (long/vertical/square) e layers. Imagens reais são incorporadas em media como data URLs PNG/JPEG/WebP, referenciadas por chaves, não por project:// ou links remotos. O JSON exportado pelo usuário é a melhor base para preservar ajustes aprovados; não substitui nem modifica o edit_plan.json de vídeo.
+
+O fundo global é compartilhado, enquanto personagens e textos são independentes depois de criar cada variante. Posições x/y são frações da tela, não células do grid de vídeo. A composição pode deixar laterais contextuais discretas e protagonista nítido, sem impor essas escolhas a todos os projetos. Conferir leitura mobile, rosto, alinhamento exato das duas passadas do título e enquadramento em cada formato. A skill ZIP inclui docs/THUMBNAIL_STUDIO.md com o contrato detalhado e orientações de uso; não publica imagens ou altera perfis de canal.
+
+![Grade de nove células](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/docs/figures/grid.svg)
+
 ## Visão geral e fluxo de trabalho
 
 Content Lab funciona localmente com servidor Node.js, interface JavaScript, renderização visual Remotion e ferramentas FFmpeg. A IA pode criar um edit_plan.json, que a interface permite validar e ajustar por cena.
@@ -316,8 +328,6 @@ Caixas livres e presets sociais com entradas e gestos.
 
 Módulo: `project://custom-scenes/CaixinhaHQ.tsx`. Fontes: Anton ou Bangers quando há texto; Anton sem sombra.
 
-Instagram: informe `customComponent.props.instagramHandle: "@DiazVersoYT"` para acrescentar o @ à frase padrão sem substituir tudo. A prop `text` ainda substitui a frase inteira e tem precedência. Sem `instagramHandle`, o convite fica `SIGA NO INSTAGRAM`.
-
 ![Exemplo de Caixinha HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/caixinha-hq/preview-0-16x9.png)
 ![Exemplo de Caixinha HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/caixinha-hq/preview-0-9x16.png)
 ![Exemplo de Caixinha HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/caixinha-hq/preview-1-16x9.png)
@@ -415,8 +425,6 @@ type HQFont = 'Bangers' | 'Anton';
 Indicação de vídeo no vertical; dois vídeos e canal no horizontal.
 
 Módulo: `project://custom-scenes/ComicPageCTA.tsx`. Fontes: Anton ou Bangers quando há texto; Anton sem sombra.
-
-No Diazverso, `customComponent.assets.character` recebe o PNG aprovado do **Nox**. Essa é a chave do Content Lab (não `assets.nox`).
 
 ![Exemplo de Encerramento HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/cta-encerramento-hq/preview-0-16x9.png)
 ![Exemplo de Encerramento HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/cta-encerramento-hq/preview-0-9x16.png)

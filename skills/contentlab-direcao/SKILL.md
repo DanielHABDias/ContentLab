@@ -1,6 +1,6 @@
 ---
 name: contentlab-direcao
-description: Planejar, criar e revisar edições no Content Lab com edit_plan.json, presets TSX, mídia local, narração e transcrição sincronizada.
+description: Planejar e revisar vídeos no Content Lab com edit_plan.json, presets TSX e áudio sincronizado; preparar também projetos JSON independentes para o Studio de Thumbnails.
 ---
 
 # Content Lab — Direção
@@ -10,6 +10,16 @@ Parta do objetivo e do guia do projeto. Identidade de canal é externa, não um 
 ## Preparação
 
 Narração vem antes do plano: audio/narration.wav e transcript.json podem ser preparados numa pasta vazia. Não inventar arquivos ou refazer transcrição disponível sem necessidade. Consultar docs/Documentacao-ContentLab.md, schemas/edit_plan.schema.json e EDIT_PLAN_REFERENCE.md. Existe um schema, sem version. Usar transcript.words para chegada de textos, mídia e câmera; ler o contrato do preset para saber se at significa chegada ou início do movimento.
+
+## Thumbnails — fluxo independente de vídeo
+
+Para criar/editar uma thumbnail, ler **docs/THUMBNAIL_STUDIO.md**, incluído neste pacote. Não pedir narração, transcript ou edit_plan.json: o Studio usa outro contrato, com `version: 1`, `media`, `background`, `base`, `variants` e `selected`. A regra de vídeo “sem version” não se aplica a esse projeto. Preferir partir do JSON exportado pelo usuário, preservando seus ajustes e imagens. Arquivo de thumbnail nunca deve substituir o plano de vídeo.
+
+O fundo é compartilhado entre versões; camadas de personagens/textos são independentes após a cópia inicial. Imagens ficam incorporadas em `media` como data URLs PNG/JPEG/WebP, referenciadas por chaves nas camadas, não por project://, builtin:// ou links remotos. Não inventar imagens/base64. Sem bytes locais verificados, entregar instruções para importação visual, não um projeto falsamente completo.
+
+O título é preenchido atrás do personagem principal e contornado à frente, no mesmo lugar; essa sobreposição é intencional. Anton e Bangers são fontes locais, com peso real do título 400. `title.stroke: 1` é 0,15 px em 1280, zero desliga; não importar para vídeo essa exceção de contorno de thumbnail. Personagens laterais/contextuais podem ser mais discretos que o protagonista via opacidade, saturação e luminosidade; isso é opção de composição, não identidade obrigatória de canal.
+
+Papel/filme/grade/estrelas derivam do próprio BackgroundHQ.tsx em quadro fixo de 1 segundo; não substituí-los por vídeos de textura. `background.invertEffects` inverte somente os efeitos; opacidade zero os desliga. Consultar o guia para unidades e limites, exportar PNG e conferir enquadramento, contraste, linha fina e leitura reduzida. As referências aprovadas de cada usuário orientam a peça sem virar regras públicas. Não publicar nem alterar perfis externos por essa tarefa.
 
 ## Cenas oficiais
 

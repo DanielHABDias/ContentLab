@@ -75,3 +75,59 @@ test('exportação ZIP: CRC32 correto e estrutura ZIP com central directory', as
   const centerOffset=view.getUint32(archive.length-6,true);
   assert.equal(view.getUint32(centerOffset,true),0x02014B50);
 });
+
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, Number.isFinite(+v) ? +v : lo));
+function drawingSpy() {
+  const calls = [];
+  const context = new Proxy({}, {
+    get: (target, key) => key === 'measureText' ? () => ({width: 100}) :
+      target[key] ?? ((...args) => calls.push([key, ...args])),
+    set: (target, key, value) => {target[key] = value; calls.push([key, value]); return true;}
+  });
+  return {context, calls};
+}
+test('inversão afeta somente marcas da textura, sem pintar a cor base', () => {
+  const factory = new Function('safe', 'cover', 'rand', script.slice(script.indexOf('  function texture('), script.indexOf('  function light(')) + ';return texture;');
+  const texture = factory(clamp, () => {}, n => (n % 10) / 10);
+  for (const style of ['halftone', 'grid', 'stars']) {
+    for (const invertEffects of [false, true]) {
+      const {context, calls} = drawingSpy();
+      texture(context, 1280, 720, {style, textureOpacity: 100, invertEffects});
+      const defaultDark = style === 'halftone';
+      const expected = defaultDark !== invertEffects ? '#000000' : '#FFFFFF';
+      assert.ok(calls.some(([key, value]) => ['fillStyle', 'strokeStyle'].includes(key) && value === expected));
+      assert.ok(!calls.some(([key]) => key === 'fillRect'), 'não repinta a base');
+    }
+  }
+  const {context, calls} = drawingSpy();
+  texture(context, 1280, 720, {style: 'halftone', textureOpacity: 0, invertEffects: true});
+  assert.equal(calls.length, 0);
+  assert.ok(html.includes('id="thumb-invert-effects"'));
+  assert.match(script, /invert.checked = state.background.invertEffects === true/);
+});
+test('texturas do TSX são desenhadas sem inverter a composição', () => {
+  const factory = new Function('safe', 'cover', script.slice(script.indexOf('  function texture('), script.indexOf('  function light(')) + ';return texture;');
+  const texture = factory(clamp, () => {});
+  for (const style of ['paper', 'film']) {
+    for (const invertEffects of [false, true]) {
+      const {context, calls} = drawingSpy();
+      texture(context, 1280, 720, {style, paperTone: 'light', textureOpacity: 80, invertEffects}, {});
+      assert.equal(context.filter, invertEffects ? 'invert(1)' : 'none');
+      assert.ok(calls.some(([key]) => key === 'drawImage'));
+    }
+  }
+});
+test('contorno 1 é subpixel e zero desativa a passada de traço', () => {
+  const factory = new Function('safe', 'fontName', 'makeTitleLines', script.slice(script.indexOf('  function titleDraw('), script.indexOf('  function subtitleDraw(')) + ';return titleDraw;');
+  const title = factory(clamp, () => 'Anton', () => ['TESTE']);
+  for (const w of [960, 1280, 1080]) {
+    const {context, calls} = drawingSpy();
+    title(context, w, 720, {text: 'TESTE', stroke: 1, size: .1, x: .5, y: .5}, false);
+    assert.equal(context.lineWidth, .15 * w / 1280);
+    assert.match(context.font, /^400 /);
+    assert.ok(calls.some(([key]) => key === 'strokeText'));
+  }
+  const {context, calls} = drawingSpy();
+  title(context, 1280, 720, {text: 'TESTE', stroke: 0, size: .1, x: .5, y: .5}, false);
+  assert.ok(!calls.some(([key]) => key === 'strokeText'));
+});
