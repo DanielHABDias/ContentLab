@@ -76,6 +76,13 @@ Em TSX espaciais, inspecionar o frame 0, os destinos de câmera, clipping, másc
 **Saída obrigatória:** relatório por `scene.id`, `beat/event`, posição temporal, janela de movimento, SFX/pico, resultado `OK|BLOQUEANTE|ALERTA|NÃO VERIFICADO`, causa e correção; matriz com contagem total de movimentos, cobertura válida, ausências, atrasos, repetições, fadings e inconsistências visuais/áudio. Estado geral: `REPROVADO` (há bloqueante), `PENDENTE DE VERIFICAÇÃO` (faltam dados/render/escuta), `APROVADO PRÉ-RENDER` (etapa A completa), `APROVADO FINAL` (etapas A+B completas). **Não liberar edição automática diante de bloqueantes** nem afirmar `APROVADO FINAL` sem escuta do MP4.
 
 
+## QA de projeto universal e transcrições
+
+Ao revisar esses fluxos, testar pasta vazia sem edit_plan.json, restauração no mesmo navegador, Recarregar após alteração externa, reconhecimento de tomadas e isolamento das thumbnails ao trocar de projeto. Abrir/recarregar não pode disparar render. Conferir que gravação/geração oficial finaliza áudio único e transcreve, enquanto excluir uma tomada preserva o final já produzido até nova finalização.
+
+Downloads avulsos e transcrição local devem funcionar sem projeto ou com caminho de projeto inválido. Cada transcrição avulsa deve ter destino exclusivo; comparar hashes/bytes de transcript.json e audio/narration.wav oficiais antes/depois, inclusive em falhas do reconhecedor e chamadas sem scope. Só scope=narration usa o fluxo oficial; a interface pede confirmação. Validar transcrição concluída com arquivo de fala quando disponível; teste de isolamento em caso de erro não comprova reconhecimento bem-sucedido. Não confundir timestamps da fonte sem cortes com os da narração preparada.
+
+
 ## Padrões oficiais
 
 Consultar scene-library/manifest.json e o README do padrão escolhido antes de criar TSX do zero. A galeria oficial inclui contratos e exemplos. Textos Anton sem sombra; Bangers com tratamento HQ. SFX não são gerados pelos componentes. Flip/Curtain/Blur são transitionOut entre cenas, não presets de cena. Preserve cópias instaladas em projetos e valide sincronismo com transcript.words.

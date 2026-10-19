@@ -138,8 +138,9 @@ export async function exportCut(source,{folder,filename,mode='video',full=true,s
   const dest=fs.realpathSync(folder);
   if(!fs.statSync(dest).isDirectory())throw Error('Pasta de exportação inválida.');
   const title=safeTitle(filename||source.title),ext=mode==='audio'?'.mp3':'.mp4';
-  const output=path.join(dest,title+ext);
-  let args=['-hide_banner','-loglevel','error','-y'];
+  let output=path.join(dest,title+ext),index=1;
+  while(fs.existsSync(output))output=path.join(dest,`${title}_${index++}${ext}`);
+  let args=['-hide_banner','-loglevel','error','-n'];
   if(!full){
     if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start||start<0)throw Error('Intervalo inválido.');
     args.push('-ss',String(start));

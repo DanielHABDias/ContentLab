@@ -13,6 +13,8 @@ import {instanceIdentity} from './instance-identity.mjs';
 import {SOURCE_CACHE,listSources,cachedSource,importLocalSource,removeSource,getSourceInfo,resolveSource,exportCut} from './source.mjs';
 import {transcribeAudio} from './transcribe.mjs';
 import {voiceStudioFolder,voiceStudioState,prepareStandaloneNarration} from './voice-studio.mjs';
+import {mountVoiceCreationRoutes} from './voice-creation-routes.mjs';
+import {sendNarrationAudio} from './audio-waveform.mjs';
 import {prepareAndTranscribeProject,narrationStamp,transcriptStatus} from './narration-pipeline.mjs';
 import {streamSkillZip} from './skill.mjs';
 import {buildMarkdown,buildHtml} from './docs.mjs';
@@ -24,6 +26,7 @@ import {mountSocialPublishRoutes} from './social-publish-routes.mjs';
 import {mountSocialMetricsRoutes} from './social-metrics-routes.mjs';
 import {mountMediaLibraryRoutes} from './media-routes.mjs';
 import {thumbnailBackground} from './thumbnail-background.mjs';
+import {mountWorkspaceRoutes,projectAssetDirectory} from './workspace-project.mjs';
 
 const PORT=Number(process.env.PORT||5000);
 const HOST='127.0.0.1';
@@ -50,9 +53,10 @@ const singleRenderActive=root=>[...jobs.values()].some(job=>job.projectRoot===ro
 const anySingleRenderActive=()=>[...jobs.values()].some(job=>job.status==='running');
 const runningTranscription=root=>[...transcriptions.values()].find(job=>job.projectRoot===root&&job.status==='running');
 const renderQueue=createRenderQueue({loadProject,renderProject,isSingleRenderBusy:anySingleRenderActive,
-  isTranscribing:root=>!!runningTranscription(root)});
+  isTranscribing:root=>!!runningTranscription(root)||voiceCreation.isProjectBusy(root)});
 const activeRender=root=>singleRenderActive(root)||renderQueue.isQueued(root);
 function startPreparedTranscript(root,options={}){
+  if(voiceCreation.isProjectBusy(root))throw Error('A narração deste projeto ainda está sendo finalizada.');
   const running=runningTranscription(root);
   if(running)return running.id;
   const id=crypto.randomUUID(),job={id,status:'running',projectRoot:root,
@@ -130,7 +134,7 @@ app.post('/api/editor/project/narration',upload.single('file'),api(async(req,res
     const audioDir=path.join(root,'audio');
     if(fs.existsSync(audioDir)&&fs.lstatSync(audioDir).isSymbolicLink())return forbidden(res,'Pasta audio insegura.');
     fs.mkdirSync(audioDir,{recursive:true});
-    if(runningTranscription(root))return res.status(409).json({error:'Aguarde a transcrição em andamento.'});
+    if(runningTranscription(root)||voiceCreation.isProjectBusy(root))return res.status(409).json({error:'Aguarde a transcrição em andamento.'});
     const current=loadProject(root);
     if(req.body.revision&&req.body.revision!==current.revision)
       return res.status(409).json({error:'Plano alterado. Recarregue antes de importar a narração.'});
@@ -369,29 +373,34 @@ app.get('/api/video-proxy/:id',api(async(req,res)=>{
 app.post('/api/download',api(async(req,res)=>{
   const options=req.body||{};
   if(!['video','audio','transcript'].includes(options.mode))return forbidden(res,'Formato de saída inválido.');
-  if(!options.folder||!fs.existsSync(options.folder))return forbidden(res,'Pasta de saída inválida.');
+  if(options.projectRoot)voiceStudioFolder(options.projectRoot);
+  else { options.folder=options.folder||path.join(os.homedir(),'Downloads');fs.mkdirSync(options.folder,{recursive:true}); }
   const id=makeSourceJob(async(job,update)=>{
     update(2,'Preparando fonte...');
     const source=await resolveSource(options.url,update);
+    let folder=options.projectRoot?projectAssetDirectory(options.projectRoot,options.sourceName||source.title,options.mode):options.folder;
+    if(options.mode==='transcript')folder=fs.mkdtempSync(path.join(folder,'transcricao-'));
     update(82,'Exportando trecho...');
     const start=Number(options.start),end=Number(options.end);
     if(options.mode!=='transcript')job.filepath=await exportCut(source,{
-      folder:options.folder,filename:options.filename,mode:options.mode,
+      folder,filename:options.filename,mode:options.mode,
       full:options.full,start,end
     });
     else{
-      const tmp=await exportCut(source,{folder:options.folder,filename:options.filename||source.title,mode:'audio',
+      const tmp=await exportCut(source,{folder,filename:options.filename||source.title,mode:'audio',
         full:options.full,start,end});
-      await transcribeAudio(tmp,fs.realpathSync(options.folder),{
+      await transcribeAudio(tmp,fs.realpathSync(folder),{
         model:options.transcript_model||'base',language:'pt',update:message=>update(90,message)
       });
-      job.filepath=path.join(fs.realpathSync(options.folder),'transcript.srt');
+      job.filepath=path.join(fs.realpathSync(folder),'transcript.srt');
     }
-    job.folder=fs.realpathSync(options.folder);
+    job.folder=fs.realpathSync(folder);
   });
   res.status(202).json({job_id:id});
 }));
 app.post('/api/batch-download',api(async(req,res)=>{
+  if(req.body.projectRoot)voiceStudioFolder(req.body.projectRoot);
+  else {req.body.folder=req.body.folder||path.join(os.homedir(),'Downloads');fs.mkdirSync(req.body.folder,{recursive:true});}
   const input=String(req.body.batch_text||''),rows=input.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
   const items=[],errors=[];
   for(let i=0;i<rows.length;i++){
@@ -404,9 +413,10 @@ app.post('/api/batch-download',api(async(req,res)=>{
   const id=makeSourceJob(async(job,update)=>{
     job.items=items;job.filepaths=[];job.folder=req.body.folder;
     const source=await resolveSource(req.body.url,update);
+    const folder=req.body.projectRoot?projectAssetDirectory(req.body.projectRoot,req.body.sourceName||source.title,req.body.mode):req.body.folder;job.folder=folder;
     for(let i=0;i<items.length;i++){
       const item=items[i];item.status='running';update(Math.round(100*i/items.length),'Exportando '+item.title);
-      try{const file=await exportCut(source,{folder:req.body.folder,filename:item.title,
+      try{const file=await exportCut(source,{folder,filename:item.title,
         mode:req.body.mode==='audio'?'audio':'video',full:false,start:item.start,end:item.end});
         job.filepaths.push(file);item.status='done';
       }catch(e){item.status='error';item.error=e.message;}
@@ -424,10 +434,22 @@ app.get('/api/transcription/state',api(async(req,res)=>{
   res.json(voiceStudioState(String(req.query.projectRoot||'')));
 }));
 app.post('/api/transcription/jobs',upload.single('file'),api(async(req,res)=>{
+  if(req.body.scope!=='narration'){
+    if(!req.file)return forbidden(res,'Selecione o arquivo de áudio para transcrição avulsa.');
+    if(!['.wav','.mp3','.m4a','.aac','.flac','.ogg','.opus'].includes(path.extname(req.file.originalname||'').toLowerCase())){fs.rmSync(req.file.path,{force:true});return forbidden(res,'Formato de áudio inválido.');}
+    const downloads=path.join(os.homedir(),'Downloads');fs.mkdirSync(downloads,{recursive:true});
+    const root=fs.mkdtempSync(path.join(downloads,'transcricao-')),id=crypto.randomUUID();
+    const job={id,scope:'standalone',status:'running',message:'Transcrevendo arquivo avulso...',projectRoot:root,result:null,error:null};transcriptions.set(id,job);
+    res.status(202).json({jobId:id});
+    transcribeAudio(req.file.path,root,{model:req.body.model||'small',language:req.body.language||'pt',detail:req.body.detail||'words',update:message=>{job.message=message;}})
+      .then(result=>Object.assign(job,{status:'done',message:'Transcrição avulsa pronta. Projeto preservado.',result:{...result,removedCount:0}}))
+      .catch(e=>Object.assign(job,{status:'error',error:e.message,message:'Falha na transcrição avulsa.'}))
+      .finally(()=>fs.rmSync(req.file.path,{force:true}));return;
+  }
   let root;
   try{root=voiceStudioFolder(req.body.projectRoot);}
   catch(e){if(req.file)fs.rmSync(req.file.path,{force:true});return forbidden(res,e.message);}
-  if(activeRender(root)||runningTranscription(root)){
+  if(activeRender(root)||runningTranscription(root)||voiceCreation.isProjectBusy(root)){
     if(req.file)fs.rmSync(req.file.path,{force:true});
     return res.status(409).json({error:'Já há processamento de áudio neste projeto.'});
   }
@@ -449,6 +471,8 @@ app.post('/api/transcription/jobs',upload.single('file'),api(async(req,res)=>{
       removeMiddleSilence:req.body.removeMiddleSilence!=='false',
       minSilence:Number(req.body.minSilence||.7),
       thresholdDb:Number(req.body.thresholdDb||-42),
+      trimEdges:req.body.trimEdges!=='false',normalize:req.body.normalize!=='false',compression:req.body.compression==='true',deesser:req.body.deesser==='true',targetLufs:req.body.targetLufs??-16,highpassHz:req.body.highpassHz??70,
+      enhancementEngine:req.body.enhancementEngine||'off',enhancementMode:req.body.enhancementMode||'natural',enhancementStrength:req.body.enhancementStrength??80,
       ...(req.body.voicePreset?{voicePreset:String(req.body.voicePreset)}:
         {pitchSemitones:Number(req.body.pitchSemitones||0)})
     },update:message=>{job.message=message;}
@@ -461,18 +485,21 @@ app.get('/api/transcription/jobs/:id/audio',api(async(req,res)=>{
   if(!job||job.status!=='done'||!job.result?.narration)
     return res.status(404).json({error:'Narração processada ainda não disponível.'});
   const variant=String(req.query.variant||'styled');
-  if(!['styled','prepared'].includes(variant))return forbidden(res,'Versão de áudio inválida.');
-  const name=variant==='prepared'?'narration.prepared.wav':'narration.wav';
+  if(!['styled','prepared','original'].includes(variant))return forbidden(res,'Versão de áudio inválida.');
+  const name=variant==='original'?path.basename(job.result.source):variant==='prepared'?'narration.prepared.wav':'narration.wav';
   const audio=path.join(job.projectRoot,'audio',name);
   if(!fs.existsSync(audio))return res.status(404).json({error:'Áudio não encontrado.'});
   res.set('Cache-Control','no-store');
-  res.type('audio/wav').sendFile(audio);
+  if(fs.lstatSync(audio).isSymbolicLink())return forbidden(res,'Áudio inválido.');
+  await sendNarrationAudio(req,res,audio);
 }));
 app.get('/api/transcription/jobs/:id',api(async(req,res)=>{
   const job=transcriptions.get(req.params.id);
   if(!job)return res.status(404).json({error:'Transcrição não encontrada.'});
   res.json(job);
 }));
+const voiceCreation=mountVoiceCreationRoutes(app,api,{isProjectBusy:root=>activeRender(root)||!!runningTranscription(root)});
+mountWorkspaceRoutes(app,api,{isBusy:root=>activeRender(root)||!!runningTranscription(root)||voiceCreation.isProjectBusy(root)});
 mountSocialRoutes(app,api);
 mountSocialPublishRoutes(app,api,upload);
 mountSocialMetricsRoutes(app,api);
@@ -484,7 +511,7 @@ app.get('/health',api(async(req,res)=>res.json({
 const server=app.listen(PORT,HOST,()=>console.log('Content Lab Node: http://'+HOST+':'+PORT));
 app.post('/api/shutdown',api(async(req,res)=>{
   const active=[...sourceJobs.values(),...jobs.values(),...transcriptions.values()].filter(j=>j.status==='running').length+
-    (renderQueue.latest()?.status==='running'?1:0);
+    (renderQueue.latest()?.status==='running'?1:0)+voiceCreation.activeCount();
   if(active&&!req.body?.force)return res.status(409).json({requires_force:true,active_jobs:active});
-  res.json({ok:true});server.close();
+  voiceCreation.cancelAll();res.json({ok:true});server.close();
 }));

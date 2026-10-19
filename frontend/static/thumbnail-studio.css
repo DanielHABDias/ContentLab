@@ -11,6 +11,7 @@
 .thumb-panel h3,.thumb-variants-head h3{margin:0 0 12px;font-size:15px;font-weight:750}
 .thumb-panel label,.thumb-top label{font-size:12px;font-weight:650;color:#576575;display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
 .thumb-panel label:last-child{margin-bottom:0}
+.thumb-panel label[hidden]{display:none}
 .thumb-panel input[type=color]{padding:3px;width:66px;height:37px;cursor:pointer}
 .thumb-panel input[type=range]{width:100%;accent-color:#266FDC;cursor:pointer;margin:0}
 .thumb-panel label:has(input[type=range]){display:grid;grid-template-columns:1fr auto;align-items:center;gap:3px 8px}
@@ -39,6 +40,8 @@
 #thumb-canvas:active{cursor:grabbing}
 #thumb-canvas:focus-visible{outline:3px solid #64A6FF;outline-offset:4px}
 .thumb-actions{justify-content:center}
+.thumb-actions label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:#576575}
+.thumb-actions select{padding:9px;border:1px solid #D9E1EC;border-radius:8px;background:#FFFFFF;color:#27364A;font:inherit}
 .thumb-instructions p{margin:8px 0;line-height:1.6;color:#647384;font-size:12px}
 #thumb-status{font-size:12px;color:#246FC4;min-height:18px}
 .thumb-asset-file-name{font-size:11px;color:#67778B;overflow-wrap:anywhere;margin:4px 0 12px}

@@ -199,7 +199,7 @@ const licenseReceipt=item=>[
   'Licença declarada: '+item.license,'Verifique a licença e atribuição antes de publicar.'
 ].join('\n')+'\n';
 export async function importMedia(key,{fetcher=fetch,update=()=>{},downloader=downloadYoutube,
-  localImporter=importLocalSource,destination=path.join(os.homedir(),'Downloads','ContentLab')}={}){
+  localImporter=importLocalSource,destination=path.join(os.homedir(),'Downloads','ContentLab'),imageSubfolder='Imagens'}={}){
   const item=selectedMedia(key);
   if(item.provider==='youtube'){
     update(10,'Preparando vídeo do YouTube…');
@@ -235,7 +235,7 @@ export async function importMedia(key,{fetcher=fetch,update=()=>{},downloader=do
       return {kind:'video',cachedKey:video.key,title:item.title,
         filePath:video.path,source:item.pageUrl,credit:item.credit,license:item.license};
     }
-    const imageFolder=path.join(destination,'Imagens');
+    const imageFolder=path.join(destination,imageSubfolder);
     fs.mkdirSync(imageFolder,{recursive:true});
     const name=safeTitle(item.title).slice(0,64)+'-'+crypto.randomBytes(4).toString('hex');
     const output=path.join(imageFolder,name+ext);

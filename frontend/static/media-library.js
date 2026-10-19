@@ -103,6 +103,7 @@
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   $('libraryDownload').addEventListener('click',async()=>{
     if(!chosen||!$('libraryRights').checked||downloading)return;
+    if(!window.ContentLabProject?.root){downloadState('Selecione o projeto no topo antes de importar.',true);return;}
     downloading=true;$('libraryDownload').disabled=true;
     $('libraryProgress').hidden=false;$('libraryProgressFill').style.width='2%';
     $('libraryOpenVideos').hidden=true;
@@ -111,7 +112,7 @@
     try{
       const response=await fetch('/api/library/download',{
         method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({key:chosen.key,acknowledgeRights:true})
+        body:JSON.stringify({key:chosen.key,acknowledgeRights:true,projectRoot:window.ContentLabProject?.root})
       });
       const result=await response.json();
       if(!response.ok)throw Error(result.error||'Não foi possível iniciar.');

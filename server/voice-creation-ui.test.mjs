@@ -1,0 +1,124 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+import {APP_ROOT} from './plan.mjs';
+
+function harness({deny=false,fetcher}={}){
+  const elements=new Map();let stopped=0,recorder=null,clock=0,tick;
+  const element=id=>{
+    if(!elements.has(id))elements.set(id,{id,value:'',disabled:false,hidden:id==='panel-transcription',textContent:'',files:[],options:[],
+      addEventListener(){},setAttribute(){},children:[],append(...items){this.children.push(...items);},replaceChildren(...values){this.options=values;this.children=[...values];},add(option){this.options.push(option);}});
+    return elements.get(id);
+  };
+  const stream={getTracks:()=>[{stop(){stopped++;}}]};
+  class FakeRecorder{
+    static isTypeSupported(){return true;}
+    constructor(){this.state='inactive';this.mimeType='audio/webm';recorder=this;}
+    start(){this.state='recording';}pause(){this.state='paused';}resume(){this.state='recording';}
+    stop(){this.state='inactive';this.ondataavailable({data:new Blob(['test-audio'])});return this.onstop();}
+  }
+  class FakeContext{
+    resume(){return Promise.resolve();}close(){return Promise.resolve();}
+    createAnalyser(){return {fftSize:256,getFloatTimeDomainData(samples){samples.fill(.1);}};}
+    createMediaStreamSource(){return {connect(){}};}
+  }
+  const mediaDevices={async getUserMedia(){if(deny)throw Error('Microfone não autorizado');return stream;},async enumerateDevices(){return [{kind:'audioinput',label:'Microfone de teste',deviceId:'fake'}];}};
+  element('transcriptionProjectRoot').value='/test-project';
+  const sandbox={document:{getElementById:element,addEventListener(){},createElement:()=>({children:[],append(...items){this.children.push(...items);},setAttribute(){}}),createTextNode:text=>({textContent:text})},window:{MediaRecorder:FakeRecorder,addEventListener(){}},navigator:{mediaDevices},
+    FormData,fetch:fetcher|| (async()=>({ok:true,json:async()=>({takes:[],revision:'test-revision',relative:'audio/recording-test.wav',jobId:'test-job'})})),
+    MediaRecorder:FakeRecorder,AudioContext:FakeContext,performance:{now:()=>clock},Blob,File,
+    URL:{createObjectURL:()=> 'blob:local-test',revokeObjectURL(){}},Option:class{constructor(text,value){this.text=text;this.value=value;}},
+    requestAnimationFrame:()=>1,cancelAnimationFrame(){},setInterval(fn){tick=fn;return 1;},clearInterval(){tick=null;},Date,
+  };
+  vm.runInNewContext(fs.readFileSync(APP_ROOT+'/frontend/static/voice-creation.js','utf8'),sandbox);
+  return {element,get recorder(){return recorder;},get stopped(){return stopped;},advance(ms){clock+=ms;tick?.();}};
+}
+test('recorder uses permission, pauses time, previews raw take and releases microphone',async()=>{
+  const h=harness();await h.element('voiceRecordStart').onclick();
+  assert.equal(h.recorder.state,'recording');assert.equal(h.element('voiceRecordStart').disabled,true);
+  h.advance(2000);assert.equal(h.element('voiceRecordTime').textContent,'00:00:02');
+  h.element('voiceRecordPause').onclick();h.advance(5000);assert.equal(h.element('voiceRecordTime').textContent,'00:00:02');
+  h.element('voiceRecordPause').onclick();h.advance(1000);assert.equal(h.element('voiceRecordTime').textContent,'00:00:03');
+  await h.element('voiceRecordStop').onclick();assert.equal(h.stopped,1);
+  assert.equal(h.element('voiceTakeAudio').src,'blob:local-test');
+  assert.equal(h.element('voiceRecordSave').disabled,true);
+  assert.match(h.element('voiceCreationStatus').textContent,/salva automaticamente/);
+  assert.equal(h.element('voiceReferenceRecording').disabled,false);
+});
+test('permission denial is visible and does not leave recorder running',async()=>{
+  const h=harness({deny:true});await h.element('voiceRecordStart').onclick();
+  assert.match(h.element('voiceCreationStatus').textContent,/não autorizado/);
+  assert.equal(h.element('voiceRecordStart').disabled,false);assert.equal(h.recorder,null);
+});
+test('finalization clearly completes beside recorder without waiting for AI model discovery',async()=>{
+  let discovered=false;
+  const h=harness({fetcher:async url=>{
+    if(url==='/api/voice/state'){discovered=true;throw Error('IA indisponível');}
+    const value=url==='/api/voice/finalize'?{jobId:'final'}:url==='/api/voice/jobs/final'?{
+      status:'done',message:'Concluído',result:{projectRoot:'/canonical-project',relative:'audio/narration.wav',duration:2,wordCount:3,takeCount:1,preview:'Minha narração pronta'}
+    }:{takes:[],revision:'current'};
+    return {ok:true,json:async()=>value};
+  }});
+  await h.element('voiceRecordFinalize').onclick();
+  assert.equal(discovered,false);
+  assert.match(h.element('voiceRecordProgress').textContent,/Concluído!/);
+  assert.match(h.element('voiceRecordProgress').className,/complete/);
+  assert.equal(h.element('voiceRecordProgress').hidden,false);
+  assert.equal(h.element('voiceFinalDetails').open,true);
+  assert.equal(h.element('voiceFinalTranscript').value,'Minha narração pronta');
+  assert.equal(h.element('voiceRecordStart').disabled,false);
+  assert.equal(h.element('voiceRecordFinalize').textContent,'Finalizar narração e transcrever');
+});
+test('enhancement preview forwards controls and exposes before/after without replacing final narration',async()=>{
+  let submitted;
+  const h=harness({fetcher:async(url,options)=>{
+    let result;
+    if(url==='/api/voice/enhancement/preview'){submitted=Object.fromEntries(options.body.entries());result={jobId:'preview-test'};}
+    else if(url==='/api/voice/jobs/preview-test')result={status:'done',result:{preview:true}};
+    else result={takes:[],revision:'current'};
+    return {ok:true,json:async()=>result};
+  }});
+  assert.equal(h.element('voiceEnhancementPreview').disabled,true);
+  h.element('voiceEnhancementEngine').value='deepfilter';h.element('voiceEnhancementMode').value='strong';h.element('voiceEnhancementStrength').value='65';
+  h.element('voiceEnhancementEngine').onchange();
+  assert.equal(h.element('voiceEnhancementPreview').disabled,false);
+  await h.element('voiceEnhancementPreview').onclick();
+  assert.equal(submitted.enhancementMode,'strong');assert.equal(submitted.enhancementStrength,'65');
+  assert.equal(submitted.kind,'recording');
+  assert.equal(h.element('voiceEnhancementPreviewResult').hidden,false);
+  assert.match(h.element('voiceEnhancementBefore').src,/variant=original/);
+  assert.match(h.element('voiceEnhancementAfter').src,/preview-test\/audio$/);
+  assert.match(h.element('voiceCreationStatus').textContent,/Seus arquivos não foram alterados/);
+  assert.equal(h.element('voiceFinalAudio').src,undefined);
+});
+test('saved voices render before optional runtime discovery completes',async()=>{
+  let release,checking=false;
+  const h=harness({fetcher:async url=>{
+    if(url==='/api/voice/profiles')return {ok:true,json:async()=>({profiles:[{id:'voice-one',name:'Minha voz',seconds:20}]})};
+    checking=true;await new Promise(resolve=>{release=resolve;});return {ok:true,json:async()=>({models:[],runtimeReady:false})};
+  }});
+  const loading=h.element('voiceStateRefresh').onclick();
+  for(let i=0;i<10&&!checking;i++)await Promise.resolve();
+  assert.equal(checking,true);
+  assert.equal(h.element('voiceProfile').value,'voice-one');
+  assert.match(h.element('voiceProfileHint').textContent,/Minha voz/);
+  const card=h.element('voiceProfilesList').children[0];
+  assert.equal(card.children[0].textContent,'Minha voz');
+  assert.match(card.children[2].src,/profiles\/voice-one\/audio$/);
+  release();await loading;
+});
+test('treatment recipes configure controls without applying them to recording finalization',async()=>{
+  let body;
+  const h=harness({fetcher:async(url,options)=>({ok:true,json:async()=>{
+    if(url==='/api/voice/finalize'){body=JSON.parse(options.body);return {jobId:'final'};}
+    if(url==='/api/voice/jobs/final')return {status:'done',result:{relative:'audio/narration.wav',projectRoot:'/test-project',duration:1,takeCount:1,wordCount:1}};
+    return {takes:[],revision:'new'};
+  }})});
+  h.element('voiceTreatmentRecipe').value='strong';h.element('voiceTreatmentRecipe').onchange();
+  assert.equal(h.element('transcriptionCompression').checked,true);assert.equal(h.element('transcriptionDeesser').checked,true);
+  assert.equal(h.element('voiceEnhancementEngine').value,'deepfilter');
+  await h.element('voiceRecordFinalize').onclick();assert.equal(body.enhancement.enhancementEngine,'off');
+  h.element('voiceTreatmentRecipe').value='preserve';h.element('voiceTreatmentRecipe').onchange();
+  assert.equal(h.element('transcriptionRemoveMiddle').checked,false);assert.equal(h.element('transcriptionNormalize').checked,true);
+});

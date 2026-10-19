@@ -14,8 +14,11 @@ let sourceRequestId = 0;
 const $ = (id) => document.getElementById(id);
 
 // Areas de trabalho isoladas: trocar de aba preserva o trabalho em andamento.
-const workspaces = ["videos", "transcription", "editor", "multieditor", "publications", "metrics", "library", "thumbnails", "settings", "docs"];
+const workspaces = ["videos", "transcription", "recording", "voiceai", "voice-settings", "editor", "multieditor", "publications", "metrics", "library", "thumbnails", "settings", "docs"];
+const workspaceGroupLabels={editor:"Editor",social:"Redes sociais",narration:"Narração",settings:"Configurações"};
 const workspaceGroups = {
+  narration: ["recording", "voiceai", "transcription"],
+  settings: ["settings", "voice-settings"],
   editor: ["editor", "multieditor"],
   social: ["publications", "metrics"]
 };
@@ -33,7 +36,7 @@ function expandWorkspaceGroup(name) {
     trigger.setAttribute("aria-expanded", String(expanded));
     trigger.setAttribute("aria-label",
       (expanded ? "Recolher" : "Expandir") +
-      (group === "editor" ? " opções de Editor" : " opções de Redes sociais"));
+      (" opções de " + workspaceGroupLabels[group]));
     trigger.classList.toggle("is-expanded", expanded);
   }
 }
@@ -59,7 +62,10 @@ function showWorkspace(name) {
     const manual = $("docsManual");
     if (manual && !manual.hasAttribute("src")) manual.src = manual.dataset.src;
   }
+  const voiceArea=["transcription","recording","voiceai"].includes(name);
+  for(const [id,visible] of [["voiceProjectShared",false],["voiceStatusShared",voiceArea||name==="voice-settings"]]){const element=$(id);if(element){element.hidden=!visible;element.classList.toggle("hidden",!visible);}}
   history.replaceState(null, "", "#" + name);
+  window.dispatchEvent(new CustomEvent("workspacechange",{detail:{name}}));
 }
 document.querySelectorAll(".workspace-tab[data-workspace]").forEach((tab) => {
   tab.addEventListener("click", () => showWorkspace(tab.dataset.workspace));
@@ -408,6 +414,7 @@ async function applyLoadedVideo(data, previewKind, previewValue) {
   $("thumb").src = data.thumbnail || "";
   $("thumb").classList.toggle("hidden", !data.thumbnail);
   $("fileName").value = data.title || "";
+  $('downloadSourceName').value='';
   $("videoSection").classList.remove("hidden");
   $("progressSection").classList.add("hidden");
 
@@ -697,7 +704,7 @@ $("chooseFolderBtn").addEventListener("click", async () => {
 });
 
 function updateDownloadBtnState() {
-  const ready = videoLoaded && currentFolder;
+  const ready = videoLoaded;
   $("downloadBtn").disabled = !ready;
   $("batchDownloadBtn").disabled = !(ready && $("batchText").value.trim());
 }
@@ -732,6 +739,7 @@ function renderBatchValidation(errors) {
 $("batchDownloadBtn").addEventListener("click", startBatchDownload);
 
 async function startBatchDownload() {
+  if($('downloadUseProject').checked&&!window.ContentLabProject?.root){alert('Selecione um projeto ou desmarque a opção de guardar nos assets.');return;}
   const mode = selectedMode();
   const payload = {
     url: activeSourceUrl(),
@@ -739,6 +747,7 @@ async function startBatchDownload() {
     transcript_model: $("transcriptModel").value,
     folder: currentFolder,
     batch_text: $("batchText").value,
+    projectRoot:$("downloadUseProject").checked?window.ContentLabProject?.root:null,sourceName:$("downloadSourceName").value.trim(),
   };
 
   renderBatchValidation([]);
@@ -799,6 +808,7 @@ function renderBatchItems(items) {
 $("downloadBtn").addEventListener("click", startDownload);
 
 async function startDownload() {
+  if($('downloadUseProject').checked&&!window.ContentLabProject?.root){alert('Selecione um projeto ou desmarque a opção de guardar nos assets.');return;}
   const full = $("fullToggle").checked;
   const mode = selectedMode();
 
@@ -809,6 +819,7 @@ async function startDownload() {
     full,
     folder: currentFolder,
     filename: $("fileName").value.trim(),
+    projectRoot:$("downloadUseProject").checked?window.ContentLabProject?.root:null,sourceName:$("downloadSourceName").value.trim(),
     start: full ? null : parseFloat($("startRange").value),
     end: full ? null : parseFloat($("endRange").value),
   };
@@ -965,7 +976,7 @@ $("transcriptionChooseFolder").addEventListener("click", async () => {
     const response = await fetch("/api/choose-folder", { method: "POST" });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Não foi possível abrir o seletor de pastas.");
-    if (data.folder) $("transcriptionProjectRoot").value = data.folder;
+    if (data.folder) {$("transcriptionProjectRoot").value = data.folder;$("transcriptionProjectRoot").dispatchEvent(new Event("change"));}
   } catch (_) {
     transcriptionError("Não foi possível abrir o seletor visual. Você também pode digitar o caminho da pasta no campo ao lado.");
   }
@@ -974,6 +985,7 @@ $("transcriptionUseEditorProject").addEventListener("click", () => {
   const root = editorProject?.projectRoot || $("editorProjectRoot").value.trim();
   if (!root) return transcriptionError("Não há pasta informada no editor. Use Escolher pasta ou digite o caminho acima.");
   $("transcriptionProjectRoot").value = root;
+  $("transcriptionProjectRoot").dispatchEvent(new Event("change"));
   transcriptionError("");
 });
 $("transcriptionOpenFolder").addEventListener("click", async () => {
@@ -987,17 +999,28 @@ $("transcriptionOpenFolder").addEventListener("click", async () => {
     if (!response.ok) throw new Error(data.error || "Não foi possível abrir a pasta.");
   } catch (error) { transcriptionError(error.message); }
 });
+function updateTranscriptionScope(){
+  const avulso=$('transcriptionScope').value==='standalone';
+  for(const node of document.querySelectorAll('#panel-transcription .voice-treatment-step, #voiceEnhancementSettings, #panel-transcription .voice-studio-options'))node.classList.toggle('hidden',avulso);
+  $('transcriptionStart').textContent=avulso?'Transcrever arquivo avulso':'Tratar e transcrever narração oficial';
+  $('transcriptionFile').parentElement.querySelector('.helper-text').textContent=avulso?'Obrigatório: áudio do computador. Não substitui arquivos do projeto.':'Selecione outro áudio ou deixe vazio para tratar a narração atual do projeto.';
+}
+$('transcriptionScope').addEventListener('change',updateTranscriptionScope);updateTranscriptionScope();
 $("transcriptionStart").addEventListener("click", async () => {
   const root = $("transcriptionProjectRoot").value.trim();
   const file = $("transcriptionFile").files[0];
+  const standalone = $("transcriptionScope").value === 'standalone';
   transcriptionError("");
-  if (!root) return transcriptionError("Escolha a pasta de destino.");
+  if (standalone && !file) return transcriptionError("Selecione o áudio para transcrever separadamente.");
+  if (!standalone && !root) return transcriptionError("Selecione o projeto no topo para preparar sua narração oficial.");
+  if (!standalone && !window.confirm('Isto atualizará a narração e a transcrição oficial deste projeto. Continuar?')) return;
   $("transcriptionStart").disabled = true;
   $("transcriptionResult").classList.add("hidden");
   $("transcriptionStatus").textContent = "Enviando narração...";
   try {
     const form = new FormData();
     form.append("projectRoot", root);
+    form.append("scope", standalone ? 'standalone' : 'narration');
     if (file) form.append("file", file);
     form.append("model", $("transcriptionModel").value);
     form.append("detail", $("transcriptionDetail").value);
@@ -1005,6 +1028,11 @@ $("transcriptionStart").addEventListener("click", async () => {
     form.append("minSilence", $("transcriptionMinSilence").value);
     form.append("thresholdDb", $("transcriptionThreshold").value);
     form.append("voicePreset", $("transcriptionVoicePreset").value);
+    for(const [field,id] of [['trimEdges','transcriptionTrimEdges'],['normalize','transcriptionNormalize'],['compression','transcriptionCompression'],['deesser','transcriptionDeesser']])form.append(field,String($(id).checked));
+    form.append('targetLufs',$('transcriptionTargetLufs').value);form.append('highpassHz',$('transcriptionHighpass').value);
+    form.append("enhancementEngine", $("voiceEnhancementEngine").value);
+    form.append("enhancementMode", $("voiceEnhancementMode").value);
+    form.append("enhancementStrength", $("voiceEnhancementStrength").value);
     form.append("language", $("transcriptionLanguage").value);
     const response = await fetch("/api/transcription/jobs", { method: "POST", body: form });
     const data = await response.json();
@@ -1025,7 +1053,16 @@ $("transcriptionStart").addEventListener("click", async () => {
         $("transcriptionPreview").value = job.result.preview || "Nenhuma fala foi reconhecida. Confira o áudio e tente outro modelo.";
         $("transcriptionPreviewDetail").textContent = job.result.detail === "words" ? "Prévia por palavra — cada linha mostra os tempos reais daquela palavra. O JSON também inclui frases em segments." : "Prévia por trecho — o JSON também mantém os tempos individuais de cada palavra em words.";
         lastTranscriptionFolder = job.projectRoot;
+        if(job.scope==='standalone'){
+          document.querySelector('#transcriptionResult > .helper-text').textContent='Arquivos salvos: transcript.json, transcript.txt e transcript.srt, na pasta exclusiva indicada abaixo.';
+          $("transcriptionResult").classList.remove("hidden");
+          $("transcriptionPlanHint").textContent = 'Transcrição avulsa salva em '+job.projectRoot+'. A narração e a transcrição oficial do projeto não foram alteradas.';
+          document.querySelector('.voice-studio-compare').classList.add('hidden');
+          return;
+        }
         latestVoiceJobId = data.jobId;
+        document.querySelector('#transcriptionResult > .helper-text').textContent='Narração e transcrição oficiais salvas no projeto: audio/narration.wav, audio/narration.prepared.wav e transcript.json/TXT/SRT.';
+        document.querySelector('.voice-studio-compare').classList.remove('hidden');
         $("transcriptionListenVersion").value = "styled";
         updateVoiceAudioPreview();
         $("transcriptionResult").classList.remove("hidden");
@@ -1151,7 +1188,7 @@ async function editorShowProject(data) {
     if (!res.ok) throw new Error("Plugins indisponíveis.");
     editorList("editorPlugins", Object.entries(plugins).map(([kind, names]) => ({ text: `${kind}: ${names.join(", ")}` })));
   } catch (error) { editorList("editorPlugins", [{ text: error.message, invalid: true }]); }
-  if (window.visualEditor) await window.visualEditor.load(data);
+  if (window.visualEditor&&editorProject?.projectRoot===data.projectRoot) await window.visualEditor.load(data);
 }
 
 $("editorChooseFolder").addEventListener("click", async () => {
@@ -1166,14 +1203,16 @@ $("editorChooseFolder").addEventListener("click", async () => {
 $("editorCreate").addEventListener("click", async () => {
   editorError("");
   try {
-    const res = await fetch("/api/editor/project/create", {
+    if(!window.ContentLabProject?.root)throw Error('Selecione o projeto no topo.');
+    const res = await fetch("/api/workspace/edit-plan", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ parentRoot: $("editorProjectRoot").value.trim(), name: $("editorNewName").value.trim() }),
+      body: JSON.stringify({ projectRoot:window.ContentLabProject.root, name: $("editorNewName").value.trim() }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.errors?.map(item => item.message).join("; ") || data.error || "Falha ao criar projeto.");
     $("editorProjectRoot").value = data.projectRoot;
     await editorShowProject(data);
+    await window.ContentLabProject.select(data.projectRoot);
     $("editorStatus").textContent = "Projeto criado. Selecione a narração e adicione cenas ao JSON.";
   } catch (error) { editorError(error.message); }
 });
@@ -1212,6 +1251,7 @@ $("editorInspectAssets").addEventListener("click", async () => {
 });
 
 $("editorLoad").addEventListener("click", async () => {
+  const requestedRoot=$('editorProjectRoot').value.trim();
   if (editorDirty && !window.confirm("Descartar alterações não salvas no JSON?")) return;
   editorError("");
   $("editorDetails").classList.add("hidden");
@@ -1223,6 +1263,7 @@ $("editorLoad").addEventListener("click", async () => {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.errors?.map(item => item.message).join("; ") || data.error || "Projeto inválido.");
+    if(requestedRoot!==$('editorProjectRoot').value.trim())return;
     await editorShowProject(data);
     $("editorStatus").textContent = "";
     editorSetProgress(0);
@@ -1232,6 +1273,15 @@ $("editorLoad").addEventListener("click", async () => {
     editorList("editorWarnings", []);
   } catch (error) { editorError(error.message); }
 });
+window.contentlabEditor={
+  canLeave:()=>!editorDirty||window.confirm('Há alterações não salvas no editor. Descartá-las para trocar/recarregar o projeto?'),
+  apply:async data=>{
+    editorProject=null;editorDirty=false;$('editorDetails').classList.add('hidden');$('editorPlanText').value='';
+    $('editorLoad').disabled=!data.hasEditPlan;$('editorCreate').disabled=data.hasEditPlan;
+    if(data.hasEditPlan)$('editorLoad').click();
+    else {$('editorStatus').textContent='Projeto aberto. Adicione edit_plan.json nesta pasta e clique em Recarregar projeto para editar/renderizar.';editorError('');}
+  }
+};
 
 $("editorPlanText").addEventListener("input", () => {
   editorDirty = true;

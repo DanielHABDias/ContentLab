@@ -1,14 +1,34 @@
 # Content Lab — Node.js + Remotion
 
+## Projeto universal
+
+Selecione **uma pasta no topo** para todas as abas. A pasta pode estar vazia: `edit_plan.json` só é necessário no Editor para editar/renderizar. O navegador restaura o último caminho usado; **Recarregar projeto** relê o plano, as tomadas, o inventário e as thumbnails. Confirme antes de descartar alterações do editor. Em gravação, finalize/salve a tomada antes de trocar a pasta.
+
+**Downloads e transcrições avulsas não exigem projeto.** Vídeos/cortes vão para Downloads ou para o destino escolhido. Marque **Guardar nos assets do projeto ativo** para usar `assets/<obra-ou-fonte>/clips/`, `audio/` ou `transcripts/`. Transcrições de fontes baixadas sempre ganham uma subpasta exclusiva. Em Tratamento, **Transcrição avulsa** é a finalidade padrão: selecione um áudio e receba JSON/TXT/SRT em `Downloads/transcricao-<identificador>/`, mantendo os tempos originais sem tratar ou cortar o áudio. Não altera o `transcript.json` nem a narração oficial, mesmo com projeto ativo. Para substituí-los, escolha explicitamente a finalidade de narração oficial e confirme.
+
+A narração oficial continua em `audio/`, com tomadas em `audio/takes/`. Thumbnails, imagens exportadas e ZIPs ficam em `thumbnails/`; o rascunho editável é `thumbnails/project.json`. Não movemos arquivos antigos de Downloads automaticamente. Exportações com nomes repetidos ganham um sufixo.
+
+## Aprimoramento de voz por IA
+
+**Gravar:** finalize cada tomada, ouça/ordene/desmarque ou exclua; depois finalize a narração para unir `audio/narration.wav` e transcrever automaticamente. **Criar com IA:** cadastre uma voz autorizada em Configurações → Voz e modelos de IA (amostra recomendada de 10–30 s, texto fiel), prepare o ambiente local e baixe explicitamente Qwen 0.6B ou 1.7B. Gere, ouça e finalize as tomadas. Modelos grandes podem ser lentos em CPU e não garantem entonação. O servidor permanece Node; o worker de voz usa Python isolado em `.tools/qwen`, sem instalação global. Para apenas obter timestamps de uma fonte externa, use a finalidade **Transcrição avulsa** em Tratamento, não a finalização da narração.
+
+Narração possui **Gravar**, **Criar com IA** e **Tratamento**: o topo compartilhado seleciona apenas a pasta do projeto. Gravação/geração não aplicam limpeza escondida. Em Tratamento ficam as receitas ajustáveis, cortes de silêncio, IA, normalização, compressão suave e suavização de sibilância. Em **Configurações → Voz e modelos de IA**, ouça as amostras salvas, selecione a voz e cadastre novas referências; os modelos ficam numa seção separada.
+
+Na área **Narração**, abra **Aprimorar voz com IA** para ativar redução de ruído local com DeepFilterNet, escolher limpeza natural/forte e intensidade e comparar uma prévia de até 20 segundos. O original é preservado; o áudio não é enviado a serviços externos. No primeiro uso, a ferramenta oficial é baixada e verificada automaticamente em `.tools/voice-enhancement` (Linux x64/Windows x64, sem instalação global). A opção começa desativada. Não é uma reprodução do Adobe Podcast; teste a naturalidade antes de aplicar à narração completa. Veja os parâmetros e o fluxo na documentação integrada.
+
 Editor automático e utilitários de vídeo para projetos de conteúdo e motion design, com servidor Node.js, interface JavaScript, Remotion e FFmpeg. Os testes automatizados Linux e Windows estão disponíveis no GitHub Actions. A validação estética final continua dependendo dos arquivos e objetivos de cada projeto real.
 
 ## Thumbnails — editor visual e exportação em lote
 
 A aba **Thumbnails** agora oferece um editor visual integrado: importar PNGs e imagem contextual, escolher fundos no estilo `BackgroundHQ` (com halftone, papel, filme, estrelas, grade ou cor sólida), ajustar camadas por arraste no canvas, escala e opacidade, luzes e degradê preto inferior. O título Anton é composto em duas passadas alinhadas: preenchimento com glow atrás do personagem central e contorno fino à frente, criando o efeito de atravessar o texto; Bangers é alternativa.
 
-Monte primeiro a thumbnail **16:9** do vídeo longo e clique **+ Novo Short** para gerar versões 9:16 com o **mesmo fundo global**, alterando personagem, texto e enquadramento individualmente. Também há saída 1:1 ou 16:9 para versões derivadas. Baixe cada PNG ou um **ZIP com todas as versões e JSON editável**. A edição principal é visual; o JSON é opcional. O projeto é salvo automaticamente no armazenamento local do navegador e pode ser importado/exportado entre computadores; nenhuma imagem é enviada para serviço externo.
+Monte primeiro a thumbnail **16:9** do vídeo longo e clique **+ Novo Short** para gerar versões 9:16 com o **mesmo fundo global**, alterando personagem, texto e enquadramento individualmente. Também há saída 1:1 ou 16:9. Salve imagens ou um **ZIP com todas as versões e JSON editável** na subpasta `thumbnails/` do projeto ativo. O rascunho é salvo automaticamente em `thumbnails/project.json` e restaurado por pasta; nenhuma imagem é enviada para serviço externo. Rascunhos antigos do navegador não são migrados automaticamente: selecione a pasta e importe o JSON que deseja guardar nela.
 
 Guia: [docs/THUMBNAIL_STUDIO.md](docs/THUMBNAIL_STUDIO.md). A aba usa as fontes Anton/Bangers já incluídas em `builtin-assets/fonts`. Os fundos de thumbnail reproduzem os estilos de forma **estática no canvas**; não são renders do TSX de vídeo nem mudam a biblioteca dos quinze presets.
+
+Nas thumbnails, os secundários podem receber **degradê lateral** independente (`glowMode: "lateral"`), acima das figuras laterais e abaixo da sombra, do texto e do protagonista. O título permite ajustar a **distância entre linhas** (`lineHeight`) mantendo o preenchimento atrás e o contorno fino à frente perfeitamente alinhados. Projetos existentes preservam seu brilho radial e sua entrelinha quando não incluem esses campos.
+
+A saída das thumbnails é **Full HD** por padrão, com opção **4K**, em **JPG** (padrão), PNG ou WebP. O painel **Luzes laterais independentes** (`background.sideLights`) controla azul/amarelo ou quaisquer cores como degradês das bordas, mesmo sem PNGs. A foto contextual fica atrás da página HQ e dos personagens, com **Preencher / Mostrar imagem inteira** e botão para centralizar posição e zoom. O ZIP respeita a resolução e o formato escolhidos; detalhes no guia do Studio.
 
 A **skill interna e o ZIP da Documentação** também orientam a criação desses projetos e incluem o guia completo de thumbnails, parâmetros, camadas e exportação. O JSON de imagem tem `version: 1` e imagens incorporadas; não é o `edit_plan.json` de vídeo. Preferências de canal são externas, não padrões públicos obrigatórios.
 

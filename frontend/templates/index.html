@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="/static/metrics.css">
 <link rel="stylesheet" href="/static/media-library.css">
 <link rel="stylesheet" href="/static/thumbnail-studio.css">
+<link rel="stylesheet" href="/static/voice-creation.css">
 </head>
 <body>
 
@@ -26,7 +27,7 @@
   <span class="sidebar-caption">WORKSPACE</span>
   <nav class="workspace-tabs" role="tablist" aria-label="Áreas de trabalho">
       <button class="workspace-tab is-active" id="tab-videos" role="tab" aria-selected="true" aria-controls="panel-videos" type="button" data-workspace="videos"><span>01</span> Vídeos e cortes</button>
-      <button class="workspace-tab" id="tab-transcription" role="tab" aria-selected="false" aria-controls="panel-transcription" type="button" data-workspace="transcription"><span>02</span> Narração</button>
+      <div class="workspace-group" data-workspace-group="narration"><button class="workspace-tab workspace-group-trigger" id="workspace-group-narration-trigger" type="button" aria-expanded="false" aria-controls="workspace-group-narration-items" aria-label="Expandir opções de Narração"><span>02</span><strong>Narração</strong><svg class="workspace-group-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2"/></svg></button><div class="workspace-subtabs" id="workspace-group-narration-items" role="group" aria-label="Narração" hidden><button class="workspace-tab workspace-subtab" id="tab-recording" role="tab" aria-selected="false" aria-controls="panel-recording" type="button" data-workspace="recording"><span aria-hidden="true">•</span> Gravar</button><button class="workspace-tab workspace-subtab" id="tab-voiceai" role="tab" aria-selected="false" aria-controls="panel-voiceai" type="button" data-workspace="voiceai"><span aria-hidden="true">•</span> Criar com IA</button><button class="workspace-tab workspace-subtab" id="tab-transcription" role="tab" aria-selected="false" aria-controls="panel-transcription" type="button" data-workspace="transcription"><span aria-hidden="true">•</span> Tratamento</button></div></div>
 
       <div class="workspace-group" data-workspace-group="editor">
         <button class="workspace-tab workspace-group-trigger" id="workspace-group-editor-trigger" type="button" aria-expanded="false" aria-controls="workspace-group-editor-items" aria-label="Expandir opções de Editor">
@@ -50,10 +51,11 @@
 
       <button class="workspace-tab" id="tab-library" role="tab" aria-selected="false" aria-controls="panel-library" type="button" data-workspace="library"><span>05</span> Banco de mídia</button>
       <button class="workspace-tab" id="tab-thumbnails" role="tab" aria-selected="false" aria-controls="panel-thumbnails" type="button" data-workspace="thumbnails"><span>06</span> Thumbnails</button>
-      <button class="workspace-tab" id="tab-settings" role="tab" aria-selected="false" aria-controls="panel-settings" type="button" data-workspace="settings"><span>07</span> Configurações</button>
+      <div class="workspace-group" data-workspace-group="settings"><button class="workspace-tab workspace-group-trigger" id="workspace-group-settings-trigger" type="button" aria-expanded="false" aria-controls="workspace-group-settings-items" aria-label="Expandir opções de Configurações"><span>07</span><strong>Configurações</strong><svg class="workspace-group-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2"/></svg></button><div class="workspace-subtabs" id="workspace-group-settings-items" role="group" aria-label="Configurações" hidden><button class="workspace-tab workspace-subtab" id="tab-settings" role="tab" aria-selected="false" aria-controls="panel-settings" type="button" data-workspace="settings"><span aria-hidden="true">•</span> Redes sociais</button><button class="workspace-tab workspace-subtab" id="tab-voice-settings" role="tab" aria-selected="false" aria-controls="panel-voice-settings" type="button" data-workspace="voice-settings"><span aria-hidden="true">•</span> Voz e modelos de IA</button></div></div>
       <button class="workspace-tab" id="tab-docs" role="tab" aria-selected="false" aria-controls="panel-docs" type="button" data-workspace="docs"><span>08</span> Documentação</button>
   </nav><div class="sidebar-foot"><span class="sidebar-foot-icon">✦</span><strong>Faça a ideia ganhar movimento.</strong><small>Node.js · Remotion · Local</small></div></aside>
   <main class="panel">
+    <section class="global-project-bar" aria-label="Projeto ativo"><div class="global-project-heading"><span class="eyebrow">PROJETO ATIVO</span><span>Uma pasta para todo o seu vídeo</span></div><div class="global-project-controls"><input id="globalProjectRoot" type="text" placeholder="Selecione a pasta do vídeo — não precisa de edit_plan.json" aria-label="Pasta universal do projeto"><button id="globalProjectChoose" class="btn btn-primary" type="button">Selecionar projeto</button><button id="globalProjectReload" class="btn btn-secondary" type="button" disabled>↻ Recarregar projeto</button></div><p id="globalProjectStatus" class="helper-text" role="status">Escolha um projeto para guardar downloads, narração e thumbnails na mesma pasta.</p></section>
     <div id="panel-videos" class="workspace-panel" role="tabpanel" aria-labelledby="tab-videos">
       <div class="workspace-intro"><span class="eyebrow">BIBLIOTECA DE FONTE</span><h2>Vídeos e cortes</h2><p>Carregue um link, reutilize o cache ou importe um vídeo que já está no computador; depois escolha trechos e exporte vídeo, áudio ou legenda.</p></div>
 
@@ -212,7 +214,7 @@
         </div>
       </div>
 
-      <div class="folder-block">
+      <div class="folder-block project-legacy-picker" hidden>
         <label class="block-label" for="fileName">Nome base do arquivo — modo único</label>
         <input id="fileName" type="text" placeholder="Nome do arquivo (sem extensão)">
       </div>
@@ -236,12 +238,14 @@
       <div class="folder-block">
         <label class="block-label">Pasta de destino</label>
         <div class="row">
-          <input id="folderPath" type="text" value="{{ default_dir }}" placeholder="Digite ou escolha a pasta de destino">
+          <input id="folderPath" type="text" value="" placeholder="Downloads (ou escolha outra pasta para arquivos avulsos)">
           <button id="chooseFolderBtn" class="btn btn-secondary">Escolher pasta</button>
         </div>
       </div>
 
+      <label class="voice-toggle"><input id="downloadUseProject" type="checkbox">Guardar nos assets do projeto ativo (opcional)</label><p class="helper-text">Sem marcar: salva em Downloads ou na pasta de destino acima. Transcrições sempre criam uma subpasta exclusiva, sem alterar a narração do projeto.</p>
       <button id="downloadBtn" class="btn btn-primary btn-lg" disabled>Processar trecho</button>
+      <label class="block-label" for="downloadSourceName">Pasta da obra / fonte (opcional)</label><input id="downloadSourceName" type="text" placeholder="Ex.: batman-arkham-knight — vazio usa o título da fonte"><p class="helper-text">Destino: assets/&lt;obra-ou-fonte&gt;/clips, audio ou transcripts dentro do projeto ativo.</p>
       <button id="batchDownloadBtn" class="btn btn-gradient btn-lg hidden" disabled>Processar cortes em lote</button>
     </section>
 
@@ -266,20 +270,64 @@
     </section>
     </div>
 
+<section id="voiceProjectShared" class="block hidden" hidden aria-label="Projeto da narração"><label class="block-label" for="transcriptionProjectRoot">Projeto da narração</label><div class="row transcription-folder-row"><input id="transcriptionProjectRoot" type="text" placeholder="Selecione a pasta do projeto" autocomplete="off"><button id="transcriptionChooseFolder" class="btn btn-secondary" type="button">Escolher pasta</button><button id="transcriptionUseEditorProject" class="btn btn-ghost btn-sm" type="button">Usar pasta do editor</button></div></section><section id="voiceStatusShared" class="hidden" hidden><p id="voiceCreationStatus" class="helper-text" role="status" aria-live="polite"></p><button id="voiceCommonCancel" type="button" class="btn btn-ghost btn-sm" disabled>Cancelar processamento</button></section><div id="panel-recording" class="workspace-panel hidden" role="tabpanel" aria-labelledby="tab-recording" hidden><div class="workspace-intro"><span class="eyebrow">NARRAÇÃO / GRAVAÇÃO</span><h2>Uma tomada de cada vez.</h2><p>Grave, organize e finalize. O Content Lab gera o áudio único e a transcrição.</p></div>          <section class="voice-create-box" aria-labelledby="voiceRecordTitle">
+            <span class="eyebrow">SUA VOZ</span><h3 id="voiceRecordTitle">Gravar narração</h3>
+            <label class="block-label" for="voiceMicrophone">Microfone</label>
+            <div class="row"><select id="voiceMicrophone"><option value="">Padrão do sistema</option></select><button id="voiceMicrophoneRefresh" class="btn btn-ghost btn-sm" type="button">Permitir e listar microfones</button></div>
+            <div class="voice-meter"><meter id="voiceLevel" min="0" max="1" value="0" aria-label="Nível do microfone"></meter><output id="voiceRecordTime">00:00:00</output></div>
+            <div class="row"><button id="voiceRecordStart" class="btn btn-primary" type="button">Gravar</button><button id="voiceRecordPause" class="btn btn-secondary" type="button" disabled>Pausar</button><button id="voiceRecordStop" class="btn btn-secondary" type="button" disabled>Finalizar tomada</button></div>
+            <audio id="voiceTakeAudio" controls hidden preload="none" aria-label="Ouvir tomada ou voz gerada"></audio>
+            <button id="voiceRecordSave" class="btn btn-secondary" type="button" disabled>Tentar salvar a tomada novamente</button>
+            <p class="helper-text">Ao finalizar cada tomada ela é salva automaticamente na pasta escolhida. Revise e organize a lista; depois finalize a narração para unir tudo em audio/narration.wav e transcrever automaticamente. Sem macros. Limite por tomada: 1 hora / 128 MB.</p><div id="voiceRecordingTakes" class="voice-takes"></div><button id="voiceRecordFinalize" class="btn btn-primary" type="button">Finalizar narração e transcrever</button>
+            <p id="voiceRecordProgress" class="voice-progress" role="status" aria-live="polite" hidden></p>
+          </section><section id="voiceCaptureTools" class="voice-create-box voice-capture-tools"><details><summary>Transcrição automática ao finalizar</summary><div class="transcription-grid"><label for="voiceAutomaticModel">Reconhecimento<select id="voiceAutomaticModel"><option value="base" selected>Rápido · base</option><option value="small">Equilibrado · small</option><option value="medium">Mais preciso · medium</option></select></label><label for="voiceAutomaticLanguage">Idioma<select id="voiceAutomaticLanguage"><option value="pt">Português</option><option value="en">Inglês</option><option value="es">Espanhol</option></select></label></div><p class="helper-text">Os tempos são reconhecidos no áudio final unido. A transcrição JSON mantém palavras e trechos. Importar e tratar conserva suas opções próprias.</p></details><details id="voiceFinalDetails" hidden><summary>Narração e transcrição prontas</summary><audio id="voiceFinalAudio" controls preload="none" aria-label="Narração final unificada"></audio><p id="voiceFinalSummary" class="helper-text"></p><textarea id="voiceFinalTranscript" rows="6" readonly aria-label="Transcrição da narração final"></textarea><button id="voiceFinalOpenFolder" type="button" class="btn btn-ghost btn-sm">Abrir pasta do projeto</button></details><a href="#transcription" class="btn btn-secondary">Continuar em Tratamento →</a><p class="helper-text">Gravar e gerar apenas unem o áudio e transcrevem. Limpeza por IA, cortes e normalização ficam em Tratamento.</p></section></div><div id="panel-voiceai" class="workspace-panel hidden" role="tabpanel" aria-labelledby="tab-voiceai" hidden><div class="workspace-intro"><span class="eyebrow">NARRAÇÃO / IA</span><h2>Sua voz, a partir do texto.</h2></div>          <section class="voice-create-box" aria-labelledby="voiceAiTitle">
+            <span class="eyebrow">OPCIONAL · LOCAL</span><h3 id="voiceAiTitle">Criar narração com IA</h3>
+<p class="helper-text">Escolha sua voz cadastrada em <a href="#voice-settings">Configurações → Voz e modelos de IA</a>. Ao gerar, o áudio e sua transcrição são salvos automaticamente no projeto.</p><label class="block-label" for="voiceAiModel">Modelo</label><select id="voiceAiModel"><option value="0.6B">Qwen 0.6B</option><option value="1.7B">Qwen 1.7B</option></select>            <label class="block-label" for="voiceProfile">Voz clonada</label><select id="voiceProfile"><option value="">Selecione uma voz</option></select><p id="voiceProfileHint" class="helper-text">Carregando vozes salvas…</p><a href="#voice-settings" class="voice-inline-link">Cadastrar ou ouvir minhas vozes →</a>
+            <label class="block-label" for="voiceAiText">Texto da narração</label><textarea id="voiceAiText" rows="5" maxlength="12000" placeholder="Digite o texto. Separe parágrafos com uma linha vazia."></textarea>
+            <details><summary>Parâmetros de geração</summary><div class="transcription-grid">
+              <label for="voiceAiLanguage">Idioma<select id="voiceAiLanguage"><option value="Portuguese">Português</option><option value="English">Inglês</option><option value="Spanish">Espanhol</option></select></label>
+              <label for="voiceAiDevice">Processamento<select id="voiceAiDevice"><option value="cpu">CPU · compatível</option><option value="cuda">CUDA · requer ambiente GPU configurado</option></select></label>
+              <label for="voiceTemperature">Variação (temperatura)<input id="voiceTemperature" type="number" min="0.1" max="1.5" step="0.05" value="0.9"></label>
+              <label for="voiceTopP">Top P<input id="voiceTopP" type="number" min="0.1" max="1" step="0.05" value="0.9"></label>
+              <label for="voiceRepetition">Penalidade de repetição<input id="voiceRepetition" type="number" min="1" max="2" step="0.05" value="1.05"></label>
+              <label for="voiceParagraphPause">Pausa entre trechos (s)<input id="voiceParagraphPause" type="number" min="0" max="2" step="0.05" value="0.2"></label>
+              <label for="voiceSeed">Seed (opcional)<input id="voiceSeed" type="number" min="0" max="2147483647" step="1"></label>
+            </div><p class="helper-text">Esses parâmetros variam a geração; não são controles exatos de emoção. Qwen Base clona o timbre, mas não garante interpretação por instrução. Não use tags como [laugh] no texto.</p></details>
+<label class="voice-toggle"><input id="voiceAiAppend" type="checkbox">Acrescentar aos trechos de IA selecionados (desmarcado: nova versão)</label><div id="voiceAiTakes" class="voice-takes"></div><button id="voiceAiFinalize" class="btn btn-secondary" type="button">Unir seleção e transcrever novamente</button>
+            <div class="row"><button id="voiceAiGenerate" class="btn btn-primary" type="button">Gerar narração e transcrição</button><button id="voiceJobCancel" class="btn btn-ghost" type="button" disabled>Cancelar tarefa de IA</button></div>
+            <p id="voiceAiProgress" class="voice-progress" role="status" aria-live="polite" hidden></p>
+          </section></div><div id="panel-voice-settings" class="workspace-panel hidden" role="tabpanel" aria-labelledby="tab-voice-settings" hidden>
+<div class="workspace-intro"><span class="eyebrow">CONFIGURAÇÕES / VOZ</span><h2>Sua biblioteca de vozes.</h2><p>Cadastre uma amostra limpa uma vez. Depois, selecione a voz ao gerar a narração.</p></div>
+<div class="voice-settings-layout">
+<section class="voice-create-box voice-profile-library"><span class="eyebrow">01 / VOZES SALVAS</span><h3>Escolha sua voz.</h3><p class="helper-text">Ouça a amostra e marque a voz que deseja usar. Os perfis ficam apenas neste computador.</p><div id="voiceProfilesList" class="voice-profiles-list" aria-live="polite"><p class="helper-text">Carregando vozes…</p></div><a href="#voiceai" class="btn btn-primary">Gerar narração com a voz selecionada →</a></section>
+<section class="voice-create-box voice-profile-form"><span class="eyebrow">02 / NOVA VOZ</span><h3>Cadastrar uma voz.</h3><p class="helper-text">Recomendamos 10–30 segundos de fala natural, sem música ou eco (aceita 3–60 s). O texto precisa corresponder exatamente ao áudio.</p>
+<label class="block-label" for="voiceProfileName">Nome da voz</label><input id="voiceProfileName" maxlength="100" placeholder="Ex.: Minha narração">
+<label class="block-label" for="voiceReferenceFile">Amostra de áudio</label><input id="voiceReferenceFile" type="file" accept="audio/*,.wav,.mp3,.m4a,.ogg,.webm,.flac"><button id="voiceReferenceRecording" class="btn btn-ghost btn-sm" type="button" disabled>Usar a última tomada gravada</button>
+<label class="block-label" for="voiceReferenceText">O que foi dito na amostra?</label><textarea id="voiceReferenceText" rows="6" maxlength="3000" placeholder="Transcreva fielmente, sem instruções de interpretação."></textarea>
+<label class="voice-toggle voice-consent"><input id="voiceConsent" type="checkbox">Esta voz é minha ou tenho autorização para cloná-la.</label><button id="voiceProfileSave" class="btn btn-primary" type="button">Salvar voz neste computador</button><p id="voiceProfileFeedback" class="helper-text" role="status"></p></section>
+</div>
+<section class="voice-create-box voice-runtime-card"><details><summary>Modelos e ambiente de IA</summary><p id="voiceRuntimeStatus" class="helper-text">Confira o ambiente antes de gerar.</p><div class="row"><button id="voiceRuntimeSetup" class="btn btn-secondary btn-sm" type="button">Preparar ambiente</button><button id="voiceStateRefresh" class="btn btn-ghost btn-sm" type="button">Atualizar estado</button></div><label class="block-label" for="voiceModelInstallSelect">Modelo para clonagem</label><div class="row"><select id="voiceModelInstallSelect"><option value="0.6B">Qwen 0.6B · mais leve</option><option value="1.7B">Qwen 1.7B · maior</option></select><button id="voiceModelDownload" class="btn btn-secondary" type="button">Baixar modelo</button></div><p class="helper-text">Download de vários GB somente ao solicitar. Reutiliza o cache local. Na CPU, a geração pode ser lenta. Gravações e textos não são enviados a serviços de geração.</p></details></section></div>
     <div id="panel-transcription" class="workspace-panel hidden" role="tabpanel" aria-labelledby="tab-transcription" hidden>
-      <div class="workspace-intro"><span class="eyebrow">02 / VOZ</span><h2>Sua narração, pronta.</h2><p>Importe, remova silêncios longos, escolha o tom da voz e transcreva. Tudo antes de criar <code>edit_plan.json</code>. Pausas editoriais adicionadas depois ficam no Editor.</p></div>
+      <div class="workspace-intro"><span class="eyebrow">02 / VOZ</span><h2>Trate sua narração.</h2><p>Use um áudio gravado, gerado por IA ou importado. Aqui você limpa ruídos, ajusta pausas, normaliza o volume e gera a transcrição definitiva.</p></div>
       <section class="block transcription-card">
-        <label class="block-label" for="transcriptionProjectRoot">Pasta do vídeo (sem precisar de edit_plan.json)</label>
-        <div class="row transcription-folder-row"><input id="transcriptionProjectRoot" type="text" placeholder="Escolha uma pasta existente" autocomplete="off"><button id="transcriptionChooseFolder" class="btn btn-secondary" type="button">Escolher pasta</button><button id="transcriptionUseEditorProject" class="btn btn-ghost" type="button">Usar pasta do editor</button></div>
-        <p class="helper-text">Pode ser uma pasta vazia. O áudio final fica em <code>audio/narration.wav</code>; a gravação original é preservada. Novos preparos sobrescrevem apenas a narração processada e a transcrição da mesma pasta.</p>
+        <label class="block-label" for="transcriptionScope">Finalidade</label><select id="transcriptionScope"><option value="standalone" selected>Transcrição avulsa — não altera o projeto</option><option value="narration">Tratar e atualizar a narração oficial do projeto</option></select><p class="helper-text">Avulsa: selecione um áudio do computador. Salva JSON, TXT e SRT em uma pasta exclusiva em Downloads, sem cortes ou tratamento, preservando os tempos originais. As opções de tratamento abaixo só se aplicam à narração oficial.</p>
         <div class="transcription-grid">
-          <div><label class="block-label" for="transcriptionFile">Arquivo da narração</label><input id="transcriptionFile" type="file" accept="audio/*,.wav,.mp3,.m4a,.aac,.flac,.ogg,.opus"><p class="helper-text">Escolha a gravação original. Para refazer efeitos de um projeto já preparado, deixe vazio e reutilize o original salvo.</p></div>
+          <div><label class="block-label" for="transcriptionFile">01 / Áudio para tratar</label><input id="transcriptionFile" type="file" accept="audio/*,.wav,.mp3,.m4a,.aac,.flac,.ogg,.opus"><p class="helper-text">Selecione outro áudio ou deixe vazio para usar a narração deste projeto. Quando já houver tratamento, reutilizamos o original preservado.</p></div>
           <div><label class="block-label" for="transcriptionModel">Qualidade do reconhecimento</label><select id="transcriptionModel"><option value="tiny">Muito rápido · tiny</option><option value="base">Rápido · base</option><option value="small" selected>Equilibrado · small</option><option value="medium">Mais preciso · medium</option></select><p class="helper-text">Modelos maiores podem demorar mais. O processamento é local.</p></div>
           <div><label class="block-label" for="transcriptionDetail">Detalhamento do texto e da prévia</label><select id="transcriptionDetail"><option value="words" selected>Por palavra</option><option value="segments">Por trecho</option></select><p class="helper-text">Define o formato de <code>transcript.txt</code> e da prévia. O <code>transcript.json</code> sempre contém <code>words</code> (cada palavra com início e fim) e <code>segments</code> (trechos). O SRT continua organizado por trecho.</p></div>
           <div><label class="block-label" for="transcriptionLanguage">Idioma</label><select id="transcriptionLanguage"><option value="pt" selected>Português</option><option value="">Detectar automaticamente</option><option value="en">Inglês</option><option value="es">Espanhol</option></select></div>
         </div>
-        <div class="voice-studio-options">
-  <div class="voice-studio-options-title"><span class="eyebrow">LIMPEZA DE ÁUDIO</span><strong>Cortes automáticos seguros</strong><p class="helper-text">Sempre remove silêncio no começo e fim. Silêncios internos longos são reduzidos, mantendo uma pausa natural curta. Ouça o resultado para conferir cortes.</p></div>
+        <div class="voice-treatment-step"><span class="eyebrow">02 / RECEITA DE TRATAMENTO</span><h3>Comece por uma receita.</h3><p class="helper-text">As receitas só preenchem os controles. Nada é aplicado até você clicar em Tratar e transcrever. Ajuste para preservar sua interpretação.</p><label class="block-label" for="voiceTreatmentRecipe">Receita</label><select id="voiceTreatmentRecipe"><option value="custom">Personalizada · controles atuais</option><option value="preserve">Preservar interpretação · sem cortar pausas internas</option><option value="balanced">Narração equilibrada · volume e dinâmica</option><option value="strong">Limpeza forte · inclui IA e suavização de sibilância</option></select></div><details id="voiceEnhancementSettings"><summary>Aprimorar voz com IA · reduzir ruído</summary>
+  <p class="helper-text">Processamento local DeepFilterNet: não envia sua voz para a internet. No primeiro uso, baixa a ferramenta oficial (cerca de 35 MB). Limpeza forte pode afetar a naturalidade; compare antes de aprovar. Não é o modelo do Adobe Podcast nem garante remover todo eco ou outras vozes.</p>
+  <div class="transcription-grid"><label for="voiceEnhancementEngine">Aprimoramento<select id="voiceEnhancementEngine"><option value="off">Desativado · manter áudio</option><option value="deepfilter">Ativar redução de ruído por IA</option></select></label>
+  <label for="voiceEnhancementMode">Limpeza<select id="voiceEnhancementMode" disabled><option value="natural">Natural</option><option value="strong">Forte · maior supressão</option></select></label>
+  <label for="voiceEnhancementStrength">Intensidade<input id="voiceEnhancementStrength" type="range" min="0" max="100" step="5" value="80" disabled><output id="voiceEnhancementStrengthValue">80%</output></label></div>
+  <button id="voiceEnhancementPreview" class="btn btn-secondary btn-sm" type="button" disabled>Ouvir teste de até 20 segundos</button>
+  <p class="helper-text">Na importação, testa o arquivo selecionado ou o original salvo; na gravação/IA, a primeira tomada selecionada. A prévia não altera seus arquivos. A opção escolhida será aplicada ao finalizar a narração ou em Importar e tratar.</p>
+  <div id="voiceEnhancementPreviewResult" hidden><label>Antes<audio id="voiceEnhancementBefore" controls preload="none"></audio></label><label>Depois<audio id="voiceEnhancementAfter" controls preload="none"></audio></label><p class="helper-text">Prévia temporária disponível por uma hora. O áudio completo só é substituído ao finalizar/preparar.</p></div>
+</details><div class="voice-studio-options">
+  <div class="voice-studio-options-title"><span class="eyebrow">LIMPEZA DE ÁUDIO</span><strong>Decupagem automática de pausas</strong><p class="helper-text">Corta silêncios, não palavras ou repetições. Ajuste a sensibilidade e confira se as pausas dramáticas foram preservadas.</p></div>
+  <label class="voice-toggle"><input id="transcriptionTrimEdges" type="checkbox" checked> Remover silêncio no começo e fim</label>
   <label class="voice-toggle"><input id="transcriptionRemoveMiddle" type="checkbox" checked> Reduzir silêncios longos no meio</label>
   <div class="transcription-grid">
     <label class="visual-field" for="transcriptionMinSilence">Intervalo interno mínimo
@@ -289,6 +337,10 @@
       <select id="transcriptionThreshold"><option value="-48">Conservadora (−48 dB)</option><option value="-42" selected>Normal (−42 dB)</option><option value="-36">Mais agressiva (−36 dB)</option></select>
     </label>
   </div>
+  <div class="voice-treatment-step"><span class="eyebrow">VOLUME E DINÂMICA</span><h3>Voz consistente, sem exagerar.</h3><div class="voice-treatment-grid">
+<label class="voice-toggle"><input id="transcriptionNormalize" type="checkbox" checked> Normalizar volume</label><label for="transcriptionTargetLufs">Volume alvo<select id="transcriptionTargetLufs"><option value="-16" selected>−16 LUFS · narração (recomendado)</option><option value="-18">−18 LUFS · mais suave</option><option value="-14">−14 LUFS · mais presente</option></select></label>
+<label for="transcriptionHighpass">Filtro de graves indesejados<select id="transcriptionHighpass"><option value="70" selected>70 Hz · moderado</option><option value="0">Desativado</option><option value="90">90 Hz · mais limpeza</option></select></label>
+<label class="voice-toggle"><input id="transcriptionCompression" type="checkbox"> Compressão suave · equilibrar falas altas e baixas</label><label class="voice-toggle"><input id="transcriptionDeesser" type="checkbox"> Suavizar “S” e chiados da fala</label></div><p class="helper-text">Pico alvo da normalização: −1,5 dBTP. Compressão e suavização são opcionais; não recuperam um áudio já estourado.</p></div>
   <div class="voice-studio-options-title"><span class="eyebrow">ESTILO DA VOZ</span><strong>Mais corpo, menos voz artificial</strong><p class="helper-text">Corpo natural usa apenas equalização: não muda o tom da sua voz e dispensa rubberband. Os graves progressivos usam mudanças pequenas de pitch e preservam a duração. Super Grave do CapCut é uma referência sonora, não um preset idêntico. A transcrição usa o áudio limpo antes do efeito.</p></div>
   <label class="visual-field" for="transcriptionVoicePreset">Tratamento da voz
     <select id="transcriptionVoicePreset">
@@ -300,11 +352,11 @@
     </select>
   </label>
 </div>
-<button id="transcriptionStart" class="btn btn-primary" type="button">Preparar narração e gerar transcrição</button>
+<button id="transcriptionStart" class="btn btn-primary" type="button">Tratar e transcrever</button>
         <p id="transcriptionError" class="error-text hidden" role="alert"></p>
         <p id="transcriptionStatus" class="helper-text" role="status" aria-live="polite"></p>
         <div id="transcriptionResult" class="hidden"><div class="transcription-result-head"><strong>Transcrição pronta</strong><span id="transcriptionStats"></span></div><p class="helper-text">Arquivos salvos: <code>audio/narration.wav</code> (efeito opcional), <code>audio/narration.prepared.wav</code>, <code>transcript.json</code>, <code>transcript.txt</code> e <code>transcript.srt</code>.</p><div class="voice-studio-compare"><label class="visual-field" for="transcriptionListenVersion">Comparar o efeito com a voz limpa
-    <select id="transcriptionListenVersion"><option value="styled" selected>Narração final — com tratamento escolhido</option><option value="prepared">Antes do efeito — narração limpa</option></select>
+    <select id="transcriptionListenVersion"><option value="styled" selected>Narração final — com tratamento escolhido</option><option value="prepared">Voz limpa — antes do efeito de timbre</option><option value="original">Original preservado — antes dos cortes e da IA</option></select>
   </label><audio id="transcriptionAudio" class="voice-studio-audio" controls preload="none" aria-label="Ouvir a narração selecionada"></audio></div><p id="transcriptionPreviewDetail" class="helper-text">Prévia com marcações de tempo.</p><textarea id="transcriptionPreview" rows="12" readonly aria-label="Prévia da transcrição com tempos"></textarea><div class="transcription-result-actions"><button id="transcriptionOpenFolder" class="btn btn-secondary btn-sm" type="button">Abrir pasta dos arquivos</button><p id="transcriptionPlanHint" class="helper-text"></p></div></div>
       </section>
     </div>
@@ -320,8 +372,8 @@
         <button id="editorLoad" class="btn btn-primary" type="button">Carregar</button>
       </div>
       <div class="row editor-create-row">
-        <input id="editorNewName" type="text" placeholder="Nome de um novo projeto">
-        <button id="editorCreate" class="btn btn-secondary" type="button">Criar na pasta acima</button>
+        <input id="editorNewName" type="text" placeholder="Nome do vídeo (opcional)">
+        <button id="editorCreate" class="btn btn-secondary" type="button">Criar edit_plan.json nesta pasta</button>
       </div>
       <p id="editorError" class="error-text hidden" role="alert"></p>
       <div id="editorDetails" class="hidden">
@@ -638,9 +690,9 @@
         <div class="thumb-top">
           <label>Projeto <input id="thumb-project-name" type="text" value="Diazverso" maxlength="80" placeholder="Nome da coleção"></label>
           <div class="thumb-top-actions">
-            <button class="btn btn-secondary btn-sm" id="thumb-download-json" type="button">Baixar projeto JSON</button>
+            <button class="btn btn-secondary btn-sm" id="thumb-download-json" type="button">Salvar JSON no projeto</button>
             <button class="btn btn-secondary btn-sm" id="thumb-import-json" type="button">Abrir projeto JSON</button>
-            <button class="btn btn-primary btn-sm" id="thumb-export-all" type="button">Baixar todas (ZIP)</button>
+            <button class="btn btn-primary btn-sm" id="thumb-export-all" type="button">Salvar todas (ZIP)</button>
           </div>
           <input id="thumb-json-file" type="file" accept=".json,application/json" hidden>
           <input id="thumb-image-file" type="file" accept="image/png,image/jpeg,image/webp" hidden>
@@ -659,8 +711,8 @@
                 </select>
               </label>
               <label>Cor base <input id="thumb-bg-color" type="color" value="#233D76"></label>
+              <label hidden>Tom do papel <select id="thumb-paper-tone"><option value="dark">Escuro</option><option value="light">Claro</option></select></label>
               <label><input id="thumb-invert-effects" type="checkbox"> Inverter cor dos efeitos (claro ↔ escuro)</label>
-              <label>Tom do papel <select id="thumb-paper-tone"><option value="dark">Escuro</option><option value="light">Claro</option></select></label>
               <label>Opacidade textura <input id="thumb-texture-opacity" type="range" min="0" max="100" value="36"><output id="thumb-texture-opacity-value"></output></label>
               <label>Imagem contextual
                 <span class="thumb-file-buttons"><button id="thumb-upload-bg" class="btn btn-secondary btn-sm" type="button">Escolher imagem</button><button id="thumb-remove-bg" class="btn btn-ghost btn-sm" type="button">Limpar</button></span>
@@ -668,6 +720,16 @@
               <label>Opacidade imagem <input id="thumb-photo-opacity" type="range" min="0" max="100" value="42"><output id="thumb-photo-opacity-value"></output></label>
               <label>Sombra inferior <input id="thumb-shadow-opacity" type="range" min="0" max="100" value="78"><output id="thumb-shadow-opacity-value"></output></label>
               <label>Altura da sombra <input id="thumb-shadow-height" type="range" min="0" max="100" value="55"><output id="thumb-shadow-height-value"></output></label>
+            </div>
+            <div class="thumb-panel">
+              <h3>Luzes laterais independentes</h3>
+              <p class="thumb-hint">Degradês das bordas para o centro, mesmo sem personagens. Não são o brilho atrás dos PNGs.</p>
+              <label>Cor à esquerda <input id="thumb-light-left-color" type="color" value="#4285E0"></label>
+              <label>Força à esquerda <input id="thumb-light-left-opacity" type="range" min="0" max="100" value="0"><output id="thumb-light-left-opacity-value"></output></label>
+              <label>Alcance à esquerda <input id="thumb-light-left-reach" type="range" min="1" max="100" value="56"><output id="thumb-light-left-reach-value"></output></label>
+              <label>Cor à direita <input id="thumb-light-right-color" type="color" value="#F5D334"></label>
+              <label>Força à direita <input id="thumb-light-right-opacity" type="range" min="0" max="100" value="0"><output id="thumb-light-right-opacity-value"></output></label>
+              <label>Alcance à direita <input id="thumb-light-right-reach" type="range" min="1" max="100" value="56"><output id="thumb-light-right-reach-value"></output></label>
             </div>
             <div class="thumb-panel">
               <h3>Camadas</h3>
@@ -696,13 +758,15 @@
               <canvas id="thumb-canvas" width="1280" height="720" aria-label="Prévia editável da thumbnail" tabindex="0"></canvas>
             </div>
             <div class="thumb-actions">
-              <button class="btn btn-secondary" id="thumb-export-current" type="button">Baixar PNG desta versão</button>
+              <label>Resolução <select id="thumb-output-resolution"><option value="full_hd">Full HD · 1920 × 1080</option><option value="4k">4K · 3840 × 2160</option></select></label>
+              <label>Formato <select id="thumb-output-format"><option value="jpeg">JPG · alta qualidade</option><option value="png">PNG</option><option value="webp">WebP</option></select></label>
+              <button class="btn btn-secondary" id="thumb-export-current" type="button">Salvar imagem no projeto</button>
               <button class="btn btn-secondary" id="thumb-duplicate-variant" type="button">Duplicar versão</button>
               <button class="btn btn-ghost" id="thumb-remove-variant" type="button">Excluir versão selecionada</button>
             </div>
             <div class="thumb-panel thumb-instructions">
               <h3>Como funciona</h3>
-              <p>Crie a thumbnail do vídeo longo, importe PNGs recortados e posicione as camadas. O texto <strong>Anton</strong> tem preenchimento atrás e contorno alinhado na frente do personagem central. Clique em <strong>Novo Short</strong> para herdar todo o cenário e trocar somente o personagem e a frase. Tudo é salvo localmente no navegador; você também pode guardar o JSON como projeto editável.</p>
+              <p>Crie a thumbnail do vídeo longo, importe PNGs recortados e posicione as camadas. O título Anton tem preenchimento atrás e contorno à frente do personagem. Novo Short herda o cenário. O rascunho editável é salvo em <code>thumbnails/project.json</code> na pasta selecionada no topo; imagens e ZIPs também ficam em <code>thumbnails/</code>.</p>
               <p id="thumb-status" role="status" aria-live="polite">Preparando o editor...</p>
             </div>
           </div>
@@ -957,11 +1021,14 @@
 </div>
 
 <script src="/static/app.js"></script>
+<script src="/static/voice-creation.js"></script>
+<script src="/static/narration-player.js"></script>
 <script src="/static/visual_editor.js"></script>
 <script src="/static/publications.js"></script>
 <script src="/static/social-connections.js"></script>
 <script src="/static/metrics.js"></script>
 <script src="/static/media-library.js"></script>
+<script src="/static/workspace-project.js"></script>
 <script src="/static/thumbnail-studio.js"></script>
 </body>
 </html>

@@ -6,6 +6,7 @@ import {run} from './exec.mjs';
 import {mediaToolExecutable,ffmpegFilterAvailable} from './runtime-tools.mjs';
 import {prepareNarration,probeAudioDuration} from './audio.mjs';
 import {transcribeAudio} from './transcribe.mjs';
+import {enhanceVoice,enhancementOptions} from './voice-enhancement.mjs';
 
 const fmt=x=>Number(x).toFixed(6);
 const AUDIO_EXT=new Set(['.wav','.mp3','.m4a','.aac','.flac','.ogg','.opus']);
@@ -36,6 +37,10 @@ export const VOICE_PRESETS=Object.freeze({
   deep:{pitchSemitones:-0.7,bassGainDb:2.1}
 });
 export function voiceOptions(raw={}){
+  for(const key of ['trimEdges','normalize','compression','deesser'])if(raw[key]!==undefined&&typeof raw[key]!=='boolean')throw Error('Opção de tratamento inválida: '+key);
+  const targetLufs=Number(raw.targetLufs??-16),highpassHz=Number(raw.highpassHz??70);
+  if(!Number.isFinite(targetLufs)||targetLufs< -24||targetLufs> -12)throw Error('Volume alvo deve ficar entre -24 e -12 LUFS.');
+  if(!Number.isFinite(highpassHz)||highpassHz<0||highpassHz>120)throw Error('Filtro de graves deve ficar entre 0 e 120 Hz.');
   const minSilence=raw.minSilence===undefined?.7:Number(raw.minSilence);
   const thresholdDb=raw.thresholdDb===undefined?-42:Number(raw.thresholdDb);
   const voicePreset=raw.voicePreset===undefined?
@@ -56,7 +61,7 @@ export function voiceOptions(raw={}){
   if(!Number.isFinite(pitchSemitones)||pitchSemitones< -3||pitchSemitones>0)
     throw Error('Pitch permitido: de -3 a 0 semitons.');
   return {removeMiddleSilence:raw.removeMiddleSilence!==false,minSilence,
-    thresholdDb,voicePreset,pitchSemitones,bassGainDb};
+    thresholdDb,voicePreset,pitchSemitones,bassGainDb,trimEdges:raw.trimEdges!==false,normalize:raw.normalize!==false,compression:raw.compression===true,deesser:raw.deesser===true,targetLufs,highpassHz,...enhancementOptions(raw)};
 }
 // FFmpeg silencedetect emits start/end pairs; retain speech-adjacent padding.
 // No silence removal is allowed to depend on the edit plan's future pauses.
@@ -77,7 +82,7 @@ export function keepRanges(duration,detected,options={}){
     const begin=Math.max(cursor,Math.min(duration,gap.start));
     const end=Math.max(begin,Math.min(duration,gap.end));
     const edgeStart=begin<=.10,edgeEnd=end>=duration-.10;
-    const cut=edgeStart||edgeEnd||(config.removeMiddleSilence&&end-begin>=config.minSilence);
+    const cut=edgeStart||edgeEnd?config.trimEdges:(config.removeMiddleSilence&&end-begin>=config.minSilence);
     if(!cut)continue;
     // Boundary silence must be removed almost entirely; the small 20ms
     // guard keeps a natural seam without leaving audible dead air.
@@ -156,7 +161,7 @@ export function voiceStudioState(folder){
 }
 export async function prepareStandaloneNarration(directory,{
   sourceFile,options={},model='small',language='pt',detail='words',
-  update=()=>{},signal,ffmpeg='ffmpeg',ffprobe='ffprobe',transcriber=transcribeAudio
+  update=()=>{},signal,ffmpeg='ffmpeg',ffprobe='ffprobe',transcriber=transcribeAudio,enhancer=enhanceVoice
 }={}){
   const root=voiceStudioFolder(directory),config=voiceOptions(options);
   if(!sourceFile||!fs.existsSync(sourceFile))throw Error('Selecione um arquivo de narração válido.');
@@ -168,12 +173,26 @@ export async function prepareStandaloneNarration(directory,{
     // original from disk, even when the output has the same project folder.
     const source=path.join(staged,'source'+ext);
     fs.copyFileSync(sourceFile,source);
+    let working=source,enhancement={applied:false};
+    if(config.enhancementEngine!=='off'&&config.enhancementStrength>0){
+      working=path.join(staged,'enhanced.wav');
+      enhancement=await enhancer(source,working,config,{ffmpeg,ffprobe,signal,update});
+    }
+    if(config.compression||config.deesser){
+      update('Equilibrando a dinâmica e suavizando sibilância...');
+      const processed=path.join(staged,'dynamics.wav'),filters=[];
+      if(config.compression)filters.push('acompressor=threshold=0.125:ratio=2:attack=15:release=180:makeup=1');
+      if(config.deesser)filters.push('deesser=i=0.15:m=0.3:f=0.5:s=o');
+      await run(ffmpeg,['-hide_banner','-loglevel','error','-i',working,'-vn','-af',filters.join(','),'-ar','48000','-c:a','pcm_s16le',processed],{signal});
+      if(Math.abs(await probeAudioDuration(processed,{ffprobe,signal})-await probeAudioDuration(working,{ffprobe,signal}))>.01)throw Error('O tratamento de dinâmica alterou a duração.');
+      working=processed;
+    }
     update('Localizando pausas e removendo silêncios de borda e intervalos internos longos...');
-    const layout=await analyzeVoice(source,config,{ffmpeg,ffprobe,signal});
+    const layout=await analyzeVoice(working,config,{ffmpeg,ffprobe,signal});
     const neutral=path.join(staged,'narration.prepared.wav');
-    await prepareNarration(source,neutral,{
-      sourceCuts:layout.cuts,voice:{autoTrimSilence:false,highpassHz:70,normalize:true,
-        targetLufs:-16,truePeakDb:-1.5}
+    await prepareNarration(working,neutral,{
+      sourceCuts:layout.cuts,voice:{autoTrimSilence:false,highpassHz:config.highpassHz,normalize:config.normalize,
+        targetLufs:config.targetLufs,truePeakDb:-1.5}
     },{ffmpeg,ffprobe,signal,duration:layout.duration,autoTrimCuts:layout.cuts});
     const styled=path.join(staged,'narration.wav');
     update('Aplicando efeitos de voz opcionais...');
@@ -201,7 +220,7 @@ export async function prepareStandaloneNarration(directory,{
     const meta={mode:'voice-studio',version:1,source:original,output:NARRATION_OUTPUT,
       neutral:NARRATION_NEUTRAL,outputIdentity:{size:identity.size,mtimeMs:identity.mtimeMs},
       duration:await probeAudioDuration(neutral,{ffprobe,signal}),originalDuration:layout.originalDuration,
-      options:config,removedCount:layout.removed.length,removedRanges:layout.removed,
+      options:config,enhancement,removedCount:layout.removed.length,removedRanges:layout.removed,
       model,language,generatedAt:new Date().toISOString()};
     const written=path.join(staged,'narration.build.json');
     fs.writeFileSync(written,JSON.stringify(meta,null,2)+'\n');
