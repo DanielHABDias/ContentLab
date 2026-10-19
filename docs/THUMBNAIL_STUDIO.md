@@ -5,7 +5,7 @@ O editor visual de thumbnails fica na aba **Thumbnails** do Content Lab. Ele é 
 ## Fluxo de trabalho
 
 1. Abra **Thumbnails** na barra lateral e dê um nome à coleção.
-2. Edite a **base do vídeo longo (16:9)**. Escolha um dos estilos de fundo de `BackgroundHQ`: `halftone`, `paper`, `film`, `stars`, `grid` ou `solid`, ou selecione sem textura.
+2. Edite a **base do vídeo longo (16:9)**. Escolha um dos estilos de fundo de `BackgroundHQ`: `halftone`, `paper`, `film`, `stars`, `grid`, `comic_page` (Página HQ transparente) ou `solid`, ou selecione sem textura.
 3. Importe uma imagem contextual (por exemplo, cenário/cidade) e ajuste a opacidade. As texturas são desenhadas *sobre* essa imagem, respeitando transparência.
 4. Importe PNGs recortados para **personagem principal**, **esquerdo** e **direito**. Selecione a camada e arraste sobre a prévia; ajuste tamanho, opacidade, rotação, flip, glow e luz de cada figura nos controles.
 5. Defina uma frase curta. O mesmo texto é desenhado na **posição exata em duas passadas**: preenchimento com glow *atrás* do personagem central, depois traço fino *à frente*. A fonte inicial é Anton; Bangers é opcional. Um subtítulo em caixa é opcional.
@@ -31,7 +31,7 @@ O editor visual de thumbnails fica na aba **Thumbnails** do Content Lab. Ele é 
 
 1. Cor base.
 2. Imagem contextual, com opacidade controlada.
-3. Textura HQ (halftone/papel/filme/estrelas/grade).
+3. Textura HQ (halftone/papel/filme/estrelas/grade/página transparente).
 4. Luzes laterais e luz do centro.
 5. Personagens laterais.
 6. Sombra inferior em degradê.
@@ -60,7 +60,7 @@ abaixo para evitar campos indefinidos na interface.
 | Objeto | Campos e unidades |
 | --- | --- |
 | `media` | Mapa `chave → data:image/png;base64,...` (também jpeg/webp). Bytes reais, sem URLs externas nem placeholders de base64. |
-| `background` | `style`: halftone/paper/film/stars/grid/solid/none; `color`: #RRGGBB; `paperTone`: light/dark; `textureOpacity`, `photoOpacity`, `shadowOpacity`, `shadowHeight`: 0–100; `invertEffects`: booleano. |
+| `background` | `style`: halftone/paper/film/stars/grid/comic_page/solid/none; `color`: #RRGGBB; `paperTone`: light/dark; `textureOpacity`, `photoOpacity`, `shadowOpacity`, `shadowHeight`: 0–100; `invertEffects`: booleano. |
 | Foto contextual | `background.photo`: chave de `media` ou null; `photoX`, `photoY`: frações de posição, centro 0,5; `photoScale`: zoom (interface 0,5–3). |
 | Figura (`left`, `center`, `right`) | `image`: chave de `media` ou null; `x`, `y`: posição fracionária (0,5 = centro, interface −0,5 a 1,5); `scale`: altura relativa à tela (interface 0,08–2,2); `opacity`: 0–100; `rotate`: graus −180 a 180; `flip`: booleano. |
 | Tratamento da figura | `saturation`, `brightness`: 0–200%, ausentes preservam 100%; `glowColor`: #RRGGBB; `glowOpacity`: 0–100%; `glowSize`: raio relativo à menor dimensão (interface 1–150%). |
@@ -118,3 +118,7 @@ coleções começam com laterais discretas (opacidade 45%, saturação 45%, luz 
 mantendo o protagonista nítido e o texto preenchido atrás dele, contorno à frente.
 
 Verifique com a prévia real os PNGs recortados, margens do cabelo/rosto, leitura mobile do título, alinhamento do contorno, contrastes sobre halftone, luzes e recorte vertical após trocar o personagem. Confira os PNGs exportados em 1280×720 e 1080×1920. O JSON é um formato de projeto, não uma exigência de edição manual.
+
+### Página HQ transparente
+
+`background.style: "comic_page"` usa o mesmo PNG original do BackgroundHQ. Os espaços entre as divisórias continuam transparentes e mostram a cor/foto base. `textureOpacity` controla a intensidade, e `invertEffects` permite divisórias claras sobre fundos escuros. A imagem usa cover centralizado: sem distorção, com recorte lateral possível em 9:16. Não redesenha os quadros.

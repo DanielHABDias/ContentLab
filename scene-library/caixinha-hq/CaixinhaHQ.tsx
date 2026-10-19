@@ -1,3 +1,4 @@
+import {HQComicPage, type HQComicPageOptions} from './HQComicPage';
 import React from 'react';
 import {AbsoluteFill, useCurrentFrame, useVideoConfig, delayRender, continueRender, cancelRender} from 'remotion';
 import {loadFont} from '@remotion/fonts';
@@ -7,7 +8,7 @@ type Corner = 'superior-esquerdo' | 'superior-direito' | 'inferior-esquerdo' | '
 type Animation = 'lateral' | 'vertical' | 'pop';
 type IconName = 'youtube' | 'like' | 'sininho' | 'seta' | 'instagram' | 'none';
 type Action = 'auto' | 'clique' | 'sininho' | 'pulo' | 'none';
-type Props = {fontFamily?: HQFont; preset?: Preset; corner?: Corner; animation?: Animation; exitAnimation?: Animation;
+type Props = HQComicPageOptions & {fontFamily?: HQFont; preset?: Preset; corner?: Corner; animation?: Animation; exitAnimation?: Animation;
   text?: string; instagramHandle?: string; boxColor?: string; textColor?: string; icon?: IconName;
   at?: number; holdDuration?: number; animationDuration?: number;
   action?: Action; actionAt?: number; actionDuration?: number; assets?: {bangers?: string; anton?: string}};
@@ -40,7 +41,7 @@ function Icon({name, size}: {name: IconName; size: number}) {
 }
 
 // Transparent overlay: the footage underneath remains untouched.
-export default function CaixinhaHQ({fontFamily="Bangers", preset = 'inscricao', corner = 'inferior-direito', animation = 'lateral', exitAnimation,
+export default function CaixinhaHQ({backgroundStyle, backgroundOpacity=100, fontFamily="Bangers", preset = 'inscricao', corner = 'inferior-direito', animation = 'lateral', exitAnimation,
   text, instagramHandle, boxColor, textColor, icon, at = 0, holdDuration = 5, animationDuration = .4,
   action = 'auto', actionAt, actionDuration, assets = {}}: Props) {
   const fontUrl=resolveHQFont(fontFamily,assets);
@@ -60,11 +61,11 @@ export default function CaixinhaHQ({fontFamily="Bangers", preset = 'inscricao', 
   if (gesture !== 'none' && (!Number.isFinite(actionLength) || actionLength < 2 / fps || !Number.isFinite(actionCenter) || actionCenter - actionLength / 2 < at + animationDuration - 1e-8 || actionCenter + actionLength / 2 > at + animationDuration + holdDuration + 1e-8)) throw new Error('A ação deve caber no tempo de leitura, sem sobrepor entrada/saída. actionAt é seu centro, em segundos relativos à cena.');
   const style = presets[preset];
   // A marca define o @ via props; text continua podendo substituir a frase inteira.
-  const handle = instagramHandle?.trim();
-  if (preset === 'instagram' && text === undefined && handle && !/^@?[A-Za-z0-9._]{1,30}$/.test(handle)) {
+  const accountHandle = instagramHandle?.trim();
+  if (preset === 'instagram' && text === undefined && accountHandle && !/^@?[A-Za-z0-9._]{1,30}$/.test(accountHandle)) {
     throw new Error('instagramHandle deve ser um @ do Instagram válido (letras, números, ponto ou _; até 30 caracteres).');
   }
-  const instagramText = preset === 'instagram' && handle ? `${style.text} @${handle.replace(/^@/, '')}` : style.text;
+  const instagramText = preset === 'instagram' && accountHandle ? `${style.text} @${accountHandle.replace(/^@/, '')}` : style.text;
   const phrase = (text ?? instagramText).normalize('NFC').toLocaleUpperCase('pt-BR').trim();
   const fill = boxColor ?? style.box;
   const color = textColor ?? style.color;
@@ -121,8 +122,9 @@ export default function CaixinhaHQ({fontFamily="Bangers", preset = 'inscricao', 
   const actionY = gesture === 'pulo' ? -32 * u * pulse : 0;
   const actionAngle = gesture === 'sininho' ? Math.sin(actionP * Math.PI * 8) * Math.sin(actionP * Math.PI) * 4 : 0;
   const outline = color.toUpperCase() === '#080A11' || color.toUpperCase() === '#000000' ? '#FFFFFF55' : '#080A11';
-  if (!layout || t < at || t >= end) return null;
+  if (!layout || t < at || t >= end) return backgroundStyle==='comic_page'?<HQComicPage opacity={backgroundOpacity}/>:null;
   return <AbsoluteFill style={{pointerEvents: 'none', overflow: 'hidden'}}>
+    {backgroundStyle==='comic_page'&&<HQComicPage opacity={backgroundOpacity}/>}
     <div style={{position: 'absolute', left: center ? (w - boxW) / 2 : right ? w - marginX - boxW : marginX, top: center ? (h - boxH) / 2 : top ? marginY : h - marginY - boxH,
       width: boxW, minHeight: boxH,
       translate: `${incoming.x + outgoing.x}px ${incoming.y + outgoing.y}px`, scale,

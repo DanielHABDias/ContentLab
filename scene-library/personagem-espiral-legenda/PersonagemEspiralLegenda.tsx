@@ -1,10 +1,11 @@
+import {HQComicPage, type HQComicPageOptions} from './HQComicPage';
 import React from 'react';
 import {AbsoluteFill, Img, delayRender, continueRender, cancelRender, useCurrentFrame, useVideoConfig} from 'remotion';
 import {loadFont} from '@remotion/fonts';
 import type {Caption} from '@remotion/captions';
 
 type Word = {word?: string; text?: string; start: number; end: number};
-type Props = {fontFamily?: HQFont;
+type Props = HQComicPageOptions & {fontFamily?: HQFont;
   assets?: {character?: string; bangers?: string; anton?: string};
   backgroundVariant?: 'espiral' | 'crescente';
   captions?: Caption[]; words?: Word[]; transcriptOffset?: number;
@@ -51,7 +52,7 @@ function Spiral({variant, time, width, height}: {variant: 'espiral' | 'crescente
   </>;
 }
 
-export default function PersonagemEspiralLegenda({fontFamily="Bangers", assets = {}, backgroundVariant = 'espiral', captions, words,
+export default function PersonagemEspiralLegenda({backgroundStyle, backgroundOpacity=100, fontFamily="Bangers", assets = {}, backgroundVariant = 'espiral', captions, words,
   transcriptOffset = 0, entryDuration = .6, entryDelay = 0, characterScale = 1,
   headAnchor = {x: .5, y: .3}, sway = .65, maxWords = 5,
   captionColor = '#FFFFFF', highlightColors = ['#175AE8', '#F22932', '#111111']}: Props) {
@@ -111,8 +112,8 @@ export default function PersonagemEspiralLegenda({fontFamily="Bangers", assets =
     else previous.push(cue);
   }
   const page = pages.find(group => t * 1000 >= group[0].startMs && t * 1000 < group.at(-1)!.endMs);
-  return <AbsoluteFill style={{overflow: 'hidden', background: '#080808'}}>
-    <Spiral variant={backgroundVariant} time={t} width={w} height={h} />
+  return <AbsoluteFill style={{overflow: 'hidden', background: backgroundStyle==='comic_page'?'transparent':'#080808'}}>
+    {backgroundStyle==='comic_page'?<HQComicPage opacity={backgroundOpacity}/>:<Spiral variant={backgroundVariant} time={t} width={w} height={h} />}
     {bounds && <div style={{position: 'absolute', left: w / 2 - charW * headAnchor.x,
       top: h / 2 - charH * headAnchor.y, width: charW, height: charH,
       translate: `0 ${(1 - arrival) * (h + charH)}px`, rotate: `${angle}deg`,

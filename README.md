@@ -342,3 +342,9 @@ Flip e Curtain são transições nativas entre duas cenas: transitionOut: flip o
 | [Personagem, espiral e legenda](scene-library/personagem-espiral-legenda/README.md) | Personagem sobe sobre espiral pixelada e legenda por palavra. |
 | [Quadro HQ sobre cena](scene-library/quadro-hq-sobre-cena/README.md) | Etiqueta e caixa de narração sobre mídia externa. |
 | [Texto HQ](scene-library/texto-hq/README.md) | Frases/palavras com Anton ou Bangers, escrita e Kinetic. |
+
+### Página HQ transparente
+
+O fundo **Página HQ transparente** (`backgroundStyle: "comic_page"`) está disponível nos 15 presets, incluindo BackgroundHQ, e no Studio de Thumbnails (`background.style: "comic_page"`). Usa a arte original com divisórias e canal alfa. Controle a intensidade com `backgroundOpacity` (TSX) ou `textureOpacity` (thumbnail), entre 0 e 100. Nos vídeos, use `mode: "overlay"` para manter a mídia da cena por trás. A imagem preenche sem distorcer; em retrato, pode recortar as laterais.
+
+**Preparar no projeto** inclui automaticamente `HQComicPage.tsx`. Na instalação manual, copie o TSX escolhido **e** esse auxiliar para `custom-scenes/`; uma única cópia do auxiliar atende a todos os presets. O PNG também está disponível como `builtin://backgrounds/background_pagina_hq.png`. Não é necessário manter o arquivo em Downloads.

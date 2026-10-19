@@ -1,9 +1,10 @@
+import {HQComicPage, type HQComicPageOptions} from './HQComicPage';
 import React from 'react';
 import {AbsoluteFill, useCurrentFrame, useVideoConfig} from 'remotion';
 
 type ProgressPoint = {at:number; value:number; easing?:'linear'|'smooth'};
 type ColorPoint = {at:number; color:string};
-type Props = {points?:ProgressPoint[]; colors?:ColorPoint[]; position?:'top'|'bottom'|'center';
+type Props = HQComicPageOptions & {points?:ProgressPoint[]; colors?:ColorPoint[]; position?:'top'|'bottom'|'center';
   width?:number; height?:number; margin?:number; x?:number; y?:number;
   trackColor?:string; outlineColor?:string; texture?:boolean; opacity?:number};
 const clamp=(v:number)=>Math.max(0,Math.min(1,v));
@@ -27,7 +28,7 @@ export function colorAt(colors:ColorPoint[],time:number){
   return colors[colors.length-1].color;
 }
 
-export default function BarraLoadingHQ({points,colors,position='bottom',width=86,height=6,margin=7,x,y,
+export default function BarraLoadingHQ({backgroundStyle, backgroundOpacity=100, points,colors,position='bottom',width=86,height=6,margin=7,x,y,
   trackColor='#FFF3D6',outlineColor='#101018',texture=true,opacity=1}:Props){
   const {width:w,height:h,fps,durationInFrames}=useVideoConfig();const time=useCurrentFrame()/fps;
   // A duração pertence à cena; sem pontos explícitos, preenche até seu último quadro.
@@ -42,6 +43,7 @@ export default function BarraLoadingHQ({points,colors,position='bottom',width=86
   if(cx-bw/2<ink||cx+bw/2+shadow>w-ink||cy-bh/2<ink||cy+bh/2+shadow>h-ink)throw new Error('Barra fora da tela: ajuste x/y, width ou margin.');
   const value=progressAt(progress,time),fill=colorAt(stops,time),id=React.useId().replace(/:/g,'');
   return <AbsoluteFill style={{pointerEvents:'none',opacity,backgroundColor:'transparent'}}>
+    {backgroundStyle==='comic_page'&&<HQComicPage opacity={backgroundOpacity}/>}
     <svg width={bw+shadow+ink*2} height={bh+shadow+ink*2} viewBox={`0 0 ${bw+shadow+ink*2} ${bh+shadow+ink*2}`} style={{position:'absolute',left:cx-bw/2-ink,top:cy-bh/2-ink,overflow:'visible'}}>
       <defs>
         <clipPath id={`${id}track`}><rect x={ink*2} y={ink*2} width={bw-ink*2} height={bh-ink*2} rx={bh*.15}/></clipPath>

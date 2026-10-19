@@ -1,6 +1,6 @@
 # Biblioteca de backgrounds
 
-Coleção de 48 arquivos incluídos no aplicativo. Todos usam o prefixo
+Coleção de backgrounds incluídos no aplicativo. Todos usam o prefixo
 `background_`. Use o nome exato, incluindo a extensão, no JSON. Eles aparecem no
 seletor de backgrounds do editor.
 
@@ -50,3 +50,5 @@ Os vídeos antes numerados também estão disponíveis:
 
 Planos JSON criados antes da reorganização precisam usar o URI atual,
 `builtin://backgrounds/nome-do-arquivo.ext`.
+
+- `background_pagina_hq.png`: página de quadrinhos com divisórias e transparência original. URI: `builtin://backgrounds/background_pagina_hq.png`. Também disponível como `backgroundStyle: "comic_page"` nos 15 presets e no Studio de Thumbnails.

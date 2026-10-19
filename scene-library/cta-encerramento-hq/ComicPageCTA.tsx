@@ -1,3 +1,4 @@
+import {HQComicPage, type HQComicPageOptions} from './HQComicPage';
 import React from 'react';
 import {
   AbsoluteFill, Img, cancelRender, continueRender, delayRender,
@@ -5,7 +6,7 @@ import {
 } from 'remotion';
 import {loadFont} from '@remotion/fonts';
 
-type Props = {channelName?:string;topTitle?:string;subscribeText?:string;calloutText?:string;fontFamily?: HQFont;
+type Props = HQComicPageOptions & {channelName?:string;topTitle?:string;subscribeText?:string;calloutText?:string;fontFamily?: HQFont;
   /** Texto abaixo da thumbnail. */
   headline?: string;
   /** Somente a faixa diagonal superior; os demais detalhes vermelhos são fixos. */
@@ -18,7 +19,7 @@ type Props = {channelName?:string;topTitle?:string;subscribeText?:string;callout
 const clamp = (n: number) => Math.max(0, Math.min(1, n));
 const ease = (n: number) => {const x = clamp(n); return x * x * (3 - 2 * x);};
 
-export default function ComicPageCTA({fontFamily="Bangers",
+export default function ComicPageCTA({backgroundStyle, backgroundOpacity=100, fontFamily="Bangers",
   channelName='', topTitle='CONTINUE ESSA HISTÓRIA!', subscribeText='INSCREVA-SE', calloutText='VAI LÁ ASSISTIR!', headline = 'A ANÁLISE COMPLETA', stripeColor = '#EF3F49',
   leftTitle = 'ASSISTA TAMBÉM', rightTitle = 'PRÓXIMO VÍDEO', assets = {},
 }: Props) {
@@ -60,9 +61,10 @@ export default function ComicPageCTA({fontFamily="Bangers",
       boxSizing: 'border-box', padding: `${10 * unit}px ${12 * unit}px`,
       fontFamily: fontFamily, background: ink, color: '#FFFFFF',
       fontSize: 54 * unit, lineHeight: 1.05, textAlign: 'center', overflowWrap: 'break-word'};
-    return <AbsoluteFill style={{background: paper, overflow: 'hidden', fontFamily: fontFamily}}>
-      <AbsoluteFill style={{opacity: .16, backgroundImage: `radial-gradient(${ink} ${2 * unit}px, transparent ${2.5 * unit}px)`,
-        backgroundSize: `${22 * unit}px ${22 * unit}px`}} />
+    return <AbsoluteFill style={{background: backgroundStyle==='comic_page'?'transparent':paper, overflow: 'hidden', fontFamily: fontFamily}}>
+      {backgroundStyle==='comic_page'&&<HQComicPage opacity={backgroundOpacity}/>}
+      {backgroundStyle!=='comic_page'&&<AbsoluteFill style={{opacity: .16, backgroundImage: `radial-gradient(${ink} ${2 * unit}px, transparent ${2.5 * unit}px)`,
+        backgroundSize: `${22 * unit}px ${22 * unit}px`}} />}
       <div style={{position: 'absolute', left: '-5%', top: '8%', width: '110%', height: '19%',
         boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center',
         background: stripeColor, rotate: '-3deg', borderTop: `${7 * unit}px solid ${ink}`,
@@ -99,11 +101,12 @@ export default function ComicPageCTA({fontFamily="Bangers",
         fontSize: 32 * unit, color: ink, opacity: pageIn}}>{channelName}</div>
     </AbsoluteFill>;
   }
-  return <AbsoluteFill style={{overflow: 'hidden', background: ink,
+  return <AbsoluteFill style={{overflow: 'hidden', background: backgroundStyle==='comic_page'?'transparent':ink,
     fontFamily: fontFamily, opacity: Math.min(1, (1 - p) * 24)}}>
-    <AbsoluteFill style={{background: paper, transform: `translateX(${(1 - pageIn) * w}px)`}} />
-    <AbsoluteFill style={{opacity: .19, backgroundImage: `radial-gradient(${ink} 2px, transparent 2.5px)`,
-      backgroundSize: '22px 22px'}} />
+    {backgroundStyle!=='comic_page'&&<AbsoluteFill style={{background: paper, transform: `translateX(${(1 - pageIn) * w}px)`}} />}
+    {backgroundStyle==='comic_page'&&<HQComicPage opacity={backgroundOpacity}/>}
+    {backgroundStyle!=='comic_page'&&<AbsoluteFill style={{opacity: .19, backgroundImage: `radial-gradient(${ink} 2px, transparent 2.5px)`,
+      backgroundSize: '22px 22px'}} />}
     <div style={{position: 'absolute', width: w * 1.5, height: h * .15,
       left: -w * .25, top: h * .12, transform: 'rotate(-12deg)',
       background: stripeColor, borderTop: `9px solid ${ink}`, borderBottom: `9px solid ${ink}`}} />

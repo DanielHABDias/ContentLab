@@ -131,6 +131,8 @@ Quando a composição precisar de uma câmera virtual que percorre um espaço ma
 
 Primeiro escolha entre os padrões da Galeria de cenas especiais. Só gere um TSX novo quando a intenção não for coberta pela biblioteca. Para alterações, preserve o módulo, IDs, tempo e assets; não reescreva o plano inteiro por mudanças pontuais.
 
+Todos os 15 presets oferecem backgroundStyle:comic_page (Página HQ transparente) e backgroundOpacity:0–100. A arte PNG original mantém as divisórias e o canal alfa, sem impor cor de fundo. Em retrato, cover centralizado pode recortar as laterais sem distorcer. Para mídia por trás, use customComponent.mode:overlay. A galeria instala o TSX e HQComicPage.tsx automaticamente; na cópia manual, copie ambos para custom-scenes, compartilhando uma única cópia do auxiliar. O BackgroundHQ também oferece essa página na aba Thumbnails, com intensidade e inversão dos efeitos.
+
 Baixe ou salve o arquivo TSX gerado pelo ChatGPT em seu computador e coloque-o dentro da pasta do projeto: custom-scenes/MinhaCena.tsx. A interface atual não baixa nem instala automaticamente o código produzido no chat; essa cópia é manual. Use project://custom-scenes/MinhaCena.tsx em timeline[].customComponent.module. A geração e o download do arquivo dependem das ferramentas que estiverem disponíveis no ChatGPT.
 
 No edit_plan.json existente, use customComponent: {module: 'project://custom-scenes/MinhaCena.tsx', mode: 'replace', props: {...}, assets: {...}}. mode replace entrega toda a composição visual ao componente; mode overlay desenha o TSX sobre as camadas tradicionais. Elementos overlay com z igual ou maior que 900 ficam acima do TSX em ambos os modos, inclusive chroma key; em mode overlay, os demais elementos tradicionais ficam abaixo. O JSX deve ter export default. Não cole código TSX dentro do JSON: o contrato só contém referência, parâmetros e URIs de assets.
@@ -255,12 +257,14 @@ Módulo: `project://custom-scenes/BackgroundHQ.tsx`. Fontes: Anton ou Bangers qu
 
 ![Exemplo de Fundo HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/background-hq/preview-0-16x9.png)
 ![Exemplo de Fundo HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/background-hq/preview-0-9x16.png)
+![Exemplo de Fundo HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/background-hq/previa-pagina-hq-16x9.png)
+![Exemplo de Fundo HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/background-hq/previa-pagina-hq-9x16.png)
 
-Guia: [background-hq](../scene-library/background-hq/README.md). Exemplos: [exemplo-cena.json](../scene-library/background-hq/exemplo-cena.json)
+Guia: [background-hq](../scene-library/background-hq/README.md). Exemplos: [exemplo-cena.json](../scene-library/background-hq/exemplo-cena.json) · [exemplo-pagina-hq.json](../scene-library/background-hq/exemplo-pagina-hq.json)
 
 ```ts
 type HQBackgroundOptions = {
-  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
   backgroundColor?: string;
   backgroundOpacity?: number;
   paperTone?: 'light' | 'dark';
@@ -286,6 +290,7 @@ type ColorPoint = {at:number; color:string};
 type Props = {points?:ProgressPoint[]; colors?:ColorPoint[]; position?:'top'|'bottom'|'center';
   width?:number; height?:number; margin?:number; x?:number; y?:number;
   trackColor?:string; outlineColor?:string; texture?:boolean; opacity?:number};
+type HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};
 ```
 
 ### Brainstorm HQ
@@ -312,7 +317,7 @@ type Props = HQBackgroundOptions & {fontFamily?: HQFont; nodes:Node[]; steps:Ste
   lineColor?:string; zoomOutDuration?:number; presentation?:'cards'|'path'|'narrative'|'evidence'; heading?:string; pathBend?:number; dotColor?:string; dotSize?:number; assets?:Record<string,string>};
 type JourneyPoint={x:number;y:number};
 type HQBackgroundOptions = {
-  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
   backgroundColor?: string;
   backgroundOpacity?: number;
   paperTone?: 'light' | 'dark';
@@ -356,6 +361,7 @@ type Props = {fontFamily?: HQFont; preset?: Preset; corner?: Corner; animation?:
   at?: number; holdDuration?: number; animationDuration?: number;
   action?: Action; actionAt?: number; actionDuration?: number; assets?: {bangers?: string; anton?: string}};
 type HQFont = 'Bangers' | 'Anton';
+type HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};
 ```
 
 ### Carrossel de frases HQ
@@ -379,7 +385,7 @@ type Props=HQBackgroundOptions & {phrases:Phrase[];fontFamily?:HQFont;align?:'le
   motionDuration?:number;textScale?:number;assets?:{bangers?:string;anton?:string}};
 type Layout={lines:string[];size:number;height:number};
 type HQBackgroundOptions = {
-  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
   backgroundColor?: string;
   backgroundOpacity?: number;
   paperTone?: 'light' | 'dark';
@@ -410,7 +416,7 @@ type Slot = {x: number; y: number; width: number; height: number; fromX: number;
 type Bounds = {x: number; y: number; width: number; height: number; sourceWidth: number; sourceHeight: number};
 type TextLayout = {lines: string[]; size: number};
 type HQBackgroundOptions = {
-  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
   backgroundColor?: string;
   backgroundOpacity?: number;
   paperTone?: 'light' | 'dark';
@@ -443,6 +449,7 @@ type Props = {channelName?:string;topTitle?:string;subscribeText?:string;callout
     thumbnailLeft?: string; thumbnailRight?: string; channelIcon?: string};
 };
 type HQFont = 'Bangers' | 'Anton';
+type HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};
 ```
 
 ### Diálogo HQ
@@ -465,7 +472,7 @@ type Props=HQBackgroundOptions & {left:Participant;right:Participant;turns:Turn[
 type Bounds={x:number;y:number;width:number;height:number;sourceWidth:number;sourceHeight:number};
 type TextLayout={lines:string[];size:number};
 type HQBackgroundOptions = {
-  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
   backgroundColor?: string;
   backgroundOpacity?: number;
   paperTone?: 'light' | 'dark';
@@ -495,7 +502,7 @@ type Props = HQBackgroundOptions & {fontFamily?: HQFont; title: string; subtitle
 type Bounds = {x: number; y: number; width: number; height: number; sourceWidth: number; sourceHeight: number};
 type TextLayout = {lines: string[]; size: number};
 type HQBackgroundOptions = {
-  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
   backgroundColor?: string;
   backgroundOpacity?: number;
   paperTone?: 'light' | 'dark';
@@ -524,7 +531,7 @@ type Props = HQBackgroundOptions & {fontFamily?: HQFont; phrases: Phrase[]; imag
 type Line = {text: string; size: number; height: number};
 type Bounds = {x: number; y: number; width: number; height: number; sourceWidth: number; sourceHeight: number};
 type HQBackgroundOptions = {
-  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
   backgroundColor?: string;
   backgroundOpacity?: number;
   paperTone?: 'light' | 'dark';
@@ -550,7 +557,7 @@ type Clip = {asset: string; title?: string; subtitle?: string; sourceStart?: num
 type Props = HQBackgroundOptions & {fontFamily?: HQFont; clips: Clip[]; direction?: 'forward' | 'reverse'; backgroundColor?: string; accentColor?: string; textColor?: string;
   startDelay?: number; moveDuration?: number; enterDuration?: number; enterLast?: boolean; assets?: Record<string, string>};
 type HQBackgroundOptions = {
-  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
   backgroundColor?: string;
   backgroundOpacity?: number;
   paperTone?: 'light' | 'dark';
@@ -600,7 +607,7 @@ type Props = HQBackgroundOptions & {fontFamily?: HQFont;
 };
 type Interval = {at: number; until: number};
 type HQBackgroundOptions = {
-  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
   backgroundColor?: string;
   backgroundOpacity?: number;
   paperTone?: 'light' | 'dark';
@@ -633,6 +640,7 @@ type Props = {fontFamily?: HQFont;
 };
 type Bounds = {x: number; y: number; width: number; height: number; sourceWidth: number; sourceHeight: number};
 type HQFont = 'Bangers' | 'Anton';
+type HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};
 ```
 
 ### Quadro HQ sobre cena
@@ -654,6 +662,7 @@ type Props = {fontFamily?: HQFont;
   assets?: {anton?: string; bangers?: string};
 };
 type HQFont = 'Bangers' | 'Anton';
+type HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};
 ```
 
 ### Texto HQ
@@ -681,7 +690,7 @@ type PreparedStep=TextStep & {fontFamily:HQFont;textColor:string;textScale:numbe
   entryDuration:number;exitDuration:number;entryDelay:number};
 type Layout={lines:string[];fontSize:number};
 type HQBackgroundOptions = {
-  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
   backgroundColor?: string;
   backgroundOpacity?: number;
   paperTone?: 'light' | 'dark';

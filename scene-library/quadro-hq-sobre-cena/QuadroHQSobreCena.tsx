@@ -1,3 +1,4 @@
+import {HQComicPage, type HQComicPageOptions} from './HQComicPage';
 import React from 'react';
 import {
   AbsoluteFill, cancelRender, continueRender, delayRender,
@@ -5,7 +6,7 @@ import {
 } from 'remotion';
 import {loadFont} from '@remotion/fonts';
 
-type Props = {fontFamily?: HQFont;
+type Props = HQComicPageOptions & {fontFamily?: HQFont;
   upperText: string;
   lowerText: string;
   tagColor?: string;
@@ -25,7 +26,7 @@ const readableInk = (hex: string) => {
 };
 
 /** Sobreposição transparente: o vídeo ou a imagem ficam na cena normal do Content Lab. */
-export default function QuadroHQSobreCena({fontFamily,
+export default function QuadroHQSobreCena({backgroundStyle, backgroundOpacity=100, fontFamily,
   upperText,
   lowerText,
   tagColor = '#5CA5AD',
@@ -68,9 +69,10 @@ export default function QuadroHQSobreCena({fontFamily,
   const tagInk = readableInk(tagColor);
 
   return <AbsoluteFill style={{background: 'transparent', pointerEvents: 'none', overflow: 'hidden'}}>
-    <AbsoluteFill style={{pointerEvents: 'none', opacity: .22,
+    {backgroundStyle==='comic_page'&&<HQComicPage opacity={backgroundOpacity}/>}
+    {backgroundStyle!=='comic_page'&&<AbsoluteFill style={{pointerEvents: 'none', opacity: .22,
       backgroundImage: `radial-gradient(circle, #080A11 ${3.2 * unit}px, transparent ${3.8 * unit}px)`,
-      backgroundSize: `${18 * unit}px ${18 * unit}px`}} />
+      backgroundSize: `${18 * unit}px ${18 * unit}px`}} />}
     <div style={{position: 'absolute', inset: '1.5% 3% 2.4%', border: `${5 * unit}px solid ${paper}`,
       boxSizing: 'border-box', opacity: .9 * frameIn}} />
 

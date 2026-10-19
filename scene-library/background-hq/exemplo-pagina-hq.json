@@ -1,0 +1,19 @@
+{
+  "id": "pagina_hq",
+  "start": 0,
+  "end": 6,
+  "layout": "fullscreen",
+  "background": {
+    "color": "#E8CD55"
+  },
+  "elements": [],
+  "customComponent": {
+    "module": "project://custom-scenes/BackgroundHQ.tsx",
+    "mode": "overlay",
+    "props": {
+      "backgroundStyle": "comic_page",
+      "backgroundOpacity": 100
+    },
+    "assets": {}
+  }
+}

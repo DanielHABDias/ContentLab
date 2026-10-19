@@ -51,7 +51,7 @@
   const textureImages = new Map();
   async function textureImage(b, w, h) {
     const style = b.style;
-    if (!["paper", "film", "grid", "stars"].includes(style)) return null;
+    if (!["paper", "film", "grid", "stars", "comic_page"].includes(style)) return null;
     const key = `${style}/${b.paperTone || 'light'}/${w}/${h}`;
     if (!textureImages.has(key)) textureImages.set(key, new Promise((resolve, reject) => {
       const img = new Image();

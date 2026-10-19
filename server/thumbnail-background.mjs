@@ -12,7 +12,7 @@ let compiled;
 // Render ONLY the installed, fixed BackgroundHQ source. Never accept a module
 // path or executable code from a request. No video render/browser is involved.
 export function thumbnailBackground({style, tone = 'light', width = 1280, height = 720}) {
-  if (!['paper', 'film', 'grid', 'stars'].includes(style)) throw Error('Fundo HQ inválido.');
+  if (!['paper', 'film', 'grid', 'stars', 'comic_page'].includes(style)) throw Error('Fundo HQ inválido.');
   if (!['light', 'dark'].includes(tone)) throw Error('Tom do papel inválido.');
   if (![width, height].every(v => Number.isInteger(v) && v >= 100 && v <= 4096)) throw Error('Dimensões inválidas.');
   const source = fs.readFileSync(preset, 'utf8');
@@ -28,9 +28,24 @@ export function thumbnailBackground({style, tone = 'light', width = 1280, height
     useCurrentFrame: () => 30,
     useVideoConfig: () => ({width, height, fps: 30, durationInFrames: 60})
   };
+  remotion.Img = ({src}) => React.createElement('svg', {width:'100%',height:'100%',viewBox:`0 0 ${width} ${height}`},
+    React.createElement('image',{href:src,width,height,preserveAspectRatio:'xMidYMid slice'}));
+  const loadFixedHelper = () => {
+    const helperExports={};
+    const helperPath=path.join(path.dirname(preset),'HQComicPage.tsx');
+    const code=ts.transpileModule(fs.readFileSync(helperPath,'utf8'),{
+      compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.React,esModuleInterop:true}
+    }).outputText;
+    vm.runInNewContext(code,{exports:helperExports,require:name=>{
+      if(name==='react')return React;if(name==='remotion')return remotion;
+      throw Error('Import não permitido: '+name);
+    }},{filename:helperPath,timeout:1000});
+    return helperExports;
+  };
   vm.runInNewContext(compiled.code, {exports, require: name => {
     if (name === 'react') return React;
     if (name === 'remotion') return remotion;
+    if (name === './HQComicPage') return loadFixedHelper();
     throw Error('Import não permitido no BackgroundHQ: ' + name);
   }}, {filename: preset, timeout: 1000});
   const markup = renderToStaticMarkup(React.createElement(exports.default, {

@@ -1,3 +1,4 @@
+import {HQComicPage, type HQComicPageOptions} from './HQComicPage';
 import React from 'react';
 import {AbsoluteFill, Img, cancelRender, continueRender, delayRender, useCurrentFrame, useVideoConfig} from 'remotion';
 import {loadFont} from '@remotion/fonts';
@@ -143,9 +144,9 @@ export default function GaleriaCartasHQ({fontFamily="Bangers", backgroundStyle="
   </AbsoluteFill>;
 }
 
-// Fundos HQ v2 — implementação embutida para manter cada TSX independente.
+// Fundos HQ v2 — fundos procedurais embutidos; página PNG via HQComicPage.tsx.
 type HQBackgroundOptions = {
-  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
   backgroundColor?: string;
   backgroundOpacity?: number;
   paperTone?: 'light' | 'dark';
@@ -156,6 +157,7 @@ export function hqGridOffset(time:number){return ((time*28)%84+84)%84;}
 export function hqPaperPose(time:number){return Math.floor(Math.max(0,time)*6)%8;}
 function HQBackground({backgroundStyle='halftone',backgroundColor='#2459C9',backgroundOpacity=100,paperTone='light',gridBackgroundColor='#10101A',gridLineColor='#858595',children}:HQBackgroundOptions & {children?:React.ReactNode}){
   const frame=useCurrentFrame();const {fps,width,height}=useVideoConfig();const t=frame/fps;
+  if(backgroundStyle==='comic_page')return <HQComicPage opacity={backgroundOpacity}/>;
   const uid=React.useId().replace(/:/g,'');
   if(!['halftone','solid','stars','film','paper','grid'].includes(backgroundStyle))throw new Error('backgroundStyle: halftone, solid, stars, film, paper ou grid.');
   if(!Number.isFinite(backgroundOpacity)||backgroundOpacity<0||backgroundOpacity>100)throw new Error('backgroundOpacity deve ser 0–100 (%).');

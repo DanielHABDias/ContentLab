@@ -28,7 +28,7 @@ PNGs `previa-anton-*` antigos podem mostrar sombras anteriores à correção; s�
 
 Todos permitem substituir `text`, `boxColor`, `textColor` e `icon`. O modo livre não exige ícone. Textos longos quebram em até duas linhas e diminuem automaticamente; prefira chamadas curtas.
 
-No Instagram, omitir `boxColor` preserva o degradê característico. Se informar uma cor #RRGGBB, ela substitui o degradê por fundo sólido, sem afetar os outros presets. **Use `instagramHandle` para o @ do perfil**, por exemplo `"@DiazVersoYT"` ou `"DiazVersoYT"`; o componente acrescenta um único `@` e exibe `SIGA NO INSTAGRAM @DIAZVERSOYT`. Se a prop for omitida, conserva `SIGA NO INSTAGRAM`, evitando alterar vídeos anteriores. `text` continua substituindo toda a frase e tem precedência sobre `instagramHandle`. O nome admite letras, dígitos, ponto e _ (até 30 caracteres). O ícone é desenhado no próprio TSX.
+No Instagram, omitir `boxColor` preserva o degradê característico. Se informar uma cor #RRGGBB, ela substitui o degradê por fundo sólido, sem afetar os outros presets. **Use `instagramHandle` para o @ do perfil**, por exemplo `"@SeuPerfil"` ou `"SeuPerfil"`; o componente acrescenta um único `@` e exibe `SIGA NO INSTAGRAM @SEUPERFIL`. Se a prop for omitida, conserva `SIGA NO INSTAGRAM`, evitando alterar vídeos anteriores. `text` continua substituindo toda a frase e tem precedência sobre `instagramHandle`. O nome admite letras, dígitos, ponto e _ (até 30 caracteres). O ícone é desenhado no próprio TSX.
 
 ## Parâmetros
 
@@ -45,7 +45,7 @@ No Instagram, omitir `boxColor` preserva o degradê característico. Se informar
 | `actionDuration` | Duração da ação; padrão 0,45 s, limitado ao tempo de leitura disponível. Mínimo 2 frames. |
 | `preset` | inscricao / like / sininho / produto / instagram / livre. Padrão inscricao. |
 | `text` | Texto livre que substitui toda a frase do preset; sempre maiúsculo. Tem precedência sobre `instagramHandle`. |
-| `instagramHandle` | Somente no preset `instagram`: @ opcional do perfil, com ou sem `@` inicial. Não fornecido: mantém `SIGA NO INSTAGRAM`; ex.: `"@DiazVersoYT"`. |
+| `instagramHandle` | Somente no preset `instagram`: @ opcional do perfil, com ou sem `@` inicial. Não fornecido: mantém `SIGA NO INSTAGRAM`; ex.: `"@SeuPerfil"`. |
 | `boxColor` / `textColor` | Cores #RRGGBB. Se omitidas, usa as cores do preset. |
 | `icon` | youtube / like / sininho / seta / instagram / none. |
 | `assets.bangers` | Fonte padrão: builtin://fonts/Bangers-Regular.ttf; para Anton use assets.anton. |
@@ -81,7 +81,7 @@ Produto pula mesmo sem áudio: o exemplo não adiciona som à ação. Se quiser,
 
 `exemplo-cena.json`: inscrição lateral. `exemplo-like-pop.json`: like com pop. `exemplo-sininho-vertical.json`: sino entrando por cima. `exemplo-produto.json`: produto na esquerda. `exemplo-livre.json`: texto personalizado em caixa roxa.
 
-`exemplo-instagram.json`: preset pedindo para seguir `@DiazVersoYT` via `instagramHandle`, degradê padrão, entrada/saída lateral com whoosh baixo e clique no meio. Funciona nos quatro cantos e com lateral/vertical/pop. A ação auto agora diminui até 88% e volta ao normal, como inscrição/like. O exemplo inclui o som no instante de pressão máxima. actionAt continua configurável; ajustar também o at do som ao mudar esse instante. action none desativa a animação; nesse caso remover também o sfx de clique.
+`exemplo-instagram.json`: preset pedindo para seguir `@SeuPerfil` via `instagramHandle`, degradê padrão, entrada/saída lateral com whoosh baixo e clique no meio. Funciona nos quatro cantos e com lateral/vertical/pop. A ação auto agora diminui até 88% e volta ao normal, como inscrição/like. O exemplo inclui o som no instante de pressão máxima. actionAt continua configurável; ajustar também o at do som ao mudar esse instante. action none desativa a animação; nesse caso remover também o sfx de clique.
 
 ## Conferência local
 
@@ -157,6 +157,14 @@ Na Documentação, selecione este padrão e prepare-o na pasta do projeto. A ins
 - [exemplo-produto.json](exemplo-produto.json)
 - [exemplo-sininho-vertical.json](exemplo-sininho-vertical.json)
 
-### Regra de uso do Instagram no Diazverso
+### Regra de uso do Instagram
 
-Na produção do canal, usar `preset: "instagram"` e `instagramHandle: "@DiazVersoYT"` no `customComponent.props`. O @ pertence à prop, não ao ícone nem ao mapa `assets`. Não há arquivo gráfico de Instagram externo. Para outro criador, informar o @ dele; não é necessário editar o código. A frase `text` deve ser usada apenas quando se deseja trocar o convite inteiro.
+Para divulgar seu perfil, usar `preset: "instagram"` e `instagramHandle: "@SeuPerfil"` no `customComponent.props`. O @ pertence à prop, não ao ícone nem ao mapa `assets`. Não há arquivo gráfico de Instagram externo. Para outro criador, informar o @ dele; não é necessário editar o código. A frase `text` deve ser usada apenas quando se deseja trocar o convite inteiro.
+
+## Página HQ transparente — fundo adicional
+
+Use `backgroundStyle: "comic_page"` e `backgroundOpacity: 0–100` (100 por padrão). Usa exatamente o PNG bannerSemFundo_3, com divisórias e transparência. Não pinta cor atrás: use `mode: "overlay"` para manter a cena base. A opacidade afeta só a arte; a opacidade global do componente continua valendo.
+
+16:9 e 9:16 sem deformar, com `cover` central (recorta laterais no vertical). As divisórias são decoração, não slots automáticos. O visual anterior permanece quando a opção não é escolhida.
+
+**Instalação:** a Galeria prepara o TSX e `HQComicPage.tsx` em `custom-scenes/`. Manualmente, copie ambos da mesma pasta. Todos os presets compartilham uma cópia idêntica do auxiliar no projeto; preserve cópias diferentes. O PNG já está embutido, sem asset extra nem rede. Exemplo de props adicionais: `{"backgroundStyle":"comic_page","backgroundOpacity":70}`. Preserve as demais props/assets obrigatórias do guia.

@@ -194,6 +194,14 @@ Na Documentação, selecione este padrão e prepare-o na pasta do projeto. A ins
 
 assets.character é obrigatório e pode apontar para qualquer imagem fornecida pelo projeto. Nenhum personagem está incluído no padrão. channelName (padrão vazio) configura a assinatura; topTitle, subscribeText e calloutText configuram os textos de convite. headline, leftTitle e rightTitle mantêm suas funções descritas acima. A geometria foi preservada; imagens de proporções diferentes exigem inspeção visual.
 
-## Uso obrigatório no Diazverso — Nox
+## Chave de personagem e identidade visual
 
-O componente instalado no Content Lab utiliza **`customComponent.assets.character`** como chave de personagem. Para o Diazverso, essa chave deve apontar para o **PNG oficial e aprovado do Nox**, preservando o Character Lock. **Não trocar o contrato para `assets.nox`** e não copiar esse campo dos READMEs antigos do Drive. O caminho do PNG deve ser o arquivo real existente no projeto, por exemplo `"character": "project://assets/<caminho-real-do-Nox>.png"` (substituir placeholder após verificar), com `fontFamily`/fontes e thumbnails configurados pelo README. A biblioteca genérica permanece utilizável por outras marcas; no perfil Diazverso, o personagem é sempre Nox. A versão do Content Lab também oferece `channelName`, `topTitle`, `subscribeText` e `calloutText` configuráveis — não substituí-los por textos fixos de uma versão anterior do Drive.
+O componente instalado no Content Lab utiliza **`customComponent.assets.character`** como chave de personagem. Aponte essa chave para o PNG aprovado do seu projeto, preservando a identidade visual definida por você. Não altere o nome da chave conforme a marca. Exemplo: `"character": "project://assets/personagem.png"` (confirme que o arquivo existe). Configure também `fontFamily`/fontes e thumbnails conforme este guia. `channelName`, `topTitle`, `subscribeText` e `calloutText` são configuráveis; não os substitua por textos fixos de uma versão antiga.
+
+## Página HQ transparente — fundo adicional
+
+Use `backgroundStyle: "comic_page"` e `backgroundOpacity: 0–100` (100 por padrão). Usa exatamente o PNG bannerSemFundo_3, com divisórias e transparência. Não pinta cor atrás: use `mode: "overlay"` para manter a cena base. A opacidade afeta só a arte; a opacidade global do componente continua valendo.
+
+16:9 e 9:16 sem deformar, com `cover` central (recorta laterais no vertical). As divisórias são decoração, não slots automáticos. O visual anterior permanece quando a opção não é escolhida.
+
+**Instalação:** a Galeria prepara o TSX e `HQComicPage.tsx` em `custom-scenes/`. Manualmente, copie ambos da mesma pasta. Todos os presets compartilham uma cópia idêntica do auxiliar no projeto; preserve cópias diferentes. O PNG já está embutido, sem asset extra nem rede. Exemplo de props adicionais: `{"backgroundStyle":"comic_page","backgroundOpacity":70}`. Preserve as demais props/assets obrigatórias do guia.

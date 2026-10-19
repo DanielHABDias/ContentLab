@@ -25,7 +25,7 @@ O layout de texto inteiro é medido antecipadamente: palavras que ainda não apa
 
 ## Instalação
 
-Copie ImagemFrasesHQ.tsx para custom-scenes/ do projeto. Use mode replace. Declare customComponent.assets.image como project://assets/... e assets.bangers como builtin://fonts/Bangers-Regular.ttf. O TSX é único, sem helpers locais; depende do runtime React/Remotion/@remotion/fonts do Content Lab e dos assets fornecidos. Não passe o mapa de assets dentro de props.
+Copie ImagemFrasesHQ.tsx para custom-scenes/ do projeto. Use mode replace. Declare customComponent.assets.image como project://assets/... e assets.bangers como builtin://fonts/Bangers-Regular.ttf. O TSX é único, com o auxiliar HQComicPage.tsx; depende do runtime React/Remotion/@remotion/fonts do Content Lab e dos assets fornecidos. Não passe o mapa de assets dentro de props.
 
 ## Parâmetros
 
@@ -78,7 +78,7 @@ Compilado no Content Lab e conferido em PNG 960×540 e 540×960, a 30 fps, com i
 
 ## Backgrounds HQ v2 — 16/10/2026
 
-Atualização que substitui a descrição anterior dos fundos. Cada TSX continua independente. Confira também o guia compartilhado.
+Atualização que substitui a descrição anterior dos fundos. Cada preset acompanha o auxiliar HQComicPage.tsx; copie ambos na instalação manual. Confira também o guia compartilhado.
 
 | Prop | Opções / padrão |
 | --- | --- |
@@ -147,3 +147,11 @@ type HQFont = 'Bangers' | 'Anton';
 Na Documentação, selecione este padrão e prepare-o na pasta do projeto. A instalação copia o TSX sem sobrescrever versões existentes. O JSON aponta project://custom-scenes/ImagemFrasesHQ.tsx. Consulte os exemplos abaixo e substitua mídias/tempos antes de renderizar.
 
 - [exemplo-cena.json](exemplo-cena.json)
+
+## Página HQ transparente — fundo adicional
+
+Use `backgroundStyle: "comic_page"` e `backgroundOpacity: 0–100` (100 por padrão). Usa exatamente o PNG bannerSemFundo_3, com divisórias e transparência. Não pinta cor atrás: use `mode: "overlay"` para manter a cena base. A opacidade afeta só a arte; a opacidade global do componente continua valendo.
+
+16:9 e 9:16 sem deformar, com `cover` central (recorta laterais no vertical). As divisórias são decoração, não slots automáticos. O visual anterior permanece quando a opção não é escolhida.
+
+**Instalação:** a Galeria prepara o TSX e `HQComicPage.tsx` em `custom-scenes/`. Manualmente, copie ambos da mesma pasta. Todos os presets compartilham uma cópia idêntica do auxiliar no projeto; preserve cópias diferentes. O PNG já está embutido, sem asset extra nem rede. Exemplo de props adicionais: `{"backgroundStyle":"comic_page","backgroundOpacity":70}`. Preserve as demais props/assets obrigatórias do guia.

@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import {thumbnailBackground} from './thumbnail-background.mjs';
 
 test('thumbnails use the installed HQ TSX source at a fixed frame in both formats', () => {
@@ -18,4 +19,15 @@ test('background endpoint contract never accepts paths or arbitrary code', () =>
   for (const style of ['../../evil.tsx','<script>','unknown']) assert.throws(()=>thumbnailBackground({style}));
   assert.throws(()=>thumbnailBackground({style:'paper',width:99999}));
   assert.throws(()=>thumbnailBackground({style:'paper',tone:'bad'}));
+});
+test('comic page preserves the exact supplied PNG, alpha and centered cover in both formats', () => {
+  for(const [width,height] of [[1280,720],[1080,1920]]){
+    const svg=thumbnailBackground({style:'comic_page',width,height});
+    assert.match(svg, /<image href="data:image\/png;base64,/);
+    assert.match(svg, /preserveAspectRatio="xMidYMid slice"/);
+    const original=fs.readFileSync(new URL('../builtin-assets/backgrounds/background_pagina_hq.png',import.meta.url));
+    assert.ok(Buffer.from(svg.match(/data:image\/png;base64,([A-Za-z0-9+/=]+)/)[1],'base64').equals(original));
+    assert.ok(!svg.includes('<rect'));
+    assert.ok(!svg.includes('<div'));
+  }
 });
