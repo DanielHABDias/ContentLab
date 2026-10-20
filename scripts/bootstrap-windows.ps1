@@ -143,7 +143,7 @@ function Ensure-Model {
   }
   $existing = Join-Path $HOME ".cache\whisper.cpp\ggml-base.bin"
   if (Test-Path -LiteralPath $existing -PathType Leaf) {
-    $env:CONTENTLAB_WHISPER_MODEL = $existing
+    $env:CONTENTLAB_WHISPER_MODEL_DIR = Split-Path -Parent $existing
     Log "Modelo Whisper existente reutilizado."; return
   }
   $folder = Join-Path $tools "models"
@@ -156,7 +156,7 @@ function Ensure-Model {
     Verify-Hash $partial "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe"
     Move-Item -LiteralPath $partial -Destination $model -Force
   }
-  $env:CONTENTLAB_WHISPER_MODEL = $model
+  $env:CONTENTLAB_WHISPER_MODEL_DIR = $folder
 }
 function Need-Install([string]$dir,[string]$dependency,[string]$manifest) {
   $stamp = Join-Path $dir "node_modules\.contentlab-package.sha256"
@@ -205,6 +205,10 @@ try {
   } else { Log "Whisper ignorado por CONTENTLAB_BOOTSTRAP_SKIP_WHISPER=1." }
   Ensure-Npm
   Ensure-Browser
+  Log "Conferindo downloader, limpeza de voz e ambientes de IA..."
+  Push-Location $root
+  try { & node scripts/prepare-features.mjs; if ($LASTEXITCODE -ne 0) { Fail "Falha ao preparar ferramentas opcionais integradas." } }
+  finally { Pop-Location }
   Log "Dependências prontas."
 } catch {
   Write-Error $_.Exception.Message

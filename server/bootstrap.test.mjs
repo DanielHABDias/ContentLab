@@ -59,6 +59,7 @@ test('Linux dependency checks reuse valid installs and reinstall only when manif
    fs.chmodSync(npm,0o755);
    const script='source scripts/bootstrap-linux.sh\n'+
      'CL_ROOT="$CL_MOCK_ROOT"\nCL_TOOLS="$CL_ROOT/.tools"\n'+
+     'cl_install_features(){ :; }; cl_install_desktop(){ :; }\n'+
      'contentlab_bootstrap\ncontentlab_bootstrap\n';
    const env={...process.env,CL_MOCK_ROOT:temp,
      CL_MOCK_INSTALL_LOG:path.join(temp,'installs.log'),
@@ -70,7 +71,7 @@ test('Linux dependency checks reuse valid installs and reinstall only when manif
    const log=()=>fs.readFileSync(path.join(temp,'installs.log'),'utf8').trim().split('\n').length;
    assert.equal(log(),2,'server and remotion installed only once');
    fs.writeFileSync(path.join(temp,'package.json'),'{"dependencies":{"express":"2"}}');
-   result=spawnSync('bash',['-c','source scripts/bootstrap-linux.sh; CL_ROOT="$CL_MOCK_ROOT"; CL_TOOLS="$CL_ROOT/.tools"; contentlab_bootstrap'],{
+   result=spawnSync('bash',['-c','source scripts/bootstrap-linux.sh; CL_ROOT="$CL_MOCK_ROOT"; CL_TOOLS="$CL_ROOT/.tools"; cl_install_features(){ :; }; cl_install_desktop(){ :; }; contentlab_bootstrap'],{
      cwd:root,env,encoding:'utf8',timeout:30000
    });
    assert.equal(result.status,0,result.stdout+'\n'+result.stderr);

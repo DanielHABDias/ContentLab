@@ -8,7 +8,7 @@ function harness({deny=false,fetcher}={}){
   const elements=new Map();let stopped=0,recorder=null,clock=0,tick;
   const element=id=>{
     if(!elements.has(id))elements.set(id,{id,value:'',disabled:false,hidden:id==='panel-transcription',textContent:'',files:[],options:[],
-      addEventListener(){},setAttribute(){},children:[],append(...items){this.children.push(...items);},replaceChildren(...values){this.options=values;this.children=[...values];},add(option){this.options.push(option);}});
+      listeners:{},addEventListener(type,handler){this.listeners[type]=handler;},setAttribute(){},children:[],append(...items){this.children.push(...items);},replaceChildren(...values){this.options=values;this.children=[...values];},add(option){this.options.push(option);}});
     return elements.get(id);
   };
   const stream={getTracks:()=>[{stop(){stopped++;}}]};
@@ -50,6 +50,14 @@ test('permission denial is visible and does not leave recorder running',async()=
   const h=harness({deny:true});await h.element('voiceRecordStart').onclick();
   assert.match(h.element('voiceCreationStatus').textContent,/não autorizado/);
   assert.equal(h.element('voiceRecordStart').disabled,false);assert.equal(h.recorder,null);
+});
+test('switching voice model restores Voicebox sampling and neutral expression',()=>{
+  const h=harness();
+  for(const [model,temperature,repetition] of [['chatterbox-multilingual',.8,2],['0.6B',.9,1.05],['1.7B',.9,1.05]]){
+    h.element('voiceAiModel').value=model;h.element('voiceAiModel').listeners.change();
+    assert.equal(h.element('voiceTemperature').value,temperature);assert.equal(h.element('voiceTopP').value,1);assert.equal(h.element('voiceRepetition').value,repetition);
+    assert.equal(h.element('voiceParagraphPause').value,0);assert.equal(h.element('voiceExaggeration').value,.5);assert.equal(h.element('voiceCfgWeight').value,.5);
+  }
 });
 test('finalization clearly completes beside recorder without waiting for AI model discovery',async()=>{
   let discovered=false;
@@ -119,6 +127,27 @@ test('treatment recipes configure controls without applying them to recording fi
   assert.equal(h.element('transcriptionCompression').checked,true);assert.equal(h.element('transcriptionDeesser').checked,true);
   assert.equal(h.element('voiceEnhancementEngine').value,'deepfilter');
   await h.element('voiceRecordFinalize').onclick();assert.equal(body.enhancement.enhancementEngine,'off');
+  assert.equal(body.treatment.enabled,true);assert.equal(body.treatment.enhancementEngine,'deepfilter');assert.equal(body.treatment.enhancementMode,'strong');assert.equal(body.treatment.removeMiddleSilence,false);
+  h.element('voiceRecordTreatmentEnabled').checked=false;await h.element('voiceRecordFinalize').onclick();assert.equal(body.treatment.enabled,false);
   h.element('voiceTreatmentRecipe').value='preserve';h.element('voiceTreatmentRecipe').onchange();
   assert.equal(h.element('transcriptionRemoveMiddle').checked,false);assert.equal(h.element('transcriptionNormalize').checked,true);
+});
+test('expressive voice presets reach generation and select isolated installer',async()=>{
+  const calls=[];
+  const h=harness({fetcher:async(url,options)=>{
+    if(options?.body)calls.push({url,body:JSON.parse(options.body)});
+    return {ok:true,json:async()=>url.startsWith('/api/voice/jobs/')?{status:'done',result:{preview:true}}:url==='/api/voice/takes'?{takes:[],revision:'r'}:{jobId:'job'}};
+  }});
+  h.element('voiceAiModel').value='chatterbox-multilingual';h.element('voiceAiModel').listeners.change();
+  assert.equal(h.element('voiceExpressiveControls').hidden,false);
+  h.element('voiceDeliveryPreset').value='dramatic';h.element('voiceDeliveryPreset').listeners.change();
+  assert.equal(h.element('voiceExaggeration').value,.75);assert.equal(h.element('voiceCfgWeight').value,.3);
+  h.element('voiceProfile').value='voice';h.element('voiceAiText').value='Agora, a resposta!';
+  await h.element('voiceAiGenerate').onclick();
+  const body=calls.find(c=>c.url==='/api/voice/generate').body;
+  assert.equal(body.exaggeration,.75);assert.equal(body.cfgWeight,.3);assert.equal(body.model,'chatterbox-multilingual');
+  assert.equal(body.enhancement.enhancementEngine,'off');
+  h.element('voiceModelInstallSelect').value='chatterbox-multilingual';await h.element('voiceRuntimeSetup').onclick();
+  assert.equal(calls.find(c=>c.url==='/api/voice/runtime').body.engine,'chatterbox');
+  h.element('voiceAiModel').value='0.6B';h.element('voiceAiModel').listeners.change();assert.equal(h.element('voiceExpressiveControls').hidden,true);
 });

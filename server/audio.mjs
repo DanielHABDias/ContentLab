@@ -92,7 +92,9 @@ export function narrationCuts(settings={}){
   return settings.sourceCuts?.length ? settings.sourceCuts : settings.narrationTrim ? [settings.narrationTrim] : [];
 }
 
-export async function prepareNarration(input,output,settings,{ffmpeg='ffmpeg',ffprobe='ffprobe',signal,duration,autoTrimCuts}={}){
+export async function prepareNarration(input,output,settings,{ffmpeg='ffmpeg',ffprobe='ffprobe',signal,duration,autoTrimCuts,outputChannels=2,outputCodec='pcm_s16le'}={}){
+  if(![1,2].includes(outputChannels)||!['pcm_s16le','pcm_s24le'].includes(outputCodec))throw Error('Formato de narração inválido.');
+  const channelLayout=outputChannels===1?'mono':'stereo';
   const cuts=autoTrimCuts??(await analyzeNarrationEdges(input,settings,{ffmpeg,ffprobe,signal})).cuts;
   const voice=settings.voice||{},filters=[];
   if(cuts.length){
@@ -102,7 +104,7 @@ export async function prepareNarration(input,output,settings,{ffmpeg='ffmpeg',ff
   const processFilters=[];
   if((voice.highpassHz??70)>0)processFilters.push('highpass=f='+Number(voice.highpassHz??70));
   if(voice.normalize!==false)processFilters.push('loudnorm=I='+Number(voice.targetLufs??-16)+':TP='+Number(voice.truePeakDb??-1.5)+':LRA=11');
-  processFilters.push('aresample=48000','aformat=sample_rates=48000:channel_layouts=stereo');
+  processFilters.push('aresample=48000','aformat=sample_rates=48000:channel_layouts='+channelLayout);
   filters.push('[cut]'+processFilters.join(',')+'[clean]');
   const inserts=silenceSourcePositions(settings.silenceInserts||[]);
   let outputLabel='clean';
@@ -120,7 +122,7 @@ export async function prepareNarration(input,output,settings,{ffmpeg='ffmpeg',ff
       const item=inserts[i];
       if(item.sourceAt<previous)throw Error('Silêncios da narração em ordem inválida.');
       filters.push('[seg'+i+']atrim=start='+fmt(previous)+':end='+fmt(item.sourceAt)+',asetpts=PTS-STARTPTS[part'+i+']');
-      filters.push('anullsrc=r=48000:cl=stereo:d='+fmt(item.duration)+'[silence'+i+']');
+      filters.push('anullsrc=r=48000:cl='+channelLayout+':d='+fmt(item.duration)+'[silence'+i+']');
       parts.push('[part'+i+']','[silence'+i+']');
       previous=item.sourceAt;
     }
@@ -130,10 +132,10 @@ export async function prepareNarration(input,output,settings,{ffmpeg='ffmpeg',ff
     outputLabel='aligned';
   }
   await run(ffmpeg,['-hide_banner','-loglevel','error','-y','-i',input,'-filter_complex',filters.join(';'),
-    '-map','['+outputLabel+']','-c:a','pcm_s16le',output],{signal});
+    '-map','['+outputLabel+']','-c:a',outputCodec,output],{signal});
   if(!fs.existsSync(output)||!fs.statSync(output).size)throw Error('Narração limpa não foi criada.');
   if(cuts.length&&!inserts.length){
-    const actual=(fs.statSync(output).size-44)/192000;
+    const actual=await probeAudioDuration(output,{ffprobe,signal});
     const expected=cuts.reduce((n,x)=>n+x.end-x.start,0);
     if(Math.abs(actual-expected)>0.08)throw Error('sourceCuts produziram narração incompleta.');
   }

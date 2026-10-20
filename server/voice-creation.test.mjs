@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {QWEN_MODELS,generationOptions,saveRecording,saveProfile,profile} from './voice-creation.mjs';
+import {QWEN_MODELS,VOICE_MODELS,generationOptions,saveRecording,saveProfile,profile} from './voice-creation.mjs';
 import {run} from './exec.mjs';
 
 test('only official cloning Base sizes are accepted',()=>{
@@ -13,9 +13,24 @@ test('only official cloning Base sizes are accepted',()=>{
 test('generation has bounded, explicit parameters and paragraph timing',()=>{
   const value=generationOptions({model:'0.6B',text:'Olá mundo!\n\nOutra ideia.',seed:42});
   assert.deepEqual(value.chunks,['Olá mundo!','Outra ideia.']);assert.equal(value.seed,42);assert.equal(value.language,'Portuguese');
+  for(const model of QWEN_MODELS){const defaults=generationOptions({model,text:'Teste.'});assert.equal(defaults.temperature,.9);assert.equal(defaults.topP,1);assert.equal(defaults.repetitionPenalty,1.05);assert.equal(defaults.pauseSeconds,0);}
   for(const raw of [{temperature:Infinity},{topP:2},{seed:1.2},{device:'shell'},{pauseSeconds:-1},{repetitionPenalty:0},{language:'xx'}])assert.throws(()=>generationOptions({model:'1.7B',text:'Teste',...raw}));
   assert.throws(()=>generationOptions({model:'1.7B',text:'x'.repeat(12001)}));
   assert.ok(generationOptions({model:'1.7B',text:'a'.repeat(1500)}).chunks.every(x=>x.length<=400));
+});
+test('Chatterbox supports cloned voice expression without changing Qwen parameters',()=>{
+  assert.ok(VOICE_MODELS.includes('chatterbox-multilingual'));
+  const value=generationOptions({model:'chatterbox-multilingual',text:'Uma pergunta?\n\nAgora, a resposta!',exaggeration:.75,cfgWeight:.3});
+  assert.deepEqual(value.chunks,['Uma pergunta?','Agora, a resposta!']);
+  assert.equal(value.exaggeration,.75);assert.equal(value.cfgWeight,.3);
+  for(const raw of [{exaggeration:-.1},{exaggeration:2.1},{cfgWeight:Infinity},{cfgWeight:-1},{cfgWeight:1.01}])assert.throws(()=>generationOptions({model:'chatterbox-multilingual',text:'Teste',...raw}));
+  const neutral=generationOptions({model:'chatterbox-multilingual',text:'Olá.'});
+  assert.equal(neutral.exaggeration,.5);assert.equal(neutral.cfgWeight,.5);
+  assert.equal(neutral.temperature,.8);assert.equal(neutral.topP,1);assert.equal(neutral.repetitionPenalty,2);assert.equal(neutral.pauseSeconds,0);
+  assert.deepEqual(generationOptions({model:'chatterbox-multilingual',text:'Será que muda tudo? Agora, a história fica interessante!'}).chunks,['Será que muda tudo?','Agora, a história fica interessante!']);
+  assert.ok(generationOptions({model:'chatterbox-multilingual',text:('Uma frase longa ').repeat(40)}).chunks.every(x=>x.length<=200));
+  assert.equal(generationOptions({model:'1.7B',text:'Olá.',exaggeration:2}).exaggeration,undefined);
+  assert.throws(()=>generationOptions({model:'chatterbox-multilingual',text:'Teste',language:'Chinese'}),/integração Chatterbox/);
 });
 test('profile IDs cannot escape the voice directory',()=>{
   for(const id of ['../../secret','id','',null])assert.throws(()=>profile(id));

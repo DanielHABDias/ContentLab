@@ -9,8 +9,25 @@ CL_NODE_VERSION="22.16.0"
 cl_log(){ printf '[Content Lab] %s\n' "$*"; }
 cl_die(){ printf '[Content Lab] ERRO: %s\n' "$*" >&2; return 1; }
 cl_download(){
-  command -v curl >/dev/null 2>&1 || cl_die "curl é necessário para baixar dependências."
-  curl --fail --location --silent --show-error --retry 3 --connect-timeout 20 "$1" -o "$2"
+  if command -v curl >/dev/null 2>&1; then
+    curl --fail --location --silent --show-error --retry 3 --connect-timeout 20 "$1" -o "$2"
+  elif command -v wget >/dev/null 2>&1; then
+    wget --https-only --tries=3 --timeout=20 -O "$2" "$1"
+  else
+    cl_system_packages curl ca-certificates
+    curl --fail --location --silent --show-error --retry 3 --connect-timeout 20 "$1" -o "$2"
+  fi
+}
+cl_system_packages(){
+  command -v apt-get >/dev/null 2>&1 || cl_die "Instalação de pacotes de sistema suportada automaticamente em Ubuntu/Zorin/Debian; distribuição sem apt-get."
+  cl_log "Preparando pacotes de sistema necessários: $*. O sistema pode pedir sua senha."
+  if [[ "$EUID" -eq 0 ]]; then apt-get update && apt-get install -y "$@"
+  elif command -v sudo >/dev/null 2>&1; then sudo apt-get update && sudo apt-get install -y "$@"
+  else cl_die "Sem permissão para preparar pacotes de sistema; execute o inicializador numa sessão com sudo."; fi
+}
+cl_install_desktop(){
+  command -v curl >/dev/null 2>&1 || cl_system_packages curl ca-certificates
+  command -v zenity >/dev/null 2>&1 || cl_system_packages zenity
 }
 cl_arch(){
   case "$(uname -m)" in
@@ -119,18 +136,7 @@ cl_install_whisper(){
   local missing=()
   for bin in cmake c++ make; do command -v "$bin" >/dev/null 2>&1 || missing+=("$bin"); done
   if (( ${#missing[@]} )); then
-    if command -v apt-get >/dev/null 2>&1; then
-      cl_log "Faltam ${missing[*]}. Instalando compilador e CMake com permissão do sistema..."
-      if command -v sudo >/dev/null 2>&1; then
-        sudo apt-get update
-        sudo apt-get install -y build-essential cmake
-      elif [[ "$EUID" -eq 0 ]]; then
-        apt-get update
-        apt-get install -y build-essential cmake
-      else
-        cl_die "Necessário instalar cmake e build-essential (não foi encontrado sudo)."
-      fi
-    else cl_die "Instale cmake, compilador C++ e make nesta distribuição Linux."; fi
+    cl_system_packages build-essential cmake
   fi
   local dir
   dir="$(mktemp -d)"
@@ -156,7 +162,7 @@ cl_install_model(){
   fi
   local existing="$HOME/.cache/whisper.cpp/ggml-base.bin"
   if [[ -s "$existing" ]]; then
-    export CONTENTLAB_WHISPER_MODEL="$existing"
+    export CONTENTLAB_WHISPER_MODEL_DIR="$(dirname "$existing")"
     cl_log "Modelo Whisper existente reutilizado."; return
   fi
   local target="$CL_TOOLS/models/ggml-base.bin" tmp
@@ -168,7 +174,7 @@ cl_install_model(){
     cl_hash "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe" "$tmp"
     mv "$tmp" "$target"
   fi
-  export CONTENTLAB_WHISPER_MODEL="$target"
+  export CONTENTLAB_WHISPER_MODEL_DIR="$CL_TOOLS/models"
 }
 cl_ensure_browser(){
   if [[ "${CONTENTLAB_BOOTSTRAP_SKIP_BROWSER:-0}" == 1 ]]; then
@@ -197,6 +203,10 @@ cl_install_npm(){
     printf '%s' "$fingerprint" > "$stamp"
   else cl_log "Dependências Remotion atualizadas."; fi
 }
+cl_install_features(){
+  cl_log "Conferindo downloader, limpeza de voz e ambientes de IA (primeira preparação pode levar vários minutos)..."
+  (cd "$CL_ROOT" && node scripts/prepare-features.mjs)
+}
 contentlab_bootstrap(){
   mkdir -p "$CL_TOOLS"
   cl_install_node
@@ -207,5 +217,7 @@ contentlab_bootstrap(){
   else cl_log "Whisper ignorado por CONTENTLAB_BOOTSTRAP_SKIP_WHISPER=1."; fi
   cl_install_npm
   cl_ensure_browser
+  cl_install_features
+  cl_install_desktop
   cl_log "Dependências prontas."
 }

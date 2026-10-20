@@ -22,6 +22,8 @@ test('voice HTTP upload, retrieval and CSRF checks',async t=>{
   assert.equal((await fetch(base+'/api/voice/profiles/invalid/audio')).status,400);
   const invalid=await fetch(base+'/api/voice/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'3B',text:'Teste'})});
   assert.equal(invalid.status,400);
+  const badEngine=await fetch(base+'/api/voice/runtime',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({engine:'../bad'})});assert.equal(badEngine.status,400);
+  const badExpression=await fetch(base+'/api/voice/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'chatterbox-multilingual',text:'Teste',exaggeration:10})});assert.equal(badExpression.status,400);
   for(const engine of ['off','unknown','deepfilter']){
     const preview=new FormData();preview.append('projectRoot',root);preview.append('enhancementEngine',engine);
     const result=await fetch(base+'/api/voice/enhancement/preview',{method:'POST',body:preview});

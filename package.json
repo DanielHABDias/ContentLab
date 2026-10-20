@@ -7,7 +7,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "start": "node server/http.mjs",
+    "start": "node scripts/start.mjs",
     "test": "node --test server/*.test.mjs",
     "check": "node --check server/http.mjs && node --test server/*.test.mjs",
     "render": "node server/cli.mjs",

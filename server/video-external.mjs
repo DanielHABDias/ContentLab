@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {run} from './exec.mjs';
 import {mediaToolExecutable} from './runtime-tools.mjs';
+import {APP_ROOT} from './plan.mjs';
+import {ensurePortableTool,portableToolPath} from './portable-tools.mjs';
 
 // O downloader externo só recebe links HTTPS de plataformas reconhecidas.
 const YOUTUBE_HOSTS=new Set(['youtube.com','www.youtube.com','m.youtube.com',
@@ -25,13 +27,15 @@ export function classifyVideoLink(input){
     return {provider:'external',url:parsed.toString(),hostname:host};
   throw Error('Este site ainda não está habilitado para importar vídeos. São aceitos links públicos do YouTube, TikTok, Instagram, Pinterest, Vimeo, X, Reddit e outras plataformas compatíveis.');
 }
-export function externalToolPath({env=process.env,platform=process.platform}={}){
+export function externalToolPath({env=process.env,platform=process.platform,directory=APP_ROOT}={}){
   if(env.CONTENTLAB_YT_DLP)return env.CONTENTLAB_YT_DLP;
+  const local=portableToolPath('ytdlp',{root:directory,platform});
+  if(fs.existsSync(local))return local;
   return platform==='win32'?'yt-dlp.exe':'yt-dlp';
 }
 function ytDlpError(err){
   if(err?.code==='ENOENT'||/\bENOENT\b/i.test(err?.message||''))
-    return Error('yt-dlp não está instalado. Instale o executável oficial e coloque no PATH, ou configure CONTENTLAB_YT_DLP com o caminho do programa.');
+    return Error('O downloader não pôde ser preparado automaticamente. Reinicie pelo inicializador do Content Lab com acesso à internet; confira o log da instalação.');
   if(err?.name==='TimeoutError'||err?.name==='AbortError')
     return Error('O site demorou demais para responder. Tente novamente com um link público.');
   const message=String(err?.message||'falha desconhecida');
@@ -48,6 +52,7 @@ function cliOptions(){
 export async function getExternalVideoInfo(input,{runner=run,env=process.env}={}){
   const {provider,url}=classifyVideoLink(input);
   if(provider==='youtube')throw Error('Links do YouTube continuam usando o carregador original.');
+  if(runner===run&&!env.CONTENTLAB_YT_DLP)await ensurePortableTool('ytdlp');
   let result;
   try{
     result=await runner(externalToolPath({env}),[
@@ -70,6 +75,7 @@ export async function downloadExternalAsset(input,folder,{
 }={}){
   const {provider,url}=classifyVideoLink(input);
   if(provider==='youtube')throw Error('Links do YouTube devem usar o downloader original.');
+  if(runner===run&&!env.CONTENTLAB_YT_DLP)await ensurePortableTool('ytdlp',{update:message=>update(3,message)});
   const ffmpeg=mediaToolExecutable('ffmpeg');
   const args=[
     ...cliOptions(),
@@ -90,7 +96,7 @@ export async function downloadExternalAsset(input,folder,{
   }catch(error){throw ytDlpError(error);}
   const file=path.join(folder,'video.mp4');
   if(!fs.existsSync(file)||!fs.statSync(file).size)
-    throw Error('O download terminou sem gerar um MP4 compatível. Atualize o yt-dlp e confira se o FFmpeg está instalado.');
+    throw Error('A plataforma não produziu um MP4 compatível. Reinicie pelo inicializador para conferir as ferramentas e tente novamente com um link público.');
   update(85,'Verificando vídeo importado…');
   return file;
 }

@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import {run} from './exec.mjs';
+import {APP_ROOT} from './plan.mjs';
+import {ensureWhisperModel} from './whisper-models.mjs';
 
 const parseTime=value=>{
   if(typeof value==='number')return value/1000;
@@ -40,10 +42,9 @@ export function transcriptTextLines(doc,detail='segments'){
 export async function transcribeAudio(file,projectRoot,{model='base',language='pt',detail='segments',signal,update=()=>{}}={}){
   if(!['words','segments'].includes(detail))
     throw Error('Detalhamento da transcrição inválido: use words ou segments.');
-  const bin=process.env.CONTENTLAB_WHISPER_CLI||'whisper-cli';
-  const models=process.env.CONTENTLAB_WHISPER_MODEL_DIR||path.join(os.homedir(),'.cache','whisper.cpp');
-  const modelFile=process.env.CONTENTLAB_WHISPER_MODEL||path.join(models,'ggml-'+model+'.bin');
-  if(!fs.existsSync(modelFile))throw Error('Modelo whisper.cpp não instalado: '+modelFile);
+  const local=path.join(APP_ROOT,'.tools','whisper','whisper-cli'+(process.platform==='win32'?'.exe':''));
+  const bin=process.env.CONTENTLAB_WHISPER_CLI||(fs.existsSync(local)?local:'whisper-cli');
+  const modelFile=await ensureWhisperModel(model,{signal,update});
   const work=fs.mkdtempSync(path.join(os.tmpdir(),'contentlab-transcribe-'));
   try{
     const converted=path.join(work,'voice-16k.wav'),prefix=path.join(work,'result');

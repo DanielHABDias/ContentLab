@@ -55,7 +55,7 @@ def main(request):
             wavs, sample_rate = model.generate_voice_clone(
                 text=text, language=request["language"], voice_clone_prompt=prompt,
                 temperature=request["temperature"], top_p=request["topP"],
-                repetition_penalty=request["repetitionPenalty"], max_new_tokens=2048,
+                repetition_penalty=request["repetitionPenalty"], top_k=50, max_new_tokens=8192,
             )
         audio = np.asarray(wavs[0]).reshape(-1)
         if not len(audio) or not np.isfinite(audio).all():

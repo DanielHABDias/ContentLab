@@ -6,8 +6,11 @@ import {APP_ROOT} from './plan.mjs';
 import {run} from './exec.mjs';
 import {voiceStudioFolder} from './voice-studio.mjs';
 import {probeAudioDuration} from './audio.mjs';
+import {CHATTERBOX_MODEL,chatterboxState} from './chatterbox.mjs';
+import {ensurePython} from './portable-tools.mjs';
 
 export const QWEN_MODELS=Object.freeze(['0.6B','1.7B']);
+export const VOICE_MODELS=Object.freeze([...QWEN_MODELS,CHATTERBOX_MODEL]);
 const base=path.join(APP_ROOT,'.tools','qwen');
 const pythonPath=()=>process.env.CONTENTLAB_QWEN_PYTHON||path.join(base,'venv',process.platform==='win32'?'Scripts/python.exe':'bin/python');
 const profilesDir=()=>path.join(base,'voices');
@@ -19,10 +22,11 @@ const numeric=(value,fallback,min,max,label)=>{
   return n;
 };
 export function generationOptions(raw={}){
-  if(!QWEN_MODELS.includes(raw.model))throw Error('Modelo Qwen inválido.');
+  if(!VOICE_MODELS.includes(raw.model))throw Error('Modelo de voz inválido.');
   const text=String(raw.text||'').trim();
   if(!text||text.length>12000)throw Error('Informe de 1 a 12.000 caracteres.');
   const language=raw.language||'Portuguese';
+  if(raw.model===CHATTERBOX_MODEL&&!['Portuguese','English','Spanish'].includes(language))throw Error('A integração Chatterbox aceita português, inglês ou espanhol; use Qwen para os demais idiomas.');
   if(!['Portuguese','English','Spanish','French','German','Italian','Russian','Chinese','Japanese','Korean'].includes(language))throw Error('Idioma inválido.');
   if(!['cpu','cuda'].includes(raw.device||'cpu'))throw Error('Dispositivo inválido.');
   const seed=raw.seed===undefined||raw.seed===''?null:Number(raw.seed);
@@ -32,6 +36,14 @@ export function generationOptions(raw={}){
   for(const paragraph of text.split(/\n\s*\n/)){
     let buffer='';
     for(const piece of paragraph.match(/[^.!?]+[.!?]*\s*|[.!?]+/g)||[paragraph]){
+      // Chatterbox can stop after the first sentence of a longer prompt.
+      // Synthesize sentences individually, preserving all supplied content.
+      if(raw.model===CHATTERBOX_MODEL){
+        let rest=piece.trim();
+        while(rest.length>200){let end=rest.lastIndexOf(' ',200);if(end<1)end=200;chunks.push(rest.slice(0,end));rest=rest.slice(end).trim();}
+        if(rest)chunks.push(rest);
+        continue;
+      }
       if(buffer.length+piece.length>400&&buffer.trim()){chunks.push(buffer.trim());buffer='';}
       if(piece.length>500){if(buffer.trim())chunks.push(buffer.trim());buffer='';for(let i=0;i<piece.length;i+=400)chunks.push(piece.slice(i,i+400).trim());}
       else buffer+=piece;
@@ -39,10 +51,11 @@ export function generationOptions(raw={}){
     if(buffer.trim())chunks.push(buffer.trim());
   }
   return {model:raw.model,chunks,language,device:raw.device||'cpu',seed,
-    temperature:numeric(raw.temperature,.9,.1,1.5,'Temperatura'),
-    topP:numeric(raw.topP,.9,.1,1,'Top P'),
-    repetitionPenalty:numeric(raw.repetitionPenalty,1.05,1,2,'Penalidade'),
-    pauseSeconds:numeric(raw.pauseSeconds,.2,0,2,'Pausa entre trechos')};
+    temperature:numeric(raw.temperature,raw.model===CHATTERBOX_MODEL?.8:.9,.1,1.5,'Temperatura'),
+    topP:numeric(raw.topP,1,.1,1,'Top P'),
+    repetitionPenalty:numeric(raw.repetitionPenalty,raw.model===CHATTERBOX_MODEL?2:1.05,1,2,'Penalidade'),
+    pauseSeconds:numeric(raw.pauseSeconds,0,0,2,'Pausa entre trechos'),
+    ...(raw.model===CHATTERBOX_MODEL?{exaggeration:numeric(raw.exaggeration,.5,0,2,'Expressividade'),cfgWeight:numeric(raw.cfgWeight,.5,0,1,'CFG')}: {})};
 }
 function safeDirectory(directory){
   fs.mkdirSync(directory,{recursive:true,mode:0o700});
@@ -96,12 +109,7 @@ export async function setupRuntime(update,signal){
   safeDirectory(base);
   const venv=path.join(base,'venv');
   if(!fs.existsSync(pythonPath())){
-    let created=false;
-    for(const [binary,prefix] of (process.platform==='win32'?[['py',['-3.12']],['python',[]]]:[['python3.12',[]],['python3',[]]])){
-      try{await run(binary,[...prefix,'-c','import sys; assert (3,10)<=sys.version_info[:2]<=(3,12)']);
-        await run(binary,[...prefix,'-m','venv',venv],{signal});created=true;break;}catch(e){if(signal?.aborted)throw e;}
-    }
-    if(!created)throw Error('Instale Python 3.12 com suporte a venv e tente novamente.');
+    await run(await ensurePython({update,signal}),['-m','venv',venv],{signal});
   }
   const log=chunk=>update(String(chunk).trim().slice(-350));
   update('Instalando PyTorch CPU em ambiente isolado...');
@@ -117,7 +125,8 @@ export async function modelState(){
     const {stdout}=await run(pythonPath(),['-c',"import json; from huggingface_hub import snapshot_download; found=[]\nfor s in ['0.6B','1.7B']:\n try:\n  p=snapshot_download('Qwen/Qwen3-TTS-12Hz-'+s+'-Base',local_files_only=True); from pathlib import Path; assert list(Path(p).glob('*.safetensors')); found.append(s)\n except Exception: pass\nprint(json.dumps(found))"]);
     installed=JSON.parse(stdout.trim().split('\n').at(-1));
   }catch{}}
-  return {runtimeReady:ready,models:QWEN_MODELS.map(id=>({id,installed:installed.includes(id)})),profiles:profiles()};
+  const chatterbox=await chatterboxState();
+  return {runtimeReady:ready,engines:{qwen:{runtimeReady:ready},chatterbox:{runtimeReady:chatterbox.runtimeReady}},models:[...QWEN_MODELS.map(id=>({id,label:'Qwen '+id,engine:'qwen',installed:installed.includes(id)})),chatterbox.model],profiles:profiles()};
 }
 export async function qwenTask(request,{signal,update=()=>{}}={}){
   if(!QWEN_MODELS.includes(request.model))throw Error('Modelo inválido.');

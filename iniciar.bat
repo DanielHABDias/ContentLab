@@ -9,9 +9,7 @@ if exist "%~dp0.tools\ffmpeg\ffmpeg.exe" (
   set "CONTENTLAB_FFMPEG=%~dp0.tools\ffmpeg\ffmpeg.exe"
   set "CONTENTLAB_FFPROBE=%~dp0.tools\ffmpeg\ffprobe.exe"
 )
-if not defined CONTENTLAB_WHISPER_MODEL (
-  if exist "%~dp0.tools\models\ggml-base.bin" set "CONTENTLAB_WHISPER_MODEL=%~dp0.tools\models\ggml-base.bin"
-)
+if not defined CONTENTLAB_WHISPER_MODEL_DIR set "CONTENTLAB_WHISPER_MODEL_DIR=%~dp0.tools\models"
 node server/launcher.mjs
 if errorlevel 1 goto failed
 exit /b 0

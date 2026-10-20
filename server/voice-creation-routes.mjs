@@ -6,10 +6,13 @@ import multer from 'multer';
 import {voiceStudioFolder,voiceStudioState} from './voice-studio.mjs';
 import {takeList,addTake,editTakes,deleteTake,finalizeTakes,transcriptionOptions,takesDirectory,resolveTake} from './narration-assembly.mjs';
 import {probeAudioDuration} from './audio.mjs';
-import {generationOptions,profile,profiles,saveProfile,saveRecording,modelState,setupRuntime,qwenTask} from './voice-creation.mjs';
+import {VOICE_MODELS,generationOptions,profile,profiles,saveProfile,saveRecording,modelState,setupRuntime,qwenTask} from './voice-creation.mjs';
+import {CHATTERBOX_MODEL,setupChatterbox,chatterboxTask} from './chatterbox.mjs';
+import {recordingTreatmentOptions} from './recording-treatment.mjs';
 import {enhanceVoice,enhancementOptions} from './voice-enhancement.mjs';
 import {run} from './exec.mjs';
 import {sendNarrationAudio} from './audio-waveform.mjs';
+import {ensureVoiceModel} from './feature-setup.mjs';
 
 export function mountVoiceCreationRoutes(app,api,{isProjectBusy=()=>false}={}){
   const jobs=new Map();let busy=null;
@@ -73,10 +76,13 @@ export function mountVoiceCreationRoutes(app,api,{isProjectBusy=()=>false}={}){
       handedOff=true;res.status(202).json({jobId:id});
     }finally{if(!handedOff&&req.file)fs.rmSync(req.file.path,{force:true});}
   }));
-  app.post('/api/voice/runtime',api(async(req,res)=>res.status(202).json({jobId:start(async(job,update,signal)=>{await setupRuntime(update,signal);return {ready:true};})})));
+  app.post('/api/voice/runtime',api(async(req,res)=>{
+    const engine=req.body.engine||'qwen';if(!['qwen','chatterbox'].includes(engine))throw Error('Motor de voz inválido.');
+    res.status(202).json({jobId:start(async(job,update,signal)=>{await (engine==='chatterbox'?setupChatterbox:setupRuntime)(update,signal);return {ready:true,engine};})});
+  }));
   app.post('/api/voice/models/download',api(async(req,res)=>{
-    if(!['0.6B','1.7B'].includes(req.body.model))return res.status(400).json({error:'Modelo inválido.'});
-    res.status(202).json({jobId:start(async(job,update,signal)=>{await qwenTask({action:'download',model:req.body.model},{update,signal});return {model:req.body.model};})});
+    if(!VOICE_MODELS.includes(req.body.model))return res.status(400).json({error:'Modelo inválido.'});
+    res.status(202).json({jobId:start(async(job,update,signal)=>{await ensureVoiceModel(req.body.model,{update,signal});return {model:req.body.model};})});
   }));
   app.post('/api/voice/profiles',uploaded,api(async(req,res)=>{
     try{res.json(await saveProfile(req.file.path,req.body));}
@@ -99,20 +105,19 @@ export function mountVoiceCreationRoutes(app,api,{isProjectBusy=()=>false}={}){
     if(isProjectBusy(root))throw Error('Há processamento de áudio ou render neste projeto.');
     const transcription=transcriptionOptions(req.body.transcription);
     const enhancement=enhancementOptions(req.body.enhancement);
-    const state=await modelState();
-    if(!state.models.find(m=>m.id===options.model)?.installed)return res.status(409).json({error:'Baixe o modelo selecionado primeiro.'});
     res.status(202).json({jobId:start(async(job,update,signal)=>{
+      await ensureVoiceModel(options.model,{signal,update});
       const staging=fs.mkdtempSync(path.join(os.tmpdir(),'contentlab-speech-'));
       try{
         const output=path.join(staging,'speech.wav');
-        await qwenTask({...options,action:'generate',reference:voice.audio,referenceText:voice.referenceText,output},{signal,update});
+        await (options.model===CHATTERBOX_MODEL?chatterboxTask:qwenTask)({...options,action:'generate',reference:voice.audio,referenceText:voice.referenceText,output},{signal,update});
         if(signal.aborted)throw Error('Cancelado.');
         // Revalidate the destination after a long inference. Never overwrite existing takes.
         takesDirectory(root);
         const relative='audio/takes/narration.ai-'+crypto.randomUUID()+'.wav';
         const file=path.join(root,relative);fs.copyFileSync(output,file,fs.constants.COPYFILE_EXCL);
         job.file=file;
-        fs.writeFileSync(file+'.json',JSON.stringify({version:1,kind:'qwen',model:options.model,profileId:voice.id,language:options.language,processing:[],createdAt:new Date().toISOString()}),{flag:'wx'});
+        fs.writeFileSync(file+'.json',JSON.stringify({version:1,kind:'qwen',engine:options.model===CHATTERBOX_MODEL?'chatterbox':'qwen',checkpoint:options.model===CHATTERBOX_MODEL?'multilingual-v3':undefined,model:options.model,profileId:voice.id,language:options.language,exaggeration:options.exaggeration,cfgWeight:options.cfgWeight,processing:[],createdAt:new Date().toISOString()}),{flag:'wx'});
         const duration=await probeAudioDuration(file);
         addTake(root,{relative,duration,kind:'qwen'},req.body.append!==true);
         const result=await finalizeTakes(root,{kind:'qwen',transcription,enhancement,signal,update});
@@ -158,12 +163,13 @@ export function mountVoiceCreationRoutes(app,api,{isProjectBusy=()=>false}={}){
   }));
   app.post('/api/voice/finalize',api(async(req,res)=>{
     const root=voiceStudioFolder(req.body.projectRoot),kind=req.body.kind||'recording';
+    const treatment=kind==='recording'?recordingTreatmentOptions(req.body.treatment??{}):null;
     const transcription=transcriptionOptions(req.body.transcription);
     const enhancement=enhancementOptions(req.body.enhancement);
     if(isProjectBusy(root))return res.status(409).json({error:'Há processamento de áudio ou render neste projeto.'});
     if(!['recording','qwen'].includes(kind)||!takeList(root).takes.some(t=>t.kind===kind&&t.selected))return res.status(400).json({error:'Selecione pelo menos uma tomada.'});
     res.status(202).json({jobId:start(async(job,update,signal)=>{
-      const result=await finalizeTakes(root,{kind,transcription,enhancement,signal,update});job.file=path.join(root,result.source);return result;
+      const result=await finalizeTakes(root,{kind,transcription,enhancement,treatment,signal,update});job.file=path.join(root,result.source);return result;
     },{projectRoot:root})});
   }));
   app.get('/api/voice/jobs/:id',api(async(req,res)=>{

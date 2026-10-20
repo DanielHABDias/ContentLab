@@ -49,10 +49,10 @@ test('yt-dlp metadata parses one public video and never invokes a shell',async()
   assert.equal(invocation.args.includes('--ignore-config'),true);
   assert.deepEqual(invocation.args.slice(-1),['https://vimeo.com/1234']);
 });
-test('Missing optional downloader shows installation instructions instead of generic ENOENT',async()=>{
+test('Missing downloader reports automatic preparation failure instead of manual PATH instructions',async()=>{
   await assert.rejects(getExternalVideoInfo('https://vimeo.com/1234',{
     runner:async()=>{throw Object.assign(Error('spawn yt-dlp ENOENT'),{code:'ENOENT'});}
-  }),/yt-dlp não está instalado/);
+  }),/preparado automaticamente/);
 });
 test('Non-public videos give a useful error instead of pretending they are supported',async()=>{
   await assert.rejects(getExternalVideoInfo('https://www.tiktok.com/@a/video/1234',{
@@ -80,8 +80,8 @@ test('Downloader writes one MP4 with a size limit, ffmpeg and no generic extract
   }finally{fs.rmSync(directory,{recursive:true,force:true});}
 });
 test('The yt-dlp executable can be configured for different operating systems',()=>{
-  assert.equal(externalToolPath({env:{},platform:'win32'}),'yt-dlp.exe');
-  assert.equal(externalToolPath({env:{},platform:'linux'}),'yt-dlp');
+  assert.equal(externalToolPath({env:{},platform:'win32',directory:'/missing-fixture'}),'yt-dlp.exe');
+  assert.equal(externalToolPath({env:{},platform:'linux',directory:'/missing-fixture'}),'yt-dlp');
   assert.equal(externalToolPath({env:{CONTENTLAB_YT_DLP:'D:\\bin\\yt-dlp.exe'},platform:'win32'}),
     'D:\\bin\\yt-dlp.exe');
 });

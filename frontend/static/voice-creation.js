@@ -1,6 +1,14 @@
-/* Recording and optional Qwen generation; does not run the existing treatment pipeline automatically. */
+/* Recording has explicit finalization treatment; local TTS and import treatment remain separate. */
 (()=>{
   const $=id=>document.getElementById(id);if(!$('voiceRecordStart'))return;
+  const expressiveModel='chatterbox-multilingual';
+  for(const id of ['voiceAiModel','voiceModelInstallSelect'])if(![...$(id).options].some(o=>o.value===expressiveModel))$(id).add(new Option('Chatterbox Multilingual V3 · expressivo',expressiveModel));
+  function expressiveControls(){$('voiceExpressiveControls').hidden=$('voiceAiModel').value!==expressiveModel;}
+  $('voiceAiModel').addEventListener('change',()=>{expressiveControls();const expressive=$('voiceAiModel').value===expressiveModel;$('voiceTemperature').value=expressive?.8:.9;$('voiceRepetition').value=expressive?2:1.05;$('voiceTopP').value=1;$('voiceParagraphPause').value=0;$('voiceDeliveryPreset').value='neutral';$('voiceExaggeration').value=.5;$('voiceCfgWeight').value=.5;});expressiveControls();
+  $('voiceDeliveryPreset').addEventListener('change',()=>{
+    const values={neutral:[.5,.5],calm:[.3,.3],dramatic:[.75,.3],energetic:[.85,.4]}[$('voiceDeliveryPreset').value];
+    if(values){$('voiceExaggeration').value=values[0];$('voiceCfgWeight').value=values[1];}
+  });
   let recorder=null,stream=null,context=null,frame=null,chunks=[],take=null,objectUrl=null;
   let elapsed=0,lastTime=0,timer=null,jobId=null,polling=false,refreshing=false,unsavedTake=false,recordingFolder=null,savingTake=false,takeState=null;
   let savedProfiles=[];
@@ -49,7 +57,7 @@
     try{
       recordingFolder=root();
       const deviceId=$('voiceMicrophone').value;
-      stream=await navigator.mediaDevices.getUserMedia({audio:{deviceId:deviceId?{exact:deviceId}:undefined,echoCancellation:false,noiseSuppression:false,autoGainControl:false},video:false});
+      stream=await navigator.mediaDevices.getUserMedia({audio:{deviceId:deviceId?{exact:deviceId}:undefined,sampleRate:{ideal:48000},channelCount:{ideal:1},echoCancellation:false,noiseSuppression:false,autoGainControl:false},video:false});
       await microphones();
       const mime=['audio/webm;codecs=opus','audio/ogg;codecs=opus','audio/mp4'].find(t=>MediaRecorder.isTypeSupported(t));
       recorder=new MediaRecorder(stream,mime?{mimeType:mime}:{});chunks=[];elapsed=0;lastTime=performance.now();
@@ -87,12 +95,12 @@
     $('voiceFinalTranscript').value=result.preview||'';
   }
   function automaticTranscription(){return {model:$('voiceAutomaticModel').value||'base',language:$('voiceAutomaticLanguage').value||'pt',detail:'words'};}
-  function enhancement(){return {enhancementEngine:$('voiceEnhancementEngine').value||'off',enhancementMode:$('voiceEnhancementMode').value||'natural',enhancementStrength:Number($('voiceEnhancementStrength').value||80)};}
+  function enhancement(){return {enhancementEngine:$('voiceEnhancementEngine').value||'off',enhancementMode:$('voiceEnhancementMode').value||'strong',enhancementStrength:Number($('voiceEnhancementStrength').value||100)};}
   function enhancementControls(){
     const off=$('voiceEnhancementEngine').value!=='deepfilter';
     $('voiceEnhancementMode').disabled=off||polling;$('voiceEnhancementStrength').disabled=off||polling;
     $('voiceEnhancementPreview').disabled=off||polling;$('voiceEnhancementEngine').disabled=polling;
-    $('voiceEnhancementStrengthValue').textContent=String($('voiceEnhancementStrength').value||80)+'%';
+    $('voiceEnhancementStrengthValue').textContent=String($('voiceEnhancementStrength').value||100)+'%';
   }
   $('voiceEnhancementEngine').onchange=enhancementControls;$('voiceEnhancementStrength').oninput=enhancementControls;
   $('voiceEnhancementPreview').onclick=safe(async()=>{
@@ -166,7 +174,13 @@
   }
   async function finalize(kind){
     if(savingTake||unsavedTake||(recorder&&recorder.state!=='inactive'))throw Error('Finalize e salve a tomada antes de unir a narração.');
-    const result=await post('/api/voice/finalize',{projectRoot:root(),kind,transcription:automaticTranscription(),enhancement:{enhancementEngine:'off'}});await watch(result.jobId);
+    const treatment=kind==='recording'?{
+      enabled:$('voiceRecordTreatmentEnabled').checked!==false,
+      enhancementEngine:$('voiceRecordAi').checked!==false?'deepfilter':'off',enhancementMode:$('voiceRecordAiMode').value||'strong',enhancementStrength:Number($('voiceRecordAiStrength').value||100),
+      compression:$('voiceRecordCompression').checked!==false,deesser:$('voiceRecordDeesser').checked!==false,normalize:$('voiceRecordNormalize').checked!==false,
+      targetLufs:Number($('voiceRecordLufs').value||-16),highpassHz:Number($('voiceRecordHighpass').value||70),trimEdges:$('voiceRecordTrim').checked!==false,removeMiddleSilence:$('voiceRecordMiddle').checked===true
+    }:undefined;
+    const result=await post('/api/voice/finalize',{projectRoot:root(),kind,treatment,transcription:automaticTranscription(),enhancement:{enhancementEngine:'off'}});await watch(result.jobId);
   }
   $('voiceRecordFinalize').onclick=safe(()=>finalize('recording'));
   $('voiceAiFinalize').onclick=safe(()=>finalize('qwen'));
@@ -209,8 +223,8 @@
       if([...$('voiceProfile').options].some(o=>o.value===selected))$('voiceProfile').value=selected;else if(list.profiles.length)$('voiceProfile').value=list.profiles[0].id;
       savedProfiles=list.profiles;renderProfiles();
       const state=await request('/api/voice/state');
-      $('voiceRuntimeStatus').textContent=state.runtimeReady?'Ambiente de IA disponível.':'Ambiente opcional ainda não preparado.';
-      for(const id of ['voiceAiModel','voiceModelInstallSelect'])for(const model of state.models){const option=[...$(id).options].find(o=>o.value===model.id);if(option)option.textContent=`Qwen ${model.id}${model.installed?' · baixado':''}`;}
+      $('voiceRuntimeStatus').textContent=`Qwen: ${state.runtimeReady?'pronto':'será preparado automaticamente'}. Chatterbox: ${state.engines?.chatterbox?.runtimeReady?'pronto':'será preparado automaticamente'}. Gerar baixa o modelo escolhido se necessário. Os botões abaixo permitem antecipar ou reparar.`;
+      for(const id of ['voiceAiModel','voiceModelInstallSelect'])for(const model of state.models){const option=[...$(id).options].find(o=>o.value===model.id);if(option)option.textContent=`${model.label||'Qwen '+model.id}${model.installed?' · baixado':''}`;}
       if(state.busyJobId&&!polling)watch(state.busyJobId).catch(e=>status(e.message));
     }finally{refreshing=false;}
   }
@@ -226,7 +240,7 @@
           if(job.status==='done'&&job.result?.relative){
             completed=true;
             if(requestedFolder===$('transcriptionProjectRoot').value.trim()){
-              await useAudio(id,job.result);status('Concluído! Narração e transcrição salvas. Ouça o resultado no bloco “Narração e transcrição prontas”. Tomadas em audio/takes/; áudio final em audio/narration.wav.',true);
+              await useAudio(id,job.result);status('Concluído! '+(job.result.treatment?.applied?'Gravação tratada. ':'')+'Narração e transcrição salvas. Ouça o resultado no bloco “Narração e transcrição prontas”. Tomadas originais em audio/takes/; áudio final em audio/narration.wav.',true);
             }else status('Narração e transcrição prontas em '+job.result.projectRoot+'. Selecione essa pasta para revisar.');
           }
           if(job.result?.preview)completed=true;
@@ -241,7 +255,7 @@
       if($('transcriptionProjectRoot').value.trim())await loadTakes().catch(()=>{});
     }
   }
-  $('voiceRuntimeSetup').onclick=safe(async()=>{await watch((await post('/api/voice/runtime',{})).jobId);});
+  $('voiceRuntimeSetup').onclick=safe(async()=>{await watch((await post('/api/voice/runtime',{engine:$('voiceModelInstallSelect').value===expressiveModel?'chatterbox':'qwen'})).jobId);});
   $('voiceModelDownload').onclick=safe(async()=>{await watch((await post('/api/voice/models/download',{model:$('voiceModelInstallSelect').value})).jobId);});
   $('voiceStateRefresh').onclick=safe(refresh);
   $('voiceCommonCancel').onclick=safe(async()=>{if(jobId)await post('/api/voice/jobs/'+jobId+'/cancel',{});});
@@ -260,7 +274,8 @@
     const body={projectRoot:root(),append:$('voiceAiAppend').checked,transcription:automaticTranscription(),enhancement:{enhancementEngine:'off'},model:$('voiceAiModel').value,profileId:$('voiceProfile').value,text:$('voiceAiText').value,
       language:$('voiceAiLanguage').value,device:$('voiceAiDevice').value,
       temperature:Number($('voiceTemperature').value),topP:Number($('voiceTopP').value),
-      repetitionPenalty:Number($('voiceRepetition').value),pauseSeconds:Number($('voiceParagraphPause').value),seed:$('voiceSeed').value};
+      repetitionPenalty:Number($('voiceRepetition').value),pauseSeconds:Number($('voiceParagraphPause').value),seed:$('voiceSeed').value,
+      ...($('voiceAiModel').value===expressiveModel?{exaggeration:Number($('voiceExaggeration').value),cfgWeight:Number($('voiceCfgWeight').value)}:{})};
     await watch((await post('/api/voice/generate',body)).jobId);
   });
   window.addEventListener('beforeunload',event=>{
@@ -280,7 +295,7 @@
     $('transcriptionMinSilence').value='0.7';$('transcriptionThreshold').value='-42';
     $('transcriptionNormalize').checked=true;$('transcriptionTargetLufs').value='-16';$('transcriptionHighpass').value='70';
     $('transcriptionCompression').checked=!preserve;$('transcriptionDeesser').checked=strong;$('transcriptionVoicePreset').value='original';
-    $('voiceEnhancementEngine').value=strong?'deepfilter':'off';$('voiceEnhancementMode').value=strong?'strong':'natural';$('voiceEnhancementStrength').value=strong?'85':'80';enhancementControls();
+    $('voiceEnhancementEngine').value=strong?'deepfilter':'off';$('voiceEnhancementMode').value=strong?'strong':'natural';$('voiceEnhancementStrength').value=strong?'100':'80';enhancementControls();
   };
   for(const id of ['transcriptionTrimEdges','transcriptionRemoveMiddle','transcriptionMinSilence','transcriptionThreshold','transcriptionNormalize','transcriptionTargetLufs','transcriptionHighpass','transcriptionCompression','transcriptionDeesser','transcriptionVoicePreset','voiceEnhancementEngine','voiceEnhancementMode','voiceEnhancementStrength'])$(id).addEventListener('change',()=>{$('voiceTreatmentRecipe').value='custom';});
   window.addEventListener('workspacechange',event=>workspaceEntered(event.detail.name));
