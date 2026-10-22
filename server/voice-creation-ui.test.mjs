@@ -51,6 +51,22 @@ test('permission denial is visible and does not leave recorder running',async()=
   assert.match(h.element('voiceCreationStatus').textContent,/não autorizado/);
   assert.equal(h.element('voiceRecordStart').disabled,false);assert.equal(h.recorder,null);
 });
+test('recording forwards breath attenuation including zero, and recipes control import independently',async()=>{
+  let body;
+  const h=harness({fetcher:async(url,options)=>{
+    if(url==='/api/voice/finalize')body=JSON.parse(options.body);
+    return {ok:true,json:async()=>url==='/api/voice/finalize'?{jobId:'breath'}:{status:'done',result:{duration:1,takeCount:1}}};
+  }});
+  h.element('voiceRecordReduceBreaths').checked=true;h.element('voiceRecordBreathStrength').value='0';
+  await h.element('voiceRecordFinalize').onclick();
+  assert.equal(body.treatment.reduceBreaths,true);assert.equal(body.treatment.breathReductionStrength,0);
+  h.element('voiceTreatmentRecipe').value='preserve';h.element('voiceTreatmentRecipe').onchange();
+  assert.equal(h.element('transcriptionReduceBreaths').checked,false);
+  assert.equal(h.element('voiceRecordReduceBreaths').checked,true);
+  h.element('voiceTreatmentRecipe').value='strong';h.element('voiceTreatmentRecipe').onchange();
+  assert.equal(h.element('transcriptionReduceBreaths').checked,true);
+  h.element('transcriptionBreathStrength').listeners.change();assert.equal(h.element('voiceTreatmentRecipe').value,'custom');
+});
 test('switching voice model restores Voicebox sampling and neutral expression',()=>{
   const h=harness();
   for(const [model,temperature,repetition] of [['chatterbox-multilingual',.8,2],['0.6B',.9,1.05],['1.7B',.9,1.05]]){

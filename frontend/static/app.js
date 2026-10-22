@@ -1030,6 +1030,7 @@ $("transcriptionStart").addEventListener("click", async () => {
     form.append("voicePreset", $("transcriptionVoicePreset").value);
     for(const [field,id] of [['trimEdges','transcriptionTrimEdges'],['normalize','transcriptionNormalize'],['compression','transcriptionCompression'],['deesser','transcriptionDeesser']])form.append(field,String($(id).checked));
     form.append('targetLufs',$('transcriptionTargetLufs').value);form.append('highpassHz',$('transcriptionHighpass').value);
+    form.append('reduceBreaths',String($('transcriptionReduceBreaths').checked));form.append('breathReductionStrength',$('transcriptionBreathStrength').value);
     form.append("enhancementEngine", $("voiceEnhancementEngine").value);
     form.append("enhancementMode", $("voiceEnhancementMode").value);
     form.append("enhancementStrength", $("voiceEnhancementStrength").value);

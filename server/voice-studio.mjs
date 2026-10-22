@@ -7,6 +7,7 @@ import {mediaToolExecutable,ffmpegFilterAvailable} from './runtime-tools.mjs';
 import {prepareNarration,probeAudioDuration} from './audio.mjs';
 import {transcribeAudio} from './transcribe.mjs';
 import {enhanceVoice,enhancementOptions} from './voice-enhancement.mjs';
+import {reduceBreaths,breathOptions} from './breath-reduction.mjs';
 
 const fmt=x=>Number(x).toFixed(6);
 const AUDIO_EXT=new Set(['.wav','.mp3','.m4a','.aac','.flac','.ogg','.opus']);
@@ -61,7 +62,7 @@ export function voiceOptions(raw={}){
   if(!Number.isFinite(pitchSemitones)||pitchSemitones< -3||pitchSemitones>0)
     throw Error('Pitch permitido: de -3 a 0 semitons.');
   return {removeMiddleSilence:raw.removeMiddleSilence!==false,minSilence,
-    thresholdDb,voicePreset,pitchSemitones,bassGainDb,trimEdges:raw.trimEdges!==false,normalize:raw.normalize!==false,compression:raw.compression===true,deesser:raw.deesser===true,targetLufs,highpassHz,...enhancementOptions(raw)};
+    thresholdDb,voicePreset,pitchSemitones,bassGainDb,trimEdges:raw.trimEdges!==false,normalize:raw.normalize!==false,compression:raw.compression===true,deesser:raw.deesser===true,targetLufs,highpassHz,...enhancementOptions(raw),...breathOptions(raw)};
 }
 // FFmpeg silencedetect emits start/end pairs; retain speech-adjacent padding.
 // No silence removal is allowed to depend on the edit plan's future pauses.
@@ -189,6 +190,9 @@ export async function prepareStandaloneNarration(directory,{
     }
     update('Localizando pausas e removendo silêncios de borda e intervalos internos longos...');
     const layout=await analyzeVoice(working,config,{ffmpeg,ffprobe,signal});
+    const breathFile=path.join(staged,'breaths.wav');
+    const breathReduction=await reduceBreaths(working,breathFile,config,{ffmpeg,signal,update});
+    working=breathFile;
     const neutral=path.join(staged,'narration.prepared.wav');
     await prepareNarration(working,neutral,{
       sourceCuts:layout.cuts,voice:{autoTrimSilence:false,highpassHz:config.highpassHz,normalize:config.normalize,
@@ -220,7 +224,7 @@ export async function prepareStandaloneNarration(directory,{
     const meta={mode:'voice-studio',version:1,source:original,output:NARRATION_OUTPUT,
       neutral:NARRATION_NEUTRAL,outputIdentity:{size:identity.size,mtimeMs:identity.mtimeMs},
       duration:await probeAudioDuration(neutral,{ffprobe,signal}),originalDuration:layout.originalDuration,
-      options:config,enhancement,removedCount:layout.removed.length,removedRanges:layout.removed,
+      options:config,enhancement,breathReduction,removedCount:layout.removed.length,removedRanges:layout.removed,
       model,language,generatedAt:new Date().toISOString()};
     const written=path.join(staged,'narration.build.json');
     fs.writeFileSync(written,JSON.stringify(meta,null,2)+'\n');

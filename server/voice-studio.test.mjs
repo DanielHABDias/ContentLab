@@ -122,10 +122,11 @@ test('standalone narration generates final WAV and transcript without edit_plan.
     assert.equal(enhanced,true);
     assert.deepEqual(fs.readFileSync(path.join(root,processed.source)),fs.readFileSync(source),'Original must remain untouched by enhancement');
     assert.equal(JSON.parse(fs.readFileSync(path.join(root,'narration.build.json'))).enhancement.applied,true);
-    const full=await prepareStandaloneNarration(root,{sourceFile:path.join(root,processed.source),options:{trimEdges:false,removeMiddleSilence:false,normalize:false,highpassHz:0,compression:true,deesser:true},transcriber});
+    const full=await prepareStandaloneNarration(root,{sourceFile:path.join(root,processed.source),options:{trimEdges:false,removeMiddleSilence:false,normalize:false,highpassHz:0,compression:true,deesser:true,reduceBreaths:true,breathReductionStrength:60},transcriber});
     assert.ok(Math.abs(full.duration-await probeAudioDuration(source))<.01,'Dynamics must not shorten the narration');
     const meta=JSON.parse(fs.readFileSync(path.join(root,'narration.build.json')));
     assert.equal(meta.options.normalize,false);assert.equal(meta.options.compression,true);assert.equal(meta.options.deesser,true);assert.equal(meta.removedCount,0);
+    assert.equal(meta.options.reduceBreaths,true);assert.ok(Array.isArray(meta.breathReduction.ranges));
 
   }finally{fs.rmSync(root,{recursive:true,force:true});}
 });

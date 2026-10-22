@@ -472,6 +472,7 @@ app.post('/api/transcription/jobs',upload.single('file'),api(async(req,res)=>{
       minSilence:Number(req.body.minSilence||.7),
       thresholdDb:Number(req.body.thresholdDb||-42),
       trimEdges:req.body.trimEdges!=='false',normalize:req.body.normalize!=='false',compression:req.body.compression==='true',deesser:req.body.deesser==='true',targetLufs:req.body.targetLufs??-16,highpassHz:req.body.highpassHz??70,
+      reduceBreaths:req.body.reduceBreaths==='true',breathReductionStrength:req.body.breathReductionStrength??60,
       enhancementEngine:req.body.enhancementEngine||'off',enhancementMode:req.body.enhancementMode||'natural',enhancementStrength:req.body.enhancementStrength??80,
       ...(req.body.voicePreset?{voicePreset:String(req.body.voicePreset)}:
         {pitchSemitones:Number(req.body.pitchSemitones||0)})

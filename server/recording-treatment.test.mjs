@@ -11,6 +11,7 @@ test('recording defaults enable strong AI and balanced voice without destroying 
   assert.equal(config.enabled,true);assert.equal(config.enhancementEngine,'deepfilter');assert.equal(config.enhancementStrength,100);
   assert.equal(config.enhancementMode,'strong');assert.equal(config.compression,true);assert.equal(config.deesser,true);assert.equal(config.normalize,true);
   assert.equal(config.highpassHz,70);assert.equal(config.targetLufs,-16);assert.equal(config.removeMiddleSilence,false);assert.equal(config.pitchSemitones,0);
+  assert.equal(config.reduceBreaths,true);assert.equal(config.breathReductionStrength,60);
   for(const invalid of [null,[],{enabled:'false'},{targetLufs:-40},{compression:'true'},{enhancementStrength:110}])assert.throws(()=>recordingTreatmentOptions(invalid));
 });
 test('disabled recording treatment copies bytes exactly and never invokes AI',async t=>{

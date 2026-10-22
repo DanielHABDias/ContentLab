@@ -178,6 +178,7 @@
       enabled:$('voiceRecordTreatmentEnabled').checked!==false,
       enhancementEngine:$('voiceRecordAi').checked!==false?'deepfilter':'off',enhancementMode:$('voiceRecordAiMode').value||'strong',enhancementStrength:Number($('voiceRecordAiStrength').value||100),
       compression:$('voiceRecordCompression').checked!==false,deesser:$('voiceRecordDeesser').checked!==false,normalize:$('voiceRecordNormalize').checked!==false,
+      reduceBreaths:$('voiceRecordReduceBreaths').checked!==false,breathReductionStrength:Number($('voiceRecordBreathStrength').value||60),
       targetLufs:Number($('voiceRecordLufs').value||-16),highpassHz:Number($('voiceRecordHighpass').value||70),trimEdges:$('voiceRecordTrim').checked!==false,removeMiddleSilence:$('voiceRecordMiddle').checked===true
     }:undefined;
     const result=await post('/api/voice/finalize',{projectRoot:root(),kind,treatment,transcription:automaticTranscription(),enhancement:{enhancementEngine:'off'}});await watch(result.jobId);
@@ -295,9 +296,10 @@
     $('transcriptionMinSilence').value='0.7';$('transcriptionThreshold').value='-42';
     $('transcriptionNormalize').checked=true;$('transcriptionTargetLufs').value='-16';$('transcriptionHighpass').value='70';
     $('transcriptionCompression').checked=!preserve;$('transcriptionDeesser').checked=strong;$('transcriptionVoicePreset').value='original';
+    $('transcriptionReduceBreaths').checked=!preserve;$('transcriptionBreathStrength').value='60';
     $('voiceEnhancementEngine').value=strong?'deepfilter':'off';$('voiceEnhancementMode').value=strong?'strong':'natural';$('voiceEnhancementStrength').value=strong?'100':'80';enhancementControls();
   };
-  for(const id of ['transcriptionTrimEdges','transcriptionRemoveMiddle','transcriptionMinSilence','transcriptionThreshold','transcriptionNormalize','transcriptionTargetLufs','transcriptionHighpass','transcriptionCompression','transcriptionDeesser','transcriptionVoicePreset','voiceEnhancementEngine','voiceEnhancementMode','voiceEnhancementStrength'])$(id).addEventListener('change',()=>{$('voiceTreatmentRecipe').value='custom';});
+  for(const id of ['transcriptionReduceBreaths','transcriptionBreathStrength','transcriptionTrimEdges','transcriptionRemoveMiddle','transcriptionMinSilence','transcriptionThreshold','transcriptionNormalize','transcriptionTargetLufs','transcriptionHighpass','transcriptionCompression','transcriptionDeesser','transcriptionVoicePreset','voiceEnhancementEngine','voiceEnhancementMode','voiceEnhancementStrength'])$(id).addEventListener('change',()=>{$('voiceTreatmentRecipe').value='custom';});
   window.addEventListener('workspacechange',event=>workspaceEntered(event.detail.name));
   window.addEventListener('projectwillchange',event=>{if(savingTake||unsavedTake||(recorder&&recorder.state!=='inactive')){event.preventDefault();status('Finalize e salve a tomada antes de trocar ou recarregar o projeto.');}});
   window.addEventListener('projectchanged',()=>{takeState=null;$('voiceFinalDetails').hidden=true;renderTakes();loadTakes().catch(error=>status(error.message));});

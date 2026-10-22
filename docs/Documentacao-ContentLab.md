@@ -12,6 +12,16 @@ Esta documentação diferencia propriedades aceitas pelo schema de comportamento
 - Exemplos de uso
 - Regras de validação
 
+## Redução de respiração nas pausas
+
+Narração → Tratamento (finalidade narração oficial) e Gravar → Ajustar tratamento da gravação oferecem Atenuar respirações nas pausas e intensidade 0–100%, inicialmente 60%. Ao finalizar a gravação, o tratamento habilitado usa essa opção automaticamente. As tomadas e o original permanecem preservados. Não altera um render em andamento nem reprocessa arquivos já prontos sozinho.
+
+É um detector acústico conservador local, não um novo modelo de IA: procura ruídos curtos e pouco periódicos, mais baixos que a fala próxima, com margem de proteção junto às palavras. Intensidade 60 corresponde a até 12 dB de atenuação e 100 a até 20 dB, com rampas suaves. Não garante remover toda respiração; se afetar consoantes, reduza ou desative. Não apaga amostras nem modifica o relógio da narração. Os cortes de silêncio são analisados antes dessa etapa, para a atenuação não criar novos cortes.
+
+API: reduceBreaths (booleano) e breathReductionStrength (0–100, padrão 60). No POST /api/transcription/jobs, campos multipart true/false e número; no POST /api/voice/finalize kind:recording, dentro de treatment. Chamadas antigas de importação sem reduceBreaths mantêm a redução desligada; gravação tem padrão ligado. Zero ou false não aplica atenuação. Metadados registram breathReduction.ranges e attenuationDb quando houve detecção. Não incluir no edit_plan.json. Não se aplica à transcrição avulsa nem automaticamente à geração de voz por IA. O teste de prévia da IA continua avaliando apenas o aprimoramento DeepFilterNet, não esta etapa adicional.
+
+![Trim de silêncio nas bordas dos SFX](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/docs/figures/audio.svg)
+
 ## Preparação automática de todas as áreas
 
 Linux: abra run.sh ou o atalho; Windows: iniciar.vbs/iniciar.bat. npm start usa o mesmo inicializador. São conferidos Node 22, pacotes npm/Remotion, Chrome Headless Shell, FFmpeg/FFprobe com rubberband, Whisper CLI e base, yt-dlp standalone, DeepFilterNet e os ambientes CPU Qwen/Chatterbox. Instalações válidas são reutilizadas; falhas interrompem o preparo com erro real. Requer internet/espaço na primeira instalação, que pode demorar e ocupar vários GB. Não significa que o repositório inclui todos esses binários.

@@ -4,11 +4,12 @@ import {voiceOptions,analyzeVoice} from './voice-studio.mjs';
 import {enhanceVoice} from './voice-enhancement.mjs';
 import {prepareNarration,probeAudioDuration} from './audio.mjs';
 import {run} from './exec.mjs';
+import {reduceBreaths} from './breath-reduction.mjs';
 
 export function recordingTreatmentOptions(raw={}){
   if(!raw||typeof raw!=='object'||Array.isArray(raw))throw Error('Tratamento da gravação inválido.');
   if(raw.enabled!==undefined&&typeof raw.enabled!=='boolean')throw Error('Ativação do tratamento inválida.');
-  return {enabled:raw.enabled!==false,...voiceOptions({voicePreset:'original',trimEdges:true,removeMiddleSilence:false,normalize:true,compression:true,deesser:true,highpassHz:70,targetLufs:-16,enhancementEngine:'deepfilter',enhancementMode:'strong',enhancementStrength:100,...raw,pitchSemitones:0,voicePreset:'original'})};
+  return {enabled:raw.enabled!==false,...voiceOptions({voicePreset:'original',trimEdges:true,removeMiddleSilence:false,normalize:true,compression:true,deesser:true,reduceBreaths:true,breathReductionStrength:60,highpassHz:70,targetLufs:-16,enhancementEngine:'deepfilter',enhancementMode:'strong',enhancementStrength:100,...raw,pitchSemitones:0,voicePreset:'original'})};
 }
 export async function treatRecording(input,output,raw={}, {ffmpeg='ffmpeg',ffprobe='ffprobe',signal,update=()=>{},enhancer=enhanceVoice}={}){
   const options=recordingTreatmentOptions(raw);
@@ -31,9 +32,13 @@ export async function treatRecording(input,output,raw={}, {ffmpeg='ffmpeg',ffpro
       if(Math.abs(await probeAudioDuration(working,{ffprobe,signal})-await probeAudioDuration(dynamics,{ffprobe,signal}))>.01)throw Error('O tratamento alterou a duração inesperadamente.');
       working=dynamics;
     }
+    const breathFile=path.join(stage,'breaths.wav');
+    const breathReduction=await reduceBreaths(working,breathFile,options,{ffmpeg,signal,update});
+    working=breathFile;
+    if(breathReduction.applied)processing.push('breath-reduction');
     update('Finalizando gravação'+(options.normalize?' em '+options.targetLufs+' LUFS, pico alvo -1,5 dBTP':'')+'...');
     await prepareNarration(working,output,{sourceCuts:layout.cuts,voice:{autoTrimSilence:false,highpassHz:0,normalize:options.normalize,targetLufs:options.targetLufs,truePeakDb:-1.5}},{ffmpeg,ffprobe,signal,duration:layout.duration,autoTrimCuts:layout.cuts,outputChannels:1,outputCodec:'pcm_s24le'});
     if(layout.removed.length)processing.push('silence-cuts');if(options.normalize)processing.push('loudness');
-    return {applied:true,options,enhancement,processing,removedRanges:layout.removed,originalDuration:layout.originalDuration,duration:await probeAudioDuration(output,{ffprobe,signal})};
+    return {applied:true,options,enhancement,breathReduction,processing,removedRanges:layout.removed,originalDuration:layout.originalDuration,duration:await probeAudioDuration(output,{ffprobe,signal})};
   }finally{fs.rmSync(stage,{recursive:true,force:true});}
 }

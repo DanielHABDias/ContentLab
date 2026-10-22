@@ -1,5 +1,7 @@
 # Content Lab — Node.js + Remotion
 
+**Redução de respiração:** disponível em **Narração → Tratamento**, na finalidade de narração oficial, e em **Gravar → Ajustar tratamento da gravação**. Vem marcada na interface, com intensidade de 60% (até 12 dB de atenuação); pode diminuir, desligar ou aumentar até 100% (20 dB). Atua conservadoramente em ruídos semelhantes a respiros nas pausas, sem cortar tempo e sem baixar outro modelo. Não garante eliminar toda respiração: ouça o resultado e reduza se afetar consoantes. O tratamento acontece antes da transcrição final; originais e tomadas são preservados. Não se aplica à transcrição avulsa nem à geração por IA automaticamente. Detalhes de API e limitações no guia integrado, seção “Redução de respiração nas pausas”.
+
 ## Projeto universal
 
 Selecione **uma pasta no topo** para todas as abas. A pasta pode estar vazia: `edit_plan.json` só é necessário no Editor para editar/renderizar. O navegador restaura o último caminho usado; **Recarregar projeto** relê o plano, as tomadas, o inventário e as thumbnails. Confirme antes de descartar alterações do editor. Em gravação, finalize/salve a tomada antes de trocar a pasta.
