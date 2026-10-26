@@ -1,11 +1,16 @@
 # Personagem, espiral e legenda sincronizada
 
+## Movimento e contrato de execução
+
+Campo espacial da espiral (ângulo, distância, curvatura, granulação) é preparado uma vez e o buffer de pixels é reutilizado. A rotação continua por frame; pixelado e curvas suaves são preservados. Recorte temporal das palavras e agrupamento das legendas são memorizados. Cabeça/escala, entrada por baixo e ausência de saída permanecem.
+
+Instalação manual: copiar **PersonagemEspiralLegenda.tsx** e **HQComicPage.tsx, HQMotion.tsx** para a mesma pasta custom-scenes. A Galeria prepara esses arquivos automaticamente, sem sobrescrever versões diferentes. Auxiliares idênticos são compartilhados uma única vez no projeto. Todos os sons continuam no plano; não há áudio automático. Anton sem sombra/contorno; Bangers mantém acabamento HQ.
+
 TSX único para 16:9 e 9:16, com dois fundos procedurais inspirados nos arquivos `background_espiral_pixelada.mp4` e `background_espiral_crescente_pixelada.mp4` fornecidos em Downloads. Recria as faixas curvas, pontilhado e vinheta por código: não precisa carregar esses vídeos, nem módulos auxiliares. É uma recriação visual, não uma cópia pixel a pixel dos vídeos originais.
 
 O personagem é um PNG transparente escolhido pelo usuário, não obrigatoriamente personagem. Entra de baixo para cima, fica grande, balança suavemente e não tem saída animada. A legenda fica à frente, abaixo, em Bangers maiúscula branca com sombra/contorno. A palavra ativa recebe um bloco colorido, alternando as cores configuradas. A TV/textura do fundo não afeta o personagem nem a legenda.
 
 Refinamento do fundo: espiral calculada em baixa resolução e ampliada sem suavização, com degraus de pixels reais nas faixas, granulação e halftone. As faixas têm curvatura ampla e suave, sem dobras fortes, e giram continuamente com formato estável; a variante padrão prioriza o contraste preto/branco da referência escura. Personagem e legenda não são pixelados.
-
 
 ## Fonte e acabamento
 
@@ -17,11 +22,9 @@ Refinamento do fundo: espiral calculada em baixa resolução e ampliada sem suav
 
 Anton é texto puro, **sem sombra nem contorno**. Bangers preserva o acabamento próprio deste padrão. Sombras/bordas de caixas e imagens continuam normais. Declare apenas a fonte selecionada. Não há fallback silencioso. Não passe caminhos de fontes em props. As referências a Bangers no restante do guia descrevem o visual padrão, não uma limitação. Revise legibilidade ao trocar fontes; caixas fixas não acomodam parágrafos ilimitados.
 
-PNGs `previa-anton-*` antigos podem mostrar sombras anteriores à correção; são históricos. A referência atual de Anton está no Texto HQ, exemplo `anton-limpo`. Consulte FONTES_HQ.md.
-
 ## Instalação
 
-Copie somente `PersonagemEspiralLegenda.tsx` para `custom-scenes/` do projeto. Forneça o PNG em `customComponent.assets.character` e a fonte em `assets.bangers` (`builtin://fonts/Bangers-Regular.ttf`). Use `exemplo-cena.json` como uma cena de timeline e substitua o caminho do PNG e as palavras pelos seus. O PNG usado nas prévias é personagem_exemplo.png; ele não está embutido no TSX. O caminho do exemplo é ilustrativo: forneça o arquivo real no projeto, sem presumir que ele ainda esteja na raiz de Downloads.
+Copie `PersonagemEspiralLegenda.tsx` e seus auxiliares para `custom-scenes/` do projeto. Forneça o PNG em `customComponent.assets.character` e a fonte em `assets.bangers` (`builtin://fonts/Bangers-Regular.ttf`). Use `exemplo-cena.json` como uma cena de timeline e substitua o caminho do PNG e as palavras pelos seus. O PNG usado nas prévias é personagem_exemplo.png; ele não está embutido no TSX. O caminho do exemplo é ilustrativo: forneça o arquivo real no projeto, sem presumir que ele ainda esteja na raiz de Downloads.
 
 ## Controles
 
@@ -75,12 +78,6 @@ Os blocos alternam por quantidade de palavras ou pausa, não por uma análise se
 
 ## Referências visuais atuais
 
-
-
-
-
-
-
 A referência atual é a de curvas suavizadas com giro, não a versão anterior de ondulação exagerada. Os fundos são recriações procedurais; não dependem dos vídeos de Downloads.
 
 ## Consulta e exemplos disponíveis
@@ -91,14 +88,13 @@ Voltar ao catálogo e à instalação. Este guia descreve o contrato atual; não
 
 Os JSONs são **cenas para inserir em `timeline`**, não planos completos. Preserve as configurações globais do projeto e adapte `id`, `start`, `end`, caminhos e SFX absolutos. Arquivos `project://` são relativos à raiz do projeto de edição, não à pasta desta biblioteca. Imagens/clipes/fontes precisam existir no destino; exemplos não baixam assets nem transcrição. A orientação vem da resolução do projeto, sem prop `aspectRatio`. Nenhum TSX toca sons automaticamente. PNGs documentam um instante, não o movimento ou a mixagem; prévias antigas não certificam todas as opções atuais.
 
-
 ## Contrato TypeScript completo
 
 Props são JSON; assets fica em customComponent.assets, nunca dentro de props. Tempos são relativos à cena, exceto SFX no plano.
 
 ```ts
 type Word = {word?: string; text?: string; start: number; end: number};
-type Props = {fontFamily?: HQFont;
+type Props = HQComicPageOptions & {fontFamily?: HQFont;
   assets?: {character?: string; bangers?: string; anton?: string};
   backgroundVariant?: 'espiral' | 'crescente';
   captions?: Caption[]; words?: Word[]; transcriptOffset?: number;

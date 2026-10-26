@@ -1,3 +1,4 @@
+import {progressHQ} from './HQMotion';
 import {HQComicPage, type HQComicPageOptions} from './HQComicPage';
 import React from 'react';
 import {
@@ -26,7 +27,7 @@ type Props = HQBackgroundOptions & {fontFamily?: HQFont;
 };
 type Interval = {at: number; until: number};
 const clamp = (n: number) => Math.max(0, Math.min(1, n));
-const ease = (n: number) => {const t = clamp(n); return t * t * (3 - 2 * t);};
+const ease = (n: number) => {const t = clamp(n); return t*t*t*(t*(t*6-15)+10);};
 const mix = (a: number, b: number, p: number) => a + (b - a) * p;
 
 // Playback advances only during this panel's active intervals, then freezes in place.
@@ -96,6 +97,8 @@ export default function PaginaHQCenas({fontFamily="Bangers", backgroundStyle="ha
   const horizontal = w > h;
   const unit = Math.min(w, h) / 1080;
   validatePanelLayout(panels,panelLayout,duration,entryDuration,heading);
+  const rangeKey=JSON.stringify({focus,enter,duration});
+  const preparedRanges=React.useMemo(()=>panels.map((_,i)=>intervalsFor(i+1,[...focus].sort((a,b)=>a.at-b.at),enter,duration)),[rangeKey,panels.length]);
   const panelCount=panels.length,asymmetric=panelLayout!=='grid',split=panelLayout==='split',parallax=panelLayout==='parallax';
   if(parallax&&(!Number.isFinite(parallaxDuration)||parallaxDuration<=0||parallaxDuration>duration))throw new Error('parallaxDuration deve ser positiva e caber na cena.');
   if(split&&(!Array.isArray(splitColors)||splitColors.length!==2||!splitColors.every(c=>/^#[a-f\d]{6}$/i.test(c))||!/^#[a-f\d]{6}$/i.test(dividerColor)))throw new Error('splitColors: duas cores #RRGGBB; dividerColor: #RRGGBB.');
@@ -128,7 +131,7 @@ export default function PaginaHQCenas({fontFamily="Bangers", backgroundStyle="ha
       .then(() => continueRender(fontHandle)).catch(error => cancelRender(error));
   }, [fontHandle, fontUrl, fontFamily]);
 
-  const zoom = enter ? ease((time - enter.at) / (enter.duration ?? 1.1)) : 0;
+  const zoom = enter ? ease(progressHQ(time,enter.at,enter.duration??1.1,fps)) : 0;
   const drift = 1 - zoom;
   const boardX = Math.sin(time * .7) * w * .003 * drift;
   const boardY = Math.sin(time * .9 + .4) * h * .004 * drift;
@@ -148,7 +151,7 @@ export default function PaginaHQCenas({fontFamily="Bangers", backgroundStyle="ha
     <AbsoluteFill style={{translate: `${boardX}px ${boardY}px`, rotate: `${boardAngle}deg`}}>
       {panels.map((panel, index) => {
         const number = index + 1;
-        const ranges = intervalsFor(number, ordered, enter, duration);
+        const ranges = preparedRanges[index];
         const elapsed = ranges.reduce((sum, range) => sum + Math.max(0, Math.min(time, range.until) - range.at), 0);
         const active = ranges.find(range => range.at <= time && time < range.until);
         const previous = ranges.filter(range => range.until <= time).at(-1);
@@ -196,8 +199,13 @@ export function hqGridOffset(time:number){return ((time*28)%84+84)%84;}
 export function hqPaperPose(time:number){return Math.floor(Math.max(0,time)*6)%8;}
 function HQBackground({backgroundStyle='halftone',backgroundColor='#2459C9',backgroundOpacity=100,paperTone='light',gridBackgroundColor='#10101A',gridLineColor='#858595',children}:HQBackgroundOptions & {children?:React.ReactNode}){
   const frame=useCurrentFrame();const {fps,width,height}=useVideoConfig();const t=frame/fps;
-  if(backgroundStyle==='comic_page')return <HQComicPage opacity={backgroundOpacity}/>;
   const uid=React.useId().replace(/:/g,'');
+  const stars=React.useMemo(()=>backgroundStyle==='stars'&&backgroundOpacity>0?Array.from({length:270},(_,i)=>{
+    const rand=(n:number)=>{const a=Math.sin(n*127.1+311.7)*43758.5453;return a-Math.floor(a);};
+    return {phase:rand(i+5),x:rand(i+700)-.5,y:rand(i+1300)-.5,radius:1+rand(i+1700)*5};
+  }):[],[backgroundStyle,backgroundOpacity]);
+  if(backgroundStyle==='comic_page')return <HQComicPage opacity={backgroundOpacity}/>;
+  if(backgroundOpacity===0)return null;
   if(!['halftone','solid','stars','film','paper','grid'].includes(backgroundStyle))throw new Error('backgroundStyle: halftone, solid, stars, film, paper ou grid.');
   if(!Number.isFinite(backgroundOpacity)||backgroundOpacity<0||backgroundOpacity>100)throw new Error('backgroundOpacity deve ser 0–100 (%).');
   if(!/^#[0-9a-f]{6}$/i.test(backgroundColor))throw new Error('backgroundColor deve usar #RRGGBB.');
@@ -209,10 +217,10 @@ function HQBackground({backgroundStyle='halftone',backgroundColor='#2459C9',back
   const dots=<pattern id={`${uid}dots`} width="14" height="14" patternUnits="userSpaceOnUse"><circle cx="4" cy="4" r="1.7" fill="#000000" opacity=".16"/></pattern>;
   let content:React.ReactNode;
   if(backgroundStyle==='stars'){
-    content=<><rect width={W} height={H} fill="#080B13"/>{Array.from({length:270},(_,i)=>{
-      const phase=(rand(i+5)+t*.025)%1,z=.18+phase*.82;
-      const x=W/2+(rand(i+700)-.5)*W*2.25*z,y=H/2+(rand(i+1300)-.5)*H*2.25*z;
-      const r=(1+rand(i+1700)*5)*z,opacity=Math.min(1,phase*8,(1-phase)*10);
+    content=<><rect width={W} height={H} fill="#080B13"/>{stars.map((star,i)=>{
+      const phase=(star.phase+t*.025)%1,z=.18+phase*.82;
+      const x=W/2+star.x*W*2.25*z,y=H/2+star.y*H*2.25*z;
+      const r=star.radius*z,opacity=Math.min(1,phase*8,(1-phase)*10);
       return <g key={i} opacity={opacity}><circle cx={x+1.4} cy={y+1.4} r={r+1} fill="#000000"/><circle cx={x} cy={y} r={r} fill={i%6===0?'#CCD6ED':'#FFF8E6'}/>{r>3.5&&<path d={`M ${x-r*.4} ${y-r*.5} l ${r*.6} 0`} stroke="white" strokeWidth={1.1}/>}</g>;
     })}<rect width={W} height={H} fill={`url(#${uid}dots)`} opacity=".22"/></>;
   }else if(backgroundStyle==='film'){

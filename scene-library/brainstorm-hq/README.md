@@ -1,5 +1,10 @@
 # Brainstorm HQ
 
+## Movimento e contrato de execução
+
+Timeline e primeiras visitas são preparadas; títulos/apoios de narrative/evidence são medidos após a fonte carregar, não novamente em cada frame. Viagens usam curva suave com aceleração acomodada nos extremos, preservando chegadas/holds. Cards usa texto escuro por padrão para contrastar com o papel claro; textColor explícito tem precedência. Cartões evidence continuam verticais e grandes; conexões ficam à frente nesse modo.
+
+Instalação manual: copiar **BrainstormHQ.tsx** e **HQComicPage.tsx** para a mesma pasta custom-scenes. A Galeria prepara esses arquivos automaticamente, sem sobrescrever versões diferentes. Auxiliares idênticos são compartilhados uma única vez no projeto. Todos os sons continuam no plano; não há áudio automático. Anton sem sombra/contorno; Bangers mantém acabamento HQ.
 
 ## Fonte e acabamento
 
@@ -10,8 +15,6 @@
 | `customComponent.assets.anton` | `builtin://fonts/Anton-Regular.ttf`, necessário quando Anton é usada. |
 
 Anton é texto puro, **sem sombra nem contorno**. Bangers preserva o acabamento próprio deste padrão. Sombras/bordas de caixas e imagens continuam normais. Declare apenas a fonte selecionada. Não há fallback silencioso. Não passe caminhos de fontes em props. As referências a Bangers no restante do guia descrevem o visual padrão, não uma limitação. Revise legibilidade ao trocar fontes; caixas fixas não acomodam parágrafos ilimitados.
-
-PNGs `previa-anton-*` antigos podem mostrar sombras anteriores à correção; são históricos. A referência atual de Anton está no Texto HQ, exemplo `anton-limpo`. Consulte FONTES_HQ.md.
 
 ## Como funciona
 
@@ -55,7 +58,7 @@ Copie `BrainstormHQ.tsx` para `custom-scenes/` do projeto e adapte `exemplo-cena
 
 Prévia horizontal: `previa-16x9.png`. Vertical: `previa-9x16.png`. Foco inicial: `previa-foco.png`. As imagens demonstrativas não fazem parte obrigatória do padrão. Não foi renderizado um vídeo completo.
 
-## Backgrounds HQ v2 — 16/10/2026
+## Fundos HQ
 
 Atualização que substitui a descrição anterior dos fundos. Cada preset acompanha o auxiliar HQComicPage.tsx; copie ambos na instalação manual. Confira também o guia compartilhado.
 
@@ -87,8 +90,6 @@ Exemplos de campos para adicionar em **customComponent.props**, junto das props 
 ```
 
 **Camadas:** para ver um vídeo/cena comum por trás, configure `customComponent.mode: "overlay"` e mantenha essa mídia na cena base. Em `replace`, a cena base não é desenhada: reduzir a opacidade não recupera uma camada removida. Em zero, só o fundo do TSX desaparece; os elementos da composição continuam visíveis. Isso não adiciona suporte automático a múltiplos módulos TSX.
-
-Prévias antigas mostram os fundos anteriores. `previa-background-16x9.png` e `previa-background-9x16.png` foram atualizadas nos testes de integração v2. Os novos visuais aguardam aprovação. O novo BackgroundHQ é o padrão que mostra somente o fundo, com a mesma API.
 
 ## Consulta e exemplos disponíveis
 
@@ -136,12 +137,6 @@ O TSX não toca áudio. O exemplo inclui whooshes discretos e variados nas três
 
 ### Prévia e estado
 
-
-
-
-
-
-
 Resultados da validação do modo percurso.
 
 ## Modo narrativo — adaptação do NarrativePath (item 02)
@@ -175,12 +170,6 @@ A frase principal e o apoio entram durante a chegada; programe a chegada até o 
 Sons continuam fora do TSX: o exemplo usa três whooshes de 0.24 s, preset subtle e trimDb -28, começando em 2.48 / 5.48 / 8.48 s. Seus centros coincidem com 2.60 / 5.60 / 8.60 s, os meios das viagens. Somar o início absoluto da cena quando ela for movida. Não há teclado porque as frases não são digitadas; conferir ganho/ataque com narração real.
 
 ### Prévia
-
-
-
-
-
-
 
 Primeira proposta visual da adaptação 02; ainda depende da avaliação do criador. Não replica cada ornamento do NarrativePath antigo: remove círculos decorativos e usa o mesmo percurso/cartoon do repertório atual. Fonte/cores/fundo vêm do plano. Nenhum arquivo do Content Lab ou projeto VD/SH foi substituído nesta etapa.
 
@@ -229,14 +218,7 @@ Mode overlay com backgroundOpacity 0 revela a cena comum por trás, mas preserva
 
 ### Referências
 
-
-
-
-
-
-
 Resultados da validação de evidências.
-
 
 ## Contrato TypeScript completo
 
@@ -249,7 +231,7 @@ type Props = HQBackgroundOptions & {fontFamily?: HQFont; nodes:Node[]; steps:Ste
   lineColor?:string; zoomOutDuration?:number; presentation?:'cards'|'path'|'narrative'|'evidence'; heading?:string; pathBend?:number; dotColor?:string; dotSize?:number; assets?:Record<string,string>};
 type JourneyPoint={x:number;y:number};
 type HQBackgroundOptions = {
-  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
   backgroundColor?: string;
   backgroundOpacity?: number;
   paperTone?: 'light' | 'dark';

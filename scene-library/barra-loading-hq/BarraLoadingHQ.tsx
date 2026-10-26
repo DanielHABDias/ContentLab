@@ -33,15 +33,16 @@ export default function BarraLoadingHQ({backgroundStyle, backgroundOpacity=100, 
   const {width:w,height:h,fps,durationInFrames}=useVideoConfig();const time=useCurrentFrame()/fps;
   // A duração pertence à cena; sem pontos explícitos, preenche até seu último quadro.
   const duration=durationInFrames/fps,last=Math.max(0,(durationInFrames-1)/fps);
-  const progress=points??[{at:0,value:0},{at:last||duration,value:100}];
-  const stops=colors??[{at:0,color:'#2689FF'}];validateLoading(progress,stops,duration);
+  const inputKey=JSON.stringify({points,colors,duration,last});
+  const {progress,stops}=React.useMemo(()=>{const p=points??[{at:0,value:0},{at:last||duration,value:100}],c=colors??[{at:0,color:'#2689FF'}];validateLoading(p,c,duration);return {progress:p,stops:c};},[inputKey]);
   if(!['top','bottom','center'].includes(position)||!colorValid(trackColor)||!colorValid(outlineColor))throw new Error('Posição inválida ou cores fora do formato #RRGGBB.');
   if(!Number.isFinite(width)||width<5||width>96||!Number.isFinite(height)||height<1||height>20||!Number.isFinite(margin)||margin<1||margin>35||!Number.isFinite(opacity)||opacity<0||opacity>1)throw new Error('width: 5–96%; height: 1–20% do lado menor; margin: 1–35%; opacity: 0–1.');
   if((x!==undefined&&(!Number.isFinite(x)||x<0||x>100))||(y!==undefined&&(!Number.isFinite(y)||y<0||y>100)))throw new Error('x e y: percentual 0–100 do centro da barra.');
   const bw=w*width/100,bh=Math.min(w,h)*height/100,ink=Math.max(2,bh*.075),shadow=bh*.13;
   const cx=w*(x??50)/100,cy=y!==undefined?h*y/100:position==='top'?h*margin/100+bh/2:position==='center'?h/2:h*(1-margin/100)-bh/2;
   if(cx-bw/2<ink||cx+bw/2+shadow>w-ink||cy-bh/2<ink||cy+bh/2+shadow>h-ink)throw new Error('Barra fora da tela: ajuste x/y, width ou margin.');
-  const value=progressAt(progress,time),fill=colorAt(stops,time),id=React.useId().replace(/:/g,'');
+  const sampleTime=time>=last?duration:time;
+  const value=progressAt(progress,sampleTime),fill=colorAt(stops,sampleTime),id=React.useId().replace(/:/g,'');
   return <AbsoluteFill style={{pointerEvents:'none',opacity,backgroundColor:'transparent'}}>
     {backgroundStyle==='comic_page'&&<HQComicPage opacity={backgroundOpacity}/>}
     <svg width={bw+shadow+ink*2} height={bh+shadow+ink*2} viewBox={`0 0 ${bw+shadow+ink*2} ${bh+shadow+ink*2}`} style={{position:'absolute',left:cx-bw/2-ink,top:cy-bh/2-ink,overflow:'visible'}}>

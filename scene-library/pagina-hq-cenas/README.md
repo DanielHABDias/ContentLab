@@ -1,5 +1,11 @@
 # Página HQ com cenas — padrão aprovado
 
+## Movimento e contrato de execução
+
+Intervalos por painel são preparados quando focus/enter mudam. Expansão conclui no último frame exibido; curva de câmera tem acomodação suave. A geometria e o crop aprovado foram preservados: não há troca automática para FLIP que altere o enquadramento. CRT continua dentro da mídia e a continuidade da próxima cena depende do sourceStart correto.
+
+Instalação manual: copiar **PaginaHQCenas.tsx** e **HQComicPage.tsx, HQMotion.tsx** para a mesma pasta custom-scenes. A Galeria prepara esses arquivos automaticamente, sem sobrescrever versões diferentes. Auxiliares idênticos são compartilhados uma única vez no projeto. Todos os sons continuam no plano; não há áudio automático. Anton sem sombra/contorno; Bangers mantém acabamento HQ.
+
 **Layouts atuais:** grid (padrão, quatro quadros), asymmetric (dois painéis assimétricos, adaptação do Panels), split (dois lados, adaptação do Split Choice) e parallax (dois a quatro quadros em profundidade). As regras antigas de quatro quadros abaixo se referem ao modo grid; asymmetric/split exigem exatamente dois painéis.
 
 ## Parallax — camadas em profundidade
@@ -51,7 +57,6 @@ Quatro quadros retangulares sobre um fundo halftone, em 9:16 ou 16:9 conforme a 
 
 Os quatro espaços são numerados em ordem de leitura: **1 superior esquerdo, 2 superior direito, 3 inferior esquerdo, 4 inferior direito**. No horizontal eles são largos; no vertical, mais altos, sempre com recorte central e sem esticar a imagem.
 
-
 ## Fonte e acabamento
 
 | Parâmetro | Opções e uso |
@@ -61,8 +66,6 @@ Os quatro espaços são numerados em ordem de leitura: **1 superior esquerdo, 2 
 | `customComponent.assets.anton` | `builtin://fonts/Anton-Regular.ttf`, necessário quando Anton é usada. |
 
 Anton é texto puro, **sem sombra nem contorno**. Bangers preserva o acabamento próprio deste padrão. Sombras/bordas de caixas e imagens continuam normais. Quando houver etiquetas, declare a fonte selecionada. Sem etiquetas, o componente dispensa fonte. Não há fallback silencioso. Não passe caminhos de fontes em props. As referências a Bangers no restante do guia descrevem o visual padrão, não uma limitação. Revise legibilidade ao trocar fontes; caixas fixas não acomodam parágrafos ilimitados.
-
-PNGs `previa-anton-*` antigos podem mostrar sombras anteriores à correção; são históricos. A referência atual de Anton está no Texto HQ, exemplo `anton-limpo`. Consulte FONTES_HQ.md.
 
 ## Arquivos e uso
 
@@ -138,13 +141,7 @@ No modo grid os quatro panels são obrigatórios, mesmo quando um deles nunca ga
 
 ## Referências visuais
 
-
-
-
-
-
-
-## Backgrounds HQ v2 — 16/10/2026
+## Fundos HQ
 
 Atualização que substitui a descrição anterior dos fundos. Cada preset acompanha o auxiliar HQComicPage.tsx; copie ambos na instalação manual. Confira também o guia compartilhado.
 
@@ -176,8 +173,6 @@ Exemplos de campos para adicionar em **customComponent.props**, junto das props 
 ```
 
 **Camadas:** para ver um vídeo/cena comum por trás, configure `customComponent.mode: "overlay"` e mantenha essa mídia na cena base. Em `replace`, a cena base não é desenhada: reduzir a opacidade não recupera uma camada removida. Em zero, só o fundo do TSX desaparece; os elementos da composição continuam visíveis. Isso não adiciona suporte automático a múltiplos módulos TSX.
-
-Prévias antigas mostram os fundos anteriores. `previa-background-16x9.png` e `previa-background-9x16.png` foram atualizadas nos testes de integração v2. Os novos visuais aguardam aprovação. O novo BackgroundHQ é o padrão que mostra somente o fundo, com a mesma API.
 
 ## Consulta e exemplos disponíveis
 
@@ -226,14 +221,9 @@ Esses JSONs são cenas, não planos completos. O TSX não toca SFX, música ou n
 
 ### Prévias
 
-
-
-
-
 Primeira proposta de adaptação do item 04; aguardando avaliação visual. São testes isolados, não render de produção. Nenhum arquivo antigo do Content Lab ou projeto VD/SH foi substituído.
 
 Resultados da validação dos painéis.
-
 
 ## Contrato TypeScript completo
 
@@ -260,7 +250,7 @@ type Props = HQBackgroundOptions & {fontFamily?: HQFont;
 };
 type Interval = {at: number; until: number};
 type HQBackgroundOptions = {
-  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
   backgroundColor?: string;
   backgroundOpacity?: number;
   paperTone?: 'light' | 'dark';

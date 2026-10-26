@@ -7,7 +7,7 @@ type Node = {id:string; text?:string; subtitle?:string; asset?:string; x?:number
 type Step = {node:string; from?:string; hold:number; moveDuration?:number; connect?:boolean};
 type Props = HQBackgroundOptions & {fontFamily?: HQFont; nodes:Node[]; steps:Step[]; backgroundColor?:string; cardColor?:string; textColor?:string;
   lineColor?:string; zoomOutDuration?:number; presentation?:'cards'|'path'|'narrative'|'evidence'; heading?:string; pathBend?:number; dotColor?:string; dotSize?:number; assets?:Record<string,string>};
-const smooth=(x:number)=>{const t=Math.max(0,Math.min(1,x));return t*t*(3-2*t);};
+const smooth=(x:number)=>{const t=Math.max(0,Math.min(1,x));return t*t*t*(t*(t*6-15)+10);};
 export function buildTimeline(nodes:Node[], steps:Step[], zoomOutDuration:number) {
   if(!nodes.length || !steps.length) throw new Error('Informe nodes e steps.');
   const ids=new Set(nodes.map(n=>n.id));
@@ -24,14 +24,16 @@ export function buildTimeline(nodes:Node[], steps:Step[], zoomOutDuration:number
   });
   if(seen.size!==nodes.length)throw new Error('Todos os nós precisam ser visitados em steps.');
   if(!Number.isFinite(zoomOutDuration)||zoomOutDuration<=0)throw new Error('zoomOutDuration deve ser positivo.');
-  return {steps:result,overviewAt:cursor,minimumDuration:cursor+zoomOutDuration};
+  const firstByNode=new Map<string,typeof result[number]>();for(const step of result)if(!firstByNode.has(step.node))firstByNode.set(step.node,step);
+  return {steps:result,firstByNode,overviewAt:cursor,minimumDuration:cursor+zoomOutDuration};
 }
 
 export default function BrainstormHQ({fontFamily="Bangers", backgroundStyle="halftone", backgroundOpacity=100, paperTone="light", gridBackgroundColor="#10101A", gridLineColor="#858595", nodes,steps,backgroundColor='#18243C',cardColor='#FFF5D7',textColor:suppliedTextColor,lineColor='#FF435A',zoomOutDuration=1.4,presentation='cards',heading='',pathBend=.18,dotColor='#F4C542',dotSize=14,assets={}}:Props){
-  const textColor=suppliedTextColor??(presentation==='evidence'?'#172338':'#FFFFFF');
+  const textColor=suppliedTextColor??(['cards','evidence'].includes(presentation)?'#172338':'#FFFFFF');
   const fontUrl=resolveHQFont(fontFamily,assets);
   const {width:w,height:h,fps,durationInFrames}=useVideoConfig();const t=useCurrentFrame()/fps;
-  const timeline=buildTimeline(nodes,steps,zoomOutDuration);
+  const timelineKey=JSON.stringify({nodes,steps,zoomOutDuration});
+  const timeline=React.useMemo(()=>buildTimeline(nodes,steps,zoomOutDuration),[timelineKey]);
   if(timeline.minimumDuration>durationInFrames/fps+1e-6)throw new Error(`Cena curta: mínimo ${timeline.minimumDuration.toFixed(2)}s; reserve também tempo para contemplar o mapa.`);
   if(!fontUrl)throw new Error('Informe fontUrl.');
   const [ready,setReady]=React.useState(false);
@@ -62,17 +64,23 @@ export default function BrainstormHQ({fontFamily="Bangers", backgroundStyle="hal
       <AbsoluteFill style={{opacity:.15,backgroundImage:'radial-gradient(#FFFFFF 1.6px, transparent 2px)',backgroundSize:'12px 12px'}}/>
     </HQBackground>
     <div style={{position:'absolute',left:0,top:0,transformOrigin:'0 0',transform:`translate(${w/2}px,${h/2}px) scale(${scale}) translate(${-cx}px,${-cy}px)`}}>
-      <svg style={{position:'absolute',overflow:'visible',width:1,height:1}}>
-        {timeline.steps.map((s,i)=>{if(!i||s.connect===false||t<s.start||s.from===s.node)return null;const a=box(s.from!),b=box(s.node);const p=s.move===0?1:smooth((t-s.start)/s.move);const d=`M ${a.x} ${a.y} C ${a.x+(b.x-a.x)*.5} ${a.y}, ${a.x+(b.x-a.x)*.5} ${b.y}, ${b.x} ${b.y}`;return <g key={i}><defs><mask id={`${uid}-${i}`} maskUnits="userSpaceOnUse" x={Math.min(a.x,b.x)-500} y={Math.min(a.y,b.y)-500} width={Math.abs(a.x-b.x)+1000} height={Math.abs(a.y-b.y)+1000}><path d={d} fill="none" stroke="white" strokeWidth={22} pathLength={1} strokeDasharray="1" strokeDashoffset={1-p}/></mask></defs><path d={d} fill="none" stroke="#080A10" strokeWidth={13} mask={`url(#${uid}-${i})`}/><path d={d} fill="none" stroke={lineColor} strokeWidth={7} strokeDasharray="17 12" mask={`url(#${uid}-${i})`}/></g>;})}
-      </svg>
-      {boxes.map(n=>{const debut=timeline.steps.find(s=>s.node===n.id)!;if(t<debut.start)return null;const p=debut.move===0?1:smooth((t-debut.start)/Math.max(.15,debut.move));const color=n.color??cardColor;if(n.asset&&!assets[n.asset])throw new Error(`Asset ausente: ${n.asset}`);return <div key={n.id} style={{position:'absolute',left:n.x-200,top:n.y-n.height/2,width:400,height:n.height,boxSizing:'border-box',border:'6px solid #080A10',background:color,boxShadow:'12px 14px 0 #080A10',opacity:p,transform:`scale(${.86+.14*p})`,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:22,gap:16}}>
+
+      {boxes.map(n=>{const debut=timeline.firstByNode.get(n.id)!;if(t<debut.start)return null;const p=debut.move===0?1:smooth((t-debut.start)/Math.max(.15,debut.move));const color=n.color??cardColor;if(n.asset&&!assets[n.asset])throw new Error(`Asset ausente: ${n.asset}`);return <div key={n.id} style={{position:'absolute',left:n.x-200,top:n.y-n.height/2,width:400,height:n.height,boxSizing:'border-box',border:'6px solid #080A10',background:color,boxShadow:'12px 14px 0 #080A10',opacity:p,transform:`scale(${.86+.14*p})`,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:22,gap:16}}>
         {n.asset&&<Img src={assets[n.asset]} style={{width:'100%',height:n.text?245:270,objectFit:'contain',minHeight:0}}/>}
         {n.text&&<div style={{color:textColor,fontSize:Math.min(55,220/Math.sqrt(Math.max(1,n.text.length/4))),textTransform:'uppercase',textAlign:'center',lineHeight:1.1,overflowWrap:'anywhere',textShadow:fontFamily === 'Anton' ? 'none' : '3px 4px 0 #080A10',WebkitTextStroke:fontFamily === 'Anton' ? '0px transparent' : '.7px #080A10',opacity:ready?1:0}}>{n.text}</div>}
       </div>;})}
+      <svg style={{position:'absolute',overflow:'visible',width:1,height:1}}>
+        {timeline.steps.map((s,i)=>{if(!i||s.connect===false||t<s.start||s.from===s.node)return null;const a=box(s.from!),b=box(s.node);const p=s.move===0?1:smooth((t-s.start)/s.move);const ports=cardPorts(a,b),pa=ports.a,pb=ports.b;const d=`M ${pa.x} ${pa.y} C ${pa.x+(pb.x-pa.x)*.5} ${pa.y}, ${pa.x+(pb.x-pa.x)*.5} ${pb.y}, ${pb.x} ${pb.y}`;return <g key={i}><defs><mask id={`${uid}-${i}`} maskUnits="userSpaceOnUse" x={Math.min(a.x,b.x)-500} y={Math.min(a.y,b.y)-500} width={Math.abs(a.x-b.x)+1000} height={Math.abs(a.y-b.y)+1000}><path d={d} fill="none" stroke="white" strokeWidth={22} pathLength={1} strokeDasharray="1" strokeDashoffset={1-p}/></mask></defs><path d={d} fill="none" stroke="#080A10" strokeWidth={13} mask={`url(#${uid}-${i})`}/><path d={d} fill="none" stroke={lineColor} strokeWidth={7} strokeDasharray="17 12" mask={`url(#${uid}-${i})`}/></g>;})}
+      </svg>
     </div>
   </AbsoluteFill>;
 }
 
+export function cardPorts(a:{x:number;y:number;width:number;height:number},b:{x:number;y:number;width:number;height:number}){
+  const dx=b.x-a.x,dy=b.y-a.y;if(dx===0&&dy===0)return {a:{x:a.x,y:a.y},b:{x:b.x,y:b.y}};
+  const edge=(n:typeof a)=>Math.min(dx===0?Infinity:n.width/2/Math.abs(dx),dy===0?Infinity:n.height/2/Math.abs(dy));
+  const ea=edge(a),eb=edge(b);return {a:{x:a.x+dx*ea,y:a.y+dy*ea},b:{x:b.x-dx*eb,y:b.y-dy*eb}};
+}
 type JourneyPoint={x:number;y:number};
 export function evidenceBoxes(nodes:Node[],portrait:boolean){
   return nodes.map((n,i)=>({...n,x:n.x??(portrait?(i%2)*500:i*560),y:n.y??(portrait?Math.floor(i/2)*620:(i%2)*130)}));
@@ -93,6 +101,7 @@ export function evidenceCurve(a:JourneyPoint,b:JourneyPoint,p:number){
 function EvidenceHQ(p:HQBackgroundOptions & {nodes:Node[];steps:Step[];timeline:ReturnType<typeof buildTimeline>;t:number;w:number;h:number;fontFamily:HQFont;ready:boolean;heading:string;cardColor:string;textColor:string;lineColor:string;zoomOutDuration:number;assets:Record<string,string>}){
   const {nodes,steps,timeline,t,w,h,fontFamily,ready,heading,cardColor,textColor,lineColor,zoomOutDuration,assets}=p;
   if(![cardColor,textColor,lineColor].every(c=>/^#[a-f\d]{6}$/i.test(c)))throw new Error('Cores de evidence devem usar #RRGGBB.');
+  const fitted=React.useMemo(()=>new Map(nodes.map(n=>[n.id,{title:ready&&n.text?narrativeFit(n.text,fontFamily,300,66,43):undefined,caption:ready&&n.subtitle?narrativeFit(n.subtitle,fontFamily,300,48,24):undefined}])),[nodes,fontFamily,ready]);
   const boxes=evidenceBoxes(nodes,h>w),box=(id:string)=>boxes.find(n=>n.id===id)!;
   const links=timeline.steps.flatMap((s,i)=>{
     if(!i||s.connect===false||s.from===s.node)return [];
@@ -110,12 +119,12 @@ function EvidenceHQ(p:HQBackgroundOptions & {nodes:Node[];steps:Step[];timeline:
     <HQBackground backgroundStyle={p.backgroundStyle} backgroundColor={p.backgroundColor} backgroundOpacity={p.backgroundOpacity} paperTone={p.paperTone} gridBackgroundColor={p.gridBackgroundColor} gridLineColor={p.gridLineColor}/>
     <div style={{position:'absolute',left:0,top:0,transformOrigin:'0 0',transform:`translate(${w/2}px,${h/2}px) scale(${scale}) translate(${-cx}px,${-cy}px)`}}>
       {boxes.map((n,i)=>{
-        const debut=timeline.steps.find(s=>s.node===n.id)!;if(t<debut.start)return null;
+        const debut=timeline.firstByNode.get(n.id)!;if(t<debut.start)return null;
         if(n.asset&&!assets[n.asset])throw new Error('Asset ausente: '+n.asset);
         const reveal=debut.move===0?1:smooth((t-debut.start)/debut.move),accent=n.color??lineColor;
         let focus=steps[state.index].node===n.id?1:0;if(state.moving>=0)focus=steps[state.moving].node===n.id?state.progress:steps[state.moving-1].node===n.id?1-state.progress:0;
         const emphasis=focus+(1-focus)*overview;
-        const title=ready&&n.text?narrativeFit(n.text,fontFamily,300,66,43):undefined,caption=ready&&n.subtitle?narrativeFit(n.subtitle,fontFamily,300,48,24):undefined;
+        const {title,caption}=fitted.get(n.id)!;
         return <div key={n.id} style={{position:'absolute',left:n.x-180,top:n.y-230,width:360,height:460,boxSizing:'border-box',background:cardColor,border:'6px solid #080A10',boxShadow:'12px 14px 0 #080A10',opacity:ready?reveal*(.68+.32*emphasis):0,transform:`translateY(${40*(1-reveal)}px) scale(${.94+.06*reveal})`,overflow:'hidden'}}>
           <div style={{position:'absolute',inset:0,opacity:.10,backgroundImage:'radial-gradient(#080A10 1.5px,transparent 2px)',backgroundSize:'12px 12px'}}/>
           <div style={{position:'absolute',left:0,right:0,top:0,height:12,background:accent}}/>
@@ -162,6 +171,7 @@ function narrativeFit(text:string,font:HQFont,width:number,height:number,max:num
 }
 function JourneyHQ(p:{nodes:Node[];steps:Step[];timeline:ReturnType<typeof buildTimeline>;t:number;w:number;h:number;fontFamily:HQFont;ready:boolean;textColor:string;lineColor:string;pathBend:number;dotColor:string;dotSize:number;zoomOutDuration:number;assets:Record<string,string>;narrative?:boolean;heading?:string} & HQBackgroundOptions){
   const {nodes,steps,timeline,t,w,h,fontFamily,ready,textColor,lineColor,pathBend,dotColor,dotSize,zoomOutDuration,assets}=p;
+  const fitted=React.useMemo(()=>new Map(nodes.map(n=>[n.id,{title:p.narrative&&ready&&n.text?narrativeFit(n.text,fontFamily,412,n.asset?86:140,90):undefined,subtitle:p.narrative&&ready&&n.subtitle?narrativeFit(n.subtitle,fontFamily,412,58,29):undefined}])),[nodes,fontFamily,ready,p.narrative]);
   const state=narrativeState(timeline,t),overview=smooth((t-timeline.overviewAt)/zoomOutDuration),u=Math.min(w,h)/1080;
   if(![textColor,lineColor].every(c=>/^#[a-f\d]{6}$/i.test(c)))throw new Error('Cores do percurso devem usar #RRGGBB.');
   const boxes=nodes.map((n,i)=>({...n,x:n.x??(h>w?(i%2)*580:(i%3)*580),y:n.y??(h>w?Math.floor(i/2)*490:Math.floor(i/3)*490)}));
@@ -184,13 +194,12 @@ function JourneyHQ(p:{nodes:Node[];steps:Step[];timeline:ReturnType<typeof build
           const a=point(s.from!),b=point(s.node),q=s.move===0?1:smooth((t-s.start)/s.move),d=journeyCurve(a,b,q,pathBend).path;
           return <g key={i}><path d={d} stroke='#080A10' strokeWidth={15} fill='none' strokeLinecap='round'/><path d={d} stroke={lineColor} strokeWidth={8} fill='none' strokeLinecap='round'/><path d={d} stroke='#FFF5D7' strokeWidth={2} opacity={.7} fill='none' strokeLinecap='round'/></g>;
         })}
-        {boxes.map(n=>{const debut=timeline.steps.find(s=>s.node===n.id)!;if(t<debut.arrival)return null;return <g key={n.id}><circle cx={n.x+4} cy={n.y+134} r={21} fill='#080A10'/><circle cx={n.x} cy={n.y+130} r={20} fill={p.backgroundColor??'#18243C'} stroke={lineColor} strokeWidth={6}/></g>;})}
+        {boxes.map(n=>{const debut=timeline.firstByNode.get(n.id)!;if(t<debut.arrival)return null;return <g key={n.id}><circle cx={n.x+4} cy={n.y+134} r={21} fill='#080A10'/><circle cx={n.x} cy={n.y+130} r={20} fill={p.backgroundColor??'#18243C'} stroke={lineColor} strokeWidth={6}/></g>;})}
       </svg>
-      {boxes.map(n=>{const debut=timeline.steps.find(s=>s.node===n.id)!;if(t<debut.start)return null;const q=debut.move===0?1:smooth((t-debut.start)/debut.move);if(n.asset&&!assets[n.asset])throw new Error('Asset ausente: '+n.asset);
+      {boxes.map(n=>{const debut=timeline.firstByNode.get(n.id)!;if(t<debut.start)return null;const q=debut.move===0?1:smooth((t-debut.start)/debut.move);if(n.asset&&!assets[n.asset])throw new Error('Asset ausente: '+n.asset);
         let focus=steps[state.index].node===n.id?1:0;if(state.moving>=0){focus=steps[state.moving].node===n.id?state.progress:steps[state.moving-1].node===n.id?1-state.progress:0;}
         const dim=p.narrative?(.18+.82*focus)*(1-overview)+overview:1;
-        const title=p.narrative&&ready&&n.text?narrativeFit(n.text,fontFamily,412,n.asset?86:140,90):undefined;
-        const subtitle=p.narrative&&ready&&n.subtitle?narrativeFit(n.subtitle,fontFamily,412,58,29):undefined;
+        const {title,subtitle}=fitted.get(n.id)!;
         return <div key={n.id} style={{position:'absolute',left:n.x-220,top:n.y-190,width:440,height:280,opacity:ready?q*dim:0,scale:.94+.06*q,display:'flex',flexDirection:'column',justifyContent:'flex-end',alignItems:'center',gap:p.narrative?14:18}}>
           {n.asset&&<Img src={assets[n.asset]} style={{width:310,height:p.narrative?90:145,objectFit:'contain'}}/>}
           {n.text&&<div style={{width:440,boxSizing:'border-box',padding:'0 14px',textAlign:'center',textTransform:'uppercase',fontSize:title?.size??Math.min(76,330/Math.sqrt(Math.max(1,n.text.length/2))),lineHeight:1.08,color:n.color??textColor,whiteSpace:p.narrative?'pre':undefined,overflowWrap:p.narrative?undefined:'anywhere',textShadow:fontFamily==='Anton'?'none':'4px 5px 0 #080A10',WebkitTextStroke:fontFamily==='Anton'?'0px transparent':'.7px #080A10'}}>{title?.text??n.text}</div>}
@@ -222,8 +231,13 @@ export function hqGridOffset(time:number){return ((time*28)%84+84)%84;}
 export function hqPaperPose(time:number){return Math.floor(Math.max(0,time)*6)%8;}
 function HQBackground({backgroundStyle='halftone',backgroundColor='#2459C9',backgroundOpacity=100,paperTone='light',gridBackgroundColor='#10101A',gridLineColor='#858595',children}:HQBackgroundOptions & {children?:React.ReactNode}){
   const frame=useCurrentFrame();const {fps,width,height}=useVideoConfig();const t=frame/fps;
-  if(backgroundStyle==='comic_page')return <HQComicPage opacity={backgroundOpacity}/>;
   const uid=React.useId().replace(/:/g,'');
+  const stars=React.useMemo(()=>backgroundStyle==='stars'&&backgroundOpacity>0?Array.from({length:270},(_,i)=>{
+    const rand=(n:number)=>{const a=Math.sin(n*127.1+311.7)*43758.5453;return a-Math.floor(a);};
+    return {phase:rand(i+5),x:rand(i+700)-.5,y:rand(i+1300)-.5,radius:1+rand(i+1700)*5};
+  }):[],[backgroundStyle,backgroundOpacity]);
+  if(backgroundStyle==='comic_page')return <HQComicPage opacity={backgroundOpacity}/>;
+  if(backgroundOpacity===0)return null;
   if(!['halftone','solid','stars','film','paper','grid'].includes(backgroundStyle))throw new Error('backgroundStyle: halftone, solid, stars, film, paper ou grid.');
   if(!Number.isFinite(backgroundOpacity)||backgroundOpacity<0||backgroundOpacity>100)throw new Error('backgroundOpacity deve ser 0–100 (%).');
   if(!/^#[0-9a-f]{6}$/i.test(backgroundColor))throw new Error('backgroundColor deve usar #RRGGBB.');
@@ -235,10 +249,10 @@ function HQBackground({backgroundStyle='halftone',backgroundColor='#2459C9',back
   const dots=<pattern id={`${uid}dots`} width="14" height="14" patternUnits="userSpaceOnUse"><circle cx="4" cy="4" r="1.7" fill="#000000" opacity=".16"/></pattern>;
   let content:React.ReactNode;
   if(backgroundStyle==='stars'){
-    content=<><rect width={W} height={H} fill="#080B13"/>{Array.from({length:270},(_,i)=>{
-      const phase=(rand(i+5)+t*.025)%1,z=.18+phase*.82;
-      const x=W/2+(rand(i+700)-.5)*W*2.25*z,y=H/2+(rand(i+1300)-.5)*H*2.25*z;
-      const r=(1+rand(i+1700)*5)*z,opacity=Math.min(1,phase*8,(1-phase)*10);
+    content=<><rect width={W} height={H} fill="#080B13"/>{stars.map((star,i)=>{
+      const phase=(star.phase+t*.025)%1,z=.18+phase*.82;
+      const x=W/2+star.x*W*2.25*z,y=H/2+star.y*H*2.25*z;
+      const r=star.radius*z,opacity=Math.min(1,phase*8,(1-phase)*10);
       return <g key={i} opacity={opacity}><circle cx={x+1.4} cy={y+1.4} r={r+1} fill="#000000"/><circle cx={x} cy={y} r={r} fill={i%6===0?'#CCD6ED':'#FFF8E6'}/>{r>3.5&&<path d={`M ${x-r*.4} ${y-r*.5} l ${r*.6} 0`} stroke="white" strokeWidth={1.1}/>}</g>;
     })}<rect width={W} height={H} fill={`url(#${uid}dots)`} opacity=".22"/></>;
   }else if(backgroundStyle==='film'){

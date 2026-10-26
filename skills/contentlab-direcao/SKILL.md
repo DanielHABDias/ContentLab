@@ -39,7 +39,7 @@ Pesquisar imagens pela função narrativa, expressão e ação, não só pelo no
 
 Consultar scene-library/manifest.json e o README do padrão antes de criar código novo. Os 15 componentes possuem variações, prévias e exemplos na Galeria de cenas especiais. Os templates antigos foram substituídos.
 
-Preparar pela documentação (inclui os arquivos auxiliares) ou copiar o TSX e HQComicPage.tsx para custom-scenes na pasta do vídeo, compartilhando uma única cópia do auxiliar. O plano usa project://custom-scenes/Nome.tsx. Não sobrescrever uma versão diferente sem autorização; a instalação não altera o JSON nem inicia render. props recebe dados JSON; customComponent.assets recebe URIs de mídia/fontes. replace substitui a cena; overlay mantém a base. Opacidade zero não recupera base descartada em replace. Anton sem sombra/contorno; Bangers com acabamento próprio.
+Preparar pela documentação (inclui todos os arquivos auxiliares) ou copiar o TSX e seus companions do manifesto para custom-scenes. HQComicPage.tsx e HQMotion.tsx, quando listados, devem ter uma única cópia compatível no projeto. O plano usa project://custom-scenes/Nome.tsx. Não sobrescrever uma versão diferente sem autorização; a instalação não altera o JSON nem inicia render. props recebe dados JSON; customComponent.assets recebe URIs de mídia/fontes. replace substitui a cena; overlay mantém a base. Opacidade zero não recupera base descartada em replace. Anton sem sombra/contorno; Bangers com acabamento próprio.
 
 ## Módulos por tarefa
 

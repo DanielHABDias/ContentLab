@@ -1,5 +1,11 @@
 # Carrossel de Frases HQ
 
+## Movimento e contrato de execução
+
+at continua significando chegada ao centro; não é o começo do movimento. O desenho considera apenas a janela próxima de frases. Medidas permanecem estáveis durante a animação. A faixa e os três níveis foram preservados.
+
+Instalação manual: copiar **CarrosselFrasesHQ.tsx** e **HQComicPage.tsx** para a mesma pasta custom-scenes. A Galeria prepara esses arquivos automaticamente, sem sobrescrever versões diferentes. Auxiliares idênticos são compartilhados uma única vez no projeto. Todos os sons continuam no plano; não há áudio automático. Anton sem sombra/contorno; Bangers mantém acabamento HQ.
+
 Enumeração vertical de frases, com três níveis visuais: **próxima**, **atual** e **anterior**. Responsivo a 16:9 e 9:16. Útil para argumentos sucessivos, listas faladas e contrastes. Não é digitação, legenda automática ou lista que gira infinitamente.
 
 ## O que aparece e como se move
@@ -82,10 +88,6 @@ Os começos no exemplo são 0.455, 2.655, 4.855 e 7.055 s. Recalcule ao mudar st
 
 São objetos de **cena**, não edit plans completos. Insira em timeline preservando configurações globais e narração. Os sons usam tempos absolutos; props usam tempos relativos. Não é necessário asset de personagem.
 
-
-
-
-
 As imagens mostram estados estáticos. O Studio local permite conferir o movimento; exemplos não certificam mixagem com voz real nem constituem aprovação visual do criador.
 
 Voltar ao catálogo · Fontes
@@ -93,7 +95,6 @@ Voltar ao catálogo · Fontes
 ## Validação realizada
 
 Compilação estrita e 60 verificações automatizadas passaram. Gerados 12 frames entre horizontal, vertical e Anton transparente/alinhada à direita. Os dois JSONs passaram na definição de cena do schema atual do Content Lab. Confira VALIDACAO.md para limites e frames críticos; não houve render de produção nem mixagem com voz.
-
 
 ## Contrato TypeScript completo
 
@@ -107,7 +108,7 @@ type Props=HQBackgroundOptions & {phrases:Phrase[];fontFamily?:HQFont;align?:'le
   motionDuration?:number;textScale?:number;assets?:{bangers?:string;anton?:string}};
 type Layout={lines:string[];size:number;height:number};
 type HQBackgroundOptions = {
-  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
   backgroundColor?: string;
   backgroundOpacity?: number;
   paperTone?: 'light' | 'dark';

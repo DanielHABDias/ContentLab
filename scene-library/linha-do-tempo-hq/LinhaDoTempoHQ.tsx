@@ -1,3 +1,4 @@
+import {progressHQ, fitLabelHQ} from './HQMotion';
 import {HQComicPage, type HQComicPageOptions} from './HQComicPage';
 import React from 'react';
 import {AbsoluteFill, Freeze, OffthreadVideo, useCurrentFrame, useVideoConfig, delayRender, continueRender, cancelRender} from 'remotion';
@@ -7,7 +8,7 @@ type Clip = {asset: string; title?: string; subtitle?: string; sourceStart?: num
 type Props = HQBackgroundOptions & {fontFamily?: HQFont; clips: Clip[]; direction?: 'forward' | 'reverse'; backgroundColor?: string; accentColor?: string; textColor?: string;
   startDelay?: number; moveDuration?: number; enterDuration?: number; enterLast?: boolean; assets?: Record<string, string>};
 const clamp = (v: number) => Math.max(0, Math.min(1, v));
-const ease = (v: number) => {const p = clamp(v); return p * p * (3 - 2 * p);};
+const ease = (v: number) => {const p = clamp(v); return p*p*p*(p*(p*6-15)+10);};
 const mix = (a: number, b: number, p: number) => a + (b - a) * p;
 
 export default function LinhaDoTempoHQ({fontFamily="Bangers", backgroundStyle="halftone", backgroundOpacity=100, paperTone="light", gridBackgroundColor="#10101A", gridLineColor="#858595", clips, direction = 'forward', backgroundColor = '#E8C64F', accentColor = '#2676E8', textColor = '#FFFFFF',
@@ -26,9 +27,10 @@ export default function LinhaDoTempoHQ({fontFamily="Bangers", backgroundStyle="h
     if (!Number.isFinite(c.hold ?? 2) || (c.hold ?? 2) < .35 || !Number.isFinite(c.sourceStart ?? 0) || (c.sourceStart ?? 0) < 0) throw new Error('hold deve ser >= .35 e sourceStart >= 0.');
   });
   if (!fontUrl) throw new Error('Informe fontUrl.');
+  const [labels,setLabels]=React.useState<{title:ReturnType<typeof fitLabelHQ>;subtitle:ReturnType<typeof fitLabelHQ>}[]|null>(null);
   const [fontHandle] = React.useState(() => delayRender('Carregando Bangers da linha do tempo'));
   React.useEffect(() => {loadFont({family: fontFamily, url: fontUrl})
-    .then(() => continueRender(fontHandle)).catch(cancelRender);}, [fontUrl, fontHandle]);
+    .then(() => {setLabels(clips.map(c=>({title:fitLabelHQ(c.title??'',fontFamily,w*(horizontal?.55:.84),h*.13,(horizontal?72:94)*u),subtitle:fitLabelHQ(c.subtitle??'',fontFamily,w*(horizontal?.55:.84),h*.07,(horizontal?38:49)*u)})));continueRender(fontHandle);}).catch(cancelRender);}, [fontUrl,fontFamily,JSON.stringify(clips),w,h,fontHandle]);
   const indices = clips.map((_, i) => i);
   if (direction === 'reverse') indices.reverse();
   let cursor = startDelay;
@@ -47,7 +49,7 @@ export default function LinhaDoTempoHQ({fontFamily="Bangers", backgroundStyle="h
   const spacing = w * (horizontal ? .78 : 1.08);
   const travel = next ? ease((t - current.end) / moveDuration) : 0;
   const camera = mix(current.index * spacing, (next?.index ?? current.index) * spacing, travel);
-  const zoom = enterLast ? ease((t - last.end) / enterDuration) : 0;
+  const zoom = enterLast ? ease(progressHQ(t,last.end,enterDuration,fps)) : 0;
   const lineY = h * (horizontal ? .72 : .59);
   const cw = w * (horizontal ? .55 : .84);
   const ch = h * (horizontal ? .55 : .30);
@@ -67,22 +69,23 @@ export default function LinhaDoTempoHQ({fontFamily="Bangers", backgroundStyle="h
         const c = clips[cue.index];
         const final = order === schedule.length - 1;
         const expanding = final ? zoom : 0;
-        const reveal = ease((t - cue.at) / .3);
-        const leave = !final ? ease((t - (cue.end - .24)) / .24) : 0;
+        const revealDuration=Math.min(.3,(c.hold??2)*.3),dimDuration=Math.min(.24,(c.hold??2)*.3);
+        const reveal = ease((t - cue.at) / revealDuration);
+        const leave = !final ? ease((t - (cue.end - dimDuration)) / dimDuration) : 0;
         const light = reveal * (1 - leave);
-        const elapsed = Math.max(0, Math.min(t, final && enterLast ? durationInFrames / fps : cue.end - (final ? 0 : .24)) - cue.at);
+        const elapsed = Math.max(0, Math.min(t, final && enterLast ? durationInFrames / fps : cue.end - (final ? 0 : dimDuration)) - cue.at);
         const x = origin + cue.index * spacing;
         return <React.Fragment key={cue.index}>
           <div style={{position: 'absolute', left: x - 18 * u, top: lineY - 18 * u, width: 36 * u, height: 36 * u, borderRadius: '50%', background: t >= cue.at ? accentColor : '#FAF7E9', border: `${5 * u}px solid #080A11`, boxSizing: 'border-box', opacity: 1 - zoom}} />
           <div style={{position: 'absolute', left: x - cw / 2, top: lineY + 43 * u, width: cw, textAlign: 'center', opacity: reveal * (1 - zoom), color: textColor,
             fontFamily: fontFamily, textTransform: 'uppercase', background: 'transparent',
             textShadow: fontFamily === 'Anton' ? 'none' : `${4 * u}px ${5 * u}px 0 #080A11, ${7 * u}px ${9 * u}px ${2 * u}px #080A1180`}}>
-            <div style={{fontSize: (horizontal ? 72 : 94) * u, lineHeight: 1.05, overflowWrap: 'anywhere'}}>{c.title}</div>
-            <div style={{fontSize: (horizontal ? 38 : 49) * u, marginTop: 14 * u, overflowWrap: 'anywhere'}}>{c.subtitle}</div>
+            <div style={{fontSize: labels?.[cue.index].title.size??(horizontal?72:94)*u, lineHeight:1.08,whiteSpace:'pre'}}>{labels?.[cue.index].title.lines.join('\n')??c.title}</div>
+            <div style={{fontSize:labels?.[cue.index].subtitle.size??(horizontal?38:49)*u, marginTop:14*u,lineHeight:1.08,whiteSpace:'pre'}}>{labels?.[cue.index].subtitle.lines.join('\n')??c.subtitle}</div>
           </div>
           <div style={{position: 'absolute', left: mix(x - cw / 2, 0, expanding), top: mix(top + (1 - reveal) * 40 * u, 0, expanding), width: mix(cw, w, expanding), height: mix(ch, h, expanding), boxSizing: 'border-box', border: `${8 * u * (1 - expanding)}px solid ${accentColor}`, background: '#080A11', overflow: 'hidden', opacity: reveal * (final ? 1 : 1 - zoom), zIndex: final && zoom > 0 ? 20 : 2, boxShadow: `${11 * u * (1 - expanding)}px ${13 * u * (1 - expanding)}px 0 #080A11`}}>
             <AbsoluteFill style={{filter: `grayscale(${1 - light}) brightness(${.32 + .68 * light})`}}>
-              <Freeze frame={Math.round(elapsed * fps)}><OffthreadVideo src={assets[c.asset]} muted trimBefore={Math.round((c.sourceStart ?? 0) * fps)} style={{position: 'absolute', width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center'}} /></Freeze>
+              {(Math.abs(x-w/2)<w+cw || expanding>0)&&<Freeze frame={Math.round(elapsed * fps)}><OffthreadVideo src={assets[c.asset]} muted trimBefore={Math.round((c.sourceStart ?? 0) * fps)} style={{position: 'absolute', width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center'}} /></Freeze>}
               {c.crt && <AbsoluteFill style={{backgroundImage: `radial-gradient(circle, transparent 45%, #0006 100%), repeating-linear-gradient(to bottom, #0004 0px, #0004 ${u}px, #FFFFFF08 ${2 * u}px, transparent ${4 * u}px)`}} />}
             </AbsoluteFill>
           </div>
@@ -106,8 +109,13 @@ export function hqGridOffset(time:number){return ((time*28)%84+84)%84;}
 export function hqPaperPose(time:number){return Math.floor(Math.max(0,time)*6)%8;}
 function HQBackground({backgroundStyle='halftone',backgroundColor='#2459C9',backgroundOpacity=100,paperTone='light',gridBackgroundColor='#10101A',gridLineColor='#858595',children}:HQBackgroundOptions & {children?:React.ReactNode}){
   const frame=useCurrentFrame();const {fps,width,height}=useVideoConfig();const t=frame/fps;
-  if(backgroundStyle==='comic_page')return <HQComicPage opacity={backgroundOpacity}/>;
   const uid=React.useId().replace(/:/g,'');
+  const stars=React.useMemo(()=>backgroundStyle==='stars'&&backgroundOpacity>0?Array.from({length:270},(_,i)=>{
+    const rand=(n:number)=>{const a=Math.sin(n*127.1+311.7)*43758.5453;return a-Math.floor(a);};
+    return {phase:rand(i+5),x:rand(i+700)-.5,y:rand(i+1300)-.5,radius:1+rand(i+1700)*5};
+  }):[],[backgroundStyle,backgroundOpacity]);
+  if(backgroundStyle==='comic_page')return <HQComicPage opacity={backgroundOpacity}/>;
+  if(backgroundOpacity===0)return null;
   if(!['halftone','solid','stars','film','paper','grid'].includes(backgroundStyle))throw new Error('backgroundStyle: halftone, solid, stars, film, paper ou grid.');
   if(!Number.isFinite(backgroundOpacity)||backgroundOpacity<0||backgroundOpacity>100)throw new Error('backgroundOpacity deve ser 0–100 (%).');
   if(!/^#[0-9a-f]{6}$/i.test(backgroundColor))throw new Error('backgroundColor deve usar #RRGGBB.');
@@ -119,10 +127,10 @@ function HQBackground({backgroundStyle='halftone',backgroundColor='#2459C9',back
   const dots=<pattern id={`${uid}dots`} width="14" height="14" patternUnits="userSpaceOnUse"><circle cx="4" cy="4" r="1.7" fill="#000000" opacity=".16"/></pattern>;
   let content:React.ReactNode;
   if(backgroundStyle==='stars'){
-    content=<><rect width={W} height={H} fill="#080B13"/>{Array.from({length:270},(_,i)=>{
-      const phase=(rand(i+5)+t*.025)%1,z=.18+phase*.82;
-      const x=W/2+(rand(i+700)-.5)*W*2.25*z,y=H/2+(rand(i+1300)-.5)*H*2.25*z;
-      const r=(1+rand(i+1700)*5)*z,opacity=Math.min(1,phase*8,(1-phase)*10);
+    content=<><rect width={W} height={H} fill="#080B13"/>{stars.map((star,i)=>{
+      const phase=(star.phase+t*.025)%1,z=.18+phase*.82;
+      const x=W/2+star.x*W*2.25*z,y=H/2+star.y*H*2.25*z;
+      const r=star.radius*z,opacity=Math.min(1,phase*8,(1-phase)*10);
       return <g key={i} opacity={opacity}><circle cx={x+1.4} cy={y+1.4} r={r+1} fill="#000000"/><circle cx={x} cy={y} r={r} fill={i%6===0?'#CCD6ED':'#FFF8E6'}/>{r>3.5&&<path d={`M ${x-r*.4} ${y-r*.5} l ${r*.6} 0`} stroke="white" strokeWidth={1.1}/>}</g>;
     })}<rect width={W} height={H} fill={`url(#${uid}dots)`} opacity=".22"/></>;
   }else if(backgroundStyle==='film'){

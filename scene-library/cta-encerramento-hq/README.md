@@ -1,11 +1,16 @@
 # CTA de encerramento HQ — 16:9 e 9:16
 
+## Movimento e contrato de execução
+
+timingScale: 0.5–2 (padrão 1) multiplica todos os tempos de entrada; quanto maior, mais lento. characterScale: 0.5–1.5 (padrão 1) é escala visual adicional, sem mover os slots. fadeOutDuration: segundos; 0 mantém visível até o fim; omitido conserva o fade proporcional legado no vertical e ausência de fade no horizontal. Título/headline agora são medidos com a fonte. Ao alterar timingScale, multiplicar as janelas de movimento e recalcular SFX conforme o centro audível do sample; não copiar offsets fixos de outra duração.
+
+Instalação manual: copiar **ComicPageCTA.tsx** e **HQComicPage.tsx, HQMotion.tsx** para a mesma pasta custom-scenes. A Galeria prepara esses arquivos automaticamente, sem sobrescrever versões diferentes. Auxiliares idênticos são compartilhados uma única vez no projeto. Todos os sons continuam no plano; não há áudio automático. Anton sem sombra/contorno; Bangers mantém acabamento HQ.
+
 Padrão com duas composições automáticas: **9:16**, baseado na CTA final aprovada do projeto, e **16:9**, com dois espaços de vídeo nas laterais e um espaço circular central para o canal. O Content Lab fornece largura e altura a partir de `project.resolution`; o TSX escolhe a composição apropriada, sem parâmetro adicional.
 
 No vertical, mantém página de quadrinho, faixa diagonal, thumbnail, personagem grande abaixo do cartão e balão de convite. No horizontal, usa o mesmo estilo HQ, com dois cartões 16:9 e um círculo central, entradas laterais coordenadas e pop do círculo. O personagem entra no canto inferior esquerdo, grande e abaixo da área dos vídeos. O título superior é maior e fica centralizado dentro da faixa, compartilhando sua inclinação de `-3°` e seu movimento. As três etiquetas usam Bangers branca maior sobre caixas pretas.
 
 A distribuição fixa de cores do horizontal é: cartão esquerdo **azul `#2676E8`**, círculo central **amarelo `#F4C542`** e cartão direito **vermelho `#EF3F49`**. As cores aparecem nos fundos dos espaços vazios e nas sombras decorativas; as thumbnails mantêm suas cores originais. Somente a cor da faixa superior depende de `stripeColor`.
-
 
 ## Fonte e acabamento
 
@@ -16,8 +21,6 @@ A distribuição fixa de cores do horizontal é: cartão esquerdo **azul `#2676E
 | `customComponent.assets.anton` | `builtin://fonts/Anton-Regular.ttf`, necessário quando Anton é usada. |
 
 Anton é texto puro, **sem sombra nem contorno**. Bangers preserva o acabamento próprio deste padrão. Sombras/bordas de caixas e imagens continuam normais. Declare apenas a fonte selecionada. Não há fallback silencioso. Não passe caminhos de fontes em props. As referências a Bangers no restante do guia descrevem o visual padrão, não uma limitação. Revise legibilidade ao trocar fontes; caixas fixas não acomodam parágrafos ilimitados.
-
-PNGs `previa-anton-*` antigos podem mostrar sombras anteriores à correção; são históricos. A referência atual de Anton está no Texto HQ, exemplo `anton-limpo`. Consulte FONTES_HQ.md.
 
 ## Encerramento horizontal 16:9
 
@@ -71,7 +74,7 @@ Para preencher os espaços, acrescente no mapa `assets` os campos `thumbnailLeft
 | `stripeColor` | `customComponent.props` | Cor hexadecimal `#RRGGBB` da **faixa diagonal superior somente**. Padrão `#EF3F49`. | `#2962D9` |
 | `thumbnail` | `customComponent.assets` | Imagem do vídeo indicado, dentro dos assets do Short. Preferir 16:9. | `project://assets/TH_0005.png` |
 
-O texto superior `A HISTÓRIA NÃO ACABA AQUI!`, o balão `VAI LÁ ASSISTIR!`, o nome `criador`, os detalhes vermelhos restantes, a posição do personagem e as animações são **fixos** neste padrão. Não alterar `channel`, timing, escala ou layout ao trocar de vídeo. Se uma nova direção pedir isso, criar outro padrão ou uma versão revisada aprovada.
+topTitle, calloutText, subscribeText e channelName são configuráveis. A composição mantém o layout aprovado; os controles opcionais de timing e escala estão descritos abaixo.
 
 ## Assets necessários no vertical
 
@@ -142,17 +145,13 @@ Teste a prévia com a thumbnail real: a imagem deve estar inteira visível, o pe
 
 Este padrão substitui a composição inteira. Fundo de papel/halftone fica atrás; cartões, títulos e balão ficam na frente do personagem no vertical para preservar a thumbnail. Não há reprodução de vídeo nas thumbnails: são imagens, mesmo nos espaços chamados “vídeos”. O TSX não cria links nem publica telas finais no YouTube.
 
-Entradas têm tempos fixos relativos à cena: página começa em 0,06 s e dura 0,38 s; cartões começam em 0,06 s e duram 0,48 s; balão/círculo começa em 0,11 s e dura 0,30 s; personagem entra de 0,62 a 1,00 s. Não existem props para duração desses movimentos, posição, escala ou textos superiores. A fonte é selecionável. `leftTitle/rightTitle` têm efeito só no horizontal; `headline/thumbnail` só no vertical. A versão vertical reduz a opacidade nos últimos aproximadamente 4,17% da duração; a horizontal não tem saída animada. Ao mudar a duração total, esse fade vertical acompanha a duração, mas os tempos das entradas continuam fixos.
+Entradas têm tempos fixos relativos à cena: página começa em 0,06 s e dura 0,38 s; cartões começam em 0,06 s e duram 0,48 s; balão/círculo começa em 0,11 s e dura 0,30 s; personagem entra de 0,62 a 1,00 s. timingScale altera os tempos das entradas; characterScale altera a escala visual. As posições finais dos slots permanecem fixas. A fonte é selecionável. `leftTitle/rightTitle` têm efeito só no horizontal; `headline/thumbnail` só no vertical. A versão vertical reduz a opacidade nos últimos aproximadamente 4,17% da duração; a horizontal não tem saída animada. Ao mudar a duração total, esse fade vertical acompanha a duração, mas os tempos das entradas continuam fixos.
 
 O PNG personagem_exemplo de referência tem margens e proporções consideradas no layout: outro recorte de personagem pode mudar sua escala aparente e cobrir regiões. Não substituir sem conferir a imagem final. `headline` deve ser curto; este padrão não mede/ajusta parágrafos arbitrários. Defaults: headline A ANÁLISE COMPLETA, faixa #EF3F49, leftTitle ASSISTA TAMBÉM e rightTitle PRÓXIMO VÍDEO.
 
 O som da tabela é a receita editorial aprovada, não áudio embutido nem uma fórmula automática baseada na duração. Preservar a receita ao reutilizar. Os MP4 desta pasta são testes visuais sem narração/mixagem. O conteúdo de um vídeo novo continua dependendo dos assets próprios desse projeto.
 
 ## Referências visuais
-
-
-
-
 
 As duas orientações têm prévias PNG e MP4 geradas localmente. A aprovação visual se refere ao padrão discutido; validar cada nova thumbnail, texto e áudio antes de entregar o vídeo.
 
@@ -164,14 +163,14 @@ Voltar ao catálogo e à instalação. Este guia descreve o contrato atual; não
 
 Os JSONs são **cenas para inserir em `timeline`**, não planos completos. Preserve as configurações globais do projeto e adapte `id`, `start`, `end`, caminhos e SFX absolutos. Arquivos `project://` são relativos à raiz do projeto de edição, não à pasta desta biblioteca. Imagens/clipes/fontes precisam existir no destino; exemplos não baixam assets nem transcrição. A orientação vem da resolução do projeto, sem prop `aspectRatio`. Nenhum TSX toca sons automaticamente. PNGs documentam um instante, não o movimento ou a mixagem; prévias antigas não certificam todas as opções atuais.
 
-
 ## Contrato TypeScript completo
 
 Props são JSON; assets fica em customComponent.assets, nunca dentro de props. Tempos são relativos à cena, exceto SFX no plano.
 
 ```ts
-type Props = {channelName?:string;topTitle?:string;subscribeText?:string;calloutText?:string;fontFamily?: HQFont;
+type Props = HQComicPageOptions & {channelName?:string;topTitle?:string;subscribeText?:string;calloutText?:string;fontFamily?: HQFont;
   /** Texto abaixo da thumbnail. */
+  timingScale?:number;fadeOutDuration?:number;characterScale?:number;
   headline?: string;
   /** Somente a faixa diagonal superior; os demais detalhes vermelhos são fixos. */
   stripeColor?: string;
@@ -188,7 +187,6 @@ type HQFont = 'Bangers' | 'Anton';
 Na Documentação, selecione este padrão e prepare-o na pasta do projeto. A instalação copia o TSX sem sobrescrever versões existentes. O JSON aponta project://custom-scenes/ComicPageCTA.tsx. Consulte os exemplos abaixo e substitua mídias/tempos antes de renderizar.
 
 - [exemplo-cena.json](exemplo-cena.json)
-
 
 ## Identidade parametrizável
 

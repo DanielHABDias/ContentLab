@@ -1,7 +1,12 @@
 # Comparativo de ideias HQ — 2 a 4 imagens
 
-Novo padrão solicitado em 16/10/2026, em avaliação visual pelo criador. Compara duas, três ou quatro ideias, cada uma com uma imagem e um texto associado. Fundo halftone de cor configurável; Bangers em maiúsculas com sombra escura. Sem painéis decorativos, balões, partículas ou vídeos embutidos.
+## Movimento e contrato de execução
 
+A imagem parte logo além da borda mais próxima de sua posição real, inclusive para PNGs estreitos, em vez de percorrer uma tela extra. O texto só revela após a chegada. Bounds de imagens são reutilizados pelo auxiliar HQMotion. Título superior permanece opcional e vazio por padrão.
+
+Instalação manual: copiar **ComparativoIdeiasHQ.tsx** e **HQComicPage.tsx, HQMotion.tsx** para a mesma pasta custom-scenes. A Galeria prepara esses arquivos automaticamente, sem sobrescrever versões diferentes. Auxiliares idênticos são compartilhados uma única vez no projeto. Todos os sons continuam no plano; não há áudio automático. Anton sem sombra/contorno; Bangers mantém acabamento HQ.
+
+Padrão reutilizável para composição HQ. Compara duas, três ou quatro ideias, cada uma com uma imagem e um texto associado. Fundo halftone de cor configurável; Bangers em maiúsculas com sombra escura. Sem painéis decorativos, balões, partículas ou vídeos embutidos.
 
 ## Fonte e acabamento
 
@@ -12,8 +17,6 @@ Novo padrão solicitado em 16/10/2026, em avaliação visual pelo criador. Compa
 | `customComponent.assets.anton` | `builtin://fonts/Anton-Regular.ttf`, necessário quando Anton é usada. |
 
 Anton é texto puro, **sem sombra nem contorno**. Bangers preserva o acabamento próprio deste padrão. Sombras/bordas de caixas e imagens continuam normais. Declare apenas a fonte selecionada. Não há fallback silencioso. Não passe caminhos de fontes em props. As referências a Bangers no restante do guia descrevem o visual padrão, não uma limitação. Revise legibilidade ao trocar fontes; caixas fixas não acomodam parágrafos ilimitados.
-
-PNGs `previa-anton-*` antigos podem mostrar sombras anteriores à correção; são históricos. A referência atual de Anton está no Texto HQ, exemplo `anton-limpo`. Consulte FONTES_HQ.md.
 
 ## O que acontece
 
@@ -36,7 +39,7 @@ A ordem de items segue a ordem de leitura. A orientação vem de width/height do
 
 ## Instalação e assets
 
-Copie `ComparativoIdeiasHQ.tsx` para `custom-scenes/` do projeto de edição e use `customComponent.mode: "replace"`. É um arquivo TSX único e não depende de módulos auxiliares locais. Precisa do runtime Remotion/React e @remotion/fonts do Content Lab, das imagens e da fonte Bangers.
+Copie `ComparativoIdeiasHQ.tsx` para `custom-scenes/` do projeto de edição e use `customComponent.mode: "replace"`. Copie os auxiliares declarados no manifesto junto do componente. Precisa do runtime Remotion/React e @remotion/fonts do Content Lab, das imagens e da fonte Bangers.
 
 Declare `customComponent.assets.bangers: "builtin://fonts/Bangers-Regular.ttf"`. Para cada item, crie uma chave no mesmo mapa, como `ideia1: "project://assets/ideias/imagem.png"`, e use `items[].asset: "ideia1"`. Não coloque o mapa assets dentro de props. Não é obrigatório usar as imagens dos exemplos nem personagens específicos.
 
@@ -79,17 +82,13 @@ Camadas: fundo sólido, halftone, imagens e textos associados. Não há CRT auto
 
 `exemplo-2-ideias.json`, `exemplo-3-ideias.json` e `exemplo-4-ideias.json` são cenas, não planos completos. Os quatro SVG de `exemplos-assets/` são apenas ilustrações genéricas criadas para demonstração. Para usar os JSON sem trocar caminhos, copie esses SVG para `assets/ideias/` do projeto. Não são obrigatórios no runtime de outros projetos.
 
-
-
-
-
 As outras imagens com sufixos 2 e 3 mostram as duas contagens restantes. A aprovação deste novo padrão ainda depende da conferência do criador; não declarar a nova composição aprovada por ter compilado.
 
 ## Conferência técnica desta versão
 
 Compilado no Content Lab local e geradas imagens de 2, 3 e 4 itens em 960×540 e 540×960, a 30 fps. Conferidos também quadros antes e depois de a primeira imagem terminar de entrar. Testados 12 layouts (duas orientações × três quantidades × com/sem título), sem sobreposição de regiões, e rejeição de quantidades fora de 2–4. Os três exemplos JSON foram lidos e os caminhos dos SFX conferidos; seus assets ilustrativos estão incluídos nesta subpasta. Preview interativo aberto localmente para inspeção. Não houve render final de vídeo nem teste de mixagem com narração real.
 
-## Backgrounds HQ v2 — 16/10/2026
+## Fundos HQ
 
 Atualização que substitui a descrição anterior dos fundos. Cada preset acompanha o auxiliar HQComicPage.tsx; copie ambos na instalação manual. Confira também o guia compartilhado.
 
@@ -122,8 +121,6 @@ Exemplos de campos para adicionar em **customComponent.props**, junto das props 
 
 **Camadas:** para ver um vídeo/cena comum por trás, configure `customComponent.mode: "overlay"` e mantenha essa mídia na cena base. Em `replace`, a cena base não é desenhada: reduzir a opacidade não recupera uma camada removida. Em zero, só o fundo do TSX desaparece; os elementos da composição continuam visíveis. Isso não adiciona suporte automático a múltiplos módulos TSX.
 
-Prévias antigas mostram os fundos anteriores. `previa-background-16x9.png` e `previa-background-9x16.png` foram atualizadas nos testes de integração v2. Os novos visuais aguardam aprovação. O novo BackgroundHQ é o padrão que mostra somente o fundo, com a mesma API.
-
 ## Consulta e exemplos disponíveis
 
 Voltar ao catálogo e à instalação. Este guia descreve o contrato atual; não é necessário aplicar atualizações antigas em sequência.
@@ -133,7 +130,6 @@ Voltar ao catálogo e à instalação. Este guia descreve o contrato atual; não
 - exemplo-4-ideias.json
 
 Os JSONs são **cenas para inserir em `timeline`**, não planos completos. Preserve as configurações globais do projeto e adapte `id`, `start`, `end`, caminhos e SFX absolutos. Arquivos `project://` são relativos à raiz do projeto de edição, não à pasta desta biblioteca. Imagens/clipes/fontes precisam existir no destino; exemplos não baixam assets nem transcrição. A orientação vem da resolução do projeto, sem prop `aspectRatio`. Nenhum TSX toca sons automaticamente. PNGs documentam um instante, não o movimento ou a mixagem; prévias antigas não certificam todas as opções atuais.
-
 
 ## Contrato TypeScript completo
 
@@ -147,7 +143,7 @@ type Slot = {x: number; y: number; width: number; height: number; fromX: number;
 type Bounds = {x: number; y: number; width: number; height: number; sourceWidth: number; sourceHeight: number};
 type TextLayout = {lines: string[]; size: number};
 type HQBackgroundOptions = {
-  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
   backgroundColor?: string;
   backgroundOpacity?: number;
   paperTone?: 'light' | 'dark';

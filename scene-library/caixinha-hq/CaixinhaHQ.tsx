@@ -9,7 +9,7 @@ type Animation = 'lateral' | 'vertical' | 'pop';
 type IconName = 'youtube' | 'like' | 'sininho' | 'seta' | 'instagram' | 'none';
 type Action = 'auto' | 'clique' | 'sininho' | 'pulo' | 'none';
 type Props = HQComicPageOptions & {fontFamily?: HQFont; preset?: Preset; corner?: Corner; animation?: Animation; exitAnimation?: Animation;
-  text?: string; instagramHandle?: string; boxColor?: string; textColor?: string; icon?: IconName;
+  motionCurve?:'smooth'|'snappy';text?: string; instagramHandle?: string; boxColor?: string; textColor?: string; icon?: IconName;
   at?: number; holdDuration?: number; animationDuration?: number;
   action?: Action; actionAt?: number; actionDuration?: number; assets?: {bangers?: string; anton?: string}};
 const presets: Record<Preset, {text: string; box: string; color: string; icon: IconName; gradient?: string}> = {
@@ -42,7 +42,7 @@ function Icon({name, size}: {name: IconName; size: number}) {
 
 // Transparent overlay: the footage underneath remains untouched.
 export default function CaixinhaHQ({backgroundStyle, backgroundOpacity=100, fontFamily="Bangers", preset = 'inscricao', corner = 'inferior-direito', animation = 'lateral', exitAnimation,
-  text, instagramHandle, boxColor, textColor, icon, at = 0, holdDuration = 5, animationDuration = .4,
+  motionCurve='smooth',text, instagramHandle, boxColor, textColor, icon, at = 0, holdDuration = 5, animationDuration = .4,
   action = 'auto', actionAt, actionDuration, assets = {}}: Props) {
   const fontUrl=resolveHQFont(fontFamily,assets);
   const {width: w, height: h, fps, durationInFrames} = useVideoConfig();
@@ -113,8 +113,9 @@ export default function CaixinhaHQ({backgroundStyle, backgroundOpacity=100, font
     x: kind === 'lateral' ? (center ? (leaving ? 1 : -1) : (right ? 1 : -1)) * (center ? w / 2 + boxW / 2 + 30 * u : boxW + marginX + 30 * u) * amount : 0,
     y: kind === 'vertical' ? (center ? (leaving ? -1 : 1) : (top ? -1 : 1)) * (center ? h / 2 + boxH / 2 + 30 * u : boxH + marginY + 30 * u) * amount : 0,
   });
-  const incoming = offset(animation, 1 - ease(enterP));
-  const outgoing = offset(exit, ease(exitP), true);
+  if(!['smooth','snappy'].includes(motionCurve))throw Error('motionCurve: smooth ou snappy.');
+  const incoming = offset(animation, 1-(motionCurve==='snappy'?1-Math.pow(1-enterP,3):ease(enterP)));
+  const outgoing = offset(exit,motionCurve==='snappy'?exitP**3:ease(exitP),true);
   const scale = (animation === 'pop' ? pop(enterP) : 1) * (exit === 'pop' ? 1 - ease(exitP) : 1);
   const actionP = clamp((t - (actionCenter - actionLength / 2)) / actionLength);
   const pulse = Math.pow(Math.sin(Math.PI * actionP), 2);

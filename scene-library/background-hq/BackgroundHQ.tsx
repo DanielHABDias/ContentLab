@@ -17,8 +17,13 @@ export function hqGridOffset(time:number){return ((time*28)%84+84)%84;}
 export function hqPaperPose(time:number){return Math.floor(Math.max(0,time)*6)%8;}
 function HQBackground({backgroundStyle='halftone',backgroundColor='#2459C9',backgroundOpacity=100,paperTone='light',gridBackgroundColor='#10101A',gridLineColor='#858595',children}:HQBackgroundOptions & {children?:React.ReactNode}){
   const frame=useCurrentFrame();const {fps,width,height}=useVideoConfig();const t=frame/fps;
-  if(backgroundStyle==='comic_page')return <HQComicPage opacity={backgroundOpacity}/>;
   const uid=React.useId().replace(/:/g,'');
+  const stars=React.useMemo(()=>backgroundStyle==='stars'&&backgroundOpacity>0?Array.from({length:270},(_,i)=>{
+    const rand=(n:number)=>{const a=Math.sin(n*127.1+311.7)*43758.5453;return a-Math.floor(a);};
+    return {phase:rand(i+5),x:rand(i+700)-.5,y:rand(i+1300)-.5,radius:1+rand(i+1700)*5};
+  }):[],[backgroundStyle,backgroundOpacity]);
+  if(backgroundStyle==='comic_page')return <HQComicPage opacity={backgroundOpacity}/>;
+  if(backgroundOpacity===0)return null;
   if(!['halftone','solid','stars','film','paper','grid'].includes(backgroundStyle))throw new Error('backgroundStyle: halftone, solid, stars, film, paper ou grid.');
   if(!Number.isFinite(backgroundOpacity)||backgroundOpacity<0||backgroundOpacity>100)throw new Error('backgroundOpacity deve ser 0–100 (%).');
   if(!/^#[0-9a-f]{6}$/i.test(backgroundColor))throw new Error('backgroundColor deve usar #RRGGBB.');
@@ -30,10 +35,10 @@ function HQBackground({backgroundStyle='halftone',backgroundColor='#2459C9',back
   const dots=<pattern id={`${uid}dots`} width="14" height="14" patternUnits="userSpaceOnUse"><circle cx="4" cy="4" r="1.7" fill="#000000" opacity=".16"/></pattern>;
   let content:React.ReactNode;
   if(backgroundStyle==='stars'){
-    content=<><rect width={W} height={H} fill="#080B13"/>{Array.from({length:270},(_,i)=>{
-      const phase=(rand(i+5)+t*.025)%1,z=.18+phase*.82;
-      const x=W/2+(rand(i+700)-.5)*W*2.25*z,y=H/2+(rand(i+1300)-.5)*H*2.25*z;
-      const r=(1+rand(i+1700)*5)*z,opacity=Math.min(1,phase*8,(1-phase)*10);
+    content=<><rect width={W} height={H} fill="#080B13"/>{stars.map((star,i)=>{
+      const phase=(star.phase+t*.025)%1,z=.18+phase*.82;
+      const x=W/2+star.x*W*2.25*z,y=H/2+star.y*H*2.25*z;
+      const r=star.radius*z,opacity=Math.min(1,phase*8,(1-phase)*10);
       return <g key={i} opacity={opacity}><circle cx={x+1.4} cy={y+1.4} r={r+1} fill="#000000"/><circle cx={x} cy={y} r={r} fill={i%6===0?'#CCD6ED':'#FFF8E6'}/>{r>3.5&&<path d={`M ${x-r*.4} ${y-r*.5} l ${r*.6} 0`} stroke="white" strokeWidth={1.1}/>}</g>;
     })}<rect width={W} height={H} fill={`url(#${uid}dots)`} opacity=".22"/></>;
   }else if(backgroundStyle==='film'){

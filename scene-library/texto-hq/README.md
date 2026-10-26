@@ -1,5 +1,11 @@
 # Texto HQ
 
+## Movimento e contrato de execução
+
+kineticUnit: letter (padrão) ou word. Word anima grupos de palavras/espaços; kineticStagger usa essas unidades, não um tempo fixo por caractere. A última unidade termina até entryDuration. Escrita/abrir/none e saída none continuam distintos. Steps são preparados por props; alternar backgroundStyle por item ou em intervalos vazios não muda a ordem dos hooks.
+
+Instalação manual: copiar **TextoHQ.tsx** e **HQComicPage.tsx** para a mesma pasta custom-scenes. A Galeria prepara esses arquivos automaticamente, sem sobrescrever versões diferentes. Auxiliares idênticos são compartilhados uma única vez no projeto. Todos os sons continuam no plano; não há áudio automático. Anton sem sombra/contorno; Bangers mantém acabamento HQ.
+
 Texto de destaque em Anton ou Bangers, com frase única ou sequência de palavras/frases substituindo umas às outras. É o antigo padrão de texto Bangers/halftone, agora renomeado porque fonte e fundo são selecionáveis. Copie **TextoHQ.tsx** para custom-scenes e use module `project://custom-scenes/TextoHQ.tsx`. As props antigas de frase única continuam válidas, mas o nome do arquivo/module mudou.
 
 ## Fontes e assets
@@ -105,7 +111,6 @@ Teste solicitado em 16/10/2026, com cortes secos e uma palavra por vez:
 
 Todos em Anton, sem sombra/contorno, fundo solid sem halftone. O tamanho relativo se refere ao maior tamanho que cabe na tela para cada palavra. Os arquivos exemplo-anton-16x9.mp4 e exemplo-anton-9x16.mp4 mostram o movimento; exemplo-anton-palavra-por-palavra.json contém a cena pronta. Os PNGs anton-limpo-* são frames de referência. Este é somente o teste da cena, não uma renderização de produção do canal. Não há áudio ou música no exemplo.
 
-
 ## Consulta e exemplos disponíveis
 
 Voltar ao catálogo e à instalação. Este guia descreve o contrato atual; não é necessário aplicar atualizações antigas em sequência.
@@ -116,7 +121,6 @@ Voltar ao catálogo e à instalação. Este guia descreve o contrato atual; não
 
 Os JSONs são **cenas para inserir em `timeline`**, não planos completos. Preserve as configurações globais do projeto e adapte `id`, `start`, `end`, caminhos e SFX absolutos. Arquivos `project://` são relativos à raiz do projeto de edição, não à pasta desta biblioteca. Imagens/clipes/fontes precisam existir no destino; exemplos não baixam assets nem transcrição. A orientação vem da resolução do projeto, sem prop `aspectRatio`. Nenhum TSX toca sons automaticamente. PNGs documentam um instante, não o movimento ou a mixagem; prévias antigas não certificam todas as opções atuais.
 
-
 ## Contrato TypeScript completo
 
 Props são JSON; assets fica em customComponent.assets, nunca dentro de props. Tempos são relativos à cena, exceto SFX no plano.
@@ -125,7 +129,7 @@ Props são JSON; assets fica em customComponent.assets, nunca dentro de props. T
 type Entrance='abrir'|'escrita'|'kinetic'|'none'|null;
 type Exit='fechar'|'none'|null;
 type TextStyle=HQBackgroundOptions & {fontFamily?:HQFont;textColor?:string;textScale?:number;
-  kineticDirection?:'up'|'down'|'left'|'right';kineticStagger?:number;kineticAccentColor?:string;
+  kineticUnit?:'letter'|'word';kineticDirection?:'up'|'down'|'left'|'right';kineticStagger?:number;kineticAccentColor?:string;
   entryAnimation?:Entrance;exitAnimation?:Exit;entryDuration?:number;exitDuration?:number;entryDelay?:number;writeDuration?:number};
 type TextStep=TextStyle & {text:string;at:number;duration:number};
 type Props=TextStyle & {text?:string;texts?:TextStep[];assets?:{bangers?:string;anton?:string}};
@@ -133,7 +137,7 @@ type PreparedStep=TextStep & {fontFamily:HQFont;textColor:string;textScale:numbe
   entryDuration:number;exitDuration:number;entryDelay:number};
 type Layout={lines:string[];fontSize:number};
 type HQBackgroundOptions = {
-  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
   backgroundColor?: string;
   backgroundOpacity?: number;
   paperTone?: 'light' | 'dark';

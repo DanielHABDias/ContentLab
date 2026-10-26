@@ -1,7 +1,12 @@
 # Linha do tempo HQ
 
-Padrão reutilizável: fundo halftone, linha com preenchimento de progresso, nós e quadros de vídeo. A câmera acompanha cada ponto suavemente. Antes de partir, o vídeo pausa e perde a cor em 0,24 s. O próximo quadro abre colorido. O último quadro visitado pode expandir até preencher a tela, sem moldura. Detecta automaticamente 16:9 e 9:16; Bangers em todas as etiquetas.
+## Movimento e contrato de execução
 
+Revelação e descoloração ocupam no máximo 30% cada do hold curto, reservando um estado colorido legível. Expansão conclui no último frame exibido mesmo quando termina no limite da cena. Rótulos são medidos após carregar a fonte. Vídeos distantes da área de câmera não são montados; seeks continuam calculados pelo frame e sourceStart. Forward/reverse e a continuidade externa foram preservados.
+
+Instalação manual: copiar **LinhaDoTempoHQ.tsx** e **HQComicPage.tsx, HQMotion.tsx** para a mesma pasta custom-scenes. A Galeria prepara esses arquivos automaticamente, sem sobrescrever versões diferentes. Auxiliares idênticos são compartilhados uma única vez no projeto. Todos os sons continuam no plano; não há áudio automático. Anton sem sombra/contorno; Bangers mantém acabamento HQ.
+
+Padrão reutilizável: fundo halftone, linha com preenchimento de progresso, nós e quadros de vídeo. A câmera acompanha cada ponto suavemente. Antes de partir, o vídeo pausa e perde a cor em 0,24 s. O próximo quadro abre colorido. O último quadro visitado pode expandir até preencher a tela, sem moldura. Detecta automaticamente 16:9 e 9:16; Bangers em todas as etiquetas.
 
 ## Fonte e acabamento
 
@@ -12,8 +17,6 @@ Padrão reutilizável: fundo halftone, linha com preenchimento de progresso, nó
 | `customComponent.assets.anton` | `builtin://fonts/Anton-Regular.ttf`, necessário quando Anton é usada. |
 
 Anton é texto puro, **sem sombra nem contorno**. Bangers preserva o acabamento próprio deste padrão. Sombras/bordas de caixas e imagens continuam normais. Declare apenas a fonte selecionada. Não há fallback silencioso. Não passe caminhos de fontes em props. As referências a Bangers no restante do guia descrevem o visual padrão, não uma limitação. Revise legibilidade ao trocar fontes; caixas fixas não acomodam parágrafos ilimitados.
-
-PNGs `previa-anton-*` antigos podem mostrar sombras anteriores à correção; são históricos. A referência atual de Anton está no Texto HQ, exemplo `anton-limpo`. Consulte FONTES_HQ.md.
 
 ## Instalação
 
@@ -74,11 +77,7 @@ O sentido reverse inverte a ordem de visita, não a reprodução temporal do arq
 
 ## Referências visuais atuais
 
-
-
-
-
-## Backgrounds HQ v2 — 16/10/2026
+## Fundos HQ
 
 Atualização que substitui a descrição anterior dos fundos. Cada preset acompanha o auxiliar HQComicPage.tsx; copie ambos na instalação manual. Confira também o guia compartilhado.
 
@@ -111,8 +110,6 @@ Exemplos de campos para adicionar em **customComponent.props**, junto das props 
 
 **Camadas:** para ver um vídeo/cena comum por trás, configure `customComponent.mode: "overlay"` e mantenha essa mídia na cena base. Em `replace`, a cena base não é desenhada: reduzir a opacidade não recupera uma camada removida. Em zero, só o fundo do TSX desaparece; os elementos da composição continuam visíveis. Isso não adiciona suporte automático a múltiplos módulos TSX.
 
-Prévias antigas mostram os fundos anteriores. `previa-background-16x9.png` e `previa-background-9x16.png` foram atualizadas nos testes de integração v2. Os novos visuais aguardam aprovação. O novo BackgroundHQ é o padrão que mostra somente o fundo, com a mesma API.
-
 ## Consulta e exemplos disponíveis
 
 Voltar ao catálogo e à instalação. Este guia descreve o contrato atual; não é necessário aplicar atualizações antigas em sequência.
@@ -120,7 +117,6 @@ Voltar ao catálogo e à instalação. Este guia descreve o contrato atual; não
 - exemplo-cena.json
 
 Os JSONs são **cenas para inserir em `timeline`**, não planos completos. Preserve as configurações globais do projeto e adapte `id`, `start`, `end`, caminhos e SFX absolutos. Arquivos `project://` são relativos à raiz do projeto de edição, não à pasta desta biblioteca. Imagens/clipes/fontes precisam existir no destino; exemplos não baixam assets nem transcrição. A orientação vem da resolução do projeto, sem prop `aspectRatio`. Nenhum TSX toca sons automaticamente. PNGs documentam um instante, não o movimento ou a mixagem; prévias antigas não certificam todas as opções atuais.
-
 
 ## Contrato TypeScript completo
 
@@ -131,7 +127,7 @@ type Clip = {asset: string; title?: string; subtitle?: string; sourceStart?: num
 type Props = HQBackgroundOptions & {fontFamily?: HQFont; clips: Clip[]; direction?: 'forward' | 'reverse'; backgroundColor?: string; accentColor?: string; textColor?: string;
   startDelay?: number; moveDuration?: number; enterDuration?: number; enterLast?: boolean; assets?: Record<string, string>};
 type HQBackgroundOptions = {
-  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
   backgroundColor?: string;
   backgroundOpacity?: number;
   paperTone?: 'light' | 'dark';

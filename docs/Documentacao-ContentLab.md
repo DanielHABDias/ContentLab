@@ -255,7 +255,9 @@ Uma abertura prioritária pode receber planejamento beat a beat dos primeiros 30
 
 O visual nomeado deve chegar legível na palavra; preparar a entrada antes dela quando não causar spoiler. Para whoosh de transição, alinhar corpo/pico perceptivo ao meio do movimento e manter início audível dentro da janela, considerando o trim real do mixer. Click, pop, sino e escrita seguem o gesto específico. Não aplicar offset sonoro fixo a todos os arquivos. Frames isolados e JSON válido não certificam suavidade nem sincronia auditiva.
 
-Todos os 15 presets oferecem backgroundStyle:comic_page (Página HQ transparente) e backgroundOpacity:0–100. A arte PNG original mantém as divisórias e o canal alfa, sem impor cor de fundo. Em retrato, cover centralizado pode recortar as laterais sem distorcer. Para mídia por trás, use customComponent.mode:overlay. A galeria instala o TSX e HQComicPage.tsx automaticamente; na cópia manual, copie ambos para custom-scenes, compartilhando uma única cópia do auxiliar. O BackgroundHQ também oferece essa página na aba Thumbnails, com intensidade e inversão dos efeitos.
+Todos os 15 presets oferecem backgroundStyle:comic_page (Página HQ transparente) e backgroundOpacity:0–100. A arte PNG original mantém as divisórias e o canal alfa, sem impor cor de fundo. Em retrato, cover centralizado pode recortar as laterais sem distorcer. Para mídia por trás, use customComponent.mode:overlay. A galeria instala o TSX e todos os companions do manifesto, inclusive HQComicPage.tsx e HQMotion.tsx quando necessário. Na cópia manual, copie todos para custom-scenes, compartilhando uma única cópia compatível de cada auxiliar. O BackgroundHQ também oferece essa página na aba Thumbnails, com intensidade e inversão dos efeitos.
+
+Os fundos mantêm a ordem dos hooks ao alternar estilos; opacidade zero evita trabalho procedural invisível. A biblioteca prepara medidas estáticas e eventos antes dos frames; o movimento continua determinístico. TextoHQ oferece kineticUnit:letter/word. QuadroHQSobreCena oferece compactAt/compactDuration/compactScale com defaults 2/0.65/0.58. CaixinhaHQ permite motionCurve:smooth/snappy; o clique permanece em actionAt. Encerramento aceita timingScale:0.5–2, characterScale:0.5–1.5 e fadeOutDuration vertical (0 mantém visível; ausente preserva o comportamento anterior). Tempos e SFX são configurados separadamente. Página e Linha do Tempo concluem expansões no último frame exibido. Não alegar ganho percentual de render a partir de um teste isolado do cálculo da espiral.
 
 Baixe ou salve o arquivo TSX gerado pelo ChatGPT em seu computador e coloque-o dentro da pasta do projeto: custom-scenes/MinhaCena.tsx. A interface atual não baixa nem instala automaticamente o código produzido no chat; essa cópia é manual. Use project://custom-scenes/MinhaCena.tsx em timeline[].customComponent.module. A geração e o download do arquivo dependem das ferramentas que estiverem disponíveis no ChatGPT.
 
@@ -381,8 +383,8 @@ Módulo: `project://custom-scenes/BackgroundHQ.tsx`. Fontes: Anton ou Bangers qu
 
 ![Exemplo de Fundo HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/background-hq/preview-0-16x9.png)
 ![Exemplo de Fundo HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/background-hq/preview-0-9x16.png)
-![Exemplo de Fundo HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/background-hq/previa-pagina-hq-16x9.png)
-![Exemplo de Fundo HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/background-hq/previa-pagina-hq-9x16.png)
+![Exemplo de Fundo HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/background-hq/preview-1-16x9.png)
+![Exemplo de Fundo HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/background-hq/preview-1-9x16.png)
 
 Guia: [background-hq](../scene-library/background-hq/README.md). Exemplos: [exemplo-cena.json](../scene-library/background-hq/exemplo-cena.json) · [exemplo-pagina-hq.json](../scene-library/background-hq/exemplo-pagina-hq.json)
 
@@ -395,6 +397,7 @@ type HQBackgroundOptions = {
   gridBackgroundColor?: string;
   gridLineColor?: string;
 };
+type HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};
 ```
 
 ### Barra de progresso HQ
@@ -411,7 +414,7 @@ Guia: [barra-loading-hq](../scene-library/barra-loading-hq/README.md). Exemplos:
 ```ts
 type ProgressPoint = {at:number; value:number; easing?:'linear'|'smooth'};
 type ColorPoint = {at:number; color:string};
-type Props = {points?:ProgressPoint[]; colors?:ColorPoint[]; position?:'top'|'bottom'|'center';
+type Props = HQComicPageOptions & {points?:ProgressPoint[]; colors?:ColorPoint[]; position?:'top'|'bottom'|'center';
   width?:number; height?:number; margin?:number; x?:number; y?:number;
   trackColor?:string; outlineColor?:string; texture?:boolean; opacity?:number};
 type HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};
@@ -449,6 +452,7 @@ type HQBackgroundOptions = {
   gridLineColor?: string;
 };
 type HQFont = 'Bangers' | 'Anton';
+type HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};
 ```
 
 ### Caixinha HQ
@@ -480,8 +484,8 @@ type Corner = 'superior-esquerdo' | 'superior-direito' | 'inferior-esquerdo' | '
 type Animation = 'lateral' | 'vertical' | 'pop';
 type IconName = 'youtube' | 'like' | 'sininho' | 'seta' | 'instagram' | 'none';
 type Action = 'auto' | 'clique' | 'sininho' | 'pulo' | 'none';
-type Props = {fontFamily?: HQFont; preset?: Preset; corner?: Corner; animation?: Animation; exitAnimation?: Animation;
-  text?: string; instagramHandle?: string; boxColor?: string; textColor?: string; icon?: IconName;
+type Props = HQComicPageOptions & {fontFamily?: HQFont; preset?: Preset; corner?: Corner; animation?: Animation; exitAnimation?: Animation;
+  motionCurve?:'smooth'|'snappy';text?: string; instagramHandle?: string; boxColor?: string; textColor?: string; icon?: IconName;
   at?: number; holdDuration?: number; animationDuration?: number;
   action?: Action; actionAt?: number; actionDuration?: number; assets?: {bangers?: string; anton?: string}};
 type HQFont = 'Bangers' | 'Anton';
@@ -517,6 +521,7 @@ type HQBackgroundOptions = {
   gridLineColor?: string;
 };
 type HQFont = 'Bangers' | 'Anton';
+type HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};
 ```
 
 ### Comparativo de ideias HQ
@@ -529,6 +534,8 @@ Módulo: `project://custom-scenes/ComparativoIdeiasHQ.tsx`. Fontes: Anton ou Ban
 ![Exemplo de Comparativo de ideias HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/comparativo-ideias-hq/preview-0-9x16.png)
 ![Exemplo de Comparativo de ideias HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/comparativo-ideias-hq/preview-1-16x9.png)
 ![Exemplo de Comparativo de ideias HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/comparativo-ideias-hq/preview-1-9x16.png)
+![Exemplo de Comparativo de ideias HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/comparativo-ideias-hq/preview-2-16x9.png)
+![Exemplo de Comparativo de ideias HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/comparativo-ideias-hq/preview-2-9x16.png)
 
 Guia: [comparativo-ideias-hq](../scene-library/comparativo-ideias-hq/README.md). Exemplos: [exemplo-2-ideias.json](../scene-library/comparativo-ideias-hq/exemplo-2-ideias.json) · [exemplo-3-ideias.json](../scene-library/comparativo-ideias-hq/exemplo-3-ideias.json) · [exemplo-4-ideias.json](../scene-library/comparativo-ideias-hq/exemplo-4-ideias.json)
 
@@ -548,6 +555,7 @@ type HQBackgroundOptions = {
   gridLineColor?: string;
 };
 type HQFont = 'Bangers' | 'Anton';
+type HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};
 ```
 
 ### Encerramento HQ
@@ -562,8 +570,9 @@ Módulo: `project://custom-scenes/ComicPageCTA.tsx`. Fontes: Anton ou Bangers qu
 Guia: [cta-encerramento-hq](../scene-library/cta-encerramento-hq/README.md). Exemplos: [exemplo-cena.json](../scene-library/cta-encerramento-hq/exemplo-cena.json)
 
 ```ts
-type Props = {channelName?:string;topTitle?:string;subscribeText?:string;calloutText?:string;fontFamily?: HQFont;
+type Props = HQComicPageOptions & {channelName?:string;topTitle?:string;subscribeText?:string;calloutText?:string;fontFamily?: HQFont;
   /** Texto abaixo da thumbnail. */
+  timingScale?:number;fadeOutDuration?:number;characterScale?:number;
   headline?: string;
   /** Somente a faixa diagonal superior; os demais detalhes vermelhos são fixos. */
   stripeColor?: string;
@@ -604,6 +613,7 @@ type HQBackgroundOptions = {
   gridLineColor?: string;
 };
 type HQFont = 'Bangers' | 'Anton';
+type HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};
 ```
 
 ### Galeria de cartas HQ
@@ -634,6 +644,7 @@ type HQBackgroundOptions = {
   gridLineColor?: string;
 };
 type HQFont = 'Bangers' | 'Anton';
+type HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};
 ```
 
 ### Imagem e frases HQ
@@ -663,6 +674,7 @@ type HQBackgroundOptions = {
   gridLineColor?: string;
 };
 type HQFont = 'Bangers' | 'Anton';
+type HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};
 ```
 
 ### Linha do tempo HQ
@@ -689,6 +701,7 @@ type HQBackgroundOptions = {
   gridLineColor?: string;
 };
 type HQFont = 'Bangers' | 'Anton';
+type HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};
 ```
 
 ### Página HQ Cenas
@@ -739,6 +752,7 @@ type HQBackgroundOptions = {
   gridLineColor?: string;
 };
 type HQFont = 'Bangers' | 'Anton';
+type HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};
 ```
 
 ### Personagem, espiral e legenda
@@ -754,7 +768,7 @@ Guia: [personagem-espiral-legenda](../scene-library/personagem-espiral-legenda/R
 
 ```ts
 type Word = {word?: string; text?: string; start: number; end: number};
-type Props = {fontFamily?: HQFont;
+type Props = HQComicPageOptions & {fontFamily?: HQFont;
   assets?: {character?: string; bangers?: string; anton?: string};
   backgroundVariant?: 'espiral' | 'crescente';
   captions?: Caption[]; words?: Word[]; transcriptOffset?: number;
@@ -779,7 +793,8 @@ Módulo: `project://custom-scenes/QuadroHQSobreCena.tsx`. Fontes: Anton ou Bange
 Guia: [quadro-hq-sobre-cena](../scene-library/quadro-hq-sobre-cena/README.md). Exemplos: [exemplo-cena.json](../scene-library/quadro-hq-sobre-cena/exemplo-cena.json)
 
 ```ts
-type Props = {fontFamily?: HQFont;
+type Props = HQComicPageOptions & {fontFamily?: HQFont;
+  compactAt?:number;compactDuration?:number;compactScale?:number;
   upperText: string;
   lowerText: string;
   tagColor?: string;
@@ -799,6 +814,10 @@ Módulo: `project://custom-scenes/TextoHQ.tsx`. Fontes: Anton ou Bangers quando 
 ![Exemplo de Texto HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/texto-hq/preview-0-9x16.png)
 ![Exemplo de Texto HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/texto-hq/preview-1-16x9.png)
 ![Exemplo de Texto HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/texto-hq/preview-1-9x16.png)
+![Exemplo de Texto HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/texto-hq/preview-2-16x9.png)
+![Exemplo de Texto HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/texto-hq/preview-2-9x16.png)
+![Exemplo de Texto HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/texto-hq/preview-3-16x9.png)
+![Exemplo de Texto HQ](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/scene-library/texto-hq/preview-3-9x16.png)
 
 Guia: [texto-hq](../scene-library/texto-hq/README.md). Exemplos: [exemplo-anton-palavra-por-palavra.json](../scene-library/texto-hq/exemplo-anton-palavra-por-palavra.json) · [exemplo-frase.json](../scene-library/texto-hq/exemplo-frase.json) · [exemplo-kinetic.json](../scene-library/texto-hq/exemplo-kinetic.json) · [exemplo-sequencia.json](../scene-library/texto-hq/exemplo-sequencia.json)
 
@@ -806,7 +825,7 @@ Guia: [texto-hq](../scene-library/texto-hq/README.md). Exemplos: [exemplo-anton-
 type Entrance='abrir'|'escrita'|'kinetic'|'none'|null;
 type Exit='fechar'|'none'|null;
 type TextStyle=HQBackgroundOptions & {fontFamily?:HQFont;textColor?:string;textScale?:number;
-  kineticDirection?:'up'|'down'|'left'|'right';kineticStagger?:number;kineticAccentColor?:string;
+  kineticUnit?:'letter'|'word';kineticDirection?:'up'|'down'|'left'|'right';kineticStagger?:number;kineticAccentColor?:string;
   entryAnimation?:Entrance;exitAnimation?:Exit;entryDuration?:number;exitDuration?:number;entryDelay?:number;writeDuration?:number};
 type TextStep=TextStyle & {text:string;at:number;duration:number};
 type Props=TextStyle & {text?:string;texts?:TextStep[];assets?:{bangers?:string;anton?:string}};
@@ -822,6 +841,7 @@ type HQBackgroundOptions = {
   gridLineColor?: string;
 };
 type HQFont = 'Bangers' | 'Anton';
+type HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};
 ```
 
 

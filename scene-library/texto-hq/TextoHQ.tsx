@@ -6,7 +6,7 @@ import {loadFont} from '@remotion/fonts';
 type Entrance='abrir'|'escrita'|'kinetic'|'none'|null;
 type Exit='fechar'|'none'|null;
 type TextStyle=HQBackgroundOptions & {fontFamily?:HQFont;textColor?:string;textScale?:number;
-  kineticDirection?:'up'|'down'|'left'|'right';kineticStagger?:number;kineticAccentColor?:string;
+  kineticUnit?:'letter'|'word';kineticDirection?:'up'|'down'|'left'|'right';kineticStagger?:number;kineticAccentColor?:string;
   entryAnimation?:Entrance;exitAnimation?:Exit;entryDuration?:number;exitDuration?:number;entryDelay?:number;writeDuration?:number};
 type TextStep=TextStyle & {text:string;at:number;duration:number};
 type Props=TextStyle & {text?:string;texts?:TextStep[];assets?:{bangers?:string;anton?:string}};
@@ -31,6 +31,7 @@ export function prepareTextSteps(props:Props,duration:number,fps:number):Prepare
     const available=item.duration-delay-exitTime;
     const write=s.writeDuration??1.8;
     if(!['abrir','escrita','kinetic','none'].includes(entrance)||!['fechar','none'].includes(exit))throw new Error('Entrada: abrir/escrita/kinetic/none; saída: fechar/none.');
+    if(entrance==='kinetic'&&!['letter','word'].includes(s.kineticUnit??'letter'))throw Error('kineticUnit: letter ou word.');
     if(entrance==='kinetic'&&(!['up','down','left','right'].includes(s.kineticDirection??'up')||!Number.isFinite(s.kineticStagger??.035)||(s.kineticStagger??.035)<0||(s.kineticStagger??.035)>.15|| (s.kineticAccentColor!==undefined&&!/^#[a-f\d]{6}$/i.test(s.kineticAccentColor))))throw new Error('Kinetic: direction up/down/left/right; stagger 0–0.15 s; accentColor #RRGGBB.');
     if(!Number.isFinite(delay)||delay<0||!Number.isFinite(write)||write<=0||!Number.isFinite(exitTime)||exitTime<0||available<1/fps||
       (exit==='fechar'&&exitTime<1/fps)|| (s.entryDuration!==undefined&&(!Number.isFinite(s.entryDuration)||s.entryDuration<=0)))throw new Error('Tempos de animação inválidos ou maiores que o intervalo do texto.');
@@ -64,15 +65,16 @@ function fitHQText(text:string,family:HQFont,width:number,height:number,scale:nu
 }
 export default function TextoHQ(props:Props){
   const {width,height,fps,durationInFrames}=useVideoConfig();const frame=useCurrentFrame();
-  const steps=prepareTextSteps(props,durationInFrames/fps,fps),assets=props.assets??{};
+  const inputKey=JSON.stringify(props);
+  const steps=React.useMemo(()=>prepareTextSteps(props,durationInFrames/fps,fps),[inputKey,durationInFrames,fps]),assets=props.assets??{};
   const urls=steps.map(s=>resolveHQFont(s.fontFamily,assets));
   const [layouts,setLayouts]=React.useState<Layout[]|null>(null);
   const [handle]=React.useState(()=>delayRender('Preparando Texto HQ'));
   const signature=JSON.stringify({steps,urls,width,height});
-  React.useEffect(()=>{Promise.all(steps.map((s,i)=>loadFont({family:s.fontFamily,url:urls[i]}))).then(()=>{
+  React.useEffect(()=>{let live=true;Promise.all(steps.map((s,i)=>loadFont({family:s.fontFamily,url:urls[i]}))).then(()=>{if(!live)return;
     setLayouts(steps.map(s=>fitHQText(s.text,s.fontFamily,width*(width>height?.84:.8)*(s.entryAnimation==='kinetic'?.88:1),height*(width>height?.64:.66)*(s.entryAnimation==='kinetic'?.82:1),s.textScale)));
     continueRender(handle);
-  }).catch(cancelRender);},[signature,handle]);
+  }).catch(error=>{if(live)cancelRender(error);});return()=>{live=false;};},[signature,handle]);
   const index=activeTextIndex(steps,frame,fps),s=index<0?undefined:steps[index],layout=index<0?undefined:layouts?.[index];
   const bg=s??props,unit=Math.min(width,height)/1080;
   const local=s?frame/fps-s.at:0;
@@ -80,12 +82,13 @@ export default function TextoHQ(props:Props){
   const opening=easeText(p),closing=s?.exitAnimation==='fechar'?easeText((local-(s.duration-s.exitDuration))/Math.max(1/fps,s.exitDuration-1/fps)):0;
   const openMask=s?.entryAnimation==='abrir'&&opening<1?`linear-gradient(to right, transparent ${50-opening*55-5}%, black ${50-opening*55}%, black ${50+opening*55}%, transparent ${50+opening*55+5}%)`:undefined;
   const closeMask=closing>0?`linear-gradient(to right, black ${50-closing*60-5}%, transparent ${50-closing*60}%, transparent ${50+closing*60}%, black ${50+closing*60+5}%)`:undefined;
-  const total=layout?.lines.reduce((a,l)=>a+Array.from(l).length,0)??0,visible=s?.entryAnimation==='escrita'?Math.floor(p*total):total;let letter=0;
+  const units=(line:string)=>s?.entryAnimation==='kinetic'&&s.kineticUnit==='word'?line.split(/(\s+)/).filter(Boolean):Array.from(line);
+  const total=layout?.lines.reduce((a,l)=>a+units(l).length,0)??0,visible=s?.entryAnimation==='escrita'?Math.floor(p*total):total;let letter=0;
   return <AbsoluteFill style={{overflow:'hidden',justifyContent:'center',alignItems:'center'}}>
     <HQBackground {...bg}><AbsoluteFill style={{pointerEvents:'none',opacity:.28,backgroundImage:`radial-gradient(circle, #080A11 ${3.2*unit}px, transparent ${3.8*unit}px)`,backgroundSize:`${18*unit}px ${18*unit}px`}}/></HQBackground>
     {s&&layout&&<div style={{position:'relative',width:width>height?'84%':'80%',textAlign:'center',opacity:(s.entryAnimation==='abrir'?opening:p>0?1:0)*(1-closing),maskImage:closeMask,WebkitMaskImage:closeMask}}>
       <div style={{fontFamily:s.fontFamily,fontSize:layout.fontSize,lineHeight:1.16,color:s.textColor,WebkitTextStroke:s.fontFamily === 'Anton' ? '0px transparent' : `${2*unit}px #080A11`,textShadow:s.fontFamily === 'Anton' ? 'none' : `${9*unit}px ${12*unit}px 0 #080A11`,maskImage:openMask,WebkitMaskImage:openMask}}>
-        {layout.lines.map((line,i)=><div key={i} style={{whiteSpace:'pre'}}>{Array.from(line).map((char,j)=>{
+        {layout.lines.map((line,i)=><div key={i} style={{whiteSpace:'pre'}}>{units(line).map((char,j)=>{
           const n=letter++;
           if(s.entryAnimation!=='kinetic')return <span key={j} style={{opacity:n<visible?1:0}}>{char}</span>;
           const k=kineticGlyph(local-s.entryDelay,n,total,s.entryDuration,s.kineticStagger),direction=s.kineticDirection??'up',distance=Math.min(layout.fontSize*.55,100*unit);
@@ -109,8 +112,13 @@ export function hqGridOffset(time:number){return ((time*28)%84+84)%84;}
 export function hqPaperPose(time:number){return Math.floor(Math.max(0,time)*6)%8;}
 function HQBackground({backgroundStyle='halftone',backgroundColor='#2459C9',backgroundOpacity=100,paperTone='light',gridBackgroundColor='#10101A',gridLineColor='#858595',children}:HQBackgroundOptions & {children?:React.ReactNode}){
   const frame=useCurrentFrame();const {fps,width,height}=useVideoConfig();const t=frame/fps;
-  if(backgroundStyle==='comic_page')return <HQComicPage opacity={backgroundOpacity}/>;
   const uid=React.useId().replace(/:/g,'');
+  const stars=React.useMemo(()=>backgroundStyle==='stars'&&backgroundOpacity>0?Array.from({length:270},(_,i)=>{
+    const rand=(n:number)=>{const a=Math.sin(n*127.1+311.7)*43758.5453;return a-Math.floor(a);};
+    return {phase:rand(i+5),x:rand(i+700)-.5,y:rand(i+1300)-.5,radius:1+rand(i+1700)*5};
+  }):[],[backgroundStyle,backgroundOpacity]);
+  if(backgroundStyle==='comic_page')return <HQComicPage opacity={backgroundOpacity}/>;
+  if(backgroundOpacity===0)return null;
   if(!['halftone','solid','stars','film','paper','grid'].includes(backgroundStyle))throw new Error('backgroundStyle: halftone, solid, stars, film, paper ou grid.');
   if(!Number.isFinite(backgroundOpacity)||backgroundOpacity<0||backgroundOpacity>100)throw new Error('backgroundOpacity deve ser 0–100 (%).');
   if(!/^#[0-9a-f]{6}$/i.test(backgroundColor))throw new Error('backgroundColor deve usar #RRGGBB.');
@@ -122,10 +130,10 @@ function HQBackground({backgroundStyle='halftone',backgroundColor='#2459C9',back
   const dots=<pattern id={`${uid}dots`} width="14" height="14" patternUnits="userSpaceOnUse"><circle cx="4" cy="4" r="1.7" fill="#000000" opacity=".16"/></pattern>;
   let content:React.ReactNode;
   if(backgroundStyle==='stars'){
-    content=<><rect width={W} height={H} fill="#080B13"/>{Array.from({length:270},(_,i)=>{
-      const phase=(rand(i+5)+t*.025)%1,z=.18+phase*.82;
-      const x=W/2+(rand(i+700)-.5)*W*2.25*z,y=H/2+(rand(i+1300)-.5)*H*2.25*z;
-      const r=(1+rand(i+1700)*5)*z,opacity=Math.min(1,phase*8,(1-phase)*10);
+    content=<><rect width={W} height={H} fill="#080B13"/>{stars.map((star,i)=>{
+      const phase=(star.phase+t*.025)%1,z=.18+phase*.82;
+      const x=W/2+star.x*W*2.25*z,y=H/2+star.y*H*2.25*z;
+      const r=star.radius*z,opacity=Math.min(1,phase*8,(1-phase)*10);
       return <g key={i} opacity={opacity}><circle cx={x+1.4} cy={y+1.4} r={r+1} fill="#000000"/><circle cx={x} cy={y} r={r} fill={i%6===0?'#CCD6ED':'#FFF8E6'}/>{r>3.5&&<path d={`M ${x-r*.4} ${y-r*.5} l ${r*.6} 0`} stroke="white" strokeWidth={1.1}/>}</g>;
     })}<rect width={W} height={H} fill={`url(#${uid}dots)`} opacity=".22"/></>;
   }else if(backgroundStyle==='film'){

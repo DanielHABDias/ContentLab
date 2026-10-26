@@ -1,5 +1,11 @@
 # Diálogo HQ
 
+## Movimento e contrato de execução
+
+Agenda de troca é preparada uma vez por lista de falas. Repetições consecutivas do mesmo participante não recolhem o PNG entre frases. Para a imagem chegar antes da voz, antecipar at e usar textDelay. Bounds são compartilhados; resultados assíncronos obsoletos são descartados.
+
+Instalação manual: copiar **DialogoHQ.tsx** e **HQComicPage.tsx, HQMotion.tsx** para a mesma pasta custom-scenes. A Galeria prepara esses arquivos automaticamente, sem sobrescrever versões diferentes. Auxiliares idênticos são compartilhados uma única vez no projeto. Todos os sons continuam no plano; não há áudio automático. Anton sem sombra/contorno; Bangers mantém acabamento HQ.
+
 ## O que aparece
 
 Um participante fica à esquerda e o outro à direita. Sem falar, a imagem recua até seu centro estar na borda da tela, ficando aproximadamente metade para fora, em cinza, mais escura e discreta. Quando fala, avança para dentro da tela e recupera suas cores, brilho e opacidade originais. Não modifica o arquivo da imagem.
@@ -79,7 +85,6 @@ O TSX não toca narração, voz de personagem, música, digitação ou whoosh au
 
 A duração total vem de end - start. Todas as falas e escritas precisam caber nela. Os valores de at aqui são relativos; eventos sonoros da timeline devem somar o start absoluto da cena. A animação é determinística por frame/FPS, inclusive ao saltar na timeline.
 
-
 ## Consulta e exemplos disponíveis
 
 Voltar ao catálogo e à instalação. Este guia descreve o contrato atual; não é necessário aplicar atualizações antigas em sequência.
@@ -87,7 +92,6 @@ Voltar ao catálogo e à instalação. Este guia descreve o contrato atual; não
 - exemplo-cena.json
 
 Os JSONs são **cenas para inserir em `timeline`**, não planos completos. Preserve as configurações globais do projeto e adapte `id`, `start`, `end`, caminhos e SFX absolutos. Arquivos `project://` são relativos à raiz do projeto de edição, não à pasta desta biblioteca. Imagens/clipes/fontes precisam existir no destino; exemplos não baixam assets nem transcrição. A orientação vem da resolução do projeto, sem prop `aspectRatio`. Nenhum TSX toca sons automaticamente. PNGs documentam um instante, não o movimento ou a mixagem; prévias antigas não certificam todas as opções atuais.
-
 
 ## Contrato TypeScript completo
 
@@ -102,7 +106,7 @@ type Props=HQBackgroundOptions & {left:Participant;right:Participant;turns:Turn[
 type Bounds={x:number;y:number;width:number;height:number;sourceWidth:number;sourceHeight:number};
 type TextLayout={lines:string[];size:number};
 type HQBackgroundOptions = {
-  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
   backgroundColor?: string;
   backgroundOpacity?: number;
   paperTone?: 'light' | 'dark';

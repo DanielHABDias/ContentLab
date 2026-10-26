@@ -1,7 +1,12 @@
 # Quadro HQ sobre a cena
 
-Padrão **9:16 e 16:9** baseado no quadro aprovado mostrado pelo criador: uma cena continua visível atrás de uma moldura clara; na parte inferior, uma etiqueta colorida pequena fica encostada em um retângulo claro com a frase principal. A etiqueta também é repetida discretamente no canto superior esquerdo, como na referência. Na camada mais baixa do TSX há **halftone transparente sobre o clipe**, abaixo da moldura e dos textos. O componente não escolhe nem corta a mídia de fundo e não aplica efeito de televisão por conta própria.
+## Movimento e contrato de execução
 
+compactAt: segundos até começar a redução horizontal (padrão 2); compactDuration: segundos da redução (padrão 0.65); compactScale: escala final, 0.2–1 (padrão 0.58). Não reduzem no vertical. Texto principal é medido com a fonte para caber. Entradas continuam em 0.08–0.48 e 0.20–0.50 s; canto inferior esquerdo e retícula transparente são preservados.
+
+Instalação manual: copiar **QuadroHQSobreCena.tsx** e **HQComicPage.tsx, HQMotion.tsx** para a mesma pasta custom-scenes. A Galeria prepara esses arquivos automaticamente, sem sobrescrever versões diferentes. Auxiliares idênticos são compartilhados uma única vez no projeto. Todos os sons continuam no plano; não há áudio automático. Anton sem sombra/contorno; Bangers mantém acabamento HQ.
+
+Padrão **9:16 e 16:9** baseado no quadro aprovado mostrado pelo criador: uma cena continua visível atrás de uma moldura clara; na parte inferior, uma etiqueta colorida pequena fica encostada em um retângulo claro com a frase principal. A etiqueta também é repetida discretamente no canto superior esquerdo, como na referência. Na camada mais baixa do TSX há **halftone transparente sobre o clipe**, abaixo da moldura e dos textos. O componente não escolhe nem corta a mídia de fundo e não aplica efeito de televisão por conta própria.
 
 ## Fonte e acabamento
 
@@ -13,8 +18,6 @@ Padrão **9:16 e 16:9** baseado no quadro aprovado mostrado pelo criador: uma ce
 
 Anton é texto puro, **sem sombra nem contorno**. Bangers preserva o acabamento próprio deste padrão. Sombras/bordas de caixas e imagens continuam normais. No modo misto, declare ambas as fontes. Não há fallback silencioso. Não passe caminhos de fontes em props. As referências a Bangers no restante do guia descrevem o visual padrão, não uma limitação. Revise legibilidade ao trocar fontes; caixas fixas não acomodam parágrafos ilimitados.
 
-PNGs `previa-anton-*` antigos podem mostrar sombras anteriores à correção; são históricos. A referência atual de Anton está no Texto HQ, exemplo `anton-limpo`. Consulte FONTES_HQ.md.
-
 ## O que pode mudar
 
 | Item | Como mudar | Exemplo |
@@ -24,7 +27,7 @@ PNGs `previa-anton-*` antigos podem mostrar sombras anteriores à correção; s�
 | Frase principal | `customComponent.props.lowerText`. Aparece no retângulo claro inferior, em Anton escuro. | `UM DIA RUIM?` |
 | Cor da etiqueta | `customComponent.props.tagColor`, hexadecimal `#RRGGBB`. O texto da etiqueta muda automaticamente entre claro e escuro para manter o contraste. Padrão `#5CA5AD`. | `#F4C542` |
 
-Moldura, papel claro e movimento de entrada são fixos. A fonte é selecionável; veja a tabela de fontes abaixo. A disposição responde automaticamente à resolução do Content Lab: em 9:16, o bloco ocupa a base da tela; em 16:9, vira uma caixa na parte inferior esquerda, com 65% da largura. Bordas e letras se ajustam à dimensão menor da tela. Configure `project.resolution` como `1080 × 1920` ou `1920 × 1080`; não há parâmetro extra de orientação.
+Moldura, papel claro e movimento de entrada são fixos; a compactação horizontal é configurável. A fonte é selecionável; veja a tabela de fontes abaixo. A disposição responde automaticamente à resolução do Content Lab: em 9:16, o bloco ocupa a base da tela; em 16:9, vira uma caixa na parte inferior esquerda, com 65% da largura. Bordas e letras se ajustam à dimensão menor da tela. Configure `project.resolution` como `1080 × 1920` ou `1920 × 1080`; não há parâmetro extra de orientação.
 
 As duas caixas entram **abrindo da esquerda para a direita**: a caixa principal abre entre `T + 0.08` e `T + 0.48 s`; a etiqueta colorida abre entre `T + 0.20` e `T + 0.50 s`. O texto aparece junto da abertura sem ser espremido ou mudar de posição. A duração total continua definida por `start/end` da cena.
 
@@ -89,17 +92,11 @@ Verifique a prévia no início, meio e fim da cena: a moldura e os textos precis
 
 ## Camadas, saída e limites
 
-Ordem visual: mídia e seus filtros na cena base; por cima, halftone transparente do TSX; depois moldura e etiqueta discreta superior; por último as duas caixas inferiores com sombra. Não há vídeo, imagem ou áudio embutido. A cor da etiqueta é livre, mas a cor do papel e a cor da frase principal são fixas; não existem props para trocar essas cores, canto ou tempos das entradas; a fonte é selecionável. Para uma caixinha nos quatro cantos, usar CaixinhaHQ, não inventar corner neste componente.
+Ordem visual: mídia e seus filtros na cena base; por cima, halftone transparente do TSX; depois moldura e etiqueta discreta superior; por último as duas caixas inferiores com sombra. Não há vídeo, imagem ou áudio embutido. A cor da etiqueta é livre, mas a cor do papel e a cor da frase principal são fixas; não existem props para trocar essas cores, canto ou tempos das entradas; a compactação horizontal aceita compactAt/compactDuration/compactScale; a fonte é selecionável. Para uma caixinha nos quatro cantos, usar CaixinhaHQ, não inventar corner neste componente.
 
-O texto é sempre maiúsculo. A frase principal usa Anton; a etiqueta inferior usa Bangers e a repetição discreta superior usa Anton. O tamanho da frase depende do comprimento e pode quebrar linha, mas não é um ajustador de parágrafos ilimitados: prefira uma frase curta que caiba na base. Não há saída animada; termina com a cena. No vertical não há redução posterior; no horizontal a redução é fixa e exige ao menos 2,65 s de cena para terminar.
+O texto é sempre maiúsculo. A frase principal usa Anton; a etiqueta inferior usa Bangers e a repetição discreta superior usa Anton. O tamanho da frase depende do comprimento e pode quebrar linha, mas não é um ajustador de parágrafos ilimitados: prefira uma frase curta que caiba na base. Não há saída animada; termina com a cena. No vertical não há redução posterior; no horizontal a redução usa compactAt + compactDuration (defaults totalizam 2,65 s).
 
 ## Referências visuais
-
-
-
-
-
-
 
 As duas orientações têm imagens e MP4 de teste visual local; não são uma validação de mixagem de áudio. O visual de base e os ajustes de abertura/redução foram definidos com o criador.
 
@@ -111,13 +108,13 @@ Voltar ao catálogo e à instalação. Este guia descreve o contrato atual; não
 
 Os JSONs são **cenas para inserir em `timeline`**, não planos completos. Preserve as configurações globais do projeto e adapte `id`, `start`, `end`, caminhos e SFX absolutos. Arquivos `project://` são relativos à raiz do projeto de edição, não à pasta desta biblioteca. Imagens/clipes/fontes precisam existir no destino; exemplos não baixam assets nem transcrição. A orientação vem da resolução do projeto, sem prop `aspectRatio`. Nenhum TSX toca sons automaticamente. PNGs documentam um instante, não o movimento ou a mixagem; prévias antigas não certificam todas as opções atuais.
 
-
 ## Contrato TypeScript completo
 
 Props são JSON; assets fica em customComponent.assets, nunca dentro de props. Tempos são relativos à cena, exceto SFX no plano.
 
 ```ts
-type Props = {fontFamily?: HQFont;
+type Props = HQComicPageOptions & {fontFamily?: HQFont;
+  compactAt?:number;compactDuration?:number;compactScale?:number;
   upperText: string;
   lowerText: string;
   tagColor?: string;

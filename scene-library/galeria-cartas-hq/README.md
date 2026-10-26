@@ -1,5 +1,10 @@
 # Galeria de cartas HQ
 
+## Movimento e contrato de execução
+
+Viagem parte logo abaixo da tela; a carta antiga mantém seu conteúdo durante a primeira parte da chegada da nova. Profundidades são calculadas numa passagem por frame, não varrendo a lista para cada carta. Camadas totalmente encobertas são descartadas após quatro rodadas na mesma coluna, preservando as bordas dos três níveis visuais.
+
+Instalação manual: copiar **GaleriaCartasHQ.tsx** e **HQComicPage.tsx, HQMotion.tsx** para a mesma pasta custom-scenes. A Galeria prepara esses arquivos automaticamente, sem sobrescrever versões diferentes. Auxiliares idênticos são compartilhados uma única vez no projeto. Todos os sons continuam no plano; não há áudio automático. Anton sem sombra/contorno; Bangers mantém acabamento HQ.
 
 ## Fonte e acabamento
 
@@ -10,8 +15,6 @@
 | `customComponent.assets.anton` | `builtin://fonts/Anton-Regular.ttf`, necessário quando Anton é usada. |
 
 Anton é texto puro, **sem sombra nem contorno**. Bangers preserva o acabamento próprio deste padrão. Sombras/bordas de caixas e imagens continuam normais. Declare apenas a fonte selecionada. Não há fallback silencioso. Não passe caminhos de fontes em props. As referências a Bangers no restante do guia descrevem o visual padrão, não uma limitação. Revise legibilidade ao trocar fontes; caixas fixas não acomodam parágrafos ilimitados.
-
-PNGs `previa-anton-*` antigos podem mostrar sombras anteriores à correção; são históricos. A referência atual de Anton está no Texto HQ, exemplo `anton-limpo`. Consulte FONTES_HQ.md.
 
 ## Como funciona
 
@@ -78,17 +81,13 @@ Camadas: fundo/halftone, pilhas de cartas com as mais recentes por cima e cabeç
 
 exemplo-cena.json é uma cena, não um edit_plan completo. Os quatro SVG em exemplos-assets/ são ilustrações genéricas, não personagens obrigatórios. Para usar o exemplo sem alterar caminhos, copie-os para assets/galeria/ do projeto. A demonstração repete algumas imagens com textos diferentes para mostrar sete entradas e várias rodadas de pilhas. Substitua pelas suas imagens reais.
 
-
-
-
-
 As imagens com sufixo -inicio mostram uma etapa anterior da galeria. O componente é novo e a aprovação visual fica a cargo do criador, mesmo depois da compilação e dos testes locais.
 
 ## Conferência desta versão
 
 Componente compilado no Content Lab local. Gerados e inspecionados PNGs com sete entradas em 16:9 (960×540) e 9:16 (540×960), a 30 fps, aos 3,5 s e 8,5 s. Conferidos o primeiro preenchimento e as pilhas após várias rodadas. Testados 80 cálculos de coluna/camada (1–4 colunas) e seis estados de profundidade, incluindo a volta à primeira coluna e o limite visual de três recuos. Exemplo JSON lido e caminhos de fontes/sons conferidos. Prévia interativa carregada no Remotion Studio. Não foi renderizado vídeo completo nem validada a mixagem com narração real.
 
-## Backgrounds HQ v2 — 16/10/2026
+## Fundos HQ
 
 Atualização que substitui a descrição anterior dos fundos. Cada preset acompanha o auxiliar HQComicPage.tsx; copie ambos na instalação manual. Confira também o guia compartilhado.
 
@@ -121,8 +120,6 @@ Exemplos de campos para adicionar em **customComponent.props**, junto das props 
 
 **Camadas:** para ver um vídeo/cena comum por trás, configure `customComponent.mode: "overlay"` e mantenha essa mídia na cena base. Em `replace`, a cena base não é desenhada: reduzir a opacidade não recupera uma camada removida. Em zero, só o fundo do TSX desaparece; os elementos da composição continuam visíveis. Isso não adiciona suporte automático a múltiplos módulos TSX.
 
-Prévias antigas mostram os fundos anteriores. `previa-background-16x9.png` e `previa-background-9x16.png` foram atualizadas nos testes de integração v2. Os novos visuais aguardam aprovação. O novo BackgroundHQ é o padrão que mostra somente o fundo, com a mesma API.
-
 ## Consulta e exemplos disponíveis
 
 Voltar ao catálogo e à instalação. Este guia descreve o contrato atual; não é necessário aplicar atualizações antigas em sequência.
@@ -130,7 +127,6 @@ Voltar ao catálogo e à instalação. Este guia descreve o contrato atual; não
 - exemplo-cena.json
 
 Os JSONs são **cenas para inserir em `timeline`**, não planos completos. Preserve as configurações globais do projeto e adapte `id`, `start`, `end`, caminhos e SFX absolutos. Arquivos `project://` são relativos à raiz do projeto de edição, não à pasta desta biblioteca. Imagens/clipes/fontes precisam existir no destino; exemplos não baixam assets nem transcrição. A orientação vem da resolução do projeto, sem prop `aspectRatio`. Nenhum TSX toca sons automaticamente. PNGs documentam um instante, não o movimento ou a mixagem; prévias antigas não certificam todas as opções atuais.
-
 
 ## Contrato TypeScript completo
 
@@ -145,7 +141,7 @@ type Props = HQBackgroundOptions & {fontFamily?: HQFont; title: string; subtitle
 type Bounds = {x: number; y: number; width: number; height: number; sourceWidth: number; sourceHeight: number};
 type TextLayout = {lines: string[]; size: number};
 type HQBackgroundOptions = {
-  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
   backgroundColor?: string;
   backgroundOpacity?: number;
   paperTone?: 'light' | 'dark';

@@ -77,7 +77,8 @@ export default function CarrosselFrasesHQ({phrases,fontFamily='Bangers',align='l
   return <AbsoluteFill style={{overflow:'hidden',pointerEvents:'none'}}>
     <HQBackground backgroundStyle={backgroundStyle} backgroundColor={backgroundColor} backgroundOpacity={backgroundOpacity} paperTone={paperTone} gridBackgroundColor={gridBackgroundColor} gridLineColor={gridLineColor}/>
     <div data-active-band style={{position:'absolute',left:0,top:h*.36,width:w,height:h*.28,backgroundColor:activeBandColor,opacity:activeBandOpacity}}/>
-    {prepared?.signature===signature&&phrases.map((phrase,i)=>{
+    {prepared?.signature===signature&&phrases.slice(Math.max(0,Math.floor(cursor)-2),Math.ceil(cursor)+3).map((phrase,offset)=>{
+      const i=Math.max(0,Math.floor(cursor)-2)+offset;
       const slot=i-cursor;if(slot>2||slot< -2)return null;
       const layout=prepared.layouts[i],focus=clampCarousel(1-Math.abs(slot)),scale=inactiveScale+(1-inactiveScale)*focus;
       const gap=h*.045,smallH=layout.height*inactiveScale;
@@ -105,8 +106,9 @@ export function hqGridOffset(time:number){return ((time*28)%84+84)%84;}
 export function hqPaperPose(time:number){return Math.floor(Math.max(0,time)*6)%8;}
 function HQBackground({backgroundStyle='halftone',backgroundColor='#2459C9',backgroundOpacity=100,paperTone='light',gridBackgroundColor='#10101A',gridLineColor='#858595',children}:HQBackgroundOptions & {children?:React.ReactNode}){
   const frame=useCurrentFrame();const {fps,width,height}=useVideoConfig();const t=frame/fps;
-  if(backgroundStyle==='comic_page')return <HQComicPage opacity={backgroundOpacity}/>;
   const uid=React.useId().replace(/:/g,'');
+  if(backgroundStyle==='comic_page')return <HQComicPage opacity={backgroundOpacity}/>;
+  if(backgroundOpacity===0)return null;
   if(!['halftone','solid','stars','film','paper','grid'].includes(backgroundStyle))throw new Error('backgroundStyle: halftone, solid, stars, film, paper ou grid.');
   if(!Number.isFinite(backgroundOpacity)||backgroundOpacity<0||backgroundOpacity>100)throw new Error('backgroundOpacity deve ser 0–100 (%).');
   if(!/^#[0-9a-f]{6}$/i.test(backgroundColor))throw new Error('backgroundColor deve usar #RRGGBB.');

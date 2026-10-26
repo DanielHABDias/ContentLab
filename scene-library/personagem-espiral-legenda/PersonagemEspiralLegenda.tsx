@@ -1,3 +1,4 @@
+import {imageBoundsHQ} from './HQMotion';
 import {HQComicPage, type HQComicPageOptions} from './HQComicPage';
 import React from 'react';
 import {AbsoluteFill, Img, delayRender, continueRender, cancelRender, useCurrentFrame, useVideoConfig} from 'remotion';
@@ -16,6 +17,14 @@ type Props = HQComicPageOptions & {fontFamily?: HQFont;
 type Bounds = {x: number; y: number; width: number; height: number; sourceWidth: number; sourceHeight: number};
 const clamp = (v: number) => Math.max(0, Math.min(1, v));
 
+export function spiralField(columns:number,rows:number,width:number,height:number,variant:string){
+  const phase=new Float64Array(columns*rows),grain=new Int16Array(columns*rows),radius=Math.hypot(width,height)/2;
+  for(let y=0;y<rows;y++)for(let x=0;x<columns;x++){
+    const dx=(x+.5)/columns*width-width/2,dy=(y+.5)/rows*height-height/2,d=Math.hypot(dx,dy)/radius;
+    const bend=(variant==='crescente'?.55:.42)*Math.pow(d,.85)+.02*Math.sin(d*5)*d,i=y*columns+x;
+    phase[i]=(Math.atan2(dy,dx)-bend)*10;grain[i]=((x*137+y*53+x*y*7)%19)-9;
+  }return {phase,grain};
+}
 // Procedural spiral: no background video, texture file or companion module needed.
 function Spiral({variant, time, width, height}: {variant: 'espiral' | 'crescente'; time: number; width: number; height: number}) {
   const canvas = React.useRef<HTMLCanvasElement>(null);
@@ -24,27 +33,20 @@ function Spiral({variant, time, width, height}: {variant: 'espiral' | 'crescente
   const pixel = Math.max(2, Math.min(width, height) / 180);
   const columns = Math.ceil(width / pixel);
   const rows = Math.ceil(height / pixel);
+  const field=React.useMemo(()=>spiralField(columns,rows,width,height,variant),[columns,rows,width,height,variant]);
+  const buffer=React.useRef<ImageData|null>(null);
   React.useLayoutEffect(() => {
     const ctx = canvas.current?.getContext('2d');
     if (!ctx) throw new Error('Canvas indisponível para a espiral pixelada.');
-    const pixels = ctx.createImageData(columns, rows);
-    const radius = Math.hypot(width, height) / 2;
-    const rotation = time * (variant === 'crescente' ? -.09 : .075);
-    for (let y = 0; y < rows; y++) for (let x = 0; x < columns; x++) {
-      const dx = (x + .5) / columns * width - width / 2;
-      const dy = (y + .5) / rows * height - height / 2;
-      const distance = Math.hypot(dx, dy) / radius;
-      // Broad, gentle curves: rotate the shape without folding the bands.
-      const bend = (variant === 'crescente' ? .55 : .42) * Math.pow(distance, .85)
-        + .02 * Math.sin(distance * 5) * distance;
-      const dark = Math.sin((Math.atan2(dy, dx) - bend - rotation) * 10) > 0;
-      const grain = ((x * 137 + y * 53 + x * y * 7) % 19) - 9;
-      const value = Math.max(0, Math.min(255, (dark ? (variant === 'crescente' ? 52 : 8) : 226) + grain));
-      const i = (y * columns + x) * 4;
-      pixels.data[i] = value; pixels.data[i + 1] = value; pixels.data[i + 2] = value; pixels.data[i + 3] = 255;
+    const pixels=buffer.current?.width===columns&&buffer.current?.height===rows?buffer.current:ctx.createImageData(columns,rows);buffer.current=pixels;
+    const rotation=time*(variant==='crescente'?-.09:.075)*10;
+    for(let i=0;i<field.phase.length;i++){
+      const dark=Math.sin(field.phase[i]-rotation)>0;
+      const value=Math.max(0,Math.min(255,(dark?(variant==='crescente'?52:8):226)+field.grain[i]));
+      const j=i*4;pixels.data[j]=value;pixels.data[j+1]=value;pixels.data[j+2]=value;pixels.data[j+3]=255;
     }
     ctx.putImageData(pixels, 0, 0);
-  }, [columns, rows, width, height, variant, time]);
+  }, [columns, rows, field, variant, time]);
   return <>
     <canvas ref={canvas} width={columns} height={rows} style={{position: 'absolute', width: '100%', height: '100%', imageRendering: 'pixelated'}} />
     <AbsoluteFill style={{opacity: .32, backgroundImage: 'radial-gradient(#000 0.75px, transparent 1.15px)', backgroundSize: '3px 3px'}} />
@@ -68,33 +70,21 @@ export default function PersonagemEspiralLegenda({backgroundStyle, backgroundOpa
   if (!Number.isFinite(transcriptOffset) || transcriptOffset < 0) throw new Error('transcriptOffset deve ser >= 0.');
   if (!highlightColors.length || ![captionColor, ...highlightColors].every(c => /^#[a-f\d]{6}$/i.test(c))) throw new Error('Informe cores #RRGGBB e ao menos uma cor de destaque.');
   if (captions !== undefined && words !== undefined) throw new Error('Use captions OU words, não os dois.');
-  const cues: Caption[] = captions ?? (words ?? []).filter(word => word.end > transcriptOffset && word.start < transcriptOffset + duration).map(word => ({
+  const cues=React.useMemo(()=>{const value:Caption[] = captions ?? (words ?? []).filter(word => word.end > transcriptOffset && word.start < transcriptOffset + duration).map(word => ({
     text: word.word ?? word.text ?? '', startMs: Math.max(0, word.start - transcriptOffset) * 1000,
     endMs: Math.min(duration, word.end - transcriptOffset) * 1000, timestampMs: null, confidence: null,
   }));
-  cues.forEach((cue, i) => {
-    if (!cue.text?.trim() || !Number.isFinite(cue.startMs) || !Number.isFinite(cue.endMs) || cue.startMs < 0 || cue.endMs <= cue.startMs || cue.endMs > duration * 1000 + 1 || (i > 0 && cue.startMs < cues[i - 1].endMs)) throw new Error('Legendas requerem palavras ordenadas, sem sobreposição e dentro da cena.');
+  value.forEach((cue, i) => {
+    if (!cue.text?.trim() || !Number.isFinite(cue.startMs) || !Number.isFinite(cue.endMs) || cue.startMs < 0 || cue.endMs <= cue.startMs || cue.endMs > duration * 1000 + 1 || (i > 0 && cue.startMs < value[i - 1].endMs)) throw new Error('Legendas requerem palavras ordenadas, sem sobreposição e dentro da cena.');
   });
+  return value;},[captions,words,transcriptOffset,duration]);
   const [bounds, setBounds] = React.useState<Bounds | null>(null);
   const [handle] = React.useState(() => delayRender('Preparando personagem e legenda'));
   React.useEffect(() => {
-    const image = new Image(); image.crossOrigin = 'anonymous';
-    const ready = new Promise<Bounds>((resolve, reject) => {
-      image.onload = () => {try {
-        const canvas = document.createElement('canvas');canvas.width = image.naturalWidth;canvas.height = image.naturalHeight;
-        const ctx = canvas.getContext('2d');if (!ctx) throw new Error('Canvas indisponível.');
-        ctx.drawImage(image, 0, 0);const rgba = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-        let x0 = canvas.width, y0 = canvas.height, x1 = -1, y1 = -1;
-        for (let y = 0; y < canvas.height; y++) for (let x = 0; x < canvas.width; x++) if (rgba[(y * canvas.width + x) * 4 + 3] > 12) {
-          x0 = Math.min(x0, x);y0 = Math.min(y0, y);x1 = Math.max(x1, x);y1 = Math.max(y1, y);
-        }
-        if (x1 < 0) throw new Error('PNG totalmente transparente.');
-        resolve({x: x0, y: y0, width: x1 - x0 + 1, height: y1 - y0 + 1, sourceWidth: canvas.width, sourceHeight: canvas.height});
-      } catch (error) {reject(error);}};
-      image.onerror = () => reject(new Error('Não foi possível carregar o PNG do personagem.'));
-      image.src = assets.character!;
-    });
-    Promise.all([ready, loadFont({family: fontFamily, url: fontUrl})]).then(([box]) => {setBounds(box);continueRender(handle);}).catch(cancelRender);
+    let live=true;
+    const ready=imageBoundsHQ(assets.character!);
+    Promise.all([ready, loadFont({family: fontFamily, url: fontUrl})]).then(([box]) => {if(live)setBounds(box);continueRender(handle);}).catch(cancelRender);
+    return()=>{live=false;};
   }, [assets.character,fontUrl,fontFamily,handle]);
   const p = clamp((t - entryDelay) / entryDuration);
   const arrival = 1 - Math.pow(1 - p, 4);
@@ -105,12 +95,13 @@ export default function PersonagemEspiralLegenda({backgroundStyle, backgroundOpa
   const unit = Math.min(w, h) / 1080;
   // Rotate around the head anchor, keeping it at the spiral's vanishing point.
   const angle = Math.sin(t * 2.1) * sway * arrival;
-  const pages: Caption[][] = [];
+  const pages=React.useMemo(()=>{const groups:Caption[][] = [];
   for (const cue of cues) {
-    const previous = pages.at(-1);
-    if (!previous || previous.length >= maxWords || previous.at(-1)!.pageBreakAfter || cue.startMs - previous.at(-1)!.endMs > 600) pages.push([cue]);
+    const previous = groups.at(-1);
+    if (!previous || previous.length >= maxWords || previous.at(-1)!.pageBreakAfter || cue.startMs - previous.at(-1)!.endMs > 600) groups.push([cue]);
     else previous.push(cue);
   }
+  return groups;},[cues,maxWords]);
   const page = pages.find(group => t * 1000 >= group[0].startMs && t * 1000 < group.at(-1)!.endMs);
   return <AbsoluteFill style={{overflow: 'hidden', background: backgroundStyle==='comic_page'?'transparent':'#080808'}}>
     {backgroundStyle==='comic_page'?<HQComicPage opacity={backgroundOpacity}/>:<Spiral variant={backgroundVariant} time={t} width={w} height={h} />}

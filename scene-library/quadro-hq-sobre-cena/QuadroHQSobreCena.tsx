@@ -1,3 +1,4 @@
+import {fitLabelHQ} from './HQMotion';
 import {HQComicPage, type HQComicPageOptions} from './HQComicPage';
 import React from 'react';
 import {
@@ -7,6 +8,7 @@ import {
 import {loadFont} from '@remotion/fonts';
 
 type Props = HQComicPageOptions & {fontFamily?: HQFont;
+  compactAt?:number;compactDuration?:number;compactScale?:number;
   upperText: string;
   lowerText: string;
   tagColor?: string;
@@ -27,7 +29,7 @@ const readableInk = (hex: string) => {
 
 /** Sobreposição transparente: o vídeo ou a imagem ficam na cena normal do Content Lab. */
 export default function QuadroHQSobreCena({backgroundStyle, backgroundOpacity=100, fontFamily,
-  upperText,
+  compactAt=2,compactDuration=.65,compactScale=.58,upperText,
   lowerText,
   tagColor = '#5CA5AD',
   assets = {},
@@ -42,14 +44,6 @@ export default function QuadroHQSobreCena({backgroundStyle, backgroundOpacity=10
   }
 
 
-  const [handle] = React.useState(() => delayRender('Carregando fontes do quadro HQ'));
-  React.useEffect(() => {
-    Promise.all([
-      loadFont({family: mainFont, url: mainFontUrl}),
-      loadFont({family: tagFont, url: tagFontUrl}),
-    ]).then(() => continueRender(handle)).catch((error) => cancelRender(error));
-  }, [mainFontUrl,tagFontUrl,mainFont,tagFont,handle]);
-
   const frame = useCurrentFrame();
   const {fps, width: w, height: h} = useVideoConfig();
   const horizontal = w > h;
@@ -59,11 +53,22 @@ export default function QuadroHQSobreCena({backgroundStyle, backgroundOpacity=10
   const mainOpen = ease((time - .08) / .40);
   const tagOpen = ease((time - .20) / .30);
   // After opening (0.50 s), hold for 1.50 s, then compact around the same corner.
-  const compact = horizontal ? ease((time - 2.0) / .65) : 0;
-  const panelScale = 1 - .42 * compact;
+  if(!Number.isFinite(compactAt)||compactAt<0||!Number.isFinite(compactDuration)||compactDuration<=0||!Number.isFinite(compactScale)||compactScale<.2||compactScale>1)throw Error('compactAt >= 0, compactDuration > 0, compactScale: 0.2–1.');
+  const compact = horizontal ? ease((time-compactAt)/compactDuration) : 0;
+  const panelScale = 1 - (1-compactScale) * compact;
   const upper = upperText.toLocaleUpperCase('pt-BR');
   const lower = lowerText.toLocaleUpperCase('pt-BR');
   const fontSize = Math.max(46 * unit, Math.min(94 * unit, w * (lower.length > 28 ? .058 : lower.length > 19 ? .07 : .091)));
+
+  const [fitted,setFitted]=React.useState<ReturnType<typeof fitLabelHQ>|null>(null);
+  const [handle] = React.useState(() => delayRender('Carregando fontes do quadro HQ'));
+  React.useEffect(() => {
+    Promise.all([
+      loadFont({family: mainFont, url: mainFontUrl}),
+      loadFont({family: tagFont, url: tagFontUrl}),
+    ]).then(() => {setFitted(fitLabelHQ(lowerText,mainFont,(w*(horizontal?.65:.9)-62*unit),h*(horizontal?.24:.20),fontSize,.96));continueRender(handle);}).catch((error) => cancelRender(error));
+  }, [mainFontUrl,tagFontUrl,mainFont,tagFont,lowerText,w,h,handle]);
+
   const paper = '#F5EFDE';
   const ink = '#111723';
   const tagInk = readableInk(tagColor);
@@ -92,8 +97,8 @@ export default function QuadroHQSobreCena({backgroundStyle, backgroundOpacity=10
       <div style={{background: paper, border: `${6 * unit}px solid #080B11`,
         padding: `${20 * unit}px ${25 * unit}px ${17 * unit}px`,
         clipPath: `inset(0 ${(1 - mainOpen) * 100}% 0 0)`,
-        fontFamily: mainFont, color: ink, fontSize, lineHeight: .96,
-        letterSpacing: -.55 * unit, overflowWrap: 'break-word'}}>{lower}</div>
+        fontFamily: mainFont, color: ink, fontSize:fitted?.size??fontSize,whiteSpace:'pre-wrap', lineHeight: .96,
+        letterSpacing: -.55 * unit, overflowWrap: 'break-word'}}>{fitted?.lines.join('\n')??lower}</div>
     </div>
   </AbsoluteFill>;
 }

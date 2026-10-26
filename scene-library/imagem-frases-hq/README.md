@@ -1,7 +1,12 @@
 # Imagem e frases HQ
 
-Padrão solicitado em 16/10/2026, em avaliação visual. Uma imagem com brilho discreto atrás e, no outro lado, blocos de texto que aparecem inteiros nos horários definidos. Sem escrita letra por letra, slide ou fade do texto. As frases anteriores permanecem. Layout, Bangers em maiúsculas, sombra escura e halftone discreto seguem a biblioteca; não copia a fonte/branding da referência como obrigação.
+## Movimento e contrato de execução
 
+Textos continuam aparecendo inteiros no instante at, sem digitação nem fade. A imagem permanece estática por intenção. Bounds são reutilizados; resultados assíncronos obsoletos são descartados. Muitos blocos reduzem o texto: prefira poucas frases legíveis.
+
+Instalação manual: copiar **ImagemFrasesHQ.tsx** e **HQComicPage.tsx, HQMotion.tsx** para a mesma pasta custom-scenes. A Galeria prepara esses arquivos automaticamente, sem sobrescrever versões diferentes. Auxiliares idênticos são compartilhados uma única vez no projeto. Todos os sons continuam no plano; não há áudio automático. Anton sem sombra/contorno; Bangers mantém acabamento HQ.
+
+Padrão solicitado em 16/10/2026, em avaliação visual. Uma imagem com brilho discreto atrás e, no outro lado, blocos de texto que aparecem inteiros nos horários definidos. Sem escrita letra por letra, slide ou fade do texto. As frases anteriores permanecem. Layout, Bangers em maiúsculas, sombra escura e halftone discreto seguem a biblioteca; não copia a fonte/branding da referência como obrigação.
 
 ## Fonte e acabamento
 
@@ -12,8 +17,6 @@ Padrão solicitado em 16/10/2026, em avaliação visual. Uma imagem com brilho d
 | `customComponent.assets.anton` | `builtin://fonts/Anton-Regular.ttf`, necessário quando Anton é usada. |
 
 Anton é texto puro, **sem sombra nem contorno**. Bangers preserva o acabamento próprio deste padrão. Sombras/bordas de caixas e imagens continuam normais. Declare apenas a fonte selecionada. Não há fallback silencioso. Não passe caminhos de fontes em props. As referências a Bangers no restante do guia descrevem o visual padrão, não uma limitação. Revise legibilidade ao trocar fontes; caixas fixas não acomodam parágrafos ilimitados.
-
-PNGs `previa-anton-*` antigos podem mostrar sombras anteriores à correção; são históricos. A referência atual de Anton está no Texto HQ, exemplo `anton-limpo`. Consulte FONTES_HQ.md.
 
 ## Composição
 
@@ -66,17 +69,13 @@ Camadas: fundo/halftone, brilho radial, imagem, textos/etiqueta. Não aplicar CR
 
 exemplo-cena.json é uma cena, não um plano completo. A máscara em exemplos-assets/mascara.svg é uma ilustração de demonstração em vetor, não uma imagem obrigatória. Para rodar o exemplo sem trocar caminhos, copie-a para assets/imagem-frases/ do projeto. Pode substituir por qualquer PNG real com transparência, sem ser personagem.
 
-
-
-
-
 Os PNGs de etapa mostram a entrada progressiva dos blocos; a prévia esquerda mostra a opção imageSide left.
 
 ## Conferência local
 
 Compilado no Content Lab e conferido em PNG 960×540 e 540×960, a 30 fps, com imagem/halftone/brilho e os quatro blocos completos. Também gerados quadros antes e no instante da primeira aparição (frames 14 e 15 para at 0,5 s) e uma etapa com dois textos. Conferida a inversão de lados, destaque amarelo e brilho azul como controles independentes. Testados 20 limites de aparição em 24/25/30/60 fps e 12 seleções da alternância de cores; as imagens visuais são de 30 fps, não uma inspeção em todos esses FPS. O exemplo JSON foi lido; não há render de vídeo completo nem áudio para mixar neste teste. A máscara é demonstrativa e pode ser substituída.
 
-## Backgrounds HQ v2 — 16/10/2026
+## Fundos HQ
 
 Atualização que substitui a descrição anterior dos fundos. Cada preset acompanha o auxiliar HQComicPage.tsx; copie ambos na instalação manual. Confira também o guia compartilhado.
 
@@ -109,8 +108,6 @@ Exemplos de campos para adicionar em **customComponent.props**, junto das props 
 
 **Camadas:** para ver um vídeo/cena comum por trás, configure `customComponent.mode: "overlay"` e mantenha essa mídia na cena base. Em `replace`, a cena base não é desenhada: reduzir a opacidade não recupera uma camada removida. Em zero, só o fundo do TSX desaparece; os elementos da composição continuam visíveis. Isso não adiciona suporte automático a múltiplos módulos TSX.
 
-Prévias antigas mostram os fundos anteriores. `previa-background-16x9.png` e `previa-background-9x16.png` foram atualizadas nos testes de integração v2. Os novos visuais aguardam aprovação. O novo BackgroundHQ é o padrão que mostra somente o fundo, com a mesma API.
-
 ## Consulta e exemplos disponíveis
 
 Voltar ao catálogo e à instalação. Este guia descreve o contrato atual; não é necessário aplicar atualizações antigas em sequência.
@@ -118,7 +115,6 @@ Voltar ao catálogo e à instalação. Este guia descreve o contrato atual; não
 - exemplo-cena.json
 
 Os JSONs são **cenas para inserir em `timeline`**, não planos completos. Preserve as configurações globais do projeto e adapte `id`, `start`, `end`, caminhos e SFX absolutos. Arquivos `project://` são relativos à raiz do projeto de edição, não à pasta desta biblioteca. Imagens/clipes/fontes precisam existir no destino; exemplos não baixam assets nem transcrição. A orientação vem da resolução do projeto, sem prop `aspectRatio`. Nenhum TSX toca sons automaticamente. PNGs documentam um instante, não o movimento ou a mixagem; prévias antigas não certificam todas as opções atuais.
-
 
 ## Contrato TypeScript completo
 
@@ -132,7 +128,7 @@ type Props = HQBackgroundOptions & {fontFamily?: HQFont; phrases: Phrase[]; imag
 type Line = {text: string; size: number; height: number};
 type Bounds = {x: number; y: number; width: number; height: number; sourceWidth: number; sourceHeight: number};
 type HQBackgroundOptions = {
-  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
   backgroundColor?: string;
   backgroundOpacity?: number;
   paperTone?: 'light' | 'dark';

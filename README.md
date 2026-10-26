@@ -355,6 +355,8 @@ Flip e Curtain são transições nativas entre duas cenas: transitionOut: flip o
 
 ### Catálogo dos 15 presets
 
+Os contratos e auxiliares são sincronizados por `node scripts/sync-scene-library.mjs` (`--check` somente verifica). A cópia manual deve incluir todos os companions do manifesto, incluindo `HQMotion.tsx` quando listado. As entradas mantêm relógio por frame; leia o significado de `at` em cada guia. Texto HQ oferece kinetic por palavra, Quadro HQ permite configurar a compactação e Caixinha mantém gestos/cliques independentes. Veja [guia da biblioteca](scene-library/README.md). Nenhum projeto existente é sobrescrito automaticamente.
+
 | Padrão | Função |
 | --- | --- |
 | [Fundo HQ](scene-library/background-hq/README.md) | Fundos sólido, retícula, papel, grade, estrelas e filme. |

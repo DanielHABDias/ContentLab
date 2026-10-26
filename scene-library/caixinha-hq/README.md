@@ -1,7 +1,12 @@
 # Caixinha HQ
 
-Sobreposição transparente em Bangers maiúscula, com sombra nas letras, borda e sombra sólida de quadrinho. Halftone maior dentro da caixa; não afeta a cena atrás. Ícones são vetoriais no próprio TSX, sem arquivos externos. Funciona em 16:9 e 9:16.
+## Movimento e contrato de execução
 
+motionCurve: smooth (padrão) ou snappy. Snappy desacelera a entrada e acelera a saída lateral/vertical; pop e a ação interna mantêm seus gestos. actionAt continua sendo o centro: o clique coincide com a contração máxima. Nenhum SFX é embutido. Os tempos dos exemplos não mudam ao escolher uma curva.
+
+Instalação manual: copiar **CaixinhaHQ.tsx** e **HQComicPage.tsx** para a mesma pasta custom-scenes. A Galeria prepara esses arquivos automaticamente, sem sobrescrever versões diferentes. Auxiliares idênticos são compartilhados uma única vez no projeto. Todos os sons continuam no plano; não há áudio automático. Anton sem sombra/contorno; Bangers mantém acabamento HQ.
+
+Sobreposição transparente em Bangers maiúscula, com sombra nas letras, borda e sombra sólida de quadrinho. Halftone maior dentro da caixa; não afeta a cena atrás. Ícones são vetoriais no próprio TSX, sem arquivos externos. Funciona em 16:9 e 9:16.
 
 ## Fonte e acabamento
 
@@ -12,8 +17,6 @@ Sobreposição transparente em Bangers maiúscula, com sombra nas letras, borda 
 | `customComponent.assets.anton` | `builtin://fonts/Anton-Regular.ttf`, necessário quando Anton é usada. |
 
 Anton é texto puro, **sem sombra nem contorno**. Bangers preserva o acabamento próprio deste padrão. Sombras/bordas de caixas e imagens continuam normais. Declare apenas a fonte selecionada. Não há fallback silencioso. Não passe caminhos de fontes em props. As referências a Bangers no restante do guia descrevem o visual padrão, não uma limitação. Revise legibilidade ao trocar fontes; caixas fixas não acomodam parágrafos ilimitados.
-
-PNGs `previa-anton-*` antigos podem mostrar sombras anteriores à correção; são históricos. A referência atual de Anton está no Texto HQ, exemplo `anton-limpo`. Consulte FONTES_HQ.md.
 
 ## Presets
 
@@ -97,17 +100,7 @@ Cada instância tem uma única aparição e uma única ação; o modo livre não
 
 ## Referências visuais
 
-
-
-
-
-
-
-## Instagram — atualização de 16/10/2026
-
-
-
-
+## Instagram
 
 O degradê, o ícone e o texto são o sexto preset da caixinha existente, não um oitavo TSX. Permanecem o contorno, a sombra e o halftone interno do padrão. O PNG comparativo dos quatro presets anteriores continua válido e não inclui o novo Instagram.
 
@@ -127,7 +120,6 @@ Voltar ao catálogo e à instalação. Este guia descreve o contrato atual; não
 
 Os JSONs são **cenas para inserir em `timeline`**, não planos completos. Preserve as configurações globais do projeto e adapte `id`, `start`, `end`, caminhos e SFX absolutos. Arquivos `project://` são relativos à raiz do projeto de edição, não à pasta desta biblioteca. Imagens/clipes/fontes precisam existir no destino; exemplos não baixam assets nem transcrição. A orientação vem da resolução do projeto, sem prop `aspectRatio`. Nenhum TSX toca sons automaticamente. PNGs documentam um instante, não o movimento ou a mixagem; prévias antigas não certificam todas as opções atuais.
 
-
 ## Contrato TypeScript completo
 
 Props são JSON; assets fica em customComponent.assets, nunca dentro de props. Tempos são relativos à cena, exceto SFX no plano.
@@ -138,8 +130,8 @@ type Corner = 'superior-esquerdo' | 'superior-direito' | 'inferior-esquerdo' | '
 type Animation = 'lateral' | 'vertical' | 'pop';
 type IconName = 'youtube' | 'like' | 'sininho' | 'seta' | 'instagram' | 'none';
 type Action = 'auto' | 'clique' | 'sininho' | 'pulo' | 'none';
-type Props = {fontFamily?: HQFont; preset?: Preset; corner?: Corner; animation?: Animation; exitAnimation?: Animation;
-  text?: string; instagramHandle?: string; boxColor?: string; textColor?: string; icon?: IconName;
+type Props = HQComicPageOptions & {fontFamily?: HQFont; preset?: Preset; corner?: Corner; animation?: Animation; exitAnimation?: Animation;
+  motionCurve?:'smooth'|'snappy';text?: string; instagramHandle?: string; boxColor?: string; textColor?: string; icon?: IconName;
   at?: number; holdDuration?: number; animationDuration?: number;
   action?: Action; actionAt?: number; actionDuration?: number; assets?: {bangers?: string; anton?: string}};
 type HQFont = 'Bangers' | 'Anton';

@@ -1,3 +1,4 @@
+import {imageBoundsHQ} from './HQMotion';
 import {HQComicPage, type HQComicPageOptions} from './HQComicPage';
 import React from 'react';
 import {AbsoluteFill, Img, cancelRender, continueRender, delayRender, useCurrentFrame, useVideoConfig} from 'remotion';
@@ -20,6 +21,11 @@ export function galleryDepth(index: number, columns: number, starts: number[], t
   let depth = 0;
   for (let next = index + columns; next < starts.length; next += columns) depth += ease((time - starts[next]) / entryDuration);
   return Math.min(3, depth);
+}
+export function galleryDepths(columns:number,starts:number[],time:number,entryDuration:number){
+  const totals=Array(columns).fill(0),depths=Array(starts.length).fill(0);
+  for(let i=starts.length-1;i>=0;i--){const col=i%columns;depths[i]=Math.min(3,totals[col]);totals[col]+=ease((time-starts[i])/entryDuration);}
+  return depths;
 }
 
 function fit(text: string, width: number, height: number, max: number, fontFamily:HQFont='Bangers'): TextLayout {
@@ -47,19 +53,7 @@ function fit(text: string, width: number, height: number, max: number, fontFamil
   }
   return {lines: wrap(low), size: low};
 }
-async function boundsFor(src: string): Promise<Bounds> {
-  const image = new Image();image.crossOrigin = 'anonymous';
-  await new Promise<void>((resolve, reject) => {image.onload = () => resolve();image.onerror = () => reject(new Error('Imagem inválida: ' + src));image.src = src;});
-  const canvas = document.createElement('canvas');canvas.width = image.naturalWidth;canvas.height = image.naturalHeight;
-  const ctx = canvas.getContext('2d');if (!ctx) throw new Error('Canvas indisponível.');ctx.drawImage(image, 0, 0);
-  const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-  let x0 = canvas.width, y0 = canvas.height, x1 = -1, y1 = -1;
-  for (let y = 0; y < canvas.height; y++) for (let x = 0; x < canvas.width; x++) if (data[(y * canvas.width + x) * 4 + 3] > 12) {
-    x0 = Math.min(x0, x);y0 = Math.min(y0, y);x1 = Math.max(x1, x);y1 = Math.max(y1, y);
-  }
-  if (x1 < 0) throw new Error('Imagem totalmente transparente.');
-  return {x: x0, y: y0, width: x1 - x0 + 1, height: y1 - y0 + 1, sourceWidth: canvas.width, sourceHeight: canvas.height};
-}
+const boundsFor=imageBoundsHQ;
 
 export default function GaleriaCartasHQ({fontFamily="Bangers", backgroundStyle="halftone", backgroundOpacity=100, paperTone="light", gridBackgroundColor="#10101A", gridLineColor="#858595", title, subtitle = '', items, columns,
   backgroundColor = '#1B2943', cardColor = '#F6EDD8', textColor = '#FFFFFF', cardTextColor = '#111723', accentColor = '#F4C542',
@@ -88,17 +82,17 @@ export default function GaleriaCartasHQ({fontFamily="Bangers", backgroundStyle="
   const [prepared, setPrepared] = React.useState<{bounds: Bounds[]; labels: TextLayout[]; captions: TextLayout[]; heading: TextLayout; sub: TextLayout} | null>(null);
   const [handle] = React.useState(() => delayRender('Preparando galeria de cartas HQ'));
   const signature = JSON.stringify({items, assets, title, subtitle, cw, ch, w, h});
-  React.useEffect(() => {
+  React.useEffect(() => {let live=true;
     Promise.all([loadFont({family: fontFamily, url: fontUrl}), Promise.all(items.map(item => boundsFor(assets[item.asset])))])
-      .then(([, bounds]) => {
+      .then(([, bounds]) => {if(!live)return;
         setPrepared({bounds,
           labels: items.map(item => fit(item.title.normalize('NFC').toLocaleUpperCase('pt-BR'), cw * .86, ch * .15, 65 * u, fontFamily)),
           captions: items.map(item => fit((item.caption ?? '').toLocaleUpperCase('pt-BR'), cw * .86, ch * .08, 32 * u, fontFamily)),
           heading: fit(title.toLocaleUpperCase('pt-BR'), w * .86, h * .105, 100 * u, fontFamily),
           sub: fit(subtitle.toLocaleUpperCase('pt-BR'), w * .86, h * .045, 38 * u, fontFamily)});
         continueRender(handle);
-      }).catch(cancelRender);
-  }, [signature, fontFamily, fontUrl, handle]);
+      }).catch(error=>{if(live)cancelRender(error);});return()=>{live=false;};}, [signature, fontFamily, fontUrl, handle]);
+  const depths=galleryDepths(count,starts,t,entryDuration);
   return <AbsoluteFill style={{overflow: 'hidden',  fontFamily: fontFamily}}>
     <HQBackground {...{backgroundStyle,backgroundColor,backgroundOpacity,paperTone,gridBackgroundColor,gridLineColor}}>
       <AbsoluteFill style={{opacity: .18, backgroundImage: `radial-gradient(#080A11 ${3.2 * u}px, transparent ${3.8 * u}px)`, backgroundSize: `${19 * u}px ${19 * u}px`}} />
@@ -110,9 +104,9 @@ export default function GaleriaCartasHQ({fontFamily="Bangers", backgroundStyle="
         fontSize: prepared.sub.size, lineHeight: 1.08, opacity: .8, whiteSpace: 'pre'}}>{prepared.sub.lines.join('\n')}</div>}
       <div style={{position: 'absolute', left: '7%', top: subtitle.trim() ? '24%' : '20%', width: '86%', height: 4 * u, background: accentColor}} />
       <AbsoluteFill style={{zIndex: 1}}>{items.map((item, i) => {
-        if (t < starts[i]) return null;
+        if (t < starts[i] || (i+count*4<items.length && t>=starts[i+count*4]+entryDuration)) return null;
         const {column} = gallerySlot(i, count);const progress = ease((t - starts[i]) / entryDuration);
-        const depth = galleryDepth(i, count, starts, t, entryDuration);
+        const depth = depths[i];
         const bx = w * .07 + column * (cw + gap);
         const dx = depth * stackOffset * u * (column % 2 ? 1 : -1);
         const dy = depth * stackOffset * u;
@@ -120,10 +114,12 @@ export default function GaleriaCartasHQ({fontFamily="Bangers", backgroundStyle="
         const bounds = prepared.bounds[i];const pictureW = cw * .86, pictureH = ch * .65;
         const size = Math.min(pictureW / bounds.width, pictureH / bounds.height);
         const iw = bounds.width * size, ih = bounds.height * size;
-        const contentOpacity = 1 - clamp(depth);
+        const next=starts[i+count];
+        const occlusion=next===undefined?0:ease((t-next-entryDuration*.45)/(entryDuration*.55));
+        const contentOpacity = 1 - clamp(occlusion);
         const labelP = ease((t - starts[i] - entryDuration) / textDuration);
         return <div key={i} style={{position: 'absolute', left: bx + dx, top: top + dy, width: cw, height: ch, zIndex: i + 1,
-          translate: `0 ${(1 - progress) * (h + ch)}px`, scale: 1 - depth * .025, rotate: `${depth * (column % 2 ? .8 : -.8)}deg`,
+          translate: `0 ${(1 - progress) * (h-top+30*u)}px`, scale: 1 - depth * .025, rotate: `${depth * (column % 2 ? .8 : -.8)}deg`,
           boxSizing: 'border-box', background: item.cardColor ?? cardColor, border: `${6 * u}px solid #080A11`, boxShadow: `${10 * u}px ${12 * u}px 0 #080A11`, transformOrigin: 'center'}}>
           <div style={{position: 'absolute', top: 0, left: 0, right: 0, height: 8 * u, background: color}} />
           <AbsoluteFill style={{opacity: .08, backgroundImage: `radial-gradient(#080A11 ${2 * u}px, transparent ${2.5 * u}px)`, backgroundSize: `${15 * u}px ${15 * u}px`}} />
@@ -157,8 +153,13 @@ export function hqGridOffset(time:number){return ((time*28)%84+84)%84;}
 export function hqPaperPose(time:number){return Math.floor(Math.max(0,time)*6)%8;}
 function HQBackground({backgroundStyle='halftone',backgroundColor='#2459C9',backgroundOpacity=100,paperTone='light',gridBackgroundColor='#10101A',gridLineColor='#858595',children}:HQBackgroundOptions & {children?:React.ReactNode}){
   const frame=useCurrentFrame();const {fps,width,height}=useVideoConfig();const t=frame/fps;
-  if(backgroundStyle==='comic_page')return <HQComicPage opacity={backgroundOpacity}/>;
   const uid=React.useId().replace(/:/g,'');
+  const stars=React.useMemo(()=>backgroundStyle==='stars'&&backgroundOpacity>0?Array.from({length:270},(_,i)=>{
+    const rand=(n:number)=>{const a=Math.sin(n*127.1+311.7)*43758.5453;return a-Math.floor(a);};
+    return {phase:rand(i+5),x:rand(i+700)-.5,y:rand(i+1300)-.5,radius:1+rand(i+1700)*5};
+  }):[],[backgroundStyle,backgroundOpacity]);
+  if(backgroundStyle==='comic_page')return <HQComicPage opacity={backgroundOpacity}/>;
+  if(backgroundOpacity===0)return null;
   if(!['halftone','solid','stars','film','paper','grid'].includes(backgroundStyle))throw new Error('backgroundStyle: halftone, solid, stars, film, paper ou grid.');
   if(!Number.isFinite(backgroundOpacity)||backgroundOpacity<0||backgroundOpacity>100)throw new Error('backgroundOpacity deve ser 0–100 (%).');
   if(!/^#[0-9a-f]{6}$/i.test(backgroundColor))throw new Error('backgroundColor deve usar #RRGGBB.');
@@ -170,10 +171,10 @@ function HQBackground({backgroundStyle='halftone',backgroundColor='#2459C9',back
   const dots=<pattern id={`${uid}dots`} width="14" height="14" patternUnits="userSpaceOnUse"><circle cx="4" cy="4" r="1.7" fill="#000000" opacity=".16"/></pattern>;
   let content:React.ReactNode;
   if(backgroundStyle==='stars'){
-    content=<><rect width={W} height={H} fill="#080B13"/>{Array.from({length:270},(_,i)=>{
-      const phase=(rand(i+5)+t*.025)%1,z=.18+phase*.82;
-      const x=W/2+(rand(i+700)-.5)*W*2.25*z,y=H/2+(rand(i+1300)-.5)*H*2.25*z;
-      const r=(1+rand(i+1700)*5)*z,opacity=Math.min(1,phase*8,(1-phase)*10);
+    content=<><rect width={W} height={H} fill="#080B13"/>{stars.map((star,i)=>{
+      const phase=(star.phase+t*.025)%1,z=.18+phase*.82;
+      const x=W/2+star.x*W*2.25*z,y=H/2+star.y*H*2.25*z;
+      const r=star.radius*z,opacity=Math.min(1,phase*8,(1-phase)*10);
       return <g key={i} opacity={opacity}><circle cx={x+1.4} cy={y+1.4} r={r+1} fill="#000000"/><circle cx={x} cy={y} r={r} fill={i%6===0?'#CCD6ED':'#FFF8E6'}/>{r>3.5&&<path d={`M ${x-r*.4} ${y-r*.5} l ${r*.6} 0`} stroke="white" strokeWidth={1.1}/>}</g>;
     })}<rect width={W} height={H} fill={`url(#${uid}dots)`} opacity=".22"/></>;
   }else if(backgroundStyle==='film'){

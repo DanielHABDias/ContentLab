@@ -1,5 +1,11 @@
 # Barra Loading HQ
 
+## Movimento e contrato de execução
+
+Pontos/cores são preparados quando as props mudam. Pausas e progresso linear permanecem. Um ponto explicitamente no fim da cena é atingido no último frame exibido, sem criar tempos duplicados nem dividir por zero.
+
+Instalação manual: copiar **BarraLoadingHQ.tsx** e **HQComicPage.tsx** para a mesma pasta custom-scenes. A Galeria prepara esses arquivos automaticamente, sem sobrescrever versões diferentes. Auxiliares idênticos são compartilhados uma única vez no projeto. Todos os sons continuam no plano; não há áudio automático. Anton sem sombra/contorno; Bangers mantém acabamento HQ.
+
 ## Funcionamento e tempo
 
 A duração total é `end - start` da cena no edit plan. Os tempos abaixo são **segundos relativos ao começo dessa cena**, não ao vídeo inteiro. Use `customComponent.mode: "overlay"`, mantendo os vídeos/textos nos elementos normais da cena.
@@ -41,7 +47,6 @@ Para usar junto de outro TSX, o aplicativo precisa permitir compor esses compone
 
 Prévias: `previa-16x9.png`, `previa-9x16.png`, `previa-azul.png`, `previa-gradiente.png`. Representam frames de testes locais, não um vídeo final exportado. A animação é determinística por quadro, inclusive ao saltar para outro momento da timeline.
 
-
 ## Consulta e exemplos disponíveis
 
 Voltar ao catálogo e à instalação. Este guia descreve o contrato atual; não é necessário aplicar atualizações antigas em sequência.
@@ -50,7 +55,6 @@ Voltar ao catálogo e à instalação. Este guia descreve o contrato atual; não
 
 Os JSONs são **cenas para inserir em `timeline`**, não planos completos. Preserve as configurações globais do projeto e adapte `id`, `start`, `end`, caminhos e SFX absolutos. Arquivos `project://` são relativos à raiz do projeto de edição, não à pasta desta biblioteca. Imagens/clipes/fontes precisam existir no destino; exemplos não baixam assets nem transcrição. A orientação vem da resolução do projeto, sem prop `aspectRatio`. Nenhum TSX toca sons automaticamente. PNGs documentam um instante, não o movimento ou a mixagem; prévias antigas não certificam todas as opções atuais.
 
-
 ## Contrato TypeScript completo
 
 Props são JSON; assets fica em customComponent.assets, nunca dentro de props. Tempos são relativos à cena, exceto SFX no plano.
@@ -58,7 +62,7 @@ Props são JSON; assets fica em customComponent.assets, nunca dentro de props. T
 ```ts
 type ProgressPoint = {at:number; value:number; easing?:'linear'|'smooth'};
 type ColorPoint = {at:number; color:string};
-type Props = {points?:ProgressPoint[]; colors?:ColorPoint[]; position?:'top'|'bottom'|'center';
+type Props = HQComicPageOptions & {points?:ProgressPoint[]; colors?:ColorPoint[]; position?:'top'|'bottom'|'center';
   width?:number; height?:number; margin?:number; x?:number; y?:number;
   trackColor?:string; outlineColor?:string; texture?:boolean; opacity?:number};
 ```

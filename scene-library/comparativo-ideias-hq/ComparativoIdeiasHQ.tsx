@@ -1,3 +1,4 @@
+import {edgeTravelHQ, imageBoundsHQ} from './HQMotion';
 import {HQComicPage, type HQComicPageOptions} from './HQComicPage';
 import React from 'react';
 import {AbsoluteFill, Img, cancelRender, continueRender, delayRender, useCurrentFrame, useVideoConfig} from 'remotion';
@@ -60,19 +61,7 @@ function fitText(text: string, width: number, height: number, maximum: number, f
   return {lines: wrap(low), size: low};
 }
 
-async function imageBounds(src: string): Promise<Bounds> {
-  const image = new Image();image.crossOrigin = 'anonymous';
-  await new Promise<void>((resolve, reject) => {image.onload = () => resolve();image.onerror = () => reject(new Error('Falha ao carregar imagem: ' + src));image.src = src;});
-  const canvas = document.createElement('canvas');canvas.width = image.naturalWidth;canvas.height = image.naturalHeight;
-  const ctx = canvas.getContext('2d');if (!ctx) throw new Error('Canvas indisponível.');
-  ctx.drawImage(image, 0, 0);const rgba = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-  let x0 = canvas.width, y0 = canvas.height, x1 = -1, y1 = -1;
-  for (let y = 0; y < canvas.height; y++) for (let x = 0; x < canvas.width; x++) if (rgba[(y * canvas.width + x) * 4 + 3] > 12) {
-    x0 = Math.min(x0, x);y0 = Math.min(y0, y);x1 = Math.max(x1, x);y1 = Math.max(y1, y);
-  }
-  if (x1 < 0) throw new Error('Imagem totalmente transparente.');
-  return {x: x0, y: y0, width: x1 - x0 + 1, height: y1 - y0 + 1, sourceWidth: canvas.width, sourceHeight: canvas.height};
-}
+const imageBounds=imageBoundsHQ;
 
 export default function ComparativoIdeiasHQ({fontFamily="Bangers", backgroundStyle="halftone", backgroundOpacity=100, paperTone="light", gridBackgroundColor="#10101A", gridLineColor="#858595", items, title = '', backgroundColor = '#D6AD42', textColor = '#FFFFFF',
   startDelay = .15, stagger = .45, entryDuration = .6, textDuration = .25, assets = {}}: Props) {
@@ -93,15 +82,14 @@ export default function ComparativoIdeiasHQ({fontFamily="Bangers", backgroundSty
   const [prepared, setPrepared] = React.useState<{bounds: Bounds[]; labels: TextLayout[]; heading: TextLayout | null} | null>(null);
   const [handle] = React.useState(() => delayRender('Preparando comparativo de ideias'));
   const signature = JSON.stringify({items, assets, w, h, title});
-  React.useEffect(() => {
+  React.useEffect(() => {let live=true;
     Promise.all([loadFont({family: fontFamily, url: fontUrl}), Promise.all(items.map(item => imageBounds(assets[item.asset])))])
-      .then(([, bounds]) => {
+      .then(([, bounds]) => {if(!live)return;
         const labels = items.map((item, i) => fitText(item.text.normalize('NFC').toLocaleUpperCase('pt-BR').trim(), slots[i].width * .94, slots[i].height * .25,
           Math.min(88 * unit, slots[i].width * .16), fontFamily));
         const heading = title.trim() ? fitText(title.toLocaleUpperCase('pt-BR'), w * .84, h * .10, 94 * unit, fontFamily) : null;
         setPrepared({bounds, labels, heading});continueRender(handle);
-      }).catch(cancelRender);
-  }, [signature, fontFamily, fontUrl, handle]);
+      }).catch(error=>{if(live)cancelRender(error);});return()=>{live=false;};}, [signature, fontFamily, fontUrl, handle]);
   const textStyle: React.CSSProperties = {fontFamily: fontFamily, color: textColor, lineHeight: 1.08, whiteSpace: 'pre',
     WebkitTextStroke: fontFamily === 'Anton' ? '0px transparent' : `${1.5 * unit}px #080A11`, textShadow: fontFamily === 'Anton' ? 'none' : `${5 * unit}px ${7 * unit}px 0 #080A11`};
   return <AbsoluteFill style={{ overflow: 'hidden'}}>
@@ -119,7 +107,7 @@ export default function ComparativoIdeiasHQ({fontFamily="Bangers", backgroundSty
       return <React.Fragment key={i}>
         <div style={{position: 'absolute', left: slot.x + (slot.width - imageW) / 2, top: slot.y + (imageH - visibleH) / 2,
           width: imageW, height: visibleH, overflow: 'hidden', opacity: t < starts[i] ? 0 : 1,
-          translate: `${slot.fromX * (w + slot.width) * (1 - progress)}px ${slot.fromY * (h + slot.height) * (1 - progress)}px`}}>
+          translate: `${slot.fromX * edgeTravelHQ(slot.x+(slot.width-imageW)/2,imageW,w,slot.fromX,30*unit) * (1 - progress)}px ${slot.fromY * edgeTravelHQ(slot.y+(imageH-visibleH)/2,visibleH,h,slot.fromY,30*unit) * (1 - progress)}px`}}>
           <Img src={assets[item.asset]} style={{position: 'absolute', left: -box.x * size, top: -box.y * size,
             width: box.sourceWidth * size, height: box.sourceHeight * size, maxWidth: 'none'}} />
         </div>
@@ -144,8 +132,13 @@ export function hqGridOffset(time:number){return ((time*28)%84+84)%84;}
 export function hqPaperPose(time:number){return Math.floor(Math.max(0,time)*6)%8;}
 function HQBackground({backgroundStyle='halftone',backgroundColor='#2459C9',backgroundOpacity=100,paperTone='light',gridBackgroundColor='#10101A',gridLineColor='#858595',children}:HQBackgroundOptions & {children?:React.ReactNode}){
   const frame=useCurrentFrame();const {fps,width,height}=useVideoConfig();const t=frame/fps;
-  if(backgroundStyle==='comic_page')return <HQComicPage opacity={backgroundOpacity}/>;
   const uid=React.useId().replace(/:/g,'');
+  const stars=React.useMemo(()=>backgroundStyle==='stars'&&backgroundOpacity>0?Array.from({length:270},(_,i)=>{
+    const rand=(n:number)=>{const a=Math.sin(n*127.1+311.7)*43758.5453;return a-Math.floor(a);};
+    return {phase:rand(i+5),x:rand(i+700)-.5,y:rand(i+1300)-.5,radius:1+rand(i+1700)*5};
+  }):[],[backgroundStyle,backgroundOpacity]);
+  if(backgroundStyle==='comic_page')return <HQComicPage opacity={backgroundOpacity}/>;
+  if(backgroundOpacity===0)return null;
   if(!['halftone','solid','stars','film','paper','grid'].includes(backgroundStyle))throw new Error('backgroundStyle: halftone, solid, stars, film, paper ou grid.');
   if(!Number.isFinite(backgroundOpacity)||backgroundOpacity<0||backgroundOpacity>100)throw new Error('backgroundOpacity deve ser 0–100 (%).');
   if(!/^#[0-9a-f]{6}$/i.test(backgroundColor))throw new Error('backgroundColor deve usar #RRGGBB.');
@@ -157,10 +150,10 @@ function HQBackground({backgroundStyle='halftone',backgroundColor='#2459C9',back
   const dots=<pattern id={`${uid}dots`} width="14" height="14" patternUnits="userSpaceOnUse"><circle cx="4" cy="4" r="1.7" fill="#000000" opacity=".16"/></pattern>;
   let content:React.ReactNode;
   if(backgroundStyle==='stars'){
-    content=<><rect width={W} height={H} fill="#080B13"/>{Array.from({length:270},(_,i)=>{
-      const phase=(rand(i+5)+t*.025)%1,z=.18+phase*.82;
-      const x=W/2+(rand(i+700)-.5)*W*2.25*z,y=H/2+(rand(i+1300)-.5)*H*2.25*z;
-      const r=(1+rand(i+1700)*5)*z,opacity=Math.min(1,phase*8,(1-phase)*10);
+    content=<><rect width={W} height={H} fill="#080B13"/>{stars.map((star,i)=>{
+      const phase=(star.phase+t*.025)%1,z=.18+phase*.82;
+      const x=W/2+star.x*W*2.25*z,y=H/2+star.y*H*2.25*z;
+      const r=star.radius*z,opacity=Math.min(1,phase*8,(1-phase)*10);
       return <g key={i} opacity={opacity}><circle cx={x+1.4} cy={y+1.4} r={r+1} fill="#000000"/><circle cx={x} cy={y} r={r} fill={i%6===0?'#CCD6ED':'#FFF8E6'}/>{r>3.5&&<path d={`M ${x-r*.4} ${y-r*.5} l ${r*.6} 0`} stroke="white" strokeWidth={1.1}/>}</g>;
     })}<rect width={W} height={H} fill={`url(#${uid}dots)`} opacity=".22"/></>;
   }else if(backgroundStyle==='film'){

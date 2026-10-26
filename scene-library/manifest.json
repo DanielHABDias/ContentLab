@@ -9,8 +9,8 @@
       "16:9",
       "9:16"
     ],
-    "hash": "4985e1f151c7066f80b1ef8b2de82860fd17b0c4fe6e7710916bfa654b99e516",
-    "contract": "type HQBackgroundOptions = {\n  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';\n  backgroundColor?: string;\n  backgroundOpacity?: number;\n  paperTone?: 'light' | 'dark';\n  gridBackgroundColor?: string;\n  gridLineColor?: string;\n};",
+    "hash": "f28e78098e3f1efa186ee968fd6a3aaff5db7b61f223738fb63fa422b2663cae",
+    "contract": "type HQBackgroundOptions = {\n  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';\n  backgroundColor?: string;\n  backgroundOpacity?: number;\n  paperTone?: 'light' | 'dark';\n  gridBackgroundColor?: string;\n  gridLineColor?: string;\n};\ntype HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};",
     "guide": "scene-library/background-hq/README.md",
     "examples": [
       "scene-library/background-hq/exemplo-cena.json",
@@ -19,8 +19,8 @@
     "previews": [
       "scene-library/background-hq/preview-0-16x9.png",
       "scene-library/background-hq/preview-0-9x16.png",
-      "scene-library/background-hq/previa-pagina-hq-16x9.png",
-      "scene-library/background-hq/previa-pagina-hq-9x16.png"
+      "scene-library/background-hq/preview-1-16x9.png",
+      "scene-library/background-hq/preview-1-9x16.png"
     ],
     "companions": [
       "scene-library/background-hq/HQComicPage.tsx"
@@ -36,8 +36,8 @@
       "16:9",
       "9:16"
     ],
-    "hash": "eb24bf15529a1f7900bcbe4451b450342abdabc3d0069acffba5d7f20b2dba46",
-    "contract": "type ProgressPoint = {at:number; value:number; easing?:'linear'|'smooth'};\ntype ColorPoint = {at:number; color:string};\ntype Props = {points?:ProgressPoint[]; colors?:ColorPoint[]; position?:'top'|'bottom'|'center';\n  width?:number; height?:number; margin?:number; x?:number; y?:number;\n  trackColor?:string; outlineColor?:string; texture?:boolean; opacity?:number};\ntype HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};",
+    "hash": "621d150ab9eb5d48416fc1f1be7f7cb5d5969ce67c65d3dc1374dd4441804e16",
+    "contract": "type ProgressPoint = {at:number; value:number; easing?:'linear'|'smooth'};\ntype ColorPoint = {at:number; color:string};\ntype Props = HQComicPageOptions & {points?:ProgressPoint[]; colors?:ColorPoint[]; position?:'top'|'bottom'|'center';\n  width?:number; height?:number; margin?:number; x?:number; y?:number;\n  trackColor?:string; outlineColor?:string; texture?:boolean; opacity?:number};\ntype HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};",
     "guide": "scene-library/barra-loading-hq/README.md",
     "examples": [
       "scene-library/barra-loading-hq/exemplo-cena.json"
@@ -60,8 +60,8 @@
       "16:9",
       "9:16"
     ],
-    "hash": "d15338e25804db6180c40bbd2e7671986b012cace2e65f830223a13551640425",
-    "contract": "type Node = {id:string; text?:string; subtitle?:string; asset?:string; x?:number; y?:number; color?:string};\ntype Step = {node:string; from?:string; hold:number; moveDuration?:number; connect?:boolean};\ntype Props = HQBackgroundOptions & {fontFamily?: HQFont; nodes:Node[]; steps:Step[]; backgroundColor?:string; cardColor?:string; textColor?:string;\n  lineColor?:string; zoomOutDuration?:number; presentation?:'cards'|'path'|'narrative'|'evidence'; heading?:string; pathBend?:number; dotColor?:string; dotSize?:number; assets?:Record<string,string>};\ntype JourneyPoint={x:number;y:number};\ntype HQBackgroundOptions = {\n  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';\n  backgroundColor?: string;\n  backgroundOpacity?: number;\n  paperTone?: 'light' | 'dark';\n  gridBackgroundColor?: string;\n  gridLineColor?: string;\n};\ntype HQFont = 'Bangers' | 'Anton';",
+    "hash": "4bfbb7c59a3b400ef3d86d75d2ec6346adf175f2fa07af6ecc2eeb15dcaa7eec",
+    "contract": "type Node = {id:string; text?:string; subtitle?:string; asset?:string; x?:number; y?:number; color?:string};\ntype Step = {node:string; from?:string; hold:number; moveDuration?:number; connect?:boolean};\ntype Props = HQBackgroundOptions & {fontFamily?: HQFont; nodes:Node[]; steps:Step[]; backgroundColor?:string; cardColor?:string; textColor?:string;\n  lineColor?:string; zoomOutDuration?:number; presentation?:'cards'|'path'|'narrative'|'evidence'; heading?:string; pathBend?:number; dotColor?:string; dotSize?:number; assets?:Record<string,string>};\ntype JourneyPoint={x:number;y:number};\ntype HQBackgroundOptions = {\n  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';\n  backgroundColor?: string;\n  backgroundOpacity?: number;\n  paperTone?: 'light' | 'dark';\n  gridBackgroundColor?: string;\n  gridLineColor?: string;\n};\ntype HQFont = 'Bangers' | 'Anton';\ntype HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};",
     "guide": "scene-library/brainstorm-hq/README.md",
     "examples": [
       "scene-library/brainstorm-hq/exemplo-cena.json",
@@ -93,8 +93,8 @@
       "16:9",
       "9:16"
     ],
-    "hash": "fe863a9270fd54f3c6dab387c6a0447e74045159de30f153e4ae7e6f44358a7d",
-    "contract": "type Preset = 'inscricao' | 'like' | 'sininho' | 'produto' | 'instagram' | 'livre';\ntype Corner = 'superior-esquerdo' | 'superior-direito' | 'inferior-esquerdo' | 'inferior-direito' | 'centro';\ntype Animation = 'lateral' | 'vertical' | 'pop';\ntype IconName = 'youtube' | 'like' | 'sininho' | 'seta' | 'instagram' | 'none';\ntype Action = 'auto' | 'clique' | 'sininho' | 'pulo' | 'none';\ntype Props = {fontFamily?: HQFont; preset?: Preset; corner?: Corner; animation?: Animation; exitAnimation?: Animation;\n  text?: string; instagramHandle?: string; boxColor?: string; textColor?: string; icon?: IconName;\n  at?: number; holdDuration?: number; animationDuration?: number;\n  action?: Action; actionAt?: number; actionDuration?: number; assets?: {bangers?: string; anton?: string}};\ntype HQFont = 'Bangers' | 'Anton';\ntype HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};",
+    "hash": "3929c034e12bece251800b31d7d7f09a72ba25160b9af61e7f05d2903a11aa2f",
+    "contract": "type Preset = 'inscricao' | 'like' | 'sininho' | 'produto' | 'instagram' | 'livre';\ntype Corner = 'superior-esquerdo' | 'superior-direito' | 'inferior-esquerdo' | 'inferior-direito' | 'centro';\ntype Animation = 'lateral' | 'vertical' | 'pop';\ntype IconName = 'youtube' | 'like' | 'sininho' | 'seta' | 'instagram' | 'none';\ntype Action = 'auto' | 'clique' | 'sininho' | 'pulo' | 'none';\ntype Props = HQComicPageOptions & {fontFamily?: HQFont; preset?: Preset; corner?: Corner; animation?: Animation; exitAnimation?: Animation;\n  motionCurve?:'smooth'|'snappy';text?: string; instagramHandle?: string; boxColor?: string; textColor?: string; icon?: IconName;\n  at?: number; holdDuration?: number; animationDuration?: number;\n  action?: Action; actionAt?: number; actionDuration?: number; assets?: {bangers?: string; anton?: string}};\ntype HQFont = 'Bangers' | 'Anton';\ntype HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};",
     "guide": "scene-library/caixinha-hq/README.md",
     "examples": [
       "scene-library/caixinha-hq/exemplo-cena.json",
@@ -135,8 +135,8 @@
       "16:9",
       "9:16"
     ],
-    "hash": "656fe0d9c1afdfecf4d228887c1a0600e7b6208c30bbc4aa3c8e95ad6e1d044b",
-    "contract": "type Phrase={text:string;at:number;color?:string};\ntype Props=HQBackgroundOptions & {phrases:Phrase[];fontFamily?:HQFont;align?:'left'|'right';\n  activeColor?:string;inactiveColor?:string;inactiveOpacity?:number;inactiveScale?:number;\n  activeBandColor?:string;activeBandOpacity?:number;\n  motionDuration?:number;textScale?:number;assets?:{bangers?:string;anton?:string}};\ntype Layout={lines:string[];size:number;height:number};\ntype HQBackgroundOptions = {\n  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';\n  backgroundColor?: string;\n  backgroundOpacity?: number;\n  paperTone?: 'light' | 'dark';\n  gridBackgroundColor?: string;\n  gridLineColor?: string;\n};\ntype HQFont = 'Bangers' | 'Anton';",
+    "hash": "ea53ac3a6b1bc711969780c64425e1a1998f4134348a7c0bd23e6f072627f532",
+    "contract": "type Phrase={text:string;at:number;color?:string};\ntype Props=HQBackgroundOptions & {phrases:Phrase[];fontFamily?:HQFont;align?:'left'|'right';\n  activeColor?:string;inactiveColor?:string;inactiveOpacity?:number;inactiveScale?:number;\n  activeBandColor?:string;activeBandOpacity?:number;\n  motionDuration?:number;textScale?:number;assets?:{bangers?:string;anton?:string}};\ntype Layout={lines:string[];size:number;height:number};\ntype HQBackgroundOptions = {\n  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';\n  backgroundColor?: string;\n  backgroundOpacity?: number;\n  paperTone?: 'light' | 'dark';\n  gridBackgroundColor?: string;\n  gridLineColor?: string;\n};\ntype HQFont = 'Bangers' | 'Anton';\ntype HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};",
     "guide": "scene-library/carrossel-frases-hq/README.md",
     "examples": [
       "scene-library/carrossel-frases-hq/exemplo-anton-overlay.json",
@@ -162,8 +162,8 @@
       "16:9",
       "9:16"
     ],
-    "hash": "fc0cd7db2fa0a20dabbab2ffa09ef90006b4d8a42f60c20f14cb46a5bcae3254",
-    "contract": "type Item = {asset: string; text: string; at?: number};\ntype Props = HQBackgroundOptions & {fontFamily?: HQFont; items: Item[]; title?: string; backgroundColor?: string; textColor?: string;\n  startDelay?: number; stagger?: number; entryDuration?: number; textDuration?: number; assets?: Record<string, string>};\ntype Slot = {x: number; y: number; width: number; height: number; fromX: number; fromY: number};\ntype Bounds = {x: number; y: number; width: number; height: number; sourceWidth: number; sourceHeight: number};\ntype TextLayout = {lines: string[]; size: number};\ntype HQBackgroundOptions = {\n  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';\n  backgroundColor?: string;\n  backgroundOpacity?: number;\n  paperTone?: 'light' | 'dark';\n  gridBackgroundColor?: string;\n  gridLineColor?: string;\n};\ntype HQFont = 'Bangers' | 'Anton';",
+    "hash": "08718389edcc04e3355ff785d739370190aef6cd777dd66c846bd740e547e5a9",
+    "contract": "type Item = {asset: string; text: string; at?: number};\ntype Props = HQBackgroundOptions & {fontFamily?: HQFont; items: Item[]; title?: string; backgroundColor?: string; textColor?: string;\n  startDelay?: number; stagger?: number; entryDuration?: number; textDuration?: number; assets?: Record<string, string>};\ntype Slot = {x: number; y: number; width: number; height: number; fromX: number; fromY: number};\ntype Bounds = {x: number; y: number; width: number; height: number; sourceWidth: number; sourceHeight: number};\ntype TextLayout = {lines: string[]; size: number};\ntype HQBackgroundOptions = {\n  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';\n  backgroundColor?: string;\n  backgroundOpacity?: number;\n  paperTone?: 'light' | 'dark';\n  gridBackgroundColor?: string;\n  gridLineColor?: string;\n};\ntype HQFont = 'Bangers' | 'Anton';\ntype HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};",
     "guide": "scene-library/comparativo-ideias-hq/README.md",
     "examples": [
       "scene-library/comparativo-ideias-hq/exemplo-2-ideias.json",
@@ -174,10 +174,13 @@
       "scene-library/comparativo-ideias-hq/preview-0-16x9.png",
       "scene-library/comparativo-ideias-hq/preview-0-9x16.png",
       "scene-library/comparativo-ideias-hq/preview-1-16x9.png",
-      "scene-library/comparativo-ideias-hq/preview-1-9x16.png"
+      "scene-library/comparativo-ideias-hq/preview-1-9x16.png",
+      "scene-library/comparativo-ideias-hq/preview-2-16x9.png",
+      "scene-library/comparativo-ideias-hq/preview-2-9x16.png"
     ],
     "companions": [
-      "scene-library/comparativo-ideias-hq/HQComicPage.tsx"
+      "scene-library/comparativo-ideias-hq/HQComicPage.tsx",
+      "scene-library/comparativo-ideias-hq/HQMotion.tsx"
     ]
   },
   {
@@ -190,8 +193,8 @@
       "16:9",
       "9:16"
     ],
-    "hash": "f9d3aced6bdc5a0dbf43dbc6ee8c3b8e4f28a7b9eb0b5f8f9623d9a194a49561",
-    "contract": "type Props = {channelName?:string;topTitle?:string;subscribeText?:string;calloutText?:string;fontFamily?: HQFont;\n  /** Texto abaixo da thumbnail. */\n  headline?: string;\n  /** Somente a faixa diagonal superior; os demais detalhes vermelhos são fixos. */\n  stripeColor?: string;\n  leftTitle?: string;\n  rightTitle?: string;\n  assets?: {thumbnail?: string; character?: string; bangers?: string; anton?: string;\n    thumbnailLeft?: string; thumbnailRight?: string; channelIcon?: string};\n};\ntype HQFont = 'Bangers' | 'Anton';\ntype HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};",
+    "hash": "a51a45ec1c060773cce5f8719bc405a7bcf65a7da61ccc8f641b5dcc7df4342a",
+    "contract": "type Props = HQComicPageOptions & {channelName?:string;topTitle?:string;subscribeText?:string;calloutText?:string;fontFamily?: HQFont;\n  /** Texto abaixo da thumbnail. */\n  timingScale?:number;fadeOutDuration?:number;characterScale?:number;\n  headline?: string;\n  /** Somente a faixa diagonal superior; os demais detalhes vermelhos são fixos. */\n  stripeColor?: string;\n  leftTitle?: string;\n  rightTitle?: string;\n  assets?: {thumbnail?: string; character?: string; bangers?: string; anton?: string;\n    thumbnailLeft?: string; thumbnailRight?: string; channelIcon?: string};\n};\ntype HQFont = 'Bangers' | 'Anton';\ntype HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};",
     "guide": "scene-library/cta-encerramento-hq/README.md",
     "examples": [
       "scene-library/cta-encerramento-hq/exemplo-cena.json"
@@ -201,7 +204,8 @@
       "scene-library/cta-encerramento-hq/preview-0-9x16.png"
     ],
     "companions": [
-      "scene-library/cta-encerramento-hq/HQComicPage.tsx"
+      "scene-library/cta-encerramento-hq/HQComicPage.tsx",
+      "scene-library/cta-encerramento-hq/HQMotion.tsx"
     ]
   },
   {
@@ -214,8 +218,8 @@
       "16:9",
       "9:16"
     ],
-    "hash": "6cfe0952fa41bd9832dbd79c866ac7513a1d27ef04269cb4fea351e52daba42f",
-    "contract": "type Speaker='left'|'right';\ntype Participant={asset:string;name?:string;color?:string;scale?:number};\ntype Turn={speaker:Speaker;text:string;at:number;duration:number;animation?:'escrita'|'none';writeDuration?:number;textDelay?:number;textColor?:string};\ntype Props=HQBackgroundOptions & {left:Participant;right:Participant;turns:Turn[];fontFamily?:HQFont;\n  textColor?:string;motionDuration?:number;highlightOpacity?:number;assets?:Record<string,string>};\ntype Bounds={x:number;y:number;width:number;height:number;sourceWidth:number;sourceHeight:number};\ntype TextLayout={lines:string[];size:number};\ntype HQBackgroundOptions = {\n  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';\n  backgroundColor?: string;\n  backgroundOpacity?: number;\n  paperTone?: 'light' | 'dark';\n  gridBackgroundColor?: string;\n  gridLineColor?: string;\n};\ntype HQFont = 'Bangers' | 'Anton';",
+    "hash": "cdcc9040d38a30621f19b87a933b93a38f35aea01dbdd45803ac88540356aedf",
+    "contract": "type Speaker='left'|'right';\ntype Participant={asset:string;name?:string;color?:string;scale?:number};\ntype Turn={speaker:Speaker;text:string;at:number;duration:number;animation?:'escrita'|'none';writeDuration?:number;textDelay?:number;textColor?:string};\ntype Props=HQBackgroundOptions & {left:Participant;right:Participant;turns:Turn[];fontFamily?:HQFont;\n  textColor?:string;motionDuration?:number;highlightOpacity?:number;assets?:Record<string,string>};\ntype Bounds={x:number;y:number;width:number;height:number;sourceWidth:number;sourceHeight:number};\ntype TextLayout={lines:string[];size:number};\ntype HQBackgroundOptions = {\n  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';\n  backgroundColor?: string;\n  backgroundOpacity?: number;\n  paperTone?: 'light' | 'dark';\n  gridBackgroundColor?: string;\n  gridLineColor?: string;\n};\ntype HQFont = 'Bangers' | 'Anton';\ntype HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};",
     "guide": "scene-library/dialogo-hq/README.md",
     "examples": [
       "scene-library/dialogo-hq/exemplo-cena.json"
@@ -225,7 +229,8 @@
       "scene-library/dialogo-hq/preview-0-9x16.png"
     ],
     "companions": [
-      "scene-library/dialogo-hq/HQComicPage.tsx"
+      "scene-library/dialogo-hq/HQComicPage.tsx",
+      "scene-library/dialogo-hq/HQMotion.tsx"
     ]
   },
   {
@@ -238,8 +243,8 @@
       "16:9",
       "9:16"
     ],
-    "hash": "7b437c05c299ef45081938a3ccc087a16d7f0437cf17ed9244717bd38529be0d",
-    "contract": "type Card = {asset: string; title: string; caption?: string; at?: number; cardColor?: string; accentColor?: string};\ntype Props = HQBackgroundOptions & {fontFamily?: HQFont; title: string; subtitle?: string; items: Card[]; columns?: number;\n  backgroundColor?: string; cardColor?: string; textColor?: string; cardTextColor?: string; accentColor?: string;\n  startDelay?: number; stagger?: number; entryDuration?: number; textDuration?: number; stackOffset?: number;\n  assets?: Record<string, string>};\ntype Bounds = {x: number; y: number; width: number; height: number; sourceWidth: number; sourceHeight: number};\ntype TextLayout = {lines: string[]; size: number};\ntype HQBackgroundOptions = {\n  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';\n  backgroundColor?: string;\n  backgroundOpacity?: number;\n  paperTone?: 'light' | 'dark';\n  gridBackgroundColor?: string;\n  gridLineColor?: string;\n};\ntype HQFont = 'Bangers' | 'Anton';",
+    "hash": "443a7bba483618e357d2a5d83ea8b71fae25bc8dcd4bebe1732ec5ea48c0f6af",
+    "contract": "type Card = {asset: string; title: string; caption?: string; at?: number; cardColor?: string; accentColor?: string};\ntype Props = HQBackgroundOptions & {fontFamily?: HQFont; title: string; subtitle?: string; items: Card[]; columns?: number;\n  backgroundColor?: string; cardColor?: string; textColor?: string; cardTextColor?: string; accentColor?: string;\n  startDelay?: number; stagger?: number; entryDuration?: number; textDuration?: number; stackOffset?: number;\n  assets?: Record<string, string>};\ntype Bounds = {x: number; y: number; width: number; height: number; sourceWidth: number; sourceHeight: number};\ntype TextLayout = {lines: string[]; size: number};\ntype HQBackgroundOptions = {\n  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';\n  backgroundColor?: string;\n  backgroundOpacity?: number;\n  paperTone?: 'light' | 'dark';\n  gridBackgroundColor?: string;\n  gridLineColor?: string;\n};\ntype HQFont = 'Bangers' | 'Anton';\ntype HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};",
     "guide": "scene-library/galeria-cartas-hq/README.md",
     "examples": [
       "scene-library/galeria-cartas-hq/exemplo-cena.json"
@@ -249,7 +254,8 @@
       "scene-library/galeria-cartas-hq/preview-0-9x16.png"
     ],
     "companions": [
-      "scene-library/galeria-cartas-hq/HQComicPage.tsx"
+      "scene-library/galeria-cartas-hq/HQComicPage.tsx",
+      "scene-library/galeria-cartas-hq/HQMotion.tsx"
     ]
   },
   {
@@ -262,8 +268,8 @@
       "16:9",
       "9:16"
     ],
-    "hash": "2f9bb9041034f19482df2fd500bfc7b307215900c04d4df5e3d402a3689225a4",
-    "contract": "type Phrase = {text: string; at: number; color?: string; size?: number};\ntype Props = HQBackgroundOptions & {fontFamily?: HQFont; phrases: Phrase[]; imageSide?: 'left' | 'right'; label?: string;\n  backgroundColor?: string; textColor?: string; mutedColor?: string; accentColor?: string; glowColor?: string;\n  glowIntensity?: number; imageScale?: number; assets?: {image?: string; bangers?: string; anton?: string}};\ntype Line = {text: string; size: number; height: number};\ntype Bounds = {x: number; y: number; width: number; height: number; sourceWidth: number; sourceHeight: number};\ntype HQBackgroundOptions = {\n  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';\n  backgroundColor?: string;\n  backgroundOpacity?: number;\n  paperTone?: 'light' | 'dark';\n  gridBackgroundColor?: string;\n  gridLineColor?: string;\n};\ntype HQFont = 'Bangers' | 'Anton';",
+    "hash": "befd5a7b6caea596a5e614f4e42eff794670005e12e46179bd306caffea3fe59",
+    "contract": "type Phrase = {text: string; at: number; color?: string; size?: number};\ntype Props = HQBackgroundOptions & {fontFamily?: HQFont; phrases: Phrase[]; imageSide?: 'left' | 'right'; label?: string;\n  backgroundColor?: string; textColor?: string; mutedColor?: string; accentColor?: string; glowColor?: string;\n  glowIntensity?: number; imageScale?: number; assets?: {image?: string; bangers?: string; anton?: string}};\ntype Line = {text: string; size: number; height: number};\ntype Bounds = {x: number; y: number; width: number; height: number; sourceWidth: number; sourceHeight: number};\ntype HQBackgroundOptions = {\n  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';\n  backgroundColor?: string;\n  backgroundOpacity?: number;\n  paperTone?: 'light' | 'dark';\n  gridBackgroundColor?: string;\n  gridLineColor?: string;\n};\ntype HQFont = 'Bangers' | 'Anton';\ntype HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};",
     "guide": "scene-library/imagem-frases-hq/README.md",
     "examples": [
       "scene-library/imagem-frases-hq/exemplo-cena.json"
@@ -273,7 +279,8 @@
       "scene-library/imagem-frases-hq/preview-0-9x16.png"
     ],
     "companions": [
-      "scene-library/imagem-frases-hq/HQComicPage.tsx"
+      "scene-library/imagem-frases-hq/HQComicPage.tsx",
+      "scene-library/imagem-frases-hq/HQMotion.tsx"
     ]
   },
   {
@@ -286,8 +293,8 @@
       "16:9",
       "9:16"
     ],
-    "hash": "127382b65210c362fcce271cf51ec59a47f87952c78caac8dc5ef9739d2e5bf1",
-    "contract": "type Clip = {asset: string; title?: string; subtitle?: string; sourceStart?: number; hold?: number; crt?: boolean};\ntype Props = HQBackgroundOptions & {fontFamily?: HQFont; clips: Clip[]; direction?: 'forward' | 'reverse'; backgroundColor?: string; accentColor?: string; textColor?: string;\n  startDelay?: number; moveDuration?: number; enterDuration?: number; enterLast?: boolean; assets?: Record<string, string>};\ntype HQBackgroundOptions = {\n  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';\n  backgroundColor?: string;\n  backgroundOpacity?: number;\n  paperTone?: 'light' | 'dark';\n  gridBackgroundColor?: string;\n  gridLineColor?: string;\n};\ntype HQFont = 'Bangers' | 'Anton';",
+    "hash": "85fd2b6433396f1af131e8ae246247b0757548c8cd4fba939cf5139c4000a684",
+    "contract": "type Clip = {asset: string; title?: string; subtitle?: string; sourceStart?: number; hold?: number; crt?: boolean};\ntype Props = HQBackgroundOptions & {fontFamily?: HQFont; clips: Clip[]; direction?: 'forward' | 'reverse'; backgroundColor?: string; accentColor?: string; textColor?: string;\n  startDelay?: number; moveDuration?: number; enterDuration?: number; enterLast?: boolean; assets?: Record<string, string>};\ntype HQBackgroundOptions = {\n  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';\n  backgroundColor?: string;\n  backgroundOpacity?: number;\n  paperTone?: 'light' | 'dark';\n  gridBackgroundColor?: string;\n  gridLineColor?: string;\n};\ntype HQFont = 'Bangers' | 'Anton';\ntype HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};",
     "guide": "scene-library/linha-do-tempo-hq/README.md",
     "examples": [
       "scene-library/linha-do-tempo-hq/exemplo-cena.json"
@@ -297,7 +304,8 @@
       "scene-library/linha-do-tempo-hq/preview-0-9x16.png"
     ],
     "companions": [
-      "scene-library/linha-do-tempo-hq/HQComicPage.tsx"
+      "scene-library/linha-do-tempo-hq/HQComicPage.tsx",
+      "scene-library/linha-do-tempo-hq/HQMotion.tsx"
     ]
   },
   {
@@ -310,8 +318,8 @@
       "16:9",
       "9:16"
     ],
-    "hash": "0cab2077b88f32e35f68b3119e4852eefe73f628dde82902072eb8f701c269a9",
-    "contract": "type Panel = {asset: string; label?: string; sourceStart?: number; crt?: boolean; mediaType?:'video'|'image'; fit?:'cover'|'contain'; at?:number; accentColor?:string; backgroundColor?:string};\ntype Focus = {panel: number; at: number; until: number};\ntype Entry = {panel: number; at: number; duration?: number};\ntype Props = HQBackgroundOptions & {fontFamily?: HQFont;\n  panels: Panel[];\n  focus: Focus[];\n  enter?: Entry;\n  backgroundColor?: string;\n  accentColor?: string;\n  panelLayout?: 'grid'|'asymmetric'|'split'|'parallax';\n  parallaxDuration?:number;\n  splitColors?: [string,string];\n  dividerColor?:string;\n  heading?:string;\n  headingColor?:string;\n  entryDuration?:number;\n  assets?: Record<string, string>;\n};\ntype Interval = {at: number; until: number};\ntype HQBackgroundOptions = {\n  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';\n  backgroundColor?: string;\n  backgroundOpacity?: number;\n  paperTone?: 'light' | 'dark';\n  gridBackgroundColor?: string;\n  gridLineColor?: string;\n};\ntype HQFont = 'Bangers' | 'Anton';",
+    "hash": "019a7de1252a5e95b78ad62872269575b69709807b1fcc2cc02019c4e259e37a",
+    "contract": "type Panel = {asset: string; label?: string; sourceStart?: number; crt?: boolean; mediaType?:'video'|'image'; fit?:'cover'|'contain'; at?:number; accentColor?:string; backgroundColor?:string};\ntype Focus = {panel: number; at: number; until: number};\ntype Entry = {panel: number; at: number; duration?: number};\ntype Props = HQBackgroundOptions & {fontFamily?: HQFont;\n  panels: Panel[];\n  focus: Focus[];\n  enter?: Entry;\n  backgroundColor?: string;\n  accentColor?: string;\n  panelLayout?: 'grid'|'asymmetric'|'split'|'parallax';\n  parallaxDuration?:number;\n  splitColors?: [string,string];\n  dividerColor?:string;\n  heading?:string;\n  headingColor?:string;\n  entryDuration?:number;\n  assets?: Record<string, string>;\n};\ntype Interval = {at: number; until: number};\ntype HQBackgroundOptions = {\n  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';\n  backgroundColor?: string;\n  backgroundOpacity?: number;\n  paperTone?: 'light' | 'dark';\n  gridBackgroundColor?: string;\n  gridLineColor?: string;\n};\ntype HQFont = 'Bangers' | 'Anton';\ntype HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};",
     "guide": "scene-library/pagina-hq-cenas/README.md",
     "examples": [
       "scene-library/pagina-hq-cenas/exemplo-cena.json",
@@ -333,7 +341,8 @@
       "scene-library/pagina-hq-cenas/preview-4-9x16.png"
     ],
     "companions": [
-      "scene-library/pagina-hq-cenas/HQComicPage.tsx"
+      "scene-library/pagina-hq-cenas/HQComicPage.tsx",
+      "scene-library/pagina-hq-cenas/HQMotion.tsx"
     ]
   },
   {
@@ -346,8 +355,8 @@
       "16:9",
       "9:16"
     ],
-    "hash": "e75a5801c90fa4844fc52fbdccf7c8d541a2ebbbbdf85a11516f00e646de3016",
-    "contract": "type Word = {word?: string; text?: string; start: number; end: number};\ntype Props = {fontFamily?: HQFont;\n  assets?: {character?: string; bangers?: string; anton?: string};\n  backgroundVariant?: 'espiral' | 'crescente';\n  captions?: Caption[]; words?: Word[]; transcriptOffset?: number;\n  entryDuration?: number; entryDelay?: number; characterScale?: number;\n  headAnchor?: {x: number; y: number}; sway?: number; maxWords?: number;\n  captionColor?: string; highlightColors?: string[];\n};\ntype Bounds = {x: number; y: number; width: number; height: number; sourceWidth: number; sourceHeight: number};\ntype HQFont = 'Bangers' | 'Anton';\ntype HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};",
+    "hash": "1beb45f0ec8133e39152640907d3690e4efe36c276b1075b3e52aa331f45d7f4",
+    "contract": "type Word = {word?: string; text?: string; start: number; end: number};\ntype Props = HQComicPageOptions & {fontFamily?: HQFont;\n  assets?: {character?: string; bangers?: string; anton?: string};\n  backgroundVariant?: 'espiral' | 'crescente';\n  captions?: Caption[]; words?: Word[]; transcriptOffset?: number;\n  entryDuration?: number; entryDelay?: number; characterScale?: number;\n  headAnchor?: {x: number; y: number}; sway?: number; maxWords?: number;\n  captionColor?: string; highlightColors?: string[];\n};\ntype Bounds = {x: number; y: number; width: number; height: number; sourceWidth: number; sourceHeight: number};\ntype HQFont = 'Bangers' | 'Anton';\ntype HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};",
     "guide": "scene-library/personagem-espiral-legenda/README.md",
     "examples": [
       "scene-library/personagem-espiral-legenda/exemplo-cena.json"
@@ -357,7 +366,8 @@
       "scene-library/personagem-espiral-legenda/preview-0-9x16.png"
     ],
     "companions": [
-      "scene-library/personagem-espiral-legenda/HQComicPage.tsx"
+      "scene-library/personagem-espiral-legenda/HQComicPage.tsx",
+      "scene-library/personagem-espiral-legenda/HQMotion.tsx"
     ]
   },
   {
@@ -370,8 +380,8 @@
       "16:9",
       "9:16"
     ],
-    "hash": "d7f1bd02e2184a691a2924bccc61e532ee75dc95374bdb82f6d36598b49ca2b4",
-    "contract": "type Props = {fontFamily?: HQFont;\n  upperText: string;\n  lowerText: string;\n  tagColor?: string;\n  assets?: {anton?: string; bangers?: string};\n};\ntype HQFont = 'Bangers' | 'Anton';\ntype HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};",
+    "hash": "7dddc99b285a04386173df8db74a48dc1018c33d3f1b0e2b50c0ca3ba4774825",
+    "contract": "type Props = HQComicPageOptions & {fontFamily?: HQFont;\n  compactAt?:number;compactDuration?:number;compactScale?:number;\n  upperText: string;\n  lowerText: string;\n  tagColor?: string;\n  assets?: {anton?: string; bangers?: string};\n};\ntype HQFont = 'Bangers' | 'Anton';\ntype HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};",
     "guide": "scene-library/quadro-hq-sobre-cena/README.md",
     "examples": [
       "scene-library/quadro-hq-sobre-cena/exemplo-cena.json"
@@ -381,7 +391,8 @@
       "scene-library/quadro-hq-sobre-cena/preview-0-9x16.png"
     ],
     "companions": [
-      "scene-library/quadro-hq-sobre-cena/HQComicPage.tsx"
+      "scene-library/quadro-hq-sobre-cena/HQComicPage.tsx",
+      "scene-library/quadro-hq-sobre-cena/HQMotion.tsx"
     ]
   },
   {
@@ -394,8 +405,8 @@
       "16:9",
       "9:16"
     ],
-    "hash": "7ccc5f5870714d0ef95b9963b9ed35f2ef578a203c6b54b06305273ddec5f446",
-    "contract": "type Entrance='abrir'|'escrita'|'kinetic'|'none'|null;\ntype Exit='fechar'|'none'|null;\ntype TextStyle=HQBackgroundOptions & {fontFamily?:HQFont;textColor?:string;textScale?:number;\n  kineticDirection?:'up'|'down'|'left'|'right';kineticStagger?:number;kineticAccentColor?:string;\n  entryAnimation?:Entrance;exitAnimation?:Exit;entryDuration?:number;exitDuration?:number;entryDelay?:number;writeDuration?:number};\ntype TextStep=TextStyle & {text:string;at:number;duration:number};\ntype Props=TextStyle & {text?:string;texts?:TextStep[];assets?:{bangers?:string;anton?:string}};\ntype PreparedStep=TextStep & {fontFamily:HQFont;textColor:string;textScale:number;entryAnimation:Entrance;exitAnimation:Exit;\n  entryDuration:number;exitDuration:number;entryDelay:number};\ntype Layout={lines:string[];fontSize:number};\ntype HQBackgroundOptions = {\n  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';\n  backgroundColor?: string;\n  backgroundOpacity?: number;\n  paperTone?: 'light' | 'dark';\n  gridBackgroundColor?: string;\n  gridLineColor?: string;\n};\ntype HQFont = 'Bangers' | 'Anton';",
+    "hash": "971d4d4154e91b4db6381869369ce3680731a92d9dd24f44a7e6abc6a9f96109",
+    "contract": "type Entrance='abrir'|'escrita'|'kinetic'|'none'|null;\ntype Exit='fechar'|'none'|null;\ntype TextStyle=HQBackgroundOptions & {fontFamily?:HQFont;textColor?:string;textScale?:number;\n  kineticUnit?:'letter'|'word';kineticDirection?:'up'|'down'|'left'|'right';kineticStagger?:number;kineticAccentColor?:string;\n  entryAnimation?:Entrance;exitAnimation?:Exit;entryDuration?:number;exitDuration?:number;entryDelay?:number;writeDuration?:number};\ntype TextStep=TextStyle & {text:string;at:number;duration:number};\ntype Props=TextStyle & {text?:string;texts?:TextStep[];assets?:{bangers?:string;anton?:string}};\ntype PreparedStep=TextStep & {fontFamily:HQFont;textColor:string;textScale:number;entryAnimation:Entrance;exitAnimation:Exit;\n  entryDuration:number;exitDuration:number;entryDelay:number};\ntype Layout={lines:string[];fontSize:number};\ntype HQBackgroundOptions = {\n  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';\n  backgroundColor?: string;\n  backgroundOpacity?: number;\n  paperTone?: 'light' | 'dark';\n  gridBackgroundColor?: string;\n  gridLineColor?: string;\n};\ntype HQFont = 'Bangers' | 'Anton';\ntype HQComicPageOptions = {backgroundStyle?:'comic_page';backgroundOpacity?:number};",
     "guide": "scene-library/texto-hq/README.md",
     "examples": [
       "scene-library/texto-hq/exemplo-anton-palavra-por-palavra.json",
@@ -407,7 +418,11 @@
       "scene-library/texto-hq/preview-0-16x9.png",
       "scene-library/texto-hq/preview-0-9x16.png",
       "scene-library/texto-hq/preview-1-16x9.png",
-      "scene-library/texto-hq/preview-1-9x16.png"
+      "scene-library/texto-hq/preview-1-9x16.png",
+      "scene-library/texto-hq/preview-2-16x9.png",
+      "scene-library/texto-hq/preview-2-9x16.png",
+      "scene-library/texto-hq/preview-3-16x9.png",
+      "scene-library/texto-hq/preview-3-9x16.png"
     ],
     "companions": [
       "scene-library/texto-hq/HQComicPage.tsx"

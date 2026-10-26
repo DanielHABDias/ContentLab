@@ -1,6 +1,12 @@
 # Background HQ
 
-TSX independente que mostra **somente o fundo**, sem título, caixas, imagens, legendas ou sons. Funciona em 16:9 e 9:16. Novo padrão solicitado em 16/10/2026; aguarda aprovação visual.
+## Movimento e contrato de execução
+
+Troca entre comic_page e os demais estilos mantém os hooks estáveis. Opacidade zero evita desenhar o fundo. Sementes estáticas das estrelas são preparadas uma vez; o frame continua definindo a animação. Papel mantém sua cadência em stop-motion e grade continua à direita.
+
+Instalação manual: copiar **BackgroundHQ.tsx** e **HQComicPage.tsx** para a mesma pasta custom-scenes. A Galeria prepara esses arquivos automaticamente, sem sobrescrever versões diferentes. Auxiliares idênticos são compartilhados uma única vez no projeto. Todos os sons continuam no plano; não há áudio automático. Anton sem sombra/contorno; Bangers mantém acabamento HQ.
+
+TSX independente que mostra **somente o fundo**, sem título, caixas, imagens, legendas ou sons. Funciona em 16:9 e 9:16.
 
 ## Estilos e parâmetros
 
@@ -44,7 +50,6 @@ Nos oito componentes de conteúdo com fundos selecionáveis, backgroundOpacity c
 
 Prévias 16:9 e 9:16 em PNG mostram o grid. Há imagens adicionais por estilo e de transparência. PNG é referência estática; a prévia local de Remotion permite conferir o movimento. Não há som incorporado ou som obrigatório, nem render final de vídeo.
 
-
 ## Consulta e exemplos disponíveis
 
 Voltar ao catálogo e à instalação. Este guia descreve o contrato atual; não é necessário aplicar atualizações antigas em sequência.
@@ -53,14 +58,13 @@ Voltar ao catálogo e à instalação. Este guia descreve o contrato atual; não
 
 Os JSONs são **cenas para inserir em `timeline`**, não planos completos. Preserve as configurações globais do projeto e adapte `id`, `start`, `end`, caminhos e SFX absolutos. Arquivos `project://` são relativos à raiz do projeto de edição, não à pasta desta biblioteca. Imagens/clipes/fontes precisam existir no destino; exemplos não baixam assets nem transcrição. A orientação vem da resolução do projeto, sem prop `aspectRatio`. Nenhum TSX toca sons automaticamente. PNGs documentam um instante, não o movimento ou a mixagem; prévias antigas não certificam todas as opções atuais.
 
-
 ## Contrato TypeScript completo
 
 Props são JSON; assets fica em customComponent.assets, nunca dentro de props. Tempos são relativos à cena, exceto SFX no plano.
 
 ```ts
 type HQBackgroundOptions = {
-  backgroundStyle?: 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
+  backgroundStyle?: 'comic_page' | 'halftone' | 'solid' | 'stars' | 'film' | 'paper' | 'grid';
   backgroundColor?: string;
   backgroundOpacity?: number;
   paperTone?: 'light' | 'dark';
