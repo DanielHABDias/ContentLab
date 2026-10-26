@@ -25,7 +25,7 @@ O rascunho automático fica em thumbnails/project.json na pasta universal, e ima
 
 O fundo é compartilhado entre versões; camadas de personagens/textos são independentes após a cópia inicial. Imagens ficam incorporadas em `media` como data URLs PNG/JPEG/WebP, referenciadas por chaves nas camadas, não por project://, builtin:// ou links remotos. Não inventar imagens/base64. Sem bytes locais verificados, entregar instruções para importação visual, não um projeto falsamente completo.
 
-O título é preenchido atrás do personagem principal e contornado à frente, no mesmo lugar; essa sobreposição é intencional. Anton e Bangers são fontes locais, com peso real do título 400. `title.lineHeight` controla a entrelinha e mantém os dois passes alinhados; ausente preserva a geometria antiga. `title.stroke: 1` é 0,15 px em 1280, zero desliga; não importar para vídeo essa exceção de contorno de thumbnail. Personagens secundários ficam à frente de todos os fundos/texturas e usam opacidade 100% por padrão. Para subordiná-los sem mostrar a textura através do corpo, ajustar luminosidade/saturação. Transparência menor é uma escolha explícita, não uma forma de mover a figura para outra camada.
+O título permite `mode:split` (padrão antigo: preenchimento atrás/contorno à frente), `front` (sólido à frente), `behind` (sólido atrás) e `outline` (contorno à frente). Alinhamento left/center/right usa x como âncora; width limita a largura. Anton e Bangers são fontes locais no peso real 400. lineHeight mantém a geometria dos passes. stroke aceita 0–160, com passo 0,1: uma unidade = 0,15 px em 1280; zero desliga. Isso não altera o peso da fonte. Secundários ficam à frente dos fundos e texturas; opacidade menor é escolha explícita.
 
 Foto contextual fica acima da cor base e abaixo de papel/halftone/filme/estrelas/grade/página HQ, todos abaixo dos personagens. `background.sideLights.left/right: {color, opacity, reach}` cria degradês independentes das bordas para o centro, mesmo sem PNGs. `opacity`: 0–100, `reach`: 1–100 (% da largura). Essas luzes ficam acima dos secundários, abaixo da sombra inferior, texto e protagonista. Não confundir com o brilho radial dos personagens; evitar somar efeitos antigos `glowMode:lateral` sem intenção.
 
@@ -43,6 +43,10 @@ Preparar pela documentação (inclui os arquivos auxiliares) ou copiar o TSX e H
 
 ## Módulos por tarefa
 
+- skills/contentlab-pesquisa/SKILL.md: temas, evidências e perguntas da audiência.
+- skills/contentlab-packaging/SKILL.md: título e thumbnail como promessa conjunta.
+- skills/contentlab-roteiro/SKILL.md: gancho, progressão, payoff e CTA.
+- skills/contentlab-metadados/SKILL.md: descrições, capítulos, tags e links.
 - skills/contentlab-cenas-tsx/SKILL.md: escolha e parametrização de presets; código novo só quando necessário.
 - skills/contentlab-composicao/SKILL.md: foco, hierarquia e formatos.
 - skills/contentlab-motion/SKILL.md: coreografia e continuidade.

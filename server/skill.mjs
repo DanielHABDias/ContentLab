@@ -15,7 +15,8 @@ export function streamSkillZip(response){
   zip.append(instruction,{name:'SKILL.md'});
   for(const skill of [
     'contentlab-composicao','contentlab-motion','contentlab-cenas-tsx','contentlab-timeline-audio',
-    'contentlab-contrato','contentlab-revisao'
+    'contentlab-contrato','contentlab-revisao','contentlab-packaging','contentlab-roteiro',
+    'contentlab-metadados','contentlab-pesquisa'
   ]){
     const relative=`skills/${skill}/SKILL.md`;
     zip.file(path.join(APP_ROOT,relative),{name:relative});

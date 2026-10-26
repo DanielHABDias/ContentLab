@@ -72,7 +72,15 @@ fonte: `1.48` deixa duas palavras mais separadas, criando espaço para o rosto.
 O preenchimento e o contorno usam exatamente a mesma posição e entrelinha.
 O tamanho ainda se reduz automaticamente para caber na tela. Sem o novo campo,
 preserva-se a entrelinha anterior `0.91` e o ajuste de tamanho antigo.
-O campo `stroke` controla um traço fino: cada unidade equivale a 0,15 px em 1280.
+O campo `stroke` controla o contorno de 0 a 160, em passos de 0,1: cada unidade equivale a 0,15 px em 1280 (160 = 24 px). Zero desliga; isso não altera o peso real da fonte.
+
+### Composição simplificada e profundidade
+
+`title.mode` aceita `split` (padrão legado: preenchimento atrás e contorno à frente), `front` (preenchimento sólido à frente), `behind` (preenchimento atrás, sem contorno à frente) e `outline` (somente contorno à frente). Todas as passadas usam a mesma geometria.
+
+`title.align` aceita `left`, `center` e `right`; `x` é a âncora correspondente. `title.width` limita o bloco a 0,1–0,95 da largura. Quebras explícitas por Enter continuam respeitadas; o encaixe automático pode reduzir a fonte para caber. Ausência desses campos preserva o layout anterior. Revise as margens ao mudar alinhamento: o aplicativo não move a âncora por conta própria.
+
+Os atalhos Simples, Texto à esquerda, Texto à direita e Profundidade alteram somente propriedades do título da variante atual; não removem mídia ou reposicionam personagens. A prévia de 160 px na seção do título usa a mesma composição sem as guias de seleção. Ela ajuda a observar leitura, não estima CTR. Para comparar, use variantes independentes e confira os arquivos reais lado a lado; a ferramenta não executa testes A/B na plataforma.
 Por exemplo, `6` produz 0,9 px; `1` continua sendo um traço subpixel, sem engrossar
 o texto artificialmente.
 
@@ -135,7 +143,7 @@ abaixo para evitar campos indefinidos na interface.
 | Luzes independentes | `background.sideLights.left/right`: `color` #RRGGBB, `opacity` 0–100, `reach` 1–100 (% da largura). Ausentes = desligadas; não dependem dos personagens. |
 | Figura (`left`, `center`, `right`) | `image`: chave de `media` ou null; `x`, `y`: posição fracionária (0,5 = centro, interface −0,5 a 1,5); `scale`: altura relativa à tela (interface 0,08–2,2); `opacity`: 0–100; `rotate`: graus −180 a 180; `flip`: booleano. |
 | Tratamento da figura | `saturation`, `brightness`: 0–200%, ausentes preservam 100%; `glowColor`: #RRGGBB; `glowOpacity`: 0–100%; `glowMode`: radial/lateral (ausente=radial); `glowSize`: raio percentual da menor dimensão no modo radial, alcance percentual da largura no modo lateral (interface 1–150%). Lateral é oferecido apenas aos secundários esquerdo/direito. |
-| `title` | `text`: frase (Enter quebra linha, caixa alta na saída); `font`: Anton/Bangers; `x`, `y`: frações; `size`: fração da largura (interface 0,05–0,34, ajustada pelo encaixe); `lineHeight`: entrelinha em unidades da fonte, 0,6–2,5, ausente=0,91; `color`, `outlineColor`: #RRGGBB; `stroke`: 0–15 na interface, passo 0,1; `glowOpacity`: 0–100%; `glowSize`: 0–80 na interface, escalado pela largura/1280. |
+| `title` | `text`: frase (Enter quebra linha, caixa alta na saída); `font`: Anton/Bangers; `x`, `y`: frações; `size`: fração da largura (interface 0,05–0,34, ajustada pelo encaixe); `lineHeight`: entrelinha em unidades da fonte, 0,6–2,5, ausente=0,91; `color`, `outlineColor`: #RRGGBB; `mode`: split/front/behind/outline (ausente=split); `align`: left/center/right (ausente=center), x é a âncora; `width`: 0,1–0,95 (ausente preserva encaixe anterior); `stroke`: 0–160 na interface e renderer, passo 0,1; `glowOpacity`: 0–100%; `glowSize`: 0–80 na interface, escalado pela largura/1280. |
 | `subtitle` | `text` vazio desliga; `font`: Anton/Bangers; `x`, `y`: frações 0–1; `size`: fração da largura (interface 0,015–0,14); `color`, `boxColor`: #RRGGBB; `opacity`: 0–100%. |
 
 Essas faixas descrevem os controles atuais, não um schema de vídeo. A validação

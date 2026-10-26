@@ -122,6 +122,8 @@ Aprimorar e refazer a transcrição pode alterar timestamps, especialmente se mu
 
 ## Studio de thumbnails: fundos e contorno
 
+As skills genéricas incluídas no ZIP cobrem pesquisa de temas (contentlab-pesquisa), título e thumbnail como promessa conjunta (contentlab-packaging), gancho/progressão/payoff (contentlab-roteiro), descrições/capítulos/tags (contentlab-metadados) e revisão. Perfis de canal ficam externos. Métodos de referência fundamentados podem substituir preferências antigas, sem contrariar fatos, contratos técnicos ou regras oficiais; não há garantia de CTR/retenção nem publicação automática.
+
 Controles de fundo de thumbnails são contextuais: no estilo paper, Tom do papel (Claro/Escuro) substitui Cor base. Nos outros estilos, apenas Cor base aparece. Trocar o estilo não apaga color nem paperTone; importar um JSON ou restaurar o rascunho aplica a mesma visibilidade.
 
 Todos os fundos e texturas de thumbnail (papel, halftone, filme, estrelas, grade e página HQ) ficam atrás dos personagens, inclusive os secundários. Novas coleções usam secundários com opacidade 100%; luminosidade e saturação podem deixá-los discretos sem transparência. Valores menores de opacity deixam o fundo aparecer através da figura intencionalmente; projetos importados preservam o valor do JSON.
@@ -132,7 +134,7 @@ Luzes dos personagens laterais: glowMode:lateral cria um degradê da borda corre
 
 A aba Thumbnails importa/exporta um projeto JSON independente do edit_plan.json, com imagens incorporadas. Inverter cor dos efeitos (background.invertEffects: boolean, ausente=false) troca claro/escuro somente da textura. Papel, filme, grade e estrelas são derivados do próprio scene-library/background-hq/BackgroundHQ.tsx no instante fixo 1 segundo via SVG, não de frames dos vídeos. Preserva a foto, a cor base e o primeiro plano; opacidade 0 desliga a textura. Os TSX animados não são modificados.
 
-O título usa preenchimento atrás do personagem principal e contorno à frente, fonte no peso real 400 (sem negrito artificial). Contorno fino aceita zero e frações: valor 1 = 0,15 px na largura 1280, escalado na prévia e exportação. Personagens têm saturation e brightness de 0 a 200%, ausentes=100; novas coleções deixam as laterais discretas, sem alterar coleções antigas. Leia docs/THUMBNAIL_STUDIO.md.
+O título aceita title.mode split (padrão legado: preenchimento atrás e contorno à frente), front (sólido à frente), behind (sólido atrás) e outline (somente contorno à frente). title.align:left/center/right usa x como âncora; title.width:0.1–0.95 limita o bloco. Atalhos simples/esquerda/direita/profundidade alteram somente o título e preservam os assets. A prévia reduzida de 160 px sem guias ajuda a conferir leitura. Fonte no peso real 400 (sem negrito artificial). Contorno aceita 0–160 com passo 0,1 (até 24 px em 1280), inclusive traços finos: valor 1 = 0,15 px na largura 1280, escalado na prévia e exportação. Personagens têm saturation e brightness de 0 a 200%, ausentes=100; novas coleções deixam as laterais discretas, sem alterar coleções antigas. Leia docs/THUMBNAIL_STUDIO.md.
 
 A coleção de thumbnails usa version:1, name, media, background, base, variants e selected. Cada variante tem id, name, format (long/vertical/square) e layers. Imagens reais são incorporadas em media como data URLs PNG/JPEG/WebP, referenciadas por chaves, não por project:// ou links remotos. O JSON exportado pelo usuário é a melhor base para preservar ajustes aprovados; não substitui nem modifica o edit_plan.json de vídeo.
 
@@ -246,6 +248,12 @@ A música tem start/end na timeline e pode escolher um trecho do arquivo usando 
 Quando a composição precisar de uma câmera virtual que percorre um espaço maior, SVGs procedurais, partículas, tipografia coreografada, grades reativas ou outros movimentos complexos, use uma cena programável TSX. Não precisa fragmentar uma animação contínua em dezenas de cenas: uma cena da timeline pode conter a composição React inteira. Para imagens simples, textos e cartões comuns, continue usando os elementos existentes.
 
 Primeiro escolha entre os padrões da Galeria de cenas especiais. Só gere um TSX novo quando a intenção não for coberta pela biblioteca. Para alterações, preserve o módulo, IDs, tempo e assets; não reescreva o plano inteiro por mudanças pontuais.
+
+Para criar ou aprimorar motion autorizado, a skill contentlab-cenas-tsx inclui references/MOTION_CRAFT.md: brief de intenção, entrada/foco/saída, câmera e mídia separadas, reuso, responsividade e mapa de eventos. A pesquisa em Remotion, LottieFiles, GSAP e Hyperframes fornece princípios adaptados; não instala novas dependências, troca o renderer ou modifica automaticamente os presets.
+
+Uma abertura prioritária pode receber planejamento beat a beat dos primeiros 30 segundos, com evidência real, imagens em pan/zoom, tipografia legível e mudanças motivadas pela fala. Mais TSX não significa automaticamente melhor edição. Conferir uma prévia curta com narração antes da montagem completa, sem exigir render integral para testar o trecho.
+
+O visual nomeado deve chegar legível na palavra; preparar a entrada antes dela quando não causar spoiler. Para whoosh de transição, alinhar corpo/pico perceptivo ao meio do movimento e manter início audível dentro da janela, considerando o trim real do mixer. Click, pop, sino e escrita seguem o gesto específico. Não aplicar offset sonoro fixo a todos os arquivos. Frames isolados e JSON válido não certificam suavidade nem sincronia auditiva.
 
 Todos os 15 presets oferecem backgroundStyle:comic_page (Página HQ transparente) e backgroundOpacity:0–100. A arte PNG original mantém as divisórias e o canal alfa, sem impor cor de fundo. Em retrato, cover centralizado pode recortar as laterais sem distorcer. Para mídia por trás, use customComponent.mode:overlay. A galeria instala o TSX e HQComicPage.tsx automaticamente; na cópia manual, copie ambos para custom-scenes, compartilhando uma única cópia do auxiliar. O BackgroundHQ também oferece essa página na aba Thumbnails, com intensidade e inversão dos efeitos.
 

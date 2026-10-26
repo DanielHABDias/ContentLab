@@ -77,6 +77,34 @@ test('exportação ZIP: CRC32 correto e estrutura ZIP com central directory', as
 });
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, Number.isFinite(+v) ? +v : lo));
+test('modos do título preservam o legado e posicionam os passes na camada correta', async () => {
+  const source = script.slice(script.indexOf('  async function paint('), script.indexOf('  function schedule()'));
+  for (const [mode, expected] of [
+    [undefined,['fill','hero','outline']],['split',['fill','hero','outline']],
+    ['front',['hero','fill']],['behind',['fill','hero']],['outline',['hero','outline']]
+  ]) {
+    const calls=[];
+    const factory=new Function('fonts','dimensions','textureImage','photo','safe','texture','light','figure','sideLights','shadow','titleDraw','subtitleDraw',source+';return paint;');
+    const noop=()=>{};
+    const paint=factory(async()=>{},()=>({w:1280,h:720}),async()=>null,async()=>null,clamp,noop,noop,
+      (_d,_w,_h,layer)=>{if(layer.hero)calls.push('hero');},noop,noop,
+      (_d,_w,_h,_title,filled)=>calls.push(filled?'fill':'outline'),noop);
+    await paint({getContext:()=>({fillRect:noop})},{format:'long',background:{style:'solid'},layers:{left:{},right:{},center:{hero:true},title:{mode},subtitle:{}}});
+    assert.deepEqual(calls,expected,String(mode));
+  }
+});
+
+test('alinhamento, largura e contorno amplo não removem o traço fino legado', () => {
+  const factory=new Function('safe','fontName','hex',script.slice(script.indexOf('  function makeTitleLines('),script.indexOf('  function subtitleDraw('))+';return titleDraw;');
+  const title=factory(clamp,()=> 'Anton',()=> '#fff');
+  for(const align of ['left','center','right']) {
+    const {context,calls}=drawingSpy();
+    title(context,1280,720,{text:'TESTE',stroke:160,size:.1,x:.5,y:.5,width:.4,align},false);
+    assert.ok(calls.some(([k,v])=>k==='textAlign'&&v===align));
+    assert.ok(calls.some(([k,v])=>k==='lineWidth'&&v===24));
+  }
+});
+
 function drawingSpy() {
   const calls = [];
   const context = new Proxy({}, {

@@ -4,15 +4,17 @@ description: Faz controle de qualidade visual e sonoro em planos e renders do Co
 ---
 
 
-## Gate Diazverso — biblioteca TSX oficial
-Consultar [Custom Cenas Diasverso](https://drive.google.com/drive/folders/1yWogLK6bRWXunvdJxTHBMIqB4ibSN44f) e README/TSX específicos. Rejeitar TSX novo/variante ou alteração de código sem pedido explícito do criador; componentes oficiais (7) em 16:9/9:16, escolhidos com parcimônia. Conferir `overlay` (QuadroHQSobreCena, CaixinhaCTAHQ) versus `replace` (demais), assets/fontes e props reais, textos legíveis, safe areas e camadas, além de áudio **externo** ao TSX. Revisar `transcript.words` versus legendas (não aproximar tempo), `sourceStart` de continuidade Página/Linha do Tempo, e diferenças de layout por formato. PNG atual como referência visual; MP4 histórico pode anteceder ajustes. Não considerar mixagem validada só por imagem/MP4 de demonstração.
-
 # Content Lab — Revisão e qualidade
 
 ## Meta
 Medir se o vídeo informa, se move com naturalidade e respeita a narrativa. **Mais efeitos não significa melhor edição.**
 
 ## Inspeção pré-render
+
+- Conferir título/thumbnail/gancho como uma promessa única e verificável, com prova e recompensa reais; usar contentlab-packaging e contentlab-roteiro quando esse material estiver no escopo.
+- Na thumbnail, inspecionar arquivo final e leitura reduzida, camadas, modo do título, contraste, foco e recortes. Texto sólido separado do personagem é opção válida; não exigir composição complexa.
+- Na descrição, revisar links, hashtags preservadas na adaptação, música realmente usada, capítulos após cortes e tags pertinentes. Consultar contentlab-metadados.
+- Métodos externos são referências, não resultados: não afirmar melhoria de CTR/retenção sem dados; não diagnosticar todo abandono como problema exclusivo de roteiro ou edição.
 - Cena comunica uma ideia identificável? Foco claro em cada momento?
 - Há tempo real para ler depois que os elementos aparecem?
 - Entradas e saídas justificadas, sem padrões repetitivos desnecessários?
@@ -28,14 +30,6 @@ Inspecione início de cena, primeiro estado legível, pico de movimento, hold, s
 - continuidade quebrada de objeto/painel entre cenas;
 - frames vazios/pretos inesperados e sobreposição de cenas;
 - diferenças negativas entre versão 9:16 e 16:9.
-
-## QA específico da edição Diazverso (15/10/2026)
-
-Sem impor regras de marca ao perfil genérico: conferir em projetos **Diazverso** que a base do vídeo é montagem de cenas e ilustrações, não excesso de TSX; revisar repetição de tomadas, spoilers e correspondência editorial sem exigir literalidade a cada palavra. Ilustrações completas devem ter zoom/pan suave e tamanho maior que a janela durante todo o slide, sem borda preta inesperada. PNGs entram/saem com animação e SFX e possuem balanço sutil; figuras inteiras legíveis. Em longos, TSX horizontal 16:9, clips preservando aspecto original, CRT em filmes/animações/séries (não games), Anton forte, caixas de narrador branco/amarelo com sombra, Nox grande/opinião e CTAs HQ com permanência >=5 s. Título de capítulo integrado a cena com áudio original SOMENTE para recontagem de história de jogo em capítulos.
-
-Em Shorts, confirmar explosão Minecraft por cima do gancho, riser de tensão, whoosh+blur e música posterior, **legendas Bangers obrigatórias** abaixo do centro com sombra e contorno fino e CTA final baseada no componente aprovado `ComicPageCTA.tsx` (thumb e headline específicas). Não aprovar automaticamente experimentos descartados `DiazversoFlowHQ` e variantes. Fonte Avengers para TSX quando houver asset carregado; Bangers para lettering HQ/legendas, Anton para frases fortes.
-
-No QA de efeitos, verificar a família e o relógio: WHOOSH diferente para deslizes, CLICK/POP/BLING para aparições e interações; Metallic Riser apenas TENSÃO e nunca slide. A parte sonora relevante deve cair idealmente **no meio da animação**, não antes, no início automático ou depois. Conferir janela real do gesto, trim do sample e vídeo renderizado. Esta política de marca aprovada substitui a antiga preferência por muitos TSX de 14/10.
 
 ## QA de cenas programáveis TSX
 Em uma cena contínua, inspecione frames na abertura, trajeto do objeto, movimento de câmera, revelação de tipografia e composição final. Confirmar que o arquivo `custom-scenes/*.tsx` existe, `customComponent.module` aponta corretamente, as dependências instaladas compilam e os assets nomeados resolvem. Verificar `replace` vs `overlay`, clipping de SVG e que o HUD não se move junto da câmera. A validação do schema não executa TSX; só afirmar sucesso após render real e checkpoints. Proteger o cache quando arquivos TSX locais mudarem.

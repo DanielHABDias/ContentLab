@@ -128,6 +128,14 @@
     if (Object.keys(candidate.media).length > 110 || Object.values(candidate.media).some(v => !imageOk(v)))
       throw Error("Há imagens inválidas no projeto importado.");
     const groups = [candidate.base, ...candidate.variants.map(v => v.layers)];
+    for (const layers of groups) {
+      const t = layers.title;
+      if (!t || (t.mode != null && !["split", "front", "behind", "outline"].includes(t.mode)) ||
+          (t.align != null && !["left", "center", "right"].includes(t.align)) ||
+          (t.width != null && (!Number.isFinite(t.width) || t.width < .1 || t.width > .95)) ||
+          (t.stroke != null && (!Number.isFinite(t.stroke) || t.stroke < 0 || t.stroke > 160)))
+        throw Error("Título inválido: confira modo, alinhamento, largura e contorno (0–160).");
+    }
     if (groups.some(l => !["center","left","right"].every(k => l[k] && imageReferenceOk(l[k].image))))
       throw Error("O projeto possui um asset inválido ou uma camada ausente.");
     return candidate;
@@ -359,17 +367,17 @@
     let lines = [];
     for (let n = 0; n < 14; n++) {
       draw.font = `400 ${size}px ${fontName(title.font)}`;
-      lines = makeTitleLines(draw, title, w * .89);
+      lines = makeTitleLines(draw, title, w * safe(title.width ?? .89, .1, .95));
       const largest = Math.max(...lines.map(line => draw.measureText(line).width), 0);
       const blockHeight = title.lineHeight == null ? lines.length * size * .89 : ((lines.length - 1) * spacing + .82) * size;
-      if (largest <= w * .91 && blockHeight <= h * (title.lineHeight == null ? .8 : .96)) break;
+      if (largest <= w * safe(title.width ?? .91, .1, .95) && blockHeight <= h * (title.lineHeight == null ? .8 : .96)) break;
       size *= .92;
     }
-    draw.textAlign = "center";draw.textBaseline = title.lineHeight == null ? "middle" : "alphabetic";draw.lineJoin = "round";
+    draw.textAlign = title.align || "center";draw.textBaseline = title.lineHeight == null ? "middle" : "alphabetic";draw.lineJoin = "round";
     const lineH = size * spacing;
     const top = safe(title.y, -.5, 1.5) * h - (lines.length - 1) * lineH / 2;
     // Hairline with the real font weight: synthetic bold thickens strokeText.
-    draw.lineWidth = safe(title.stroke, 0, 24) * .15 * w / 1280;
+    draw.lineWidth = safe(title.stroke, 0, 160) * .15 * w / 1280;
     for (let i = 0; i < lines.length; i++) {
       const metrics = draw.measureText(lines[i]);
       // New layouts center the visible ink, not the font's invisible em box.
@@ -435,7 +443,9 @@
       draw.strokeRect(r.x, r.y, r.w, r.h);
     } else if (chosen === "title") {
       const t = view.layers.title;
-      draw.strokeRect((t.x - .46) * w, (t.y - .12) * h, .92 * w, .24 * h);
+      const width = safe(t.width ?? .92, .1, .95);
+      const offset = t.align === "left" ? 0 : t.align === "right" ? width : width / 2;
+      draw.strokeRect((t.x - offset) * w, (t.y - .12) * h, width * w, .24 * h);
     } else if (chosen === "subtitle") {
       const s = view.layers.subtitle;
       draw.strokeRect((s.x - .25) * w, (s.y - .045) * h, .50 * w, .09 * h);
@@ -482,9 +492,11 @@
     }
     sideLights(draw, w, h, b.sideLights);
     shadow(draw, w, h, b);
-    titleDraw(draw, w, h, view.layers.title, true);
+    const titleMode = view.layers.title.mode || "split";
+    if (titleMode === "split" || titleMode === "behind") titleDraw(draw, w, h, view.layers.title, true);
     figure(draw, w, h, view.layers.center, loaded.center);
-    titleDraw(draw, w, h, view.layers.title, false);
+    if (titleMode === "front") titleDraw(draw, w, h, view.layers.title, true);
+    if (titleMode === "split" || titleMode === "outline") titleDraw(draw, w, h, view.layers.title, false);
     subtitleDraw(draw, w, h, view.layers.subtitle);
     if (highlight) selectionOutline(draw, w, h, view, highlight, loaded);
     return loaded;
@@ -497,7 +509,18 @@
       const seq = ++currentSeq;
       try {
         const loaded = await paint(canvas, viewFor(state.selected), selectedLayer, true, seq);
-        if (seq === currentSeq && loaded) hitImages = loaded;
+        if (seq === currentSeq && loaded) {
+          hitImages = loaded;
+          const feed = $("thumb-feed-preview");
+          if (feed) {
+            const clean = document.createElement("canvas");
+            await paint(clean, viewFor(state.selected), null, true, seq);
+            if (seq === currentSeq && feed.isConnected) {
+              feed.width = 160;feed.height = Math.round(160 * canvas.height / canvas.width);
+              feed.getContext("2d").drawImage(clean, 0, 0, feed.width, feed.height);
+            }
+          }
+        }
       } catch (e) { status(e.message || "Falha na prévia.", true); }
     });
   }
@@ -506,7 +529,7 @@
     ["background", "Fundo e imagem"],
     ["left", "Personagem esquerdo"],
     ["right", "Personagem direito"],
-    ["title", "Anton · texto duplo"],
+    ["title", "Título · composição e tipografia"],
     ["center", "Personagem principal"],
     ["subtitle", "Etiqueta opcional"]
   ];
@@ -544,7 +567,7 @@
     };
     const range = (label, field, min, max, step, unit = "") => {
       const input = document.createElement("input");input.type = "range";
-      input.min = min;input.max = max;input.step = step;input.value = value[field] ?? ({photoX:.5,photoY:.5,photoScale:1,lineHeight:.91,saturation:100,brightness:100}[field] ?? min);
+      input.min = min;input.max = max;input.step = step;input.value = value[field] ?? ({width:.89,photoX:.5,photoY:.5,photoScale:1,lineHeight:.91,saturation:100,brightness:100}[field] ?? min);
       addField(label, input, input.value + unit, v => {
         value[field] = +v; const o=input.parentElement.querySelector("output");if(o)o.textContent=v+unit;
         changed();
@@ -578,17 +601,36 @@
       range("Posição vertical da imagem","photoY",-0.5,1.5,.01);
       range("Zoom da imagem","photoScale",.5,3,.02);
     } else if (key === "title") {
+      const layouts = document.createElement("div");layouts.className="thumb-inline";
+      for (const [label, config] of [
+        ["Simples", {mode:"front",align:"left",width:.54,x:.05,y:.72,size:.18,glowOpacity:0}],
+        ["Texto à esquerda", {mode:"front",align:"left",width:.43,x:.05,y:.5,size:.15,glowOpacity:0}],
+        ["Texto à direita", {mode:"front",align:"right",width:.43,x:.95,y:.5,size:.15,glowOpacity:0}],
+        ["Profundidade", {mode:"split",align:"center",width:.89,x:.5,y:.5,size:.25}]
+      ]) {
+        const button=document.createElement("button");button.type="button";button.className="btn btn-secondary btn-sm";button.textContent=label;
+        button.onclick=()=>{Object.assign(value,config);changed(true);};layouts.append(button);
+      }
+      host.append(layouts);
+      const hint=document.createElement("p");hint.className="thumb-hint";hint.textContent="Atalhos alteram somente o título. Posicione o personagem ao lado quando necessário; imagens e textos são preservados.";host.append(hint);
       text("Frase principal (Enter quebra a linha)","text");
+      options("Composição do título","mode",[["split","Preenchido atrás + contorno à frente"],["front","Preenchido à frente"],["behind","Preenchido atrás"],["outline","Somente contorno à frente"]]);
+      if(value.mode == null)host.querySelector('select').value="split";
+      options("Alinhamento (posição X é a âncora)","align",[["center","Centro"],["left","Esquerda"],["right","Direita"]]);
+      if(value.align == null)host.querySelectorAll('select')[1].value="center";
+      range("Largura máxima do bloco","width",.1,.95,.01);
       options("Fonte","font",[["Anton","Anton"],["Bangers","Bangers"]]);
       color("Cor do preenchimento","color");
       color("Cor do contorno","outlineColor");
       range("Tamanho","size",.05,.34,.005);
       range("Distância entre linhas","lineHeight",.6,2.5,.01);
-      range("Contorno fino (1 = 0,15 px em 1280)","stroke",0,15,.1);
+      range("Contorno (1 = 0,15 px; 160 = 24 px em 1280)","stroke",0,160,.1);
       range("Brilho do preenchimento","glowOpacity",0,100,1,"%");
       range("Espalhamento glow","glowSize",0,80,1);
       range("Posição X","x",-.5,1.5,.01);
       range("Posição Y","y",-.5,1.5,.01);
+      const feedLabel=document.createElement("p");feedLabel.textContent="Leitura reduzida · 160 px (sem guias)";
+      const feed=document.createElement("canvas");feed.id="thumb-feed-preview";feed.style.width="160px";feed.style.maxWidth="100%";feed.setAttribute("aria-label","Prévia reduzida da thumbnail");host.append(feedLabel,feed);
     } else if (key === "subtitle") {
       text("Legenda opcional","text");
       options("Fonte","font",[["Bangers","Bangers"],["Anton","Anton"]]);

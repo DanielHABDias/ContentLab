@@ -5,35 +5,11 @@ description: Planeja coreografia de motion design no Content Lab: keyframes, eas
 
 # Content Lab — Movimento e coreografia
 
-## Motion contínuo de referência inferior — marca do projeto Shorts (15/10/2026)
+## Direção, abertura e sincronismo perceptivo
 
-Nos Shorts marca do projeto SH_0005 a SH_0010, a referência autoral é a metade INFERIOR do vídeo comparativo de 15 segundos enviado pelo editor. Não copiar nomes/cores/layout do exemplo; reinterpretar gramática de movimento: texto que desmonta/recompõe, perspectiva, parallax, câmera espacial, formas e retícula que levam ao próximo assunto, máscara de tinta e continuidade. Não é suficiente repetir sete cartões TSX com o mesmo ciclo.
+Para criação/revisão autorizada, aplicar [Direção e engenharia de motion](../contentlab-cenas-tsx/references/MOTION_CRAFT.md). Em abertura prioritária, planejar beats dos primeiros 30 s, variar evidências e linguagem com hold legível e validar uma prévia curta com narração antes da montagem completa. Não impor quota de TSX/cortes nem este tratamento a todo projeto automaticamente.
 
-Para esta produção, usar gancho + cena TSX única do desenvolvimento (beats em segundos RELATIVOS, at e until) + CTA. As mudanças de narrativa tornam-se transições internas sobrepostas, com uma camada espacial compartilhada. Alternar vídeo real, PNG de personagem, duelos, lettering e respiros. PNG em contain; vídeo horizontal em cover central. Sem painéis cinza e sem texto sobre texto.
-
-Fonte indicada pelo editor: Avengers com contorno ~1,4px e sombra escura; não inventar arquivo de fonte, fallback para Anton embutida até existir asset Avengers. Ritmo avaliado em MP4 real, não só TSX. Blocos longos necessitam microtransformações internas e respiros, não cortes extras. Sons raros, ligados a deslocamentos reais: remover repetição do Ting curto e outros sinos. Manter explosão Minecraft prioritária com áudio próprio, metallic riser completo antes do primeiro whoosh, blur forte nas transições estruturais.
-
-
-
-## Whip blur forte e riser completo — marca do projeto Shorts (14/10/2026)
-
-Para **Shorts marca do projeto** especificamente, a duração recomendada do `blur_left/right/up/down` passou a ser `transitionDuration:0.20` segundo a 30 fps (6 frames). O compositor `server/compose.mjs` aplica um blur gaussiano anisotrópico **ao quadro inteiro**, com `sigma=56:sigmaV=22` para deslocamento horizontal e `22:56` para vertical, e peso máximo de 99,5% no centro do efeito. O arquivo do compositor recebeu nova assinatura de cache para invalidar frames de transições antigas. Nunca presumir que apenas alterar o JSON torna o blur mais forte: usar a versão mais recente do ContentLab e validar frames centrais do render.
-
-Antes do primeiro whoosh, o `builtin://sfx/Riser metálico.mp3` deve tocar **inteiro**, não apenas 0,6 s. Na mixagem atual, `config.preserveFullSource:true` impede corte automático de início/fim e `config.alignEndAt:<tempo do whoosh>` calcula o começo a partir da duração real do arquivo (nesta biblioteca, cerca de 2,82 s). Não definir `config.duration` para limitar esse riser nem `fadeOut` artificial; o whoosh dispara já dentro da nova cena, tipicamente +0,02 s. Caso um arquivo seja maior do que o trecho disponível antes do whoosh, o motor sinaliza erro em vez de truncar. Música após a transição. Direção sonora específica, nunca padrão imposto em vídeo longo ou em GSB.
-
-
-
-## Primeiro blur dos Shorts marca do projeto — timing operacional (14/10/2026)
-
-No compositor atual, `blur_left/right/up/down` estão implementadas: a transição usa o último frame da cena anterior e os primeiros frames da próxima, ocupando o **início da próxima cena**. A duração de partida ~0,4 s deve ser conferida no MP4 a 30 fps, e o Woosh inicia audivelmente durante `[nextScene.start,nextScene.start+transitionDuration)`, não antes da troca nem depois do movimento. Riser fica na saída do gancho, música só após o primeiro blur. O mecanismo completo exige verificação audiovisual; transição declarada no JSON não garante perceptibilidade.
-
-
-
-## Motion marca do projeto — padrão HQ contemporâneo consolidado (14/10/2026)
-
-Com o perfil marca do projeto, criar motion design moderno/cinematográfico com estruturas discretas de HQ: câmera recua do footage para revelar painéis em página 2.5D, viaja até outro painel cinza/dessaturado, esse quadro ganha cor ao ser focado e a câmera entra na próxima cena real. É **exemplo de coreografia**, não transição mandatória em todos os cortes. Manter gutters, retícula sutil, caixas retangulares de narração, Anton para palavra gigante/fundo colorido, Bangers para lettering; evitar balões de diálogo/pensamento e cartoon infantil. Em explicações, considerar TSX com frequência, desde que o filme, jogo ou personagem mencionado possa ser visto full screen ou no próprio painel. O áudio segue o contrato de movimentos com SFX iniciando audivelmente durante a animação. Shorts conservam explosão Minecraft 0–3s, riser pré-transição, blur + whoosh durante o movimento, música pós-blur e CTA; não estender vinheta a vídeos longos nem a marcas diferentes. projeto existente permanece fechado.
-
-
+Para whooshes de transição, alinhar corpo/pico perceptivo perto do meio do movimento real, com início audível dentro da janela; medir o sample após trim. Não usar offset universal +0,02 s ou antecipação fixa de frames como regra geral: exemplos específicos abaixo não substituem o cálculo e a escuta de cada gesto. Click/pop/escrita seguem sua ação. Pan linear contínuo é válido quando intencional; não obrigar spring ou micro-oscilação em tudo.
 
 ## Propósito
 Definir **por que, quando e como** a composição muda. Movimento deve guiar atenção e explicar relações; não acrescentar atividade visual artificial.
@@ -94,7 +70,7 @@ Para TSX, considerar: texto distribuído em X/Y numa cena maior que a tela; câm
 
 Usar `useCurrentFrame`, `useVideoConfig`, `interpolate` com clamp e `spring` moderado testado; nunca CSS animations/transitions nem relógio externo. Um efeito dominante por beat, com hold de leitura, e descanso após cenas densas. Conferir frames antes, durante e depois da palavra. Repertório: `contentlab-cenas-tsx/references/REPERTORIO_MOTION_TSX.md`.
 
-## Política de sound design por movimento — obrigatória (outubro/2026)
+## Política de sound design por movimento — obrigatória
 
 **Toda cena que contenha movimento/animação editorial intencional deve receber cobertura sonora vinculada ao movimento**: entrada/saída animada, pop, zoom, travelling de câmera, painel/objeto que desloca, transição com movimento, tipografia kinetic, máscara, separação de camadas, rotação 2.5D. Em uma mesma cena TSX, identificar os vários eventos relevantes; um SFX pode cobrir movimento contínuo coerente, não é necessário um sample para cada keyframe. Animação ambiente em loop sem ação editorial pode usar textura ambiente existente, desde que a decisão seja explícita e o revisor consiga verificar cobertura coerente. Cena 100% estática e corte seco não exigem SFX artificial.
 
@@ -105,7 +81,7 @@ Usar `useCurrentFrame`, `useVideoConfig`, `interpolate` com clamp e `spring` mod
 **Saída para a timeline:** entregar por evento: `scene.id`, `movementStart`/ `movementEnd` absolutos, função, asset SFX verificado, `at` absoluto dentro da janela, duração do trecho audível, fade quando preciso, ganho, e método de escuta/validação. Para TSX, derivar movimento de `useCurrentFrame()/fps + scene.start`. Revisão bloqueia movimento editorial sem áudio correspondente, início audível fora da janela, efeitos sempre iguais sem intenção ou corte áspero. Acionar `contentlab-revisao` antes do plano automático e depois do render.
 
 
-## Repertório ampliado de motion design (13/10/2026)
+## Repertório ampliado de motion design
 
 Marcar técnica como **nativa no JSON**, **programável em TSX** ou **não disponível**; não prometer que um efeito TSX existe como valor `transitionOut`. Flip/Curtain/Blur estão implementadas no compositor entre duas cenas; usar transitionOut e transitionDuration. Não adicionar efeitos como checklist mecânico: escolher a mecânica que esclarece a fala e mantém ligação visual entre antes e depois. Planejar entrada, transformação, hold, saída, som e checkpoints para cada beat.
 

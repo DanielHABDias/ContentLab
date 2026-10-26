@@ -5,10 +5,6 @@ description: Planeja sincronismo com narração, transcript, SFX, música, corte
 
 # Content Lab — Timeline, voz e áudio
 
-## Diazverso — áudio e tempo nos TSX oficiais
-Consultar [Custom Cenas Diasverso](https://drive.google.com/drive/folders/1yWogLK6bRWXunvdJxTHBMIqB4ibSN44f) e README específico da cena. Os sete TSX são **visuais**: narração, música e SFX ficam no `edit_plan.json`. `timeline[].start/end` em segundos absolutos, tempos de props em segundos relativos (exceto contrato individual), `sfx.at` absoluto. Para PersonagemEspiralLegenda, usar timestamps reais de `transcript.words` + `transcriptOffset` ou `captions` em milissegundos; nunca dividir uniformemente as palavras. Ao expandir Página HQ e Linha do Tempo HQ, continuar o vídeo no sourceStart efetivamente reproduzido sem reiniciar. Teclado só durante escrita, clique no instante exato de pressão, sino durante tremida, whoosh no movimento; `trimDb` não assegura loudness. Nenhum TSX novo pode ser criado por padrão, salvo pedido explícito do criador.
-
-
 ## Fonte temporal
 
 Em Gravar, finalizar a seleção aplica por padrão tratamento explícito da própria gravação: DeepFilterNet forte a 100%, filtro de 70 Hz, compressão/de-esser suaves, normalização -16 LUFS com pico alvo -1,5 dBTP e corte de silêncio nas bordas. Pausas internas preservadas, sem pitch. Tomadas e WAV final gravados permanecem mono, 48 kHz, PCM 24-bit, inclusive sem tratamento. Personalizada na área Tratamento inicia com essa mesma base; não confundir com transcrição avulsa, que não trata áudio. Pode ajustar/desligar na própria aba; não herdar controles da importação ou tratar automaticamente voz gerada por IA. Tomadas originais permanecem intactas e reprocessamento parte delas. A transcrição é posterior ao tratamento/cortes: nunca reutilizar timestamps antigos quando mudar o áudio. API /api/voice/finalize com kind:recording recebe treatment (enabled:false desliga); parâmetros não vão para edit_plan.json. Falhas de IA/transcrição preservam o bundle anterior. Não prometer configuração universalmente melhor nem equivalência ao Adobe Podcast; aprovar por escuta.
@@ -75,16 +71,6 @@ Exemplo estrutural (ajustar duração e instante aos eventos reais; asset deve e
 ```
 Esse exemplo não prova que existe animação em 12,24 s; primeiro localizar seu intervalo. A verificação automática inspeciona janelas e paths; a verificação perceptual exige preview com áudio, pois `at` exato no JSON não prova que o SFX é ouvido no movimento. Variar categorias de SFX ao longo do vídeo; não usar whoosh indiscriminadamente. Silêncio deve ser escolha justificada, não esquecimento de uma animação.
 
-
-## Regra editorial Diazverso — som a serviço do movimento (15/10/2026)
-
-Para projetos Diazverso, sincronizar o ATAQUE AUDÍVEL ou PICO ÚTIL do SFX ao **meio da animação** (ou ponto de passagem/impacto no corpo do gesto), NÃO antecipar antes, nem agendar automaticamente no primeiro frame. Calcular pelo evento real e pela porção audível do arquivo, inspecionar no MP4. `at` pode vir antes do pico apenas para compensar o ataque do sample, desde que o início audível não soe antes do gesto.
-
-- Deslize, deslocamento de PNG, slide de caixa HQ e transição: preferir WHOOSH, alternando as opções reais do acervo; não repetir um único arquivo por automatismo.
-- Aparição curta, ícone, botão ou clique: POP/BLING/CLICK conforme a ação; sino pede bell/sino. CTAs HQ com entrada/saída em whoosh, contração + retorno no clique e hold visível de pelo menos 5 segundos.
-- `Riser metálico`/Metallic Rise: SÓ construir tensão e preparar uma virada; **NUNCA** sonorizar slide ou entrada de PNG/caixa. Em Shorts pode anteceder o primeiro whoosh após o gancho Minecraft, com música começando depois do blur.
-- Preservar a narração e áudio embutido de clipes/CTAs. Não gerar SFX para cortes secos sem gesto e não fingir cobertura só pelo JSON.
-- Preferências atuais de trilha de Shorts: Bully Main Theme, Bully Walk Theme, L's Theme A, Kuroi Light, GTA IV Main Theme, GTA San Andreas Opening Intro e GTA V Welcome to Los Santos (não GTA V Pause Menu). Pasta NoCopyright do Drive NÃO comprova licença nem Content ID seguro.
 
 ## Biblioteca local de música aprovada versus direitos de redistribuição
 
