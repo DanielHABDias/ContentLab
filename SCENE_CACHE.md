@@ -38,6 +38,14 @@ A identidade de um segmento inclui JSON da cena, ID, parâmetros globais de reso
 
 O cache de peças contém corpos de cena e transições. Uma transição vinculada à cena alterada também pode precisar ser recalculada.
 
+## Montagem final e voz
+
+A preparação do WAV ocorre em paralelo com a geração das cenas e a composição visual, usando os mesmos cortes e relógio de transcrição anteriores. A mixagem só começa depois de vídeo e WAV concluídos. Falha/cancelamento de qualquer tarefa interrompe a outra e aguarda sua limpeza. Não modifica o áudio original.
+
+Na composição, até duas tarefas de cena (transição e corpo) são preparadas em paralelo, conforme CPU/RAM; a ordem de montagem é preservada e as peças concluídas permanecem em cache. Filtros complexos e encoder usam o limite CONTENTLAB_COMPOSE_THREADS (padrão 2). A concatenação final tenta copiar os streams sem outra geração H.264 somente após conferir codec, resolução, FPS, timebase, perfil, cores e cabeçalhos. Confere também duração e quantidade de frames do resultado. Incompatibilidade ou falha na cópia usa recodificação como fallback, sem baixar qualidade ou alterar o tempo das transições.
+
+O relatório performance inclui sceneGenerationSeconds, voicePreparationSeconds, compositionSeconds, audioMixSeconds, compositionConcurrency e assembly (copy/encode e motivo do fallback). Tempos de etapas sobrepostas não devem ser somados como tempo total. A mixagem final continua copiando o vídeo e codificando somente áudio AAC. Cache integral válido continua evitando todo esse trabalho.
+
 ## Relatório e uso futuro
 
 `render_report.json` lista `sceneCache.rendered`, `sceneCache.reused` e contagens. No futuro, os MP4s por ID poderão alimentar um editor visual de cenas, com comparação antes/depois e Player sincronizado ao renderizador.

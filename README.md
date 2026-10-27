@@ -287,6 +287,8 @@ Ao alterar o schema, os estilos ou as capacidades reais, revise as descrições,
 
 ## Render e cache
 
+A montagem prepara até duas peças em paralelo e evita uma recodificação integral extra quando os streams são compatíveis, com conferência de frames/duração e fallback seguro. A voz é preparada enquanto as cenas são geradas; a mixagem aguarda ambos. Relatórios separam tempos das etapas, que podem se sobrepor. Qualidade, transições e sincronismo não são simplificados para acelerar.
+
 O render por CPU escolhe automaticamente **até três cenas simultâneas**, conforme CPU/RAM e resolução, sem exigir RTX. Mantém ordem da timeline, qualidade e cache; sob pressão de memória, serializa novos trabalhos. GPU ativada ou paralelismo de frames personalizado mantém uma cena por vez. Não requer mudança no edit_plan.json. Para diagnóstico, `CONTENTLAB_SCENE_CONCURRENCY=1` força modo sequencial. Tempos e limite efetivo ficam no relatório final. Veja [política e limites](SCENE_CACHE.md).
 
 No Editor automático:

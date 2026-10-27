@@ -3,6 +3,33 @@ import path from 'node:path';
 import {run} from './exec.mjs';
 import {SegmentCache,statIdentity} from './cache.mjs';
 import {sha} from './plan.mjs';
+import {sceneWorkerLimit,runSceneWorkers} from './scene-workers.mjs';
+
+async function videoInfo(file,ffprobe,signal){
+  const {stdout}=await run(ffprobe,['-v','error','-select_streams','v:0','-show_streams','-show_data_hash','sha256','-of','json',file],{signal});
+  const stream=JSON.parse(stdout).streams?.[0];
+  if(!stream)throw Error('Trecho sem vídeo: '+file);
+  const keys=['codec_name','codec_tag_string','profile','level','width','height','pix_fmt','sample_aspect_ratio','r_frame_rate','time_base','field_order','color_range','color_space','color_transfer','color_primaries','extradata_hash'];
+  return {signature:JSON.stringify(keys.map(k=>stream[k]??null)),duration:Number(stream.duration),frames:Number(stream.nb_frames)};
+}
+async function assemble(files,output,work,{ffmpeg,ffprobe,signal,forceReencode=false}){
+  let reason=forceReencode?'explicit-encode':null;
+  const infos=[];
+  if(!reason){
+    for(const file of files)infos.push(await videoInfo(file,ffprobe,signal));
+    if(infos.some(i=>i.signature!==infos[0].signature))reason='incompatible-streams';
+  }
+  if(!reason)try{
+    await ffconcat(files,output,work,ffmpeg,signal,true);
+    const result=await videoInfo(output,ffprobe,signal);
+    const duration=infos.reduce((n,i)=>n+i.duration,0),frames=infos.reduce((n,i)=>n+i.frames,0);
+    if(!Number.isFinite(duration)||!Number.isFinite(frames)||!Number.isFinite(result.duration)||result.frames!==frames||Math.abs(result.duration-duration)>.05)
+      throw Error('Concatenação sem encode alterou frames/duração.');
+    return {mode:'copy',pieces:files.length};
+  }catch(error){if(signal?.aborted)throw error;reason='copy-validation-failed';}
+  await ffconcat(files,output,work,ffmpeg,signal,false);
+  return {mode:'encode',reason,pieces:files.length};
+}
 
 const fileLine=file=>"file '"+path.resolve(file).replace(/\\/g,'/').replace(/'/g,"'\\''")+"'\n";
 const encoding=['-c:v','libx264','-preset','veryfast','-crf','18','-threads',String(Math.max(1,Number(process.env.CONTENTLAB_COMPOSE_THREADS||2)))];
@@ -26,8 +53,8 @@ function normalizedTransition(scene,next){
   const seconds=Math.min(Number(scene.transitionDuration||0.35),durationOf(scene)/2,durationOf(next)/2);
   return {type,seconds:Math.max(0,seconds)};
 }
-export async function composeVisual(scenes,segments,output,settings,work,{ffmpeg='ffmpeg',signal,cacheDirectory}={}){
-  const pieces=[],fps=settings.fps,w=settings.width,h=settings.height;
+export async function composeVisual(scenes,segments,output,settings,work,{ffmpeg='ffmpeg',ffprobe='ffprobe',signal,cacheDirectory,compositionConcurrency,forceReencode=false}={}){
+  const groups=segments.map(()=>[]),fps=settings.fps,w=settings.width,h=settings.height;
   const pieceCache=cacheDirectory?new SegmentCache(cacheDirectory):null;
   const boundaries=segments.slice(0,-1).map((_,i)=>{
     const boundary=normalizedTransition(scenes[i],scenes[i+1]);
@@ -36,15 +63,17 @@ export async function composeVisual(scenes,segments,output,settings,work,{ffmpeg
     return {...boundary,seconds:boundary.type==='cut'?0:Math.round(boundary.seconds*fps)/fps};
   });
   if(boundaries.every(t=>t.type==='cut'||t.seconds<=0)){
-    await ffconcat(segments,output,work,ffmpeg,signal,true);
-    return {transitions:[]};
+    const assembly=await assemble(segments,output,work,{ffmpeg,ffprobe,signal,forceReencode});
+    return {transitions:[],assembly};
   }
   const transitions=[];
   // Keep the FULL duration of every scene. A transition occupies the beginning of
   // the incoming scene: incoming frames 0..d are blended with the outgoing still.
   // The incoming body then begins at d, without repeating, freezing, or skipping
   // incoming motion. Narration/SFX continue to match their JSON timestamps.
-  for(let i=0;i<segments.length;i++){
+  const concurrency=sceneWorkerLimit({...settings,count:segments.length,requested:compositionConcurrency??2});
+  await runSceneWorkers(segments.length,async(i,signal)=>{
+    const pieces=groups[i];
     const segment=segments[i],scene=scenes[i];
     const boundary=boundaries[i-1]||{type:'cut',seconds:0};
     const seconds=boundary.seconds;
@@ -152,6 +181,7 @@ export async function composeVisual(scenes,segments,output,settings,work,{ffmpeg
           }
         }
         await run(ffmpeg,['-hide_banner','-loglevel','error','-y',
+          '-filter_complex_threads',String(Math.max(1,Number(process.env.CONTENTLAB_COMPOSE_THREADS||2))),
           '-loop','1','-framerate',String(fps),'-t',D(seconds),'-i',frame,
           '-i',segment,'-filter_complex',graph,'-map','[out]',
           '-frames:v',String(Math.round(seconds*fps)),
@@ -159,7 +189,7 @@ export async function composeVisual(scenes,segments,output,settings,work,{ffmpeg
         piece=pieceCache?pieceCache.save(id,key,temp):temp;
       }
       pieces.push(piece);
-      transitions.push({from:previousScene.id,to:scene.id,type,duration:seconds,at:scene.start});
+      transitions[i]={from:previousScene.id,to:scene.id,type,duration:seconds,at:scene.start};
     }
     const bodyStart=seconds>0?seconds:0;
     const bodyTime=Math.max(0,durationOf(scene)-bodyStart);
@@ -177,8 +207,9 @@ export async function composeVisual(scenes,segments,output,settings,work,{ffmpeg
       }
       pieces.push(piece);
     }
-  }
+  },{concurrency,signal,canStartAnother:active=>sceneWorkerLimit({...settings,count:segments.length,requested:compositionConcurrency??2})>active});
+  const pieces=groups.flat();
   if(!pieces.length)throw Error('A montagem não gerou trechos.');
-  await ffconcat(pieces,output,work,ffmpeg,signal,false);
-  return {transitions};
+  const assembly=await assemble(pieces,output,work,{ffmpeg,ffprobe,signal,forceReencode});
+  return {transitions:transitions.filter(Boolean),assembly,concurrency};
 }

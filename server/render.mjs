@@ -89,7 +89,18 @@ export async function renderProject(directory,{
   let completed=0;
   let gpuEncodingAllowed=hardwareAccel;
   const emit=(stage,current,total,id)=>progress?.(stage,current,total,id);
+  const voice=path.join(work,'narration.cleaned.wav'),silent=path.join(work,'visual.mp4');
+  let composed,voicePreparationSeconds,compositionSeconds,sceneGenerationSeconds;
   try {
+    // Coordinate visual production and WAV preparation as independent tasks.
+    // On either failure cancel the other and drain both before deleting work.
+    await runSceneWorkers(2,async(task,pipelineSignal)=>{
+    if(task===1){
+      const start=Date.now();
+      await prepareVoice(validation.narration,voice,voiceSourceSettings,{ffmpeg,ffprobe,signal:pipelineSignal,duration,autoTrimCuts:narrationEdges.cuts});
+      voicePreparationSeconds=(Date.now()-start)/1000;return;
+    }
+    const visualStarted=Date.now();
     await runSceneWorkers(scenes.length,async(i,sceneSignal)=>{
       if(sceneSignal.aborted)throw Error('Render cancelado.');
       const sceneStarted=Date.now();
@@ -119,22 +130,24 @@ export async function renderProject(directory,{
       paths[i]=video;
       sceneTimings[i]={id:scene.id,cached:reused.includes(scene.id),elapsedSeconds:(Date.now()-sceneStarted)/1000};
       emit('scene',++completed,scenes.length,scene.id+(reused.includes(scene.id)?' (cache)':''));
-    },{concurrency,signal,canStartAnother:active=>sceneWorkerLimit({...cfg,count:scenes.length,hardwareAccel,requested:sceneConcurrency})>active});
+    },{concurrency,signal:pipelineSignal,canStartAnother:active=>sceneWorkerLimit({...cfg,count:scenes.length,hardwareAccel,requested:sceneConcurrency})>active});
+    sceneGenerationSeconds=(Date.now()-visualStarted)/1000;
     // Completion order differs from timeline order. Keep cache reports and
     // final composition deterministic, regardless of which worker finishes first.
     const order=new Map(scenes.map((s,i)=>[s.id,i]));
     reused.sort((a,b)=>order.get(a)-order.get(b));rendered.sort((a,b)=>order.get(a)-order.get(b));
-    const silent=path.join(work,'visual.mp4');
-    const composed=await compose(scenes,paths,silent,cfg,work,{
-      ffmpeg,signal,cacheDirectory:path.join(finalDir,'pieces')
+    const composeStarted=Date.now();
+    composed=await compose(scenes,paths,silent,cfg,work,{
+      ffmpeg,ffprobe,signal:pipelineSignal,cacheDirectory:path.join(finalDir,'pieces')
     });
     emit('compose',scenes.length,scenes.length,'Vídeo composto');
-    const voice=path.join(work,'narration.cleaned.wav');
-    await prepareVoice(validation.narration,voice,voiceSourceSettings,{ffmpeg,ffprobe,signal,duration,
-      autoTrimCuts:narrationEdges.cuts});
+    compositionSeconds=(Date.now()-composeStarted)/1000;
+    },{concurrency:2,signal});
     emit('narration',scenes.length,scenes.length,'Narração preparada');
     const tempFinal=path.join(work,'final.mp4');
+    const mixStarted=Date.now();
     const layers=await mix(silent,voice,plan,validation.resolvedAssets,tempFinal,duration,{ffmpeg,ffprobe,signal});
+    const audioMixSeconds=(Date.now()-mixStarted)/1000;
     emit('audio',scenes.length,scenes.length,'Áudio mixado');
     const verified=await probe(tempFinal,{ffprobe,signal});
     const tolerance=Math.max(.15,2/cfg.fps);
@@ -152,7 +165,8 @@ export async function renderProject(directory,{
       narrationAutoTrim:{start:narrationEdges.headSeconds,end:narrationEdges.tailSeconds},
       warnings:validation.warnings||[],
       elapsedSeconds:Math.round((Date.now()-started)/10)/100,
-      performance:{sceneConcurrency:concurrency,sceneTimings},
+      performance:{sceneConcurrency:concurrency,sceneTimings,sceneGenerationSeconds,voicePreparationSeconds,compositionSeconds,
+        audioMixSeconds,compositionConcurrency:composed.concurrency??1,assembly:composed.assembly},
     };
     fs.writeFileSync(reportFile,JSON.stringify(report,null,2)+'\n');
     emit('verify',scenes.length,scenes.length,'Render concluído');

@@ -50,7 +50,7 @@ jobs:
       - name: Verify edge-trimmed sound cues and ripple narration
         run: node server/smoke-audio-sync.mjs
       - name: Require rendered 100ms fade and slide/blur pixel checks
-        run: CONTENTLAB_REQUIRE_FFMPEG_TEST=1 node --test server/motion-visual.test.mjs
+        run: CONTENTLAB_REQUIRE_FFMPEG_TEST=1 node --test server/motion-visual.test.mjs server/compose.test.mjs
       - name: Install Remotion dependencies
         run: npm ci --prefix backend/remotion
       - name: Exercise live storyboard UI in headless Chrome

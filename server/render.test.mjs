@@ -5,6 +5,29 @@ import os from 'node:os';
 import path from 'node:path';
 import {renderProject} from './render.mjs';
 
+test('voice preparation overlaps scenes and voice failure drains active renderers',{timeout:5000},async()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'cl-voice-overlap-'));
+  try{
+    fs.mkdirSync(path.join(root,'audio'));fs.writeFileSync(path.join(root,'audio','voice.wav'),'original');
+    fs.writeFileSync(path.join(root,'edit_plan.json'),JSON.stringify({project:{name:'overlap',format:'youtube_long',profile:'generic'},audio:{narration:'audio/voice.wav'},timeline:[{id:'a',start:0,end:1,elements:[],background:{color:'#000'}}]}));
+    let beginVoice;const started=new Promise(resolve=>{beginVoice=resolve;});
+    const options={renderScene:async(s,c,w,file)=>{await started;fs.writeFileSync(file,'scene');},
+      prepareVoice:async(input,file)=>{beginVoice();fs.writeFileSync(file,'voice');},
+      compose:async(s,p,file)=>{fs.writeFileSync(file,'visual');return {};},
+      mix:async(v,a,p,r,file)=>{assert.equal(fs.readFileSync(a,'utf8'),'voice');fs.writeFileSync(file,'final');return [];},
+      probe:async()=>({videoDuration:1,audioDuration:1})};
+    assert.equal((await renderProject(root,options)).status,'completed');
+    let drained=false;
+    await assert.rejects(renderProject(root,{...options,cacheMode:'rebuild',
+      renderScene:async(s,c,w,file,{signal})=>{try{await new Promise(resolve=>signal.addEventListener('abort',resolve,{once:true}));}finally{drained=true;}},
+      prepareVoice:async()=>{throw Error('voice failure');}
+    }),/voice failure/);
+    assert.equal(drained,true);
+    assert.equal(fs.readFileSync(path.join(root,'audio','voice.wav'),'utf8'),'original');
+    assert.equal(fs.readdirSync(path.join(root,'output','final')).some(n=>n.startsWith('contentlab-render-')),false);
+  }finally{fs.rmSync(root,{recursive:true,force:true});}
+});
+
 test('scene concurrency preserves composition order, cache and monotonically completed progress',async()=>{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'contentlab-render-order-'));
   try{
