@@ -5,6 +5,52 @@ import os from 'node:os';
 import path from 'node:path';
 import {renderProject} from './render.mjs';
 
+test('scene concurrency preserves composition order, cache and monotonically completed progress',async()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'contentlab-render-order-'));
+  try{
+    fs.mkdirSync(path.join(root,'audio'));fs.writeFileSync(path.join(root,'audio','voice.wav'),'voice');
+    const plan={project:{name:'order',format:'custom',profile:'generic',resolution:{width:64,height:36},fps:30},audio:{narration:'audio/voice.wav'},
+      timeline:['a','b','c'].map((id,i)=>({id,start:i,end:i+1,background:{color:'#000'},elements:[]}))};
+    fs.writeFileSync(path.join(root,'edit_plan.json'),JSON.stringify(plan));
+    const completed=[];
+    const options={sceneConcurrency:2,
+      renderScene:async(scene,cfg,words,target)=>{await new Promise(resolve=>setTimeout(resolve,scene.id==='a'?20:1));fs.writeFileSync(target,scene.id);},
+      compose:async(scenes,paths,target)=>{assert.deepEqual(paths.map(p=>fs.readFileSync(p,'utf8')),['a','b','c']);fs.writeFileSync(target,'visual');return {};},
+      prepareVoice:async(input,target)=>fs.writeFileSync(target,'voice'),
+      mix:async(visual,voice,plan,assets,target)=>{fs.writeFileSync(target,'final');return [];},
+      probe:async()=>({videoDuration:3,audioDuration:3}),
+      progress:(stage,current)=>{if(stage==='scene')completed.push(current);}};
+    const report=await renderProject(root,options);
+    assert.deepEqual(report.sceneCache.rendered,['a','b','c']);
+    assert.deepEqual(completed,[1,2,3]);
+    assert.deepEqual(report.performance.sceneTimings.map(s=>s.id),['a','b','c']);
+    assert.equal((await renderProject(root,options)).cacheHit,true);
+  }finally{fs.rmSync(root,{recursive:true,force:true});}
+});
+
+test('a failed scene preserves completed cache and the previous final without composing partial output',async()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'contentlab-render-partial-'));
+  try{
+    fs.mkdirSync(path.join(root,'audio'));fs.writeFileSync(path.join(root,'audio','voice.wav'),'voice');
+    fs.mkdirSync(path.join(root,'output','final'),{recursive:true});
+    fs.writeFileSync(path.join(root,'output','final','final.mp4'),'previous-final');
+    const plan={project:{name:'partial',format:'youtube_long',profile:'generic'},audio:{narration:'audio/voice.wav'},
+      timeline:['a','b','c'].map((id,i)=>({id,start:i,end:i+1,background:{color:'#000'},elements:[]}))};
+    fs.writeFileSync(path.join(root,'edit_plan.json'),JSON.stringify(plan));
+    const calls=[];
+    await assert.rejects(renderProject(root,{sceneConcurrency:1,prepareVoice:async()=>{},
+      renderScene:async(scene,cfg,words,target)=>{calls.push(scene.id);if(scene.id==='b')throw Error('bad scene');fs.writeFileSync(target,'scene');},
+      compose:async()=>assert.fail('Partial output must not be composed')
+    }),/cena 2\/3 \[b\].*bad scene/);
+    assert.deepEqual(calls,['a','b']);
+    const final=path.join(root,'output','final');
+    assert.equal(fs.readFileSync(path.join(final,'final.mp4'),'utf8'),'previous-final');
+    const manifest=JSON.parse(fs.readFileSync(path.join(final,'scenes','manifest.json')));
+    assert.deepEqual(Object.keys(manifest.entries),['a']);
+    assert.equal(fs.readdirSync(final).some(name=>name.startsWith('contentlab-render-')),false);
+  }finally{fs.rmSync(root,{recursive:true,force:true});}
+});
+
 test('Node pipeline persists scene clips, redraws only changed scene and rebuilds all',async()=>{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'contentlab-node-render-'));
   try{

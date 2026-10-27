@@ -7,8 +7,12 @@ export async function run(bin,args,{cwd,signal,onOutput,env}={}){
     let stdout='',stderr='';
     child.stdout.on('data',chunk=>{stdout+=chunk.toString();if(stdout.length>100000)stdout=stdout.slice(-100000);onOutput?.(chunk.toString(),'stdout');});
     child.stderr.on('data',chunk=>{stderr+=chunk.toString();if(stderr.length>100000)stderr=stderr.slice(-100000);onOutput?.(chunk.toString(),'stderr');});
-    child.on('error',reject);
+    // Abort emits error before close. Wait for stdio/process teardown before
+    // callers delete staging folders shared with the child (parallel renders).
+    let processError=null;
+    child.on('error',error=>{processError=error;});
     child.on('close',(code,signalled)=>{
+      if(processError){reject(processError);return;}
       if(code===0){resolve({stdout,stderr});return;}
       // Preserve both CLI stdout (often bundler diagnostics) and stderr (uncaught failures).
       const output=[stdout,stderr].filter(Boolean).join('\n').slice(-16000);

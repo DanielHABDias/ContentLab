@@ -7,6 +7,7 @@ import {transcriptWords,remapTranscriptWords,applyNarrationSilence,renderRemotio
 import {prepareNarration,mixAudio,probeOutput,narrationCuts,analyzeNarrationEdges} from './audio.mjs';
 import {transcriptStatus,renderVoiceSettings} from './narration-pipeline.mjs';
 import {composeVisual} from './compose.mjs';
+import {sceneWorkerLimit,runSceneWorkers} from './scene-workers.mjs';
 
 function hashRender(plan,validation,identity){
   const inputs=[validation.narration,...Object.values(validation.resolvedAssets)];
@@ -26,7 +27,7 @@ function normalizedScenes(plan){
   return result;
 }
 export async function renderProject(directory,{
-  cacheMode='reuse',hardwareAccel=false,signal,progress,
+  cacheMode='reuse',hardwareAccel=false,signal,progress,sceneConcurrency,
   ffmpeg=process.env.FFMPEG_PATH||'ffmpeg',ffprobe=process.env.FFPROBE_PATH||'ffprobe',
   renderScene=renderRemotionScene,
   compose=composeVisual,
@@ -81,13 +82,17 @@ export async function renderProject(directory,{
       }
     }catch{}
   }
+  const concurrency=sceneWorkerLimit({...cfg,count:scenes.length,hardwareAccel,requested:sceneConcurrency});
   const work=fs.mkdtempSync(path.join(finalDir,'contentlab-render-'));
-  const reused=[],rendered=[],paths=[],started=Date.now();
+  const reused=[],rendered=[],paths=new Array(scenes.length),started=Date.now();
+  const sceneTimings=new Array(scenes.length);
+  let completed=0;
   let gpuEncodingAllowed=hardwareAccel;
   const emit=(stage,current,total,id)=>progress?.(stage,current,total,id);
   try {
-    for(let i=0;i<scenes.length;i++){
-      if(signal?.aborted)throw Error('Render cancelado.');
+    await runSceneWorkers(scenes.length,async(i,sceneSignal)=>{
+      if(sceneSignal.aborted)throw Error('Render cancelado.');
+      const sceneStarted=Date.now();
       const scene=scenes[i],fingerprint=fingerprints[i];
       let video=cacheMode==='reuse'?cache.lookup(scene.id,fingerprint):null;
       if(video){reused.push(scene.id);}
@@ -95,10 +100,10 @@ export async function renderProject(directory,{
         const temp=path.join(work,'scene-'+i+'.mp4');
         // Announce the scene BEFORE invoking Remotion, so a failed first
         // subprocess is not reported misleadingly as merely "prepare".
-        emit('scene_start',i+1,scenes.length,scene.id);
+        emit('scene_start',completed+1,scenes.length,scene.id);
         try{
           await renderScene(scene,cfg,words,temp,{
-            signal,hardwareAccel:gpuEncodingAllowed,
+            signal:sceneSignal,hardwareAccel:gpuEncodingAllowed,
             onHardwareFallback:()=>{gpuEncodingAllowed=false;},
           });
         }catch(error){
@@ -107,12 +112,18 @@ export async function renderProject(directory,{
           throw new Error('Falha na cena '+(i+1)+'/'+scenes.length+' ['+scene.id+']'+label+
             ': '+error.message,{cause:error});
         }
+        if(sceneSignal.aborted)throw Error('Render cancelado.');
         video=cache.save(scene.id,fingerprint,temp);
         rendered.push(scene.id);
       }
-      paths.push(video);
-      emit('scene',i+1,scenes.length,scene.id+(reused.includes(scene.id)?' (cache)':''));
-    }
+      paths[i]=video;
+      sceneTimings[i]={id:scene.id,cached:reused.includes(scene.id),elapsedSeconds:(Date.now()-sceneStarted)/1000};
+      emit('scene',++completed,scenes.length,scene.id+(reused.includes(scene.id)?' (cache)':''));
+    },{concurrency,signal,canStartAnother:()=>sceneWorkerLimit({...cfg,count:scenes.length,hardwareAccel,requested:sceneConcurrency})>1});
+    // Completion order differs from timeline order. Keep cache reports and
+    // final composition deterministic, regardless of which worker finishes first.
+    const order=new Map(scenes.map((s,i)=>[s.id,i]));
+    reused.sort((a,b)=>order.get(a)-order.get(b));rendered.sort((a,b)=>order.get(a)-order.get(b));
     const silent=path.join(work,'visual.mp4');
     const composed=await compose(scenes,paths,silent,cfg,work,{
       ffmpeg,signal,cacheDirectory:path.join(finalDir,'pieces')
@@ -141,6 +152,7 @@ export async function renderProject(directory,{
       narrationAutoTrim:{start:narrationEdges.headSeconds,end:narrationEdges.tailSeconds},
       warnings:validation.warnings||[],
       elapsedSeconds:Math.round((Date.now()-started)/10)/100,
+      performance:{sceneConcurrency:concurrency,sceneTimings},
     };
     fs.writeFileSync(reportFile,JSON.stringify(report,null,2)+'\n');
     emit('verify',scenes.length,scenes.length,'Render concluído');
