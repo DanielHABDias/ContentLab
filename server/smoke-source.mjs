@@ -51,6 +51,22 @@ try{
     downloader:async(url,target)=>fs.copyFileSync(input,path.join(target,'video.mp4'))
   });
   assert.equal(yt.origin,'youtube');
+  let downloads=0,release;
+  const gate=new Promise(r=>release=r);
+  const concurrentOptions={metadata:async()=>({title:'Concurrent',thumbnail:''}),downloader:async(url,target)=>{downloads++;await gate;fs.copyFileSync(input,path.join(target,'video.mp4'));}};
+  const a=downloadInternetVideo('https://youtu.be/aaaaaaaaaaa',()=>{},concurrentOptions);
+  const b=downloadInternetVideo('https://www.youtube.com/watch?v=aaaaaaaaaaa',()=>{},concurrentOptions);
+  release();const [ca,cb]=await Promise.all([a,b]);
+  assert.equal(downloads,1);assert.equal(ca.key,cb.key);removeSource(ca.key);
+  // A second server/process has its own deduplication map, but isolated staging.
+  const other=await import('./source.mjs?concurrency-regression');
+  let startSuccess,releaseSuccess;
+  const started=new Promise(r=>startSuccess=r),finish=new Promise(r=>releaseSuccess=r);
+  const success=other.downloadInternetVideo('https://youtu.be/bbbbbbbbbbb',()=>{},{metadata:async()=>({title:'Isolated'}),downloader:async(url,target)=>{fs.writeFileSync(path.join(target,'fragment.part'),'fragment');startSuccess(target);await finish;fs.copyFileSync(input,path.join(target,'video.mp4'));}});
+  const activeStage=await started;
+  await assert.rejects(downloadInternetVideo('https://youtu.be/bbbbbbbbbbb',()=>{},{metadata:async()=>({title:'Failure'}),downloader:async()=>{throw Error('isolated failure');}}),/isolated failure/);
+  assert.ok(fs.existsSync(path.join(activeStage,'fragment.part')),'Falha não apaga fragmentos de outro download');
+  releaseSuccess();removeSource((await success).key);
   assert.ok(yt.key.startsWith('yt-'));
   assert.equal((await resolveSource('https://www.youtube.com/watch?v=BaW_jenozKc')).key,yt.key);
   const ytAudio=await exportCut(yt,{folder,filename:'YouTube audio',mode:'audio',full:true});

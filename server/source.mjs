@@ -73,7 +73,16 @@ export async function getSourceInfo(url){
   if(kind.provider==='youtube')return getYoutubeInfo(kind.url);
   return getExternalVideoInfo(kind.url);
 }
-export async function downloadInternetVideo(url,update=()=>{},{
+const pendingDownloads=new Map();
+export async function downloadInternetVideo(url,update=()=>{},options={}){
+  const link=classifyVideoLink(url);
+  const key=link.provider==='youtube'?'yt-'+hash(youtubeId(link.url)):'web-'+hash(link.url);
+  if(pendingDownloads.has(key))return pendingDownloads.get(key);
+  const pending=downloadInternetVideoOnce(link.url,update,options);
+  pendingDownloads.set(key,pending);
+  try{return await pending;}finally{if(pendingDownloads.get(key)===pending)pendingDownloads.delete(key);}
+}
+async function downloadInternetVideoOnce(url,update=()=>{},{
   downloader=downloadExternalAsset,metadata=getExternalVideoInfo
 }={}){
   const link=classifyVideoLink(url);
@@ -81,22 +90,28 @@ export async function downloadInternetVideo(url,update=()=>{},{
   const key=isYoutube?'yt-'+hash(youtubeId(link.url)):'web-'+hash(link.url),folder=entryFolder(key);
   if(fs.existsSync(path.join(folder,'meta.json')))return cachedSource(key);
   fs.mkdirSync(folder,{recursive:true});
+  // Each attempt owns only its temporary directory. Concurrent processes must
+  // never write/delete one another's yt-dlp fragments or shared cache folder.
+  const stage=fs.mkdtempSync(path.join(folder,'.download-'));
   try{
     update(2,'Preparando vídeo da internet…');
     const info=await metadata(link.url);
-    await downloader(link.url,folder,{update});
-    const media=await probeVideo(path.join(folder,'video.mp4'));
+    await downloader(link.url,stage,{update});
+    const media=await probeVideo(path.join(stage,'video.mp4'));
     if(!media.width||!media.duration)throw Error('O arquivo não contém um vídeo válido.');
     const item={title:info.title,origin:isYoutube?'youtube':'internet',sourceUrl:link.url,
       filename:'video.mp4',duration:media.duration,thumbnail:info.thumbnail,
       width:media.width,height:media.height,createdAt:new Date().toISOString()};
-    fs.writeFileSync(path.join(folder,'meta.json'),JSON.stringify(item,null,2));
+    if(fs.existsSync(path.join(folder,'meta.json')))return cachedSource(key);
+    fs.renameSync(path.join(stage,'video.mp4'),path.join(folder,'video.mp4'));
+    fs.writeFileSync(path.join(stage,'meta.json'),JSON.stringify(item,null,2));
+    fs.renameSync(path.join(stage,'meta.json'),path.join(folder,'meta.json'));
     update(100,'Vídeo da internet disponível no cache.');
     return cachedSource(key);
-  }catch(error){
-    // Nunca deixe downloads parciais aparecendo no cache.
-    fs.rmSync(folder,{recursive:true,force:true});
-    throw error;
+  }finally{
+    fs.rmSync(stage,{recursive:true,force:true});
+    // Remove only an empty failed entry; another attempt may still be using it.
+    try{fs.rmdirSync(folder);}catch(error){if(!['ENOTEMPTY','EEXIST','ENOENT'].includes(error.code))throw error;}
   }
 }
 export async function resolveSource(url,update){
