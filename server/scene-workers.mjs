@@ -21,19 +21,19 @@ export function sceneWorkerLimit({width=1920,height=1080,count=1,hardwareAccel=f
   requested=process.env.CONTENTLAB_SCENE_CONCURRENCY,
   frameConcurrency=process.env.CONTENTLAB_REMOTION_CONCURRENCY,
   resources=renderResources()}={}){
-  const explicit=requested===undefined||requested===''?2:Number(requested);
-  if(!Number.isInteger(explicit)||explicit<1||explicit>2)
-    throw Error('CONTENTLAB_SCENE_CONCURRENCY deve ser 1 ou 2.');
+  const explicit=requested===undefined||requested===''?3:Number(requested);
+  if(!Number.isInteger(explicit)||explicit<1||explicit>3)
+    throw Error('CONTENTLAB_SCENE_CONCURRENCY deve ser 1, 2 ou 3.');
   if(hardwareAccel||Number(frameConcurrency||1)!==1)return 1;
-  const perWorker=Math.max(3,width*height/(1920*1080)*1.5)*GiB;
-  const cpuLimit=resources.cpus>=6?2:1;
+  const perWorker=Math.max(2.5,width*height/(1920*1080)*1.5)*GiB;
+  const cpuLimit=resources.cpus>=9?3:resources.cpus>=6?2:1;
   const totalLimit=Math.max(1,Math.floor((resources.totalMemory-4*GiB)/perWorker));
   const availableLimit=Math.max(1,Math.floor((resources.availableMemory-2*GiB)/perWorker));
   return Math.max(1,Math.min(explicit,count,cpuLimit,totalLimit,availableLimit));
 }
 
 export async function runSceneWorkers(count,worker,{concurrency=1,signal,canStartAnother=()=>true}={}){
-  if(!Number.isInteger(concurrency)||concurrency<1||concurrency>2)throw Error('Concorrência de cenas inválida.');
+  if(!Number.isInteger(concurrency)||concurrency<1||concurrency>3)throw Error('Concorrência de cenas inválida.');
   const controller=new AbortController();
   const cancel=()=>controller.abort();
   signal?.addEventListener('abort',cancel,{once:true});
@@ -47,7 +47,7 @@ export async function runSceneWorkers(count,worker,{concurrency=1,signal,canStar
       // Under pressure, let existing work finish instead of opening another
       // Chromium. Wake on completion/cancel, without polling or busy-waiting.
       try{
-        if(active>0&&!canStartAnother()){
+        if(active>0&&!canStartAnother(active)){
           await new Promise(resolve=>waiting.add(resolve));continue;
         }
       }catch(error){if(!failure){failure=error;controller.abort();}break;}

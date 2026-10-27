@@ -119,7 +119,7 @@ export async function renderProject(directory,{
       paths[i]=video;
       sceneTimings[i]={id:scene.id,cached:reused.includes(scene.id),elapsedSeconds:(Date.now()-sceneStarted)/1000};
       emit('scene',++completed,scenes.length,scene.id+(reused.includes(scene.id)?' (cache)':''));
-    },{concurrency,signal,canStartAnother:()=>sceneWorkerLimit({...cfg,count:scenes.length,hardwareAccel,requested:sceneConcurrency})>1});
+    },{concurrency,signal,canStartAnother:active=>sceneWorkerLimit({...cfg,count:scenes.length,hardwareAccel,requested:sceneConcurrency})>active});
     // Completion order differs from timeline order. Keep cache reports and
     // final composition deterministic, regardless of which worker finishes first.
     const order=new Map(scenes.map((s,i)=>[s.id,i]));

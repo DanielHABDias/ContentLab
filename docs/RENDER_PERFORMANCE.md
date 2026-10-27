@@ -1,6 +1,6 @@
 # Render CPU: concorrência e validação
 
-O pipeline mantém até duas cenas independentes em execução, com um renderizador de frames por cena no padrão. Não são virtual threads de Java: o Node coordena subprocessos Remotion/Chromium. Qualidade, FPS, composição, transições e mixagem não foram reduzidos para acelerar.
+O pipeline mantém até três cenas independentes em execução, com um renderizador de frames por cena no padrão. Não são virtual threads de Java: o Node coordena subprocessos Remotion/Chromium. Qualidade, FPS, composição, transições e mixagem não foram reduzidos para acelerar.
 
 A política automática e os overrides estão em [SCENE_CACHE.md](../SCENE_CACHE.md). Não é necessário mudar projetos. Preferir **Aproveitar cache**; a otimização não justifica refazer cenas já válidas. Evitar outros processos pesados durante o render. O limite de RAM é uma estimativa conservadora, não detector infalível de OOM; para TSX especialmente pesado, usar uma cena por vez.
 
