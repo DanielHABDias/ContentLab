@@ -46,6 +46,20 @@ try{
   const webCut=await exportCut(web,{folder,filename:'Trecho importado',mode:'video',
     full:false,start:0.3,end:1.3});
   assert.ok(fs.statSync(webCut).size>500);
+  const yt=await downloadInternetVideo('https://youtu.be/BaW_jenozKc',()=>{},{
+    metadata:async()=>({title:'YouTube fixture',thumbnail:''}),
+    downloader:async(url,target)=>fs.copyFileSync(input,path.join(target,'video.mp4'))
+  });
+  assert.equal(yt.origin,'youtube');
+  assert.ok(yt.key.startsWith('yt-'));
+  assert.equal((await resolveSource('https://www.youtube.com/watch?v=BaW_jenozKc')).key,yt.key);
+  const ytAudio=await exportCut(yt,{folder,filename:'YouTube audio',mode:'audio',full:true});
+  assert.ok(fs.statSync(ytAudio).size>500);
+  await assert.rejects(downloadInternetVideo('https://youtu.be/zzzzzzzzzzz',()=>{},{
+    metadata:async()=>({title:'failed'}),downloader:async(url,target)=>{fs.writeFileSync(path.join(target,'video.mp4.part'),'partial');throw Error('fixture failed');}
+  }),/fixture failed/);
+  assert.equal(fs.readdirSync(path.join(root,'cache')).length,3,'Falha não deixa cache parcial');
+  removeSource(yt.key);
   removeSource(web.key);
   removeSource(first.key);
   assert.equal(listSources().length,0);

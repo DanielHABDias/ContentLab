@@ -2,8 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import crypto from 'node:crypto';
-import {pipeline} from 'node:stream/promises';
-import {Readable} from 'node:stream';
 import {run} from './exec.mjs';
 import {classifyVideoLink,getExternalVideoInfo,downloadExternalAsset} from './video-external.mjs';
 
@@ -55,8 +53,6 @@ export async function importLocalSource(file,update=()=>{}){
   update(100,'Vídeo copiado.');
   return cachedSource(key);
 }
-let client;
-async function yt(){if(!client){const mod=await import('youtubei.js');client=await mod.Innertube.create({generate_session_locally:true});}return client;}
 export function youtubeId(url){
   const u=new URL(url);
   if(!['youtube.com','www.youtube.com','m.youtube.com','music.youtube.com','youtu.be'].includes(u.hostname))throw Error('Informe um link do YouTube válido.');
@@ -65,39 +61,12 @@ export function youtubeId(url){
   return id;
 }
 export async function getYoutubeInfo(url){
-  const id=youtubeId(url),api=await yt(),info=await api.getInfo(id);
-  const basic=info.basic_info||{};
-  return {title:String(basic.title||'Vídeo do YouTube'),duration:Number(basic.duration||basic.duration_sec||0),
-    thumbnail:basic.thumbnail?.[0]?.url||basic.thumbnail?.url||basic.thumbnails?.at(-1)?.url||'',url,id};
+  youtubeId(url);
+  return getExternalVideoInfo(url);
 }
-async function saveStream(source,file){
-  const readable=typeof source?.getReader==='function'?Readable.fromWeb(source):Readable.from(source);
-  await pipeline(readable,fs.createWriteStream(file,{flags:'wx'}));
-}
-export async function downloadYoutube(url,update=()=>{}){
-  const id=youtubeId(url),key='yt-'+hash(id),folder=entryFolder(key);
-  if(fs.existsSync(path.join(folder,'meta.json')))return cachedSource(key);
-  fs.mkdirSync(folder,{recursive:true});
-  const api=await yt(),metadata=await getYoutubeInfo(url);
-  const video=path.join(folder,'stream-video.mp4'),audio=path.join(folder,'stream-audio.m4a');
-  update(4,'Obtendo mídia do YouTube...');
-  try{
-    await saveStream(await api.download(id,{type:'video',quality:'best',format:'mp4'}),video);
-    update(55,'Baixando áudio...');
-    await saveStream(await api.download(id,{type:'audio',quality:'best',format:'mp4'}),audio);
-    update(82,'Juntando as faixas sem recodificar...');
-    const output=path.join(folder,'video.mp4');
-    await run('ffmpeg',['-hide_banner','-loglevel','error','-y','-i',video,'-i',audio,
-      '-map','0:v:0','-map','1:a:0','-c','copy','-movflags','+faststart',output]);
-    const media=await probeVideo(output);
-    const item={title:metadata.title,origin:'youtube',sourceUrl:url,filename:'video.mp4',duration:media.duration,
-      thumbnail:metadata.thumbnail,width:media.width,height:media.height,createdAt:new Date().toISOString()};
-    fs.writeFileSync(path.join(folder,'meta.json'),JSON.stringify(item,null,2));
-    update(100,'Vídeo em cache.');
-    return cachedSource(key);
-  }finally{
-    for(const file of [video,audio])if(fs.existsSync(file))fs.rmSync(file,{force:true});
-  }
+export async function downloadYoutube(url,update=()=>{},options={}){
+  youtubeId(url);
+  return downloadInternetVideo(url,update,options);
 }
 export async function getSourceInfo(url){
   const kind=classifyVideoLink(url);
@@ -108,8 +77,8 @@ export async function downloadInternetVideo(url,update=()=>{},{
   downloader=downloadExternalAsset,metadata=getExternalVideoInfo
 }={}){
   const link=classifyVideoLink(url);
-  if(link.provider==='youtube')return downloadYoutube(link.url,update);
-  const key='web-'+hash(link.url),folder=entryFolder(key);
+  const isYoutube=link.provider==='youtube';
+  const key=isYoutube?'yt-'+hash(youtubeId(link.url)):'web-'+hash(link.url),folder=entryFolder(key);
   if(fs.existsSync(path.join(folder,'meta.json')))return cachedSource(key);
   fs.mkdirSync(folder,{recursive:true});
   try{
@@ -118,7 +87,7 @@ export async function downloadInternetVideo(url,update=()=>{},{
     await downloader(link.url,folder,{update});
     const media=await probeVideo(path.join(folder,'video.mp4'));
     if(!media.width||!media.duration)throw Error('O arquivo não contém um vídeo válido.');
-    const item={title:info.title,origin:'internet',sourceUrl:link.url,
+    const item={title:info.title,origin:isYoutube?'youtube':'internet',sourceUrl:link.url,
       filename:'video.mp4',duration:media.duration,thumbnail:info.thumbnail,
       width:media.width,height:media.height,createdAt:new Date().toISOString()};
     fs.writeFileSync(path.join(folder,'meta.json'),JSON.stringify(item,null,2));

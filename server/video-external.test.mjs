@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {classifyVideoLink,externalToolPath,getExternalVideoInfo,downloadExternalAsset} from './video-external.mjs';
 
-test('YouTube is routed to the original downloader while public video platforms use yt-dlp',()=>{
+test('Recognized YouTube and external platforms are classified before downloading',()=>{
   for(const url of ['https://www.youtube.com/watch?v=BaW_jenozKc',
     'https://youtu.be/BaW_jenozKc','https://music.youtube.com/watch?v=BaW_jenozKc'])
     assert.equal(classifyVideoLink(url).provider,'youtube');
@@ -25,9 +25,13 @@ test('Potentially dangerous links are rejected before yt-dlp runs',()=>{
     'https://example.com/video.mp4','not a url'])
     assert.throws(()=>classifyVideoLink(url),Error,url);
 });
-test('YouTube metadata is not sent to yt-dlp',async()=>{
-  await assert.rejects(getExternalVideoInfo('https://www.youtube.com/watch?v=BaW_jenozKc',
-    {runner:async()=>{throw Error('should not run');}}),/carregador original/);
+test('YouTube metadata uses yt-dlp with the application Node runtime',async()=>{
+  let args;
+  const info=await getExternalVideoInfo('https://www.youtube.com/watch?v=BaW_jenozKc',
+    {runner:async(bin,a)=>{args=a;return {stdout:JSON.stringify({id:'BaW_jenozKc',title:'YouTube',duration:10})};}});
+  assert.equal(info.provider,'youtube');
+  assert.equal(args[args.indexOf('--js-runtimes')+1],'node:'+process.execPath);
+  assert.ok(args.includes('--ignore-config'));
 });
 test('yt-dlp metadata parses one public video and never invokes a shell',async()=>{
   let invocation;

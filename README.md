@@ -42,13 +42,15 @@ O fundo oferece **Inverter cor dos efeitos**, sem inverter foto/personagens: bol
 
 ## Vídeos e cortes — link da internet
 
-A aba **Vídeos e cortes** aceita **Link da internet**. O YouTube continua usando exatamente o carregador existente (biblioteca `youtubei.js`); nenhum JSON do Google ou OAuth de publicação é necessário para esse fluxo. Para links públicos de outras plataformas compatíveis (por exemplo, TikTok, Pinterest, Instagram, Vimeo, X/Twitter, Reddit, Facebook, Twitch e Dailymotion), o backend usa o executável open source [yt-dlp](https://github.com/yt-dlp/yt-dlp).
+A aba **Vídeos e cortes** aceita **Link da internet**. YouTube e outras plataformas públicas compatíveis (TikTok, Pinterest, Instagram, Vimeo, X/Twitter, Reddit, Facebook, Twitch e Dailymotion) usam o executável open source [yt-dlp](https://github.com/yt-dlp/yt-dlp) para consultar metadados e baixar mídia. O decifrador de URLs do `youtubei.js` não é usado nos downloads. Nenhum JSON do Google ou OAuth de publicação é necessário para esse fluxo.
 
 **Preparação automática:** o inicializador baixa o executável standalone oficial do [yt-dlp](https://github.com/yt-dlp/yt-dlp/releases) para `.tools/ytdlp`, verifica SHA256 e testa sua execução. Não exige Python, instalação manual ou PATH. Se faltar ao importar um link, o próprio fluxo também o prepara. FFmpeg/FFprobe são preparados pelo inicializador. `CONTENTLAB_YT_DLP` fica apenas como override avançado opcional. Linux e Windows x64/arm64 têm artefatos mapeados; validação física realizada em Linux x64.
 
 Ao colar um link suportado e clicar **Carregar**, o Content Lab consulta o título, a duração e a miniatura; depois, importa o vídeo para o mesmo cache da fonte e libera prévia, cortes e exportação. O download externo gera MP4 quando possível, admite vídeos de até 1 GB e seleciona apenas um vídeo por URL. Links já importados reutilizam o cache.
 
-**Limites:** nenhum programa baixa literalmente de todo site. O aplicativo só encaminha URLs HTTPS de domínios de vídeo conhecidos; não baixa arquivos de endereços internos/locais ou URLs arbitrárias, não contorna DRM e não autentica contas privadas. Sites podem deixar de funcionar, exigir consentimento ou ter restrições nos seus termos. O `yt-dlp` é preparado automaticamente e não altera o YouTube original. Respeite os direitos de uso e publicação do material.
+Para os desafios JavaScript do YouTube, o downloader recebe automaticamente o caminho do próprio Node 22+ que executa o aplicativo, inclusive em instalações portáteis. Os scripts EJS estão incluídos no standalone oficial; não é necessário configurar Deno ou instalar outro runtime. Cache existente, importação pelo Banco de mídia, cortes e exportação de áudio continuam usando o mesmo fluxo. A pesquisa por palavras-chave do Banco de mídia ainda usa `youtubei.js`, separadamente do download.
+
+**Limites:** nenhum programa baixa literalmente de todo site. O aplicativo só encaminha URLs HTTPS de domínios de vídeo conhecidos; não baixa arquivos de endereços internos/locais ou URLs arbitrárias, não contorna DRM e não autentica contas privadas. Sites podem deixar de funcionar, exigir consentimento ou ter restrições nos seus termos. Respeite os direitos de uso e publicação do material.
 
 ## Banco de mídia — pesquisar, baixar e criar cortes
 

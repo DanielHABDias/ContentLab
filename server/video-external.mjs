@@ -45,18 +45,18 @@ function ytDlpError(err){
     return Error('O vídeo exige autenticação ou não está disponível publicamente. O Content Lab não acessa contas privadas.');
   return Error('Não foi possível acessar o vídeo pelo yt-dlp. Verifique se o programa está atualizado e se a plataforma permite o download. '+message.slice(-280));
 }
-function cliOptions(){
+function cliOptions(provider){
   // Sem playlist, configurações globais nem extrator genérico para reduzir a superfície de URLs arbitrárias.
-  return ['--ignore-config','--no-playlist','--ies','default,-generic','--no-warnings'];
+  return ['--ignore-config','--no-playlist','--ies','default,-generic','--no-warnings',
+    ...(provider==='youtube'?['--js-runtimes','node:'+process.execPath]:[])];
 }
 export async function getExternalVideoInfo(input,{runner=run,env=process.env}={}){
   const {provider,url}=classifyVideoLink(input);
-  if(provider==='youtube')throw Error('Links do YouTube continuam usando o carregador original.');
   if(runner===run&&!env.CONTENTLAB_YT_DLP)await ensurePortableTool('ytdlp');
   let result;
   try{
     result=await runner(externalToolPath({env}),[
-      ...cliOptions(),'--skip-download','--print','%(.{id,title,duration,thumbnail})j',url
+      ...cliOptions(provider),'--skip-download','--print','%(.{id,title,duration,thumbnail})j',url
     ],{signal:AbortSignal.timeout(60000)});
   }catch(error){throw ytDlpError(error);}
   let info;
@@ -67,18 +67,17 @@ export async function getExternalVideoInfo(input,{runner=run,env=process.env}={}
     duration:Number(info.duration||0),
     thumbnail:typeof info.thumbnail==='string'&&/^https:\/\//.test(info.thumbnail)?
       info.thumbnail:'',
-    url,id:String(info.id||''),provider:'external'
+    url,id:String(info.id||''),provider
   };
 }
 export async function downloadExternalAsset(input,folder,{
   runner=run,env=process.env,update=()=>{}
 }={}){
   const {provider,url}=classifyVideoLink(input);
-  if(provider==='youtube')throw Error('Links do YouTube devem usar o downloader original.');
   if(runner===run&&!env.CONTENTLAB_YT_DLP)await ensurePortableTool('ytdlp',{update:message=>update(3,message)});
   const ffmpeg=mediaToolExecutable('ffmpeg');
   const args=[
-    ...cliOptions(),
+    ...cliOptions(provider),
     '--max-filesize','1G',
     '-f','bv*+ba/b',
     '--merge-output-format','mp4',
