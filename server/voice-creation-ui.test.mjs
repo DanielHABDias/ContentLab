@@ -5,51 +5,67 @@ import vm from 'node:vm';
 import {APP_ROOT} from './plan.mjs';
 
 function harness({deny=false,fetcher}={}){
-  const elements=new Map();let stopped=0,recorder=null,clock=0,tick;
+  const elements=new Map(),handlers={};let stopped=0,recorder=null,clock=0,tick,panel;
+  const generic=()=>({children:[],style:{},value:'80',scrollLeft:0,querySelector(){return {value:'80'};},append(...items){this.children.push(...items);},setAttribute(){},closest(){return {after(){}};},after(){},focus(){},setPointerCapture(){},getBoundingClientRect(){return {left:0,width:900};},clientWidth:900,getContext(){return {scale(){},fillText(){},fillRect(){},beginPath(){},moveTo(){},lineTo(){},stroke(){}};}});
   const element=id=>{
     if(!elements.has(id))elements.set(id,{id,value:'',disabled:false,hidden:id==='panel-transcription',textContent:'',files:[],options:[],
-      listeners:{},addEventListener(type,handler){this.listeners[type]=handler;},setAttribute(){},children:[],append(...items){this.children.push(...items);},replaceChildren(...values){this.options=values;this.children=[...values];},add(option){this.options.push(option);}});
+      ...generic(),value:'',listeners:{},addEventListener(type,handler){this.listeners[type]=handler;},setAttribute(){},children:[],append(...items){this.children.push(...items);},replaceChildren(...values){this.options=values;this.children=[...values];},add(option){this.options.push(option);}});
     return elements.get(id);
   };
   const stream={getTracks:()=>[{stop(){stopped++;}}]};
   class FakeRecorder{
     static isTypeSupported(){return true;}
     constructor(){this.state='inactive';this.mimeType='audio/webm';recorder=this;}
-    start(){this.state='recording';}pause(){this.state='paused';}resume(){this.state='recording';}
-    stop(){this.state='inactive';this.ondataavailable({data:new Blob(['test-audio'])});return this.onstop();}
+    start(){this.state='recording';this.started=clock;}pause(){this.state='paused';}resume(){this.state='recording';}
+    stop(){this.state='inactive';this.ondataavailable({data:new Blob([JSON.stringify({duration:(clock-this.started)/1000})])});return this.onstop();}
   }
   class FakeContext{
+    constructor(){this.state='running';}
+    async decodeAudioData(bytes){const duration=JSON.parse(new TextDecoder().decode(bytes)).duration,length=Math.round(duration*48000);return {length,numberOfChannels:1,getChannelData:()=>new Float32Array(length).fill(.1)};}
     resume(){return Promise.resolve();}close(){return Promise.resolve();}
     createAnalyser(){return {fftSize:256,getFloatTimeDomainData(samples){samples.fill(.1);}};}
     createMediaStreamSource(){return {connect(){}};}
   }
   const mediaDevices={async getUserMedia(){if(deny)throw Error('Microfone não autorizado');return stream;},async enumerateDevices(){return [{kind:'audioinput',label:'Microfone de teste',deviceId:'fake'}];}};
   element('transcriptionProjectRoot').value='/test-project';
-  const sandbox={document:{getElementById:element,addEventListener(){},createElement:()=>({children:[],append(...items){this.children.push(...items);},setAttribute(){}}),createTextNode:text=>({textContent:text})},window:{MediaRecorder:FakeRecorder,addEventListener(){}},navigator:{mediaDevices},
+  const sandbox={document:{head:generic(),getElementById:element,addEventListener(name,fn){handlers[name]=fn;},createElement:tag=>{const obj=generic();if(tag==='section'){panel=obj;const nodes=new Map();obj.querySelector=selector=>{if(!nodes.has(selector))nodes.set(selector,generic());return nodes.get(selector);};}return obj;},createTextNode:text=>({textContent:text})},window:{MediaRecorder:FakeRecorder,addEventListener(){}},navigator:{mediaDevices},
     FormData,fetch:fetcher|| (async()=>({ok:true,json:async()=>({takes:[],revision:'test-revision',relative:'audio/recording-test.wav',jobId:'test-job'})})),
     MediaRecorder:FakeRecorder,AudioContext:FakeContext,performance:{now:()=>clock},Blob,File,
     URL:{createObjectURL:()=> 'blob:local-test',revokeObjectURL(){}},Option:class{constructor(text,value){this.text=text;this.value=value;}},
     requestAnimationFrame:()=>1,cancelAnimationFrame(){},setInterval(fn){tick=fn;return 1;},clearInterval(){tick=null;},Date,
   };
+  vm.runInNewContext(fs.readFileSync(APP_ROOT+'/frontend/static/recording-timeline.js','utf8'),sandbox);
   vm.runInNewContext(fs.readFileSync(APP_ROOT+'/frontend/static/voice-creation.js','utf8'),sandbox);
-  return {element,get recorder(){return recorder;},get stopped(){return stopped;},advance(ms){clock+=ms;tick?.();}};
+  return {element,get panel(){return panel;},keydown:handlers.keydown,get recorder(){return recorder;},get stopped(){return stopped;},advance(ms){clock+=ms;tick?.();}};
 }
 test('recorder uses permission, pauses time, previews raw take and releases microphone',async()=>{
   const h=harness();await h.element('voiceRecordStart').onclick();
-  assert.equal(h.recorder.state,'recording');assert.equal(h.element('voiceRecordStart').disabled,true);
+  assert.equal(h.recorder.state,'recording');assert.equal(h.element('voiceRecordStart').disabled,false);assert.equal(h.element('voiceRecordStart').textContent,'Pausar');assert.equal(h.element('voiceRecordPause').hidden,true);
   h.advance(2000);assert.equal(h.element('voiceRecordTime').textContent,'00:00:02');
-  h.element('voiceRecordPause').onclick();h.advance(5000);assert.equal(h.element('voiceRecordTime').textContent,'00:00:02');
-  h.element('voiceRecordPause').onclick();h.advance(1000);assert.equal(h.element('voiceRecordTime').textContent,'00:00:03');
-  await h.element('voiceRecordStop').onclick();assert.equal(h.stopped,1);
+  await h.element('voiceRecordPause').onclick();h.advance(5000);assert.equal(h.element('voiceRecordTime').textContent,'00:00:02');
+  await h.element('voiceRecordPause').onclick();h.advance(1000);assert.equal(h.element('voiceRecordTime').textContent,'00:00:03');
+  await h.element('voiceRecordStop').onclick();assert.equal(h.stopped,2);
   assert.equal(h.element('voiceTakeAudio').src,'blob:local-test');
   assert.equal(h.element('voiceRecordSave').disabled,true);
-  assert.match(h.element('voiceCreationStatus').textContent,/salva automaticamente/);
+  assert.match(h.element('voiceCreationStatus').textContent,/Clipe salvo/);
   assert.equal(h.element('voiceReferenceRecording').disabled,false);
 });
 test('permission denial is visible and does not leave recorder running',async()=>{
   const h=harness({deny:true});await h.element('voiceRecordStart').onclick();
   assert.match(h.element('voiceCreationStatus').textContent,/não autorizado/);
   assert.equal(h.element('voiceRecordStart').disabled,false);assert.equal(h.recorder,null);
+});
+test('mouse cut, undo, continuation and close export only the edited clip as WAV',async()=>{
+ let saved;
+ const h=harness({fetcher:async(url,options)=>{if(url==='/api/voice/recordings')saved=await options.body.get('file').arrayBuffer();return {ok:true,json:async()=>({takes:[],revision:'r'})};}});
+ await h.element('voiceRecordStart').onclick();h.advance(4000);await h.element('voiceRecordPause').onclick();
+ const canvas=h.panel.querySelector('canvas');
+ const select=()=>{canvas.onpointerdown({clientX:80,pointerId:1,preventDefault(){}});canvas.onpointermove({clientX:240});canvas.onpointerup();};select();
+ h.panel.querySelector('[data-action="delete"]').onclick();assert.match(h.panel.querySelector('[data-info]').textContent,/2.00/);
+ h.panel.querySelector('[data-action="undo"]').onclick();assert.match(h.panel.querySelector('[data-info]').textContent,/1.00–3.00/);
+ h.panel.querySelector('[data-action="delete"]').onclick();await h.element('voiceRecordPause').onclick();h.advance(1000);await h.element('voiceRecordStop').onclick();
+ assert.equal(new DataView(saved).getUint32(40,true),3*48000*2);
+ assert.equal(h.element('voiceRecordStart').textContent,'Gravar');
 });
 test('recording forwards breath attenuation including zero, and recipes control import independently',async()=>{
   let body;

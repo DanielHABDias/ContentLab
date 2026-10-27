@@ -51,43 +51,16 @@
     $('voiceTakeAudio').src=objectUrl;$('voiceTakeAudio').hidden=false;$('voiceRecordSave').disabled=false;$('voiceRecordSave').hidden=false;
     $('voiceReferenceRecording').disabled=false;
   }
-  $('voiceRecordStart').onclick=safe(async()=>{
-    if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw Error('Seu navegador não oferece gravação. Use Chrome/Firefox pelo endereço local.');
-    if(recorder&&recorder.state!=='inactive')return;
-    try{
-      recordingFolder=root();
-      const deviceId=$('voiceMicrophone').value;
-      stream=await navigator.mediaDevices.getUserMedia({audio:{deviceId:deviceId?{exact:deviceId}:undefined,sampleRate:{ideal:48000},channelCount:{ideal:1},echoCancellation:false,noiseSuppression:false,autoGainControl:false},video:false});
-      await microphones();
-      const mime=['audio/webm;codecs=opus','audio/ogg;codecs=opus','audio/mp4'].find(t=>MediaRecorder.isTypeSupported(t));
-      recorder=new MediaRecorder(stream,mime?{mimeType:mime}:{});chunks=[];elapsed=0;lastTime=performance.now();
-      recorder.ondataavailable=event=>{if(event.data.size)chunks.push(event.data);};
-      recorder.onstop=async()=>{
-        const blob=new Blob(chunks,{type:recorder.mimeType});release();
-        $('voiceRecordStart').disabled=false;$('voiceRecordStop').disabled=true;$('voiceRecordPause').disabled=true;
-        if(blob.size){showTake(blob);try{await saveTake(recordingFolder);}catch(error){status('Tomada mantida no navegador: '+error.message+' Use Tentar salvar novamente.');}}
-        else status('A gravação não contém áudio.');
-      };
-      recorder.onerror=()=>{if(recorder.state!=='inactive')recorder.stop();else release();status('Falha na captura de áudio.');};
-      recorder.start(1000);$('voiceRecordStart').disabled=true;$('voiceRecordPause').disabled=false;$('voiceRecordStop').disabled=false;
-      $('voiceRecordPause').textContent='Pausar';$('voiceRecordSave').disabled=true;
-      context=new AudioContext();await context.resume();const analyzer=context.createAnalyser();analyzer.fftSize=256;
-      context.createMediaStreamSource(stream).connect(analyzer);const samples=new Float32Array(analyzer.fftSize);
-      const level=()=>{analyzer.getFloatTimeDomainData(samples);$('voiceLevel').value=recorder.state==='recording'?Math.min(1,Math.sqrt(samples.reduce((a,n)=>a+n*n,0)/samples.length)*4):0;frame=requestAnimationFrame(level);};level();
-      timer=setInterval(()=>{
-        const now=performance.now();if(recorder.state==='recording')elapsed+=now-lastTime;lastTime=now;
-        $('voiceRecordTime').textContent=new Date(elapsed).toISOString().slice(11,19);
-        if(elapsed>3600000)recorder.stop();
-      },200);status('Gravando. Permaneça nesta página.');
-    }catch(error){release();$('voiceRecordStart').disabled=false;throw error;}
+  const timeline=window.RecordingTimeline.attach({
+    onStart:()=>{if(polling||savingTake)throw Error('Aguarde o processamento.');recordingFolder=root();$('voiceTakeAudio').pause?.();$('voiceTakeAudio').hidden=true;},
+    onDirty:value=>{unsavedTake=value;},
+    onState:state=>{recorder={state};},
+    onSave:async blob=>{showTake(blob);await saveTake(recordingFolder);$('voiceTakeAudio').hidden=true;},status
   });
-  $('voiceRecordPause').onclick=()=>{
-    if(recorder?.state==='recording'){elapsed+=performance.now()-lastTime;recorder.pause();$('voiceRecordPause').textContent='Continuar';}
-    else if(recorder?.state==='paused'){recorder.resume();$('voiceRecordPause').textContent='Pausar';}
-    lastTime=performance.now();
-  };
-  $('voiceRecordStop').onclick=()=>{if(recorder&&recorder.state!=='inactive')return recorder.stop();};
-  function recordedFile(){if(!take)throw Error('Grave uma tomada primeiro.');const ext=take.type.includes('ogg')?'ogg':take.type.includes('mp4')?'m4a':'webm';return new File([take],'recording.'+ext,{type:take.type});}
+  $('voiceRecordStart').onclick=safe(()=>timeline.state==='recording'?timeline.pause():timeline.start());
+  $('voiceRecordPause').onclick=safe(()=>timeline.state==='recording'?timeline.pause():timeline.start());
+  $('voiceRecordStop').onclick=safe(()=>timeline.finish());
+  function recordedFile(){if(!take)throw Error('Grave uma tomada primeiro.');const ext=take.type.includes('wav')?'wav':take.type.includes('ogg')?'ogg':take.type.includes('mp4')?'m4a':'webm';return new File([take],'recording.'+ext,{type:take.type});}
   async function useAudio(id,result){
     $('voiceFinalAudio').src='/api/voice/final/audio?projectRoot='+encodeURIComponent(result.projectRoot)+'&t='+Date.now();$('voiceFinalDetails').hidden=false;
     $('voiceFinalDetails').open=true;
@@ -196,7 +169,7 @@
       status('Tomada salva automaticamente. Grave a próxima ou clique em Finalizar narração e transcrever.');
     }finally{savingTake=false;$('voiceRecordStart').disabled=polling;$('voiceRecordSave').disabled=!unsavedTake;$('voiceRecordSave').hidden=!unsavedTake;}
   }
-  $('voiceRecordSave').onclick=safe(()=>saveTake(recordingFolder||root()));
+  $('voiceRecordSave').onclick=safe(()=>timeline.state==='paused'?timeline.finish():saveTake(recordingFolder||root()));
   $('voiceReferenceRecording').onclick=safe(async()=>{
     const transfer=new DataTransfer();transfer.items.add(recordedFile());$('voiceReferenceFile').files=transfer.files;status('Tomada selecionada como amostra. Informe a transcrição exata e salve o perfil.');
   });

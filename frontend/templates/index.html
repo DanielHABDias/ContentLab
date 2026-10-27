@@ -278,7 +278,7 @@
             <div class="row"><button id="voiceRecordStart" class="btn btn-primary" type="button">Gravar</button><button id="voiceRecordPause" class="btn btn-secondary" type="button" disabled>Pausar</button><button id="voiceRecordStop" class="btn btn-secondary" type="button" disabled>Finalizar tomada</button></div>
             <audio id="voiceTakeAudio" controls hidden preload="none" aria-label="Ouvir tomada ou voz gerada"></audio>
             <button id="voiceRecordSave" class="btn btn-secondary" type="button" disabled>Tentar salvar a tomada novamente</button>
-            <p class="helper-text">Ao finalizar cada tomada ela é salva automaticamente na pasta escolhida. Revise e organize a lista; depois finalize a narração para unir tudo, aplicar o tratamento escolhido e transcrever o áudio final. As tomadas continuam originais. Limite por tomada: 1 hora / 128 MB.</p><div id="voiceRecordingTakes" class="voice-takes"></div>
+            <p class="helper-text">Arraste na onda para selecionar e use Delete para apagar. A barra horizontal percorre a tomada; o zoom amplia os detalhes. Salvar clipe fecha a tomada atual. Depois finalize a narração para unir, tratar e transcrever. Salve antes de fechar a página. Limite por clipe: 20 minutos · WAV mono, 48 kHz.</p><div id="voiceRecordingTakes" class="voice-takes"></div>
             <label class="voice-toggle"><input id="voiceRecordTreatmentEnabled" type="checkbox" checked>Tratar a gravação ao finalizar · IA + voz equilibrada</label>
             <p class="helper-text">As tomadas originais não são alteradas. Saída WAV mono, 48 kHz, PCM 24-bit. Padrão: IA forte a 100%, filtro de graves, compressão suave, suavização de “S”, volume -16 LUFS e pico alvo -1,5 dBTP. Pausas internas preservadas. O primeiro uso da IA pode baixar cerca de 35 MB; falhas não substituem o áudio final anterior.</p>
             <details><summary>Ajustar tratamento da gravação</summary><div class="transcription-grid">
@@ -1037,6 +1037,7 @@
 </div>
 
 <script src="/static/app.js"></script>
+<script src="/static/recording-timeline.js"></script>
 <script src="/static/voice-creation.js"></script>
 <script src="/static/narration-player.js"></script>
 <script src="/static/visual_editor.js"></script>
