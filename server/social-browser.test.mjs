@@ -16,7 +16,7 @@ test('três URLs oficiais aceitam perfis diferentes e recusam exfiltração e pr
   }
   assert.throws(()=>socialUrl('twitter','https://studio.youtube.com/'));
 });
-test('configurações só liberam publicação depois de três confirmações explícitas; troca de perfil invalida a confirmação',async t=>{
+test('uma confirmação libera publicações; troca de perfil invalida só a conta alterada',async t=>{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'cl-social-browser-'));
   t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
   const file=path.join(root,'settings','social-browser.json');
@@ -41,13 +41,14 @@ test('configurações só liberam publicação depois de três confirmações ex
     assert.equal(opened.at(-1).args.at(-1),urls[p]);
     assert.equal(opened.at(-1).options.shell,false);
     confirmSocialBrowser(p,{file});
+    assert.equal(socialBrowserReady(readSocialBrowser(file)),true,'uma única rede já libera a aba');
   }
   assert.equal(socialBrowserReady(readSocialBrowser(file)),true);
   const changed=saveSocialBrowser({browser:'system',urls:{...urls,youtube:'https://studio.youtube.com/channel/UCdifferent'}},{file,browsers});
   assert.equal(changed.confirmed.youtube,false);
   assert.equal(changed.confirmed.instagram,true);
   assert.equal(changed.confirmed.tiktok,true);
-  assert.equal(socialBrowserReady(changed),false);
+  assert.equal(socialBrowserReady(changed),true,'outras redes confirmadas continuam habilitadas');
   assert.throws(()=>saveSocialBrowser({browser:'unknown',urls},{file,browsers}),/navegador disponível/);
   assert.deepEqual(readSocialBrowser(file),changed,'falha não substitui dados anteriores');
   const detected=detectBrowsers();

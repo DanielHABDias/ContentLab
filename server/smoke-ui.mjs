@@ -168,64 +168,102 @@ try{
     window.__socialOriginalFetch=window.fetch;
     const urls={tiktok:'https://www.tiktok.com/tiktokstudio',instagram:'https://www.instagram.com/',youtube:'https://studio.youtube.com/'};
     let settings={browser:null,urls,confirmed:{tiktok:false,instagram:false,youtube:false}};
+    const items=[];
     window.fetch=(url,options)=>{
       if(!String(url).startsWith('/api/social-browser/'))return window.__socialOriginalFetch(url,options);
-      const path=String(url),body=options?.body?JSON.parse(options.body):null;
+      const endpoint=String(url),body=typeof options?.body==='string'?JSON.parse(options.body):null;
       const keys=['tiktok','instagram','youtube'];
-      if(path==='/api/social-browser/settings'){
+      if(endpoint==='/api/social-browser/settings'){
         const confirmed=Object.fromEntries(keys.map(p=>[p,settings.browser===body.browser&&settings.urls[p]===body.urls[p]&&settings.confirmed[p]]));
         settings={...body,confirmed};
-      }else if(path.includes('/confirm/')){
-        const p=path.split('/').at(-1);
-        settings.confirmed[p]=true;
+      }else if(endpoint.includes('/confirm/')){
+        settings.confirmed[endpoint.split('/').at(-1)]=true;
+      }else if(endpoint==='/api/social-browser/drafts'&&options?.method==='POST'){
+        const form=options.body;
+        const item={id:'00000000-1111-4444-8888-'+String(items.length+1).padStart(12,'0'),
+          kind:form.get('kind'),titleA:form.get('titleA'),titleB:form.get('titleB'),description:form.get('description'),
+          tags:form.get('tags').split(',').map(x=>x.trim()).filter(Boolean),
+          platforms:JSON.parse(form.get('platforms')),fileName:form.get('video').name,scheduledAt:form.get('scheduledAt')};
+        items.unshift(item);
+        return Promise.resolve(new Response(JSON.stringify({item}),{status:201,headers:{'Content-Type':'application/json'}}));
+      }else if(endpoint==='/api/social-browser/drafts'){
+        return Promise.resolve(new Response(JSON.stringify({items}),{status:200,headers:{'Content-Type':'application/json'}}));
       }
-      const ready=!!settings.browser&&keys.every(p=>settings.confirmed[p]);
-      const result=path.endsWith('/open/tiktok')||path.endsWith('/open/instagram')||path.endsWith('/open/youtube')?
-        {opened:true,label:path.split('/').at(-1),loginVerified:false}:
+      const ready=!!settings.browser&&keys.some(p=>settings.confirmed[p]);
+      const result=endpoint.includes('/open/')?
+        {opened:true,label:endpoint.split('/').at(-1),loginVerified:false}:
         {browsers:[{id:'system',label:'Padrão do sistema',available:true}],platforms:{},settings,ready};
       return Promise.resolve(new Response(JSON.stringify(result),{status:200,headers:{'Content-Type':'application/json'}}));
     };
   })()`);
   await evaluate('document.getElementById("workspace-group-social-trigger").click()');
-  assert.equal(await evaluate('document.getElementById("workspace-group-social-items").hidden'),false,
-    'Social category includes Publications');
-  assert.equal(await evaluate('document.getElementById("tab-metrics")'),null,
-    'Old OAuth metrics tab is removed');
   await evaluate('document.getElementById("tab-publications").click()');
-  await wait(()=>evaluate('document.getElementById("panel-settings").hidden===false'),
-    'First entry forwards to social browser settings');
-  assert.equal(await evaluate('document.getElementById("socialBrowserSelect").value'),'system');
-  assert.equal(await evaluate('document.getElementById("socialGoPublications").disabled'),true,
-    'Publishing remains locked before logins');
-  assert.equal(await evaluate('document.getElementById("socialClientId")'),null,
-    'Obsolete Google/Instagram/TikTok OAuth credential form is removed');
-  await evaluate('document.getElementById("socialUrl-youtube").value="https://studio.youtube.com/channel/UCexample";document.getElementById("socialSaveSettings").click()');
-  await wait(()=>evaluate('document.getElementById("socialOpen-youtube").disabled===false'),
-    'Save local browser and URL configuration');
-  for(const p of ['tiktok','instagram','youtube']){
-    await evaluate('document.getElementById("socialOpen-"+'+JSON.stringify(p)+').click()');
-    await wait(()=>evaluate('document.getElementById("socialConfirm-"+'+JSON.stringify(p)+').disabled===false'),
-      'Open official site and require explicit user confirmation');
-    await evaluate('document.getElementById("socialConfirm-"+'+JSON.stringify(p)+').click()');
-    await wait(()=>evaluate('document.getElementById("socialState-"+'+JSON.stringify(p)+').textContent==="Login conferido"'),
-      'Store account confirmation after opening the site');
-  }
-  assert.equal(await evaluate('document.getElementById("socialGoPublications").disabled'),false,
-    'Three confirmed platforms unlock Publications');
+  await wait(()=>evaluate('document.getElementById("panel-settings").hidden===false'),'First social visit redirects to settings');
+  assert.equal(await evaluate('document.getElementById("socialGoPublications").disabled'),true);
+  assert.equal(await evaluate('document.getElementById("socialClientId")'),null,'Legacy OAuth credentials removed');
+  await evaluate('document.getElementById("socialSaveSettings").click()');
+  await wait(()=>evaluate('document.getElementById("socialOpen-tiktok").disabled===false'),'Settings saved');
+  await evaluate('document.getElementById("socialOpen-tiktok").click()');
+  await wait(()=>evaluate('document.getElementById("socialConfirm-tiktok").disabled===false'),'TikTok login opened');
+  await evaluate('document.getElementById("socialConfirm-tiktok").click()');
+  await wait(()=>evaluate('document.getElementById("socialGoPublications").disabled===false'),
+    'One confirmed social network unlocks Publications');
   await evaluate('document.getElementById("socialGoPublications").click()');
-  assert.equal(await evaluate('document.getElementById("publishReady").hidden'),false,
-    'Only the new ready screen is shown; no automatic upload controls');
-  assert.equal(await evaluate('document.getElementById("publishSubmit")'),null,
-    'Old automatic publisher has been removed');
+  await wait(()=>evaluate('document.getElementById("publishReady").hidden===false'),'New board appears');
+  assert.equal(await evaluate('document.getElementById("publishNetwork-tiktok").classList.contains("is-connected")'),true);
+  assert.equal(await evaluate('document.getElementById("publishNetwork-youtube").classList.contains("is-disabled")'),true);
+  assert.equal(await evaluate('document.getElementById("publishDraftCount").textContent'),'0');
+  assert.equal(await evaluate('document.getElementById("publishEmptyCard").classList.contains("is-first")'),true);
+  await evaluate('document.getElementById("publishEmptyCard").click()');
+  assert.equal(await evaluate('document.getElementById("publishComposerDialog").open'),true);
+  assert.equal(await evaluate('document.getElementById("publishLongCovers").hidden'),true,
+    'Short has one cover and optional visual frame extraction');
+  await evaluate('document.querySelector("#publishComposerForm input[value=long]").click()');
+  assert.equal(await evaluate('document.getElementById("publishLongCovers").hidden'),false);
+  assert.equal(await evaluate('document.querySelector("#publishDestinations input[value=youtube]").disabled'),true,
+    'Long format excludes YouTube as specified');
+  assert.equal(await evaluate('document.querySelector("#publishDestinations input[value=tiktok]").disabled'),false);
+  await evaluate(`(() => {
+    const assign=(id,file)=>{
+      const input=document.getElementById(id),files=new DataTransfer();
+      files.items.add(file);input.files=files.files;input.dispatchEvent(new Event('change',{bubbles:true}));
+    };
+    const png=new Uint8Array([137,80,78,71,13,10,26,10,0,0,0,0,73,72,68,82]);
+    const video=new Uint8Array([0,0,0,20,102,116,121,112,105,115,111,109,0,0,0,0]);
+    assign('publishVideoFile',new File([video],'longo.mp4',{type:'video/mp4'}));
+    assign('publishCoverA',new File([png],'a.png',{type:'image/png'}));
+    assign('publishCoverB',new File([png],'b.png',{type:'image/png'}));
+    document.getElementById('publishTitleA').value='Título A';
+    document.getElementById('publishTitleB').value='Título B';
+    document.querySelector('#publishDestinations input[value=tiktok]').click();
+    document.getElementById('publishComposerForm').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+  })()`);
+  await wait(()=>evaluate('document.getElementById("publishDraftCount").textContent==="1"'),
+    'Long-form A/B draft is added to the board');
+  assert.equal(await evaluate('document.querySelector(".publish-draft-ab").textContent.includes("Título B")'),true);
+  await evaluate('document.getElementById("publishAddVideo").click()');
+  await evaluate(`(() => {
+    const input=document.getElementById('publishVideoFile'),files=new DataTransfer();
+    files.items.add(new File([new Uint8Array([0,0,0,20,102,116,121,112,105,115,111,109])],'curto.mp4',{type:'video/mp4'}));
+    input.files=files.files;input.dispatchEvent(new Event('change',{bubbles:true}));
+    const cover=document.getElementById('publishShortCoverFile'),covers=new DataTransfer();
+    covers.items.add(new File([new Uint8Array([137,80,78,71,13,10,26,10])],'capa.png',{type:'image/png'}));
+    cover.files=covers.files;cover.dispatchEvent(new Event('change',{bubbles:true}));
+    document.getElementById('publishTitleA').value='Meu Short';
+    document.querySelector('#publishDestinations input[value=tiktok]').click();
+    document.getElementById('publishComposerForm').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+  })()`);
+  await wait(()=>evaluate('document.getElementById("publishDraftCount").textContent==="2"'),
+    'Second short adds to existing list without sending to platforms');
+  assert.equal(await evaluate('document.querySelectorAll(".publish-draft-card").length'),2);
   await evaluate('document.getElementById("publishManageAccounts").click()');
   await evaluate('document.getElementById("socialUrl-youtube").value="https://studio.youtube.com/channel/UCother";document.getElementById("socialSaveSettings").click()');
-  await wait(()=>evaluate('document.getElementById("socialGoPublications").disabled===true'),
-    'Switching Google/YouTube profiles invalidates previous confirmation');
+  await wait(()=>evaluate('document.getElementById("socialGoPublications").disabled===false'),
+    'Changing an unconfirmed YouTube URL does not disable confirmed TikTok');
   await evaluate('window.fetch=window.__socialOriginalFetch');
   await evaluate('document.getElementById("tab-videos").click()');
-  assert.equal(await evaluate('document.getElementById("workspace-group-social-items").hidden'),true,
-    'Direct workspaces close the nested social menu');
-
+  assert.equal(await evaluate('document.getElementById("workspace-group-social-items").hidden'),true);
+  
   await evaluate('document.getElementById("tab-multieditor").click()');
   assert.equal(await evaluate('document.getElementById("panel-multieditor").hidden'),false);
   assert.equal(await evaluate('!!document.querySelector("#panel-multieditor #queueFolders")'),true,

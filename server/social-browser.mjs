@@ -119,4 +119,4 @@ export function confirmSocialBrowser(platform,{file=SOCIAL_BROWSER_FILE}={}){
   writeSocialBrowser(config,file);openings.delete(platform);
   return config;
 }
-export const socialBrowserReady=config=>!!config.browser&&Object.keys(SOCIAL_PLATFORMS).every(p=>config.confirmed[p]===true);
+export const socialBrowserReady=config=>!!config.browser&&Object.keys(SOCIAL_PLATFORMS).some(p=>config.confirmed[p]===true);

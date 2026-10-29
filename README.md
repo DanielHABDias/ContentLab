@@ -79,18 +79,29 @@ Ferramentas avaliadas: [yt-dlp](https://github.com/yt-dlp/yt-dlp), [gallery-dl](
 
 Remotion concentra a renderização visual; o FFmpeg continua responsável por áudio, cortes e composição final. O código de servidor utiliza exclusivamente Node.js.
 
-## Redes sociais — novo fluxo local (primeira etapa)
+## Redes sociais — preparação local de publicações (sem envio)
 
-As antigas integrações com **OAuth, Google Cloud, JSON de credenciais, tokens, envio automático e métricas via API** foram retiradas do aplicativo. A área **Publicações** foi reconstruída do zero e, nesta etapa, **não realiza uploads, agendamentos ou publicação automática**.
+O antigo fluxo OAuth/API, arquivos JSON de credenciais do Google, agendamento automático e métricas foi descontinuado. **Nenhum vídeo é publicado, agendado remotamente ou enviado às redes nesta etapa.**
 
-1. Abra **Redes sociais → Publicações**. Se ainda não tiver feito a configuração inicial, o Content Lab encaminha você para **Configurações → Redes sociais**.
-2. O aplicativo tenta identificar o navegador padrão do sistema e os navegadores instalados. Escolha o navegador: **Padrão do sistema**, ou um navegador detectado e disponível, como Chrome, Edge, Firefox ou Brave.
-3. Confira as três URLs propostas: **TikTok Studio** (`https://www.tiktok.com/tiktokstudio`), **Instagram** (`https://www.instagram.com/`) e **YouTube Studio** (`https://studio.youtube.com/`). Cada campo é editável: para múltiplos perfis Google, selecione o caminho/canal correto ou parâmetros de conta na URL do YouTube Studio; os demais serviços também podem utilizar caminhos para as contas desejadas. URLs são validadas para aceitar somente domínios HTTPS oficiais.
-4. Clique **Salvar navegador e URLs**. As preferências são gravadas no perfil do usuário, em `~/.contentlab/social-browser.json` (equivalente no diretório pessoal do Windows), sem senhas ou tokens.
-5. Para cada plataforma, clique **Abrir e verificar login**. O Content Lab abre o endereço no navegador escolhido. Confira você mesmo se a conta correta está conectada e volte para clicar em **Conferi: estou logado**. O aplicativo **não lê cookies nem verifica automaticamente a sessão**: o estado indica somente sua confirmação.
-6. Depois que os três logins forem confirmados, a aba **Publicações** é liberada. Por enquanto ela mostra o acesso rápido aos três sites e o link para alterar configurações; as ferramentas de postagem serão implementadas numa etapa futura.
+### Primeiro acesso e perfis
 
-Mudar navegador ou URL invalida as confirmações afetadas para evitar confusão de contas. Sem configurações locais, são apresentados os padrões. Nenhum arquivo de autenticação antigo é lido pelo novo fluxo; se você possui um `.env` antigo no computador, pode revisá-lo e removê-lo **manualmente** após confirmar que não contém outras configurações úteis. O Content Lab não apaga arquivos pessoais existentes automaticamente.
+1. Em **Redes sociais → Publicações**, se não houver nenhuma rede confirmada, o Content Lab encaminha para **Configurações → Redes sociais**.
+2. Escolha o navegador padrão/detectado e ajuste as URLs oficiais do TikTok Studio, Instagram e YouTube Studio (incluindo caminhos para outro perfil/canal). Clique **Salvar navegador e URLs**.
+3. Clique **Abrir e verificar login** para a rede desejada. Depois de conferir manualmente o login no navegador escolhido, clique **Conferi: estou logado**. **Basta confirmar uma rede** para liberar Publicações; as outras podem permanecer desligadas. As redes confirmadas aparecem coloridas no topo; as não confirmadas, cinzas.
+4. O navegador e as URLs são salvos em `~/.contentlab/social-browser.json`. O Content Lab não lê cookies nem verifica automaticamente a sessão — o estado representa a confirmação da pessoa. A troca de navegador ou de URL invalida apenas as confirmações afetadas.
+
+### Lista e criação de rascunhos
+
+A tela começa vazia, com um cartão de borda tracejada para adicionar o primeiro vídeo. **Adicionar vídeo** abre um modal com estas opções:
+
+- **Short / vídeo curto:** escolha MP4/WebM, título, descrição, tags, destinos e data/hora desejadas. Use uma thumbnail enviada do computador **ou** visualize o vídeo, percorra o tempo com um controle e clique **Usar este frame como capa**; o navegador captura o quadro em PNG localmente.
+- **Vídeo longo:** os mesmos campos gerais, mas **dois títulos diferentes e duas thumbnails** (versões A/B), sem captura automática de frame. O teste A/B é somente um preparo de materiais; não existe publicação nem teste A/B automático nesta etapa.
+- **Destinos (conforme o fluxo solicitado):** vídeos **longos** habilitam TikTok e Instagram; vídeos **curtos** habilitam YouTube, TikTok e Instagram. Em ambos os casos, só redes previamente confirmadas são selecionáveis. Trata-se de uma regra de preparação no Content Lab, **não de uma garantia de que a plataforma aceitará o formato quando a integração futura for implementada**.
+- **Planejamento:** a data/hora escolhida é guardada no rascunho, mas nenhum agendamento remoto é criado. A lista oferece visualização de vídeo e exclusão do item.
+
+Cada entrada mostra a miniatura, formato, título(s), tags, redes escolhidas e planejamento. Os arquivos locais são copiados para `~/.contentlab/publication-drafts/<id>/` e os metadados são guardados em `~/.contentlab/publication-drafts/drafts.json`; a lista persiste entre reinícios. **Atenção ao espaço em disco**: o aplicativo armazena uma cópia do vídeo e das thumbnails. O botão Excluir remove essas cópias após confirmação. Nenhuma credencial nem senha é armazenada junto aos rascunhos.
+
+O Content Lab não remove automaticamente eventuais arquivos `.env` antigos do computador, pois podem conter configurações úteis de outras partes do aplicativo.
 
 ## Multi-editor automático: fila sequencial
 

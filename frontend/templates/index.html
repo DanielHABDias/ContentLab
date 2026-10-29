@@ -493,21 +493,95 @@
       <div class="workspace-intro"><span class="eyebrow">REDES SOCIAIS / PUBLICAÇÃO</span><h2>Publicações.<br><span class="heading-muted">Prepare suas contas primeiro.</span></h2>
       <p>O Content Lab abre as plataformas no seu navegador. Nenhum vídeo é enviado automaticamente nesta etapa.</p></div>
       <section id="publishSetupGate" class="block social-setup-gate" aria-label="Configuração inicial das redes sociais">
-        <span class="eyebrow">PRIMEIRO ACESSO</span><h3>Configure o navegador e confira seus logins.</h3>
-        <p>Escolha o navegador em Configurações, ajuste as URLs para seus perfis e abra TikTok Studio, Instagram e YouTube Studio. Depois confirme os acessos.</p>
+        <span class="eyebrow">PRIMEIRO ACESSO</span><h3>Configure o navegador e confirme sua primeira rede.</h3>
+        <p>Escolha seu navegador, personalize as URLs e confira o login na rede que quiser usar. Uma única rede confirmada já libera esta área.</p>
         <button id="publishGoSettings" class="btn btn-primary" type="button">Ir para Configurações de redes sociais</button>
       </section>
-      <section id="publishReady" class="block social-ready" hidden>
-        <span class="eyebrow">CONFIGURAÇÃO CONCLUÍDA</span><h3>Suas três plataformas estão preparadas.</h3>
-        <p>Os links estão salvos e você confirmou o login no navegador selecionado. Esta é somente a primeira etapa da nova aba; nenhuma publicação ou agendamento está habilitado.</p>
-        <div class="social-ready-actions">
-          <button class="btn btn-secondary" id="publishOpen-tiktok" type="button">Abrir TikTok Studio</button>
-          <button class="btn btn-secondary" id="publishOpen-instagram" type="button">Abrir Instagram</button>
-          <button class="btn btn-secondary" id="publishOpen-youtube" type="button">Abrir YouTube Studio</button>
-          <button class="btn btn-ghost" id="publishManageAccounts" type="button">Alterar configurações</button>
+      <section id="publishReady" class="publish-board" aria-label="Preparar lista de publicações" hidden>
+        <header class="publish-board-head">
+          <div><span class="eyebrow">ESTÚDIO DE PUBLICAÇÕES</span><h3>Seu próximo conteúdo começa aqui<span class="publish-accent">.</span></h3>
+          <p>Monte sua fila criativa e deixe tudo pronto. Nada será publicado ou agendado nas redes nesta etapa.</p></div>
+          <button id="publishManageAccounts" class="publish-manage" type="button" title="Gerenciar perfis e URLs">⚙ Gerenciar redes</button>
+        </header>
+        <div class="publish-connected-bar" aria-label="Redes sociais confirmadas">
+          <div class="publish-network" id="publishNetwork-youtube" data-platform="youtube"><span class="publish-network-icon">▶</span><div><strong>YouTube</strong><small id="publishNetworkStatus-youtube">Não confirmado</small></div></div>
+          <div class="publish-network" id="publishNetwork-tiktok" data-platform="tiktok"><span class="publish-network-icon">♪</span><div><strong>TikTok</strong><small id="publishNetworkStatus-tiktok">Não confirmado</small></div></div>
+          <div class="publish-network" id="publishNetwork-instagram" data-platform="instagram"><span class="publish-network-icon">◎</span><div><strong>Instagram</strong><small id="publishNetworkStatus-instagram">Não confirmado</small></div></div>
         </div>
+        <section class="publish-queue-head">
+          <div><span class="eyebrow">MINHA LISTA</span><h3>Publicações preparadas <span id="publishDraftCount" class="publish-queue-count">0</span></h3>
+          <p>Adicione vídeos longos ou Shorts, personalize textos, capas e destinos.</p></div>
+          <button id="publishAddVideo" class="btn btn-primary publish-main-cta" type="button">＋ Adicionar vídeo</button>
+        </section>
+        <div id="publishDraftList" class="publish-draft-list" aria-live="polite"></div>
+        <button id="publishEmptyCard" class="publish-empty-card" type="button">
+          <span class="publish-empty-thumb"><span class="publish-empty-play">▶</span><span class="publish-empty-film">🎞</span></span>
+          <span class="publish-empty-copy"><strong>Seu primeiro vídeo entra aqui</strong><span>Selecione um arquivo, configure o título e a descrição e crie o primeiro item da lista.</span><em>＋ Adicionar primeiro vídeo</em></span>
+        </button>
+        <div class="publish-local-hint"><span>✦</span> Lista e arquivos salvos somente neste computador. Publicação nas redes: próxima etapa.</div>
         <p id="publishStatus" class="helper-text" role="status" aria-live="polite"></p>
       </section>
+
+      <dialog id="publishComposerDialog" class="publish-dialog" aria-labelledby="publishComposerTitle">
+        <form id="publishComposerForm" class="publish-composer">
+          <header class="publish-composer-header">
+            <div><span class="eyebrow">NOVO CONTEÚDO</span><h3 id="publishComposerTitle">Preparar publicação</h3><p>Escolha a mídia e prepare tudo antes de enviar para as redes.</p></div>
+            <button type="button" class="publish-close" id="publishComposerClose" aria-label="Fechar">×</button>
+          </header>
+          <div class="publish-composer-body">
+            <section class="publish-composer-section">
+              <span class="eyebrow">01 / ARQUIVO</span><h4>Qual vídeo vamos preparar?</h4>
+              <div class="publish-kind-switch" role="radiogroup" aria-label="Formato do vídeo">
+                <label class="publish-kind-choice"><input type="radio" name="kind" value="short" checked><span>▣ <strong>Short / vídeo curto</strong><small>Uma capa e um título</small></span></label>
+                <label class="publish-kind-choice"><input type="radio" name="kind" value="long"><span>▰ <strong>Vídeo longo</strong><small>Duas capas e títulos A/B</small></span></label>
+              </div>
+              <label class="publish-upload-drop" for="publishVideoFile"><span class="publish-upload-icon">↥</span><strong id="publishFileCaption">Selecionar vídeo do computador</strong><small>MP4 ou WebM · arquivo local</small>
+                <input id="publishVideoFile" name="video" type="file" accept=".mp4,.webm,.mov,.m4v,video/mp4,video/webm" required>
+              </label>
+              <p id="publishVideoMeta" class="publish-file-meta"></p>
+            </section>
+            <section class="publish-composer-section">
+              <span class="eyebrow">02 / IDENTIDADE</span><h4>Título e detalhes</h4>
+              <div class="publish-form-grid">
+                <label class="publish-form-field" for="publishTitleA"><span id="publishTitleALabel">Título do vídeo</span><input id="publishTitleA" name="titleA" type="text" maxlength="150" required placeholder="Um título que chama atenção"></label>
+                <label class="publish-form-field" id="publishTitleBWrap" for="publishTitleB" hidden><span>Título B · teste A/B</span><input id="publishTitleB" name="titleB" type="text" maxlength="150" placeholder="Uma segunda ideia de título"></label>
+              </div>
+              <label class="publish-form-field" for="publishDescription"><span>Descrição</span><textarea id="publishDescription" name="description" rows="3" maxlength="5000" placeholder="Conte a história, inclua links e convide para assistir..."></textarea></label>
+              <label class="publish-form-field" for="publishTags"><span>Tags</span><input id="publishTags" name="tags" type="text" placeholder="entretenimento, cultura pop, curiosidades"><small>Separe por vírgulas. Adicionaremos as hashtags à visualização.</small></label>
+            </section>
+            <section class="publish-composer-section">
+              <span class="eyebrow">03 / VISUAL</span><h4 id="publishCoverHeading">Sua thumbnail</h4>
+              <div id="publishLongCovers" class="publish-cover-grid" hidden>
+                <label class="publish-cover-upload" for="publishCoverA"><span>OPÇÃO A</span><strong>Escolher primeira thumbnail</strong><img id="publishLongPreviewA" alt="Prévia da thumbnail A" hidden><small>PNG, JPG ou WebP</small><input id="publishCoverA" type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"></label>
+                <label class="publish-cover-upload" for="publishCoverB"><span>OPÇÃO B</span><strong>Escolher segunda thumbnail</strong><img id="publishLongPreviewB" alt="Prévia da thumbnail B" hidden><small>PNG, JPG ou WebP</small><input id="publishCoverB" type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"></label>
+              </div>
+              <div id="publishShortCover" class="publish-short-cover">
+                <label class="publish-form-field" for="publishShortCoverFile"><span>Enviar uma imagem (opcional)</span><input id="publishShortCoverFile" type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"></label>
+                <div class="publish-frame-extractor">
+                  <div class="publish-frame-preview"><video id="publishFrameVideo" muted playsinline preload="metadata"></video><img id="publishFrameImage" alt="Thumbnail do frame escolhido" hidden><div id="publishFramePlaceholder">Selecione um vídeo para escolher um frame</div></div>
+                  <div class="publish-frame-controls"><label for="publishFrameSeek">Escolha o momento da capa <strong id="publishFrameTime">00:00</strong></label><input type="range" id="publishFrameSeek" min="0" max="0" step=".1" value="0" disabled><button id="publishCaptureFrame" class="btn btn-secondary btn-sm" type="button" disabled>▣ Usar este frame como capa</button></div>
+                </div>
+                <p id="publishCoverFeedback" class="helper-text">Sem imagem pronta? Arraste a barra até o frame desejado e clique para capturar.</p>
+              </div>
+            </section>
+            <section class="publish-composer-section">
+              <span class="eyebrow">04 / DESTINO E PLANEJAMENTO</span><h4>Onde e quando?</h4>
+              <div class="publish-destination-options" id="publishDestinations">
+                <label class="publish-destination" data-platform="youtube"><input type="checkbox" name="platform" value="youtube"><span>▶ YouTube</span></label>
+                <label class="publish-destination" data-platform="tiktok"><input type="checkbox" name="platform" value="tiktok"><span>♪ TikTok</span></label>
+                <label class="publish-destination" data-platform="instagram"><input type="checkbox" name="platform" value="instagram"><span>◎ Instagram</span></label>
+              </div>
+              <p id="publishDestinationHint" class="helper-text">Somente redes com login confirmado são selecionáveis.</p>
+              <label class="publish-form-field publish-date-field" for="publishScheduleAt"><span>Data e horário desejados (opcional)</span><input id="publishScheduleAt" name="scheduledAt" type="datetime-local"><small>Planejamento local, sem disparo automático por enquanto.</small></label>
+            </section>
+          </div>
+          <footer class="publish-composer-footer">
+            <p id="publishComposerFeedback" role="status" aria-live="polite"></p>
+            <button id="publishComposerCancel" class="btn btn-secondary" type="button">Cancelar</button>
+            <button id="publishComposerSave" class="btn btn-primary" type="submit">＋ Adicionar à lista</button>
+          </footer>
+        </form>
+      </dialog>
     </div>
 
     <div id="panel-thumbnails" class="workspace-panel hidden" role="tabpanel" aria-labelledby="tab-thumbnails" hidden>
@@ -716,7 +790,7 @@
       </section>
       <section class="block social-setup-card social-checklist">
         <span class="eyebrow">03 / CONFIRMAÇÃO</span><h3>Preparação para publicar</h3>
-        <p id="socialSetupSummary">Confirme o login nas três plataformas para liberar a aba Publicações.</p>
+        <p id="socialSetupSummary">Confirme o login em pelo menos uma plataforma para liberar Publicações.</p>
         <button id="socialGoPublications" class="btn btn-primary" type="button" disabled>Continuar para Publicações</button>
       </section>
     </div>

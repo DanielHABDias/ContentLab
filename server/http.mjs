@@ -23,6 +23,7 @@ import {sceneLibrary,libraryFile,installScenePreset} from './scene-library.mjs';
 import {diagramNames,diagramSvg} from './docs-diagrams.mjs';
 import {sceneCacheOverview,savedSceneFile} from './scene-browser.mjs';
 import {mountSocialBrowserRoutes} from './social-browser-routes.mjs';
+import {mountSocialDraftRoutes} from './social-draft-routes.mjs';
 import {mountMediaLibraryRoutes} from './media-routes.mjs';
 import {thumbnailBackground} from './thumbnail-background.mjs';
 import {mountWorkspaceRoutes,projectAssetDirectory} from './workspace-project.mjs';
@@ -508,6 +509,7 @@ app.get('/api/transcription/jobs/:id',api(async(req,res)=>{
 const voiceCreation=mountVoiceCreationRoutes(app,api,{isProjectBusy:root=>activeRender(root)||!!runningTranscription(root)});
 mountWorkspaceRoutes(app,api,{isBusy:root=>activeRender(root)||!!runningTranscription(root)||voiceCreation.isProjectBusy(root)});
 mountSocialBrowserRoutes(app,api);
+mountSocialDraftRoutes(app,api);
 mountMediaLibraryRoutes(app,api);
 const runningIdentity=instanceIdentity();
 app.get('/health',api(async(req,res)=>res.json({
