@@ -420,7 +420,7 @@
       if(!ready||changed())throw Error('Confirme uma rede em Configurações.');
       const video=$('publishVideoFile').files[0],long=kind()==='long';
       if(!video&&!editingId)throw Error('Selecione um vídeo do computador.');
-      if(!/\.(mp4|webm|mov|m4v)$/i.test(video.name))throw Error('Use vídeo MP4 ou WebM.');
+      if(video&&!/\.(mp4|webm|mov|m4v)$/i.test(video.name))throw Error('Use vídeo MP4 ou WebM.');
       const coverA=long?$('publishCoverA').files[0]:$('publishShortCoverFile').files[0]||
         (captured?new File([captured],'frame.png',{type:'image/png'}):null);
       const coverB=long?$('publishCoverB').files[0]:null;
