@@ -94,9 +94,10 @@ export async function openSocialStudioWindow({config,platforms,profile=SOCIAL_ST
     throw Error('Para enviar vídeos, selecione Chrome, Edge ou Brave em Configurações.');
   fs.mkdirSync(profile,{recursive:true,mode:0o700});
   if(fs.lstatSync(profile).isSymbolicLink())throw Error('Perfil do navegador inseguro.');
-  let n=previousPort(profile),control=null;
+  let n=previousPort(profile),control=null,fresh=false;
   if(n)try{control=await connectBrowser(n,4);}catch{control=null;}
   if(!control){
+    fresh=true;
     n=await port();
     const args=[...cmd.args,'--remote-debugging-port='+n,'--remote-debugging-address=127.0.0.1',
       '--remote-allow-origins=http://127.0.0.1:'+n,'--user-data-dir='+profile,'--no-first-run'];
@@ -107,11 +108,25 @@ export async function openSocialStudioWindow({config,platforms,profile=SOCIAL_ST
   }
   const targets=new Map(),clients=new Map();
   try{
+    // O Chrome já abriu a primeira página ao iniciar: reutilizá-la evita
+    // uma aba duplicada da primeira rede na janela visível.
+    let first=null;
+    if(fresh){
+      const response=await control.send('Target.getTargets');
+      const pages=(response.targetInfos||[]).filter(t=>t.type==='page');
+      first=pages.find(t=>{try{return new URL(t.url).hostname===new URL(urls[ordered[0]]).hostname;}catch{return false;}})
+        ||pages.find(t=>!t.url?.startsWith('devtools:'))||null;
+    }
     for(const platform of ordered){
-      const target=await control.send('Target.createTarget',{url:urls[platform],newWindow:false});
-      if(!target.targetId)throw Error('Não foi possível abrir a aba '+platform);
-      targets.set(platform,target.targetId);
-      clients.set(platform,await connectTab(n,target.targetId));
+      const selected=platform===ordered[0]&&first?.targetId?
+        {targetId:first.targetId}:
+        await control.send('Target.createTarget',{url:urls[platform],newWindow:false});
+      if(!selected.targetId)throw Error('Não foi possível abrir a aba '+platform);
+      targets.set(platform,selected.targetId);
+      clients.set(platform,await connectTab(n,selected.targetId));
+      if(platform===ordered[0]&&first?.targetId){
+        await clients.get(platform).send('Page.navigate',{url:urls[platform]});
+      }
     }
   }catch(error){for(const c of clients.values())c.close();control.close();throw error;}
   return {
