@@ -6,7 +6,7 @@ import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {run} from './exec.mjs';
 import {ffmpegFilterAvailable} from './runtime-tools.mjs';
-import {detectedSilences,keepRanges,prepareStandaloneNarration,voiceStudioState,voiceOptions,VOICE_PRESETS} from './voice-studio.mjs';
+import {detectedSilences,keepRanges,officialNarrationSource,prepareStandaloneNarration,voiceStudioState,voiceOptions,VOICE_PRESETS} from './voice-studio.mjs';
 import {transcriptStatus,renderVoiceSettings} from './narration-pipeline.mjs';
 import {probeAudioDuration} from './audio.mjs';
 
@@ -28,6 +28,15 @@ const createVoice=async(root)=>{
     '-map','[a]',source]);
   return source;
 };
+test('official treatment defaults to the current project narration.wav',t=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'contentlab-official-narration-'));
+  t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
+  fs.mkdirSync(path.join(root,'audio'));
+  assert.throws(()=>officialNarrationSource(root),/audio\/narration\.wav/);
+  const narration=path.join(root,'audio','narration.wav');fs.writeFileSync(narration,'current-master');
+  fs.writeFileSync(path.join(root,'audio','narration.original.wav'),'older-source');
+  assert.equal(officialNarrationSource(root),narration);
+});
 const transcriber=async(audio,dest,{detail}={})=>{
   const dur=await probeAudioDuration(audio);
   const doc={language:'pt',segments:[{start:0,end:dur,text:'Exemplo de voz'}],

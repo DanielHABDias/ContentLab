@@ -31,7 +31,10 @@ export async function inspectWorkspace(folder,{reload=false}={}){
   }
   for(const category of ['assets','audio','thumbnails'])visit(path.join(root,category));
   const list=reload?await rescanTakes(root):takeList(root);
-  return {projectRoot:root,name:path.basename(root),hasEditPlan:regular(path.join(root,'edit_plan.json')),hasTranscript:regular(path.join(root,'transcript.json')),assets,takeCount:list.takes.length,truncated:assets.length>=2000};
+  return {projectRoot:root,name:path.basename(root),hasEditPlan:regular(path.join(root,'edit_plan.json')),
+    hasTranscript:regular(path.join(root,'transcript.json')),
+    hasNarration:regular(path.join(root,'audio','narration.wav')),
+    assets,takeCount:list.takes.length,truncated:assets.length>=2000};
 }
 const revision=bytes=>crypto.createHash('sha256').update(bytes).digest('hex');
 export function readThumbnailProject(folder){

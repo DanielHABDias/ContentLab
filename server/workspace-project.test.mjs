@@ -11,7 +11,9 @@ import {run} from './exec.mjs';
 const draft=name=>Buffer.from(JSON.stringify({version:1,name,base:{center:{},title:{}},background:{},media:{},variants:[]}));
 test('universal project accepts empty folders and safely groups assets without an edit plan',async t=>{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'workspace-empty-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
-  let info=await inspectWorkspace(root);assert.equal(info.hasEditPlan,false);assert.equal(info.takeCount,0);
+  let info=await inspectWorkspace(root);assert.equal(info.hasEditPlan,false);assert.equal(info.takeCount,0);assert.equal(info.hasNarration,false);
+  fs.mkdirSync(path.join(root,'audio'),{recursive:true});fs.writeFileSync(path.join(root,'audio','narration.wav'),'fixture');
+  info=await inspectWorkspace(root);assert.equal(info.hasNarration,true);
   const folder=projectAssetDirectory(root,'Batman: A Piada Mórtal','video');
   assert.equal(folder,path.join(root,'assets','batman-a-piada-mortal','clips'));
   fs.writeFileSync(path.join(folder,'cena.mp4'),'fixture');

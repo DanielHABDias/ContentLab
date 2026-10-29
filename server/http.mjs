@@ -460,9 +460,9 @@ app.post('/api/transcription/jobs',upload.single('file'),api(async(req,res)=>{
   if(req.file&&!['.wav','.mp3','.m4a','.aac','.flac','.ogg','.opus'].includes(ext)){
     fs.rmSync(req.file.path,{force:true});return forbidden(res,'Formato de áudio inválido.');
   }
-  const state=voiceStudioState(root);
-  if(!req.file&&!state.ready)return forbidden(res,'Selecione o áudio ou prepare primeiro uma narração.');
-  const sourceFile=req.file?req.file.path+ext:path.join(root,state.source);
+  let sourceFile;
+  try{sourceFile=req.file?req.file.path+ext:officialNarrationSource(root);}
+  catch(error){return forbidden(res,error.message);}
   if(req.file)fs.renameSync(req.file.path,sourceFile);
   const id=crypto.randomUUID();
   const job={id,status:'running',message:'Preparando narração...',projectRoot:root,result:null,error:null};

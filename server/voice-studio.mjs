@@ -27,6 +27,16 @@ export function voiceStudioFolder(folder){
   }
   return root;
 }
+export function officialNarrationSource(folder,{required=true}={}){
+  const root=voiceStudioFolder(folder),file=path.join(root,NARRATION_OUTPUT);
+  if(!fs.existsSync(file)){
+    if(required)throw Error('A narração padrão audio/narration.wav não foi encontrada neste projeto.');
+    return null;
+  }
+  const stat=fs.lstatSync(file);
+  if(stat.isSymbolicLink()||!stat.isFile())throw Error('A narração padrão audio/narration.wav é inválida.');
+  return file;
+}
 // Profiles are intentionally gentler than the previous pitch-only filter.
 // CapCut does not disclose Super Deep's processing parameters: none of these
 // presets should be described as an exact reproduction of that proprietary effect.

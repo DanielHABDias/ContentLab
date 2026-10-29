@@ -1003,7 +1003,15 @@ function updateTranscriptionScope(){
   const avulso=$('transcriptionScope').value==='standalone';
   for(const node of document.querySelectorAll('#panel-transcription .voice-treatment-step, #voiceEnhancementSettings, #panel-transcription .voice-studio-options'))node.classList.toggle('hidden',avulso);
   $('transcriptionStart').textContent=avulso?'Transcrever arquivo avulso':'Tratar e transcrever narração oficial';
-  $('transcriptionFile').parentElement.querySelector('.helper-text').textContent=avulso?'Obrigatório: áudio do computador. Não substitui arquivos do projeto.':'Selecione outro áudio ou deixe vazio para tratar a narração atual do projeto.';
+  $('transcriptionFileLabel').textContent=avulso?'01 / Áudio para transcrever':'01 / Áudio para tratar';
+  $('transcriptionDefaultSource').hidden=avulso;
+  $('transcriptionFile').parentElement.querySelectorAll('.helper-text')[1].textContent=avulso?'Obrigatório: áudio do computador. Não substitui arquivos do projeto.':'Opcional: selecione outro áudio para substituir audio/narration.wav somente neste tratamento.';
+  updateTranscriptionDefaultSource(window.ContentLabProject?.snapshot);
+}
+function updateTranscriptionDefaultSource(project){
+  const status=$('transcriptionDefaultSourceStatus');if(!status)return;
+  const root=project?.projectRoot||$('transcriptionProjectRoot').value.trim();
+  status.textContent=project?.hasNarration?' · encontrado no projeto':root?' · ainda não encontrado no projeto':' · selecione um projeto';
 }
 $('transcriptionScope').addEventListener('change',updateTranscriptionScope);updateTranscriptionScope();
 // Preferências locais: sem dados salvos, prevalecem os padrões do formulário.
