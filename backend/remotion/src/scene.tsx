@@ -1,6 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, cancelRender, continueRender, delayRender, Img, Sequence, staticFile, useCurrentFrame, useVideoConfig, interpolateColors} from 'remotion';
 import {clamp01, ease, progress, smootherstep, idleEnvelope, intervalSeconds} from './motion.mjs';
+import {elementDimensions, mediaDefaultsToFullFrame} from './layout.mjs';
 import {Video} from '@remotion/media';
 import {loadFont} from '@remotion/fonts';
 import type {Element, Keyframe, SceneProps, Word} from './types';
@@ -225,8 +226,12 @@ const Layer = ({item, props, time, absolute, camera}: {item: Element; props: Sce
   if (motion.idle === 'pan') state.x += 0.015 * smootherstep(elapsed / Math.max(total, 0.01));
   const box = item.data.box && typeof item.data.box === 'object' ? item.data.box : {};
   const card = box.preset === 'floating_card' || box.background;
-  const elementWidth = item.type === 'filter' || isWordStack ? width : item.data.cells ? rw : width * 0.8;
-  const elementHeight = item.type === 'filter' ? height : item.data.cells ? rh : height * 0.8;
+  const dimensions = elementDimensions({
+    type: item.type, cells: item.data.cells, regionWidth: rw, regionHeight: rh,
+    frameWidth: width, frameHeight: height, isWordStack,
+  });
+  const elementWidth = dimensions.width;
+  const elementHeight = dimensions.height;
   // Pixel nudges apply after 3x3 cell placement and camera projection.
   // Positive X moves right and positive Y moves down.
   const x = (state.x - camera.x) * width * 2 * camera.scale + width / 2 + state.offsetX;
@@ -274,7 +279,8 @@ const Layer = ({item, props, time, absolute, camera}: {item: Element; props: Sce
   }
   if (item.src) {
     const isVideo = item.type === 'video' || (item.type === 'overlay' && /\.(mp4|mov|mkv|webm)$/i.test(item.src));
-    return <div style={common}><Media src={item.src} isVideo={isVideo} loop={item.data.loop} objectFit={fit(item.data.fit)} style={{width: '100%', height: '100%'}}/></div>;
+    const mediaFit = item.data.fit ?? (mediaDefaultsToFullFrame(item.type, item.data.cells) ? 'cover' : undefined);
+    return <div style={common}><Media src={item.src} isVideo={isVideo} loop={item.data.loop} objectFit={fit(mediaFit)} style={{width: '100%', height: '100%'}}/></div>;
   }
   if (item.type === 'kinetic_text' && item.data.style === 'word_stream_horizontal') {
     const candidates: Word[] = item.data.phraseWords ?? props.words.filter((word) => word.end > item.start && word.start < item.end);

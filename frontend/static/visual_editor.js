@@ -466,7 +466,7 @@
         const element={id:'camada-'+Date.now().toString(36),type,
           start:scene.start,end:scene.end};
         if(['image','video','overlay','sfx'].includes(type))element.asset='';
-        if(type==='image')element.cells=[2,5,8];
+        if(['image','video'].includes(type))element.fit='cover';
         if(type==='text')element.text='Novo texto';
         if(type==='sfx'){delete element.start;delete element.end;element.at=scene.start;}
         scene.elements=scene.elements||[];scene.elements.push(element);changed();

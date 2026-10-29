@@ -6,6 +6,19 @@ description: Faz controle de qualidade visual e sonoro em planos e renders do Co
 
 # Content Lab — Revisão e qualidade
 
+## Passes especializados obrigatórios
+
+Esta skill consolida o QA, mas quatro revisões possuem escopo próprio e precisam produzir relatórios separados:
+
+1. `contentlab-revisor-json-tecnico`: schema, relógios, assets, regiões, defaults do renderer, TSX e cache;
+2. `contentlab-revisor-abertura`: abertura de longos, antes de montar o restante e novamente no render final quando ela mudar;
+3. `contentlab-revisor-visual-movimento`: correspondência visual, enquadramento, fluidez, continuidade e timing;
+4. `contentlab-revisor-audio-sincronizacao`: voz, música, SFX, onset e centro perceptivo dos gestos.
+
+Execute primeiro o passe técnico e depois os três passes perceptivos antes de declarar o plano pronto para render. Para Shorts, a abertura fica `N/A`; os demais continuam obrigatórios. Se uma única IA executar todos, mantenha escopos e relatórios separados e registre que foram passes especializados do mesmo agente — não os chame de revisores independentes.
+
+Consolide os estados assim: qualquer `CORRIGIR` reprova; qualquer `NÃO VERIFICADO` impede aprovação final; somente os quatro passes aplicáveis em `CONFORME` permitem `APROVADO PRÉ-RENDER`. Após o render, repita visual/movimento e áudio/sincronização; repita abertura se ela mudou ou não foi efetivamente assistida, e o técnico se o plano ou renderer mudou.
+
 ## Meta
 Medir se o vídeo informa, se move com naturalidade e respeita a narrativa. **Mais efeitos não significa melhor edição.**
 

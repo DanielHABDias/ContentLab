@@ -325,6 +325,8 @@ Editor automático: abrir/criar projeto depois do preparo da voz, conferir asset
 
 Na seção Sua linha do tempo, + Nova cena cria uma cena editável; + Adicionar camada inclui imagem, vídeo, texto, legenda, overlay ou efeito sonoro; e Propriedades avançadas contém background, grid/cells, câmera, animações, transformações e keyframes. Não há um formulário paralelo limitado a esquerda/direita: toda a composição usa o mesmo editor visual e um único edit_plan.json.
 
+Imagem ou vídeo sem cells é full-frame e usa cover por padrão. Para mídia menor, painel ou coluna, declare cells explicitamente; fit sozinho não transforma uma região menor em tela inteira.
+
 Documentação: referência pesquisável de campos e exemplos, disponível no próprio site e como arquivo Markdown ou HTML. A skill ZIP inclui os documentos e diagramas.
 
 ![Estrutura do edit_plan.json](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/docs/figures/structure.svg)
@@ -986,8 +988,8 @@ Obrigatório significa exigido dentro do objeto pai. Um bloco opcional pode ter 
 | `timeline[].elements[].start` | number | Não | mín. 0 | `0` | Início absoluto da camada; usa o início da cena se ausente. |
 | `timeline[].elements[].end` | number | Não | maior que 0 | `1` | Fim absoluto da camada; usa o fim da cena se ausente. |
 | `timeline[].elements[].at` | number | Não | mín. 0 | `1.25` | Disparo absoluto do SFX, marcado pelo início audível depois do trim. |
-| `timeline[].elements[].cells` | array | Não | mín. itens 1; sem duplicatas | `[2,5,8]` | Células únicas de 1 a 9 que delimitam a região ocupada. |
-| `timeline[].elements[].fit` | enum | Não | opções: cover, contain, stretch, smart_cover | `"contain"` | contain preserva, cover recorta, stretch deforma, smart_cover se comporta como cover atualmente. |
+| `timeline[].elements[].cells` | array | Não | mín. itens 1; sem duplicatas | `[2,5,8]` | Células únicas de 1 a 9 que delimitam a região ocupada. Imagem ou vídeo sem cells ocupa a tela inteira. |
+| `timeline[].elements[].fit` | enum | Não | opções: cover, contain, stretch, smart_cover | `"contain"` | contain preserva, cover recorta, stretch deforma, smart_cover se comporta como cover atualmente. Imagem ou vídeo sem cells usa cover por padrão. |
 | `timeline[].elements[].box` | texto ou objeto | Não | — | `{}` | Caixa decorativa: string de preset ou objeto de configurações. |
 | `timeline[].elements[].box.preset` | string | Não | — | `"exemplo"` | Nome opcional do preset da caixa. |
 | `timeline[].elements[].box.padding` | number | Não | mín. 0 | `0` | Preenchimento interno da caixa. |

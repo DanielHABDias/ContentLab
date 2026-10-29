@@ -53,6 +53,10 @@ Preparar pela documentação (inclui todos os arquivos auxiliares) ou copiar o T
 - skills/contentlab-timeline-audio/SKILL.md: voz, transcrição, SFX e música.
 - skills/contentlab-contrato/SKILL.md: JSON, assets e cache.
 - skills/contentlab-revisao/SKILL.md: inspeção audiovisual.
+- skills/contentlab-revisor-json-tecnico/SKILL.md: contrato do JSON, assets, regiões, defaults do renderer e cache.
+- skills/contentlab-revisor-abertura/SKILL.md: gate exclusivo dos primeiros 30 segundos de vídeos longos e checkpoints de alta complexidade.
+- skills/contentlab-revisor-visual-movimento/SKILL.md: enquadramento, fluidez, continuidade e sincronismo visual.
+- skills/contentlab-revisor-audio-sincronizacao/SKILL.md: voz, música, SFX e timing perceptivo.
 
 ## Transições e áudio
 
@@ -61,3 +65,5 @@ Flip, Curtain e Blur são transitionOut entre cenas reais, não cenas intermedi�
 ## Qualidade
 
 Validar JSON, caminhos, props e duração. Conferir frames de entrada/desenvolvimento/saída, ouvir voz/SFX e testar cache. Não declarar homologação estética com TypeScript/schema apenas. Antes de inspecionar o render, classificar como pré-render. Não publicar, alterar Drive nem fazer Git sem autorização.
+
+Antes de entregar `edit_plan.json` como pronto para render, executar primeiro o revisor técnico do JSON e depois os três passes perceptivos, consolidando tudo em `contentlab-revisao`. Vídeos longos exigem técnico, abertura, visual/movimento e áudio/sincronização; Shorts exigem técnico, visual/movimento e áudio/sincronização, com abertura `N/A`. Um estado `CORRIGIR` bloqueia a entrega; `NÃO VERIFICADO` permite apenas rascunho explicitamente pendente. Depois do MP4, repetir os passes aplicáveis sobre pixels e áudio reais.
