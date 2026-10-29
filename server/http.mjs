@@ -13,6 +13,7 @@ import {instanceIdentity} from './instance-identity.mjs';
 import {SOURCE_CACHE,listSources,cachedSource,importLocalSource,removeSource,getSourceInfo,resolveSource,exportCut} from './source.mjs';
 import {transcribeAudio} from './transcribe.mjs';
 import {voiceStudioFolder,voiceStudioState,prepareStandaloneNarration} from './voice-studio.mjs';
+import {readAudioTreatmentSettings,writeAudioTreatmentSettings} from './audio-treatment-settings.mjs';
 import {mountVoiceCreationRoutes} from './voice-creation-routes.mjs';
 import {sendNarrationAudio} from './audio-waveform.mjs';
 import {prepareAndTranscribeProject,narrationStamp,transcriptStatus} from './narration-pipeline.mjs';
@@ -430,6 +431,9 @@ app.get('/api/progress/:id',api(async(req,res)=>{
   if(!job)return res.status(404).json({error:'Processamento não encontrado.'});
   res.json(job);
 }));
+app.get('/api/audio-treatment/preferences',api(async(req,res)=>{
+  res.json({controls:readAudioTreatmentSettings()});
+}));
 app.get('/api/transcription/state',api(async(req,res)=>{
   res.json(voiceStudioState(String(req.query.projectRoot||'')));
 }));
@@ -477,7 +481,11 @@ app.post('/api/transcription/jobs',upload.single('file'),api(async(req,res)=>{
       ...(req.body.voicePreset?{voicePreset:String(req.body.voicePreset)}:
         {pitchSemitones:Number(req.body.pitchSemitones||0)})
     },update:message=>{job.message=message;}
-  }).then(result=>Object.assign(job,{status:'done',message:'Narração e transcrição prontas.',result}))
+  }).then(result=>{
+    // Gravar preferências somente depois que o processamento oficial terminar com sucesso.
+    try{if(req.body.audioTreatmentSettings)writeAudioTreatmentSettings(req.body.audioTreatmentSettings);}catch(error){console.warn('Não foi possível salvar as preferências locais do tratamento:',error.message);}
+    Object.assign(job,{status:'done',message:'Narração e transcrição prontas.',result});
+  })
     .catch(e=>Object.assign(job,{status:'error',message:'Falha no preparo da narração.',error:e.message}))
     .finally(()=>{if(req.file)fs.rmSync(sourceFile,{force:true});});
 }));

@@ -1009,32 +1009,39 @@ $('transcriptionScope').addEventListener('change',updateTranscriptionScope);upda
 // Preferências locais: sem dados salvos, prevalecem os padrões do formulário.
 const audioTreatmentStorageKey='contentlab.audio-treatment.settings.v1';
 const audioTreatmentIds=['voiceTreatmentRecipe','transcriptionTrimEdges','transcriptionRemoveMiddle','transcriptionMinSilence','transcriptionThreshold','transcriptionNormalize','transcriptionTargetLufs','transcriptionHighpass','transcriptionCompression','transcriptionDeesser','transcriptionVoicePreset','transcriptionReduceBreaths','transcriptionBreathStrength','voiceEnhancementEngine','voiceEnhancementMode','voiceEnhancementStrength'];
-function restoreAudioTreatmentSettings(){
-  try{
-    const raw=window.localStorage?.getItem(audioTreatmentStorageKey);
-    if(!raw)return;
-    const stored=JSON.parse(raw);
-    if(stored?.version!==1||!stored.controls||typeof stored.controls!=='object')return;
-    for(const id of audioTreatmentIds){
-      const node=$(id),value=stored.controls[id];
-      if(node.type==='checkbox'){if(typeof value==='boolean')node.checked=value;}
-      else if(typeof value==='string'){
-        if(node.tagName==='SELECT'&&![...node.options].some(option=>option.value===value))continue;
-        if(node.type==='number'||node.type==='range'){
-          const number=Number(value);
-          if(!Number.isFinite(number)||(node.min!==''&&number<Number(node.min))||(node.max!==''&&number>Number(node.max)))continue;
-        }
-        node.value=value;
+function audioTreatmentSnapshot(){
+  const controls={};
+  for(const id of audioTreatmentIds){const node=$(id);controls[id]=node.type==='checkbox'?node.checked:String(node.value);}
+  return controls;
+}
+function applyAudioTreatmentSettings(stored){
+  if(stored?.version!==1||!stored.controls||typeof stored.controls!=='object')return;
+  for(const id of audioTreatmentIds){
+    const node=$(id),value=stored.controls[id];
+    if(node.type==='checkbox'){if(typeof value==='boolean')node.checked=value;}
+    else if(typeof value==='string'){
+      if(node.tagName==='SELECT'&&![...node.options].some(option=>option.value===value))continue;
+      if(node.type==='number'||node.type==='range'){
+        const number=Number(value);
+        if(!Number.isFinite(number)||(node.min!==''&&number<Number(node.min))||(node.max!==''&&number>Number(node.max)))continue;
       }
+      node.value=value;
     }
-  }catch(_){/* Storage ausente ou inválido: manter padrões. */}
+  }
+}
+async function restoreAudioTreatmentSettings(){
+  // Primeiro, aproveite preferências de versões anteriores guardadas no navegador.
+  try{const local=window.localStorage?.getItem(audioTreatmentStorageKey);if(local)applyAudioTreatmentSettings(JSON.parse(local));}catch(_){}
+  // O arquivo JSON do aplicativo é a fonte principal, inclusive após reiniciar o navegador.
+  try{
+    const response=await fetch('/api/audio-treatment/preferences');
+    if(!response.ok)return;
+    const data=await response.json();
+    if(data?.controls)applyAudioTreatmentSettings({version:1,controls:data.controls});
+  }catch(_){/* Sem arquivo, manter padrões ou preferências legadas válidas. */}
 }
 function saveAudioTreatmentSettings(){
-  try{
-    const controls={};
-    for(const id of audioTreatmentIds){const node=$(id);controls[id]=node.type==='checkbox'?node.checked:String(node.value);}
-    window.localStorage?.setItem(audioTreatmentStorageKey,JSON.stringify({version:1,controls}));
-  }catch(_){/* Processamento continua se armazenamento local estiver indisponível. */}
+  try{window.localStorage?.setItem(audioTreatmentStorageKey,JSON.stringify({version:1,controls:audioTreatmentSnapshot()}));}catch(_){}
 }
 restoreAudioTreatmentSettings();
 $("transcriptionStart").addEventListener("click", async () => {
@@ -1052,6 +1059,7 @@ $("transcriptionStart").addEventListener("click", async () => {
     const form = new FormData();
     form.append("projectRoot", root);
     form.append("scope", standalone ? 'standalone' : 'narration');
+    if(!standalone)form.append("audioTreatmentSettings",JSON.stringify(audioTreatmentSnapshot()));
     if (file) form.append("file", file);
     form.append("model", $("transcriptionModel").value);
     form.append("detail", $("transcriptionDetail").value);

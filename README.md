@@ -1,6 +1,6 @@
 # Content Lab — Node.js + Remotion
 
-**Redução de respiração:** disponível somente em **Narração → Tratamento** (narração oficial). A intensidade inicial é 60% e mantém a atenuação original de até 12 dB; acima de 60%, a redução passa a ser progressivamente mais agressiva, alcançando até 40 dB em 100%. Não encurta o áudio; escute e ajuste para não comprometer consoantes. Os controles ficam salvos no armazenamento local do navegador depois de um tratamento concluído com sucesso; sem preferências válidas, aplicam-se os padrões da tela.
+**Redução de respiração:** disponível somente em **Narração → Tratamento** (narração oficial). A intensidade inicial é 60% e mantém a atenuação original de até 12 dB; acima de 60%, a redução passa a ser progressivamente mais agressiva, alcançando até 40 dB em 100%. Não encurta o áudio; escute e ajuste para não comprometer consoantes. Os parâmetros ficam salvos em `~/.contentlab/audio-treatment-settings.json` (no perfil local do usuário) depois de um tratamento concluído com sucesso, com cópia opcional no armazenamento do navegador. Sem dados locais válidos, aplicam-se os padrões da tela.
 
 ## Projeto universal
 
