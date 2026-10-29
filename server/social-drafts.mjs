@@ -62,8 +62,6 @@ function validateInput(body,files,confirmed,{existing=null,root=SOCIAL_DRAFT_DIR
   if(!titleA)reject('Informe o título do vídeo (até 150 caracteres).');
   const titleB=kind==='long'?text(body.titleB,150):null;
   if(kind==='long'&&(!titleB||titleB===titleA))reject('O teste A/B exige dois títulos diferentes.');
-  const youtubeNoAi=body.youtubeNoAi===true||body.youtubeNoAi==='true';
-  const youtubeNoPromotion=body.youtubeNoPromotion===true||body.youtubeNoPromotion==='true';
   const description=typeof body.description==='string'?body.description.trim():'';
   if(description.length>5000)reject('Descrição muito longa.');
   const tags=typeof body.tags==='string'?body.tags.split(/[,\n]/).map(x=>x.trim().replace(/^#/,'')).filter(Boolean):[];
@@ -90,7 +88,7 @@ function validateInput(body,files,confirmed,{existing=null,root=SOCIAL_DRAFT_DIR
   const aType=coverA?inspectFile(coverA,'image'):existingMedia('coverA','image');
   const bType=kind==='long'?(coverB?inspectFile(coverB,'image'):existingMedia('coverB','image')):null;
   if(kind==='short'&&coverB)reject('Shorts aceitam somente uma thumbnail.');
-  return {kind,titleA,titleB,description,tags,platforms,scheduledAt,video,coverA,coverB,videoType,aType,bType,youtubeNoAi,youtubeNoPromotion};
+  return {kind,titleA,titleB,description,tags,platforms,scheduledAt,video,coverA,coverB,videoType,aType,bType};
 }
 export function createSocialDraft({body,files,confirmed,root=SOCIAL_DRAFT_DIR,sourceProject=null,needsReview=false}){
   const data=validateInput(body,files,confirmed);
@@ -107,7 +105,6 @@ export function createSocialDraft({body,files,confirmed,root=SOCIAL_DRAFT_DIR,so
     if(coverBFile)copy(data.coverB,coverBFile);
     const item={
       id,kind:data.kind,titleA:data.titleA,titleB:data.titleB,description:data.description,
-      youtubeNoAi:data.youtubeNoAi,youtubeNoPromotion:data.youtubeNoPromotion,
       tags:data.tags,platforms:data.platforms,scheduledAt:data.scheduledAt,
       fileName:path.basename(data.video.originalname).slice(0,160),
       bytes:fs.statSync(path.join(folder,videoFile)).size,
@@ -143,7 +140,6 @@ export function updateSocialDraft(id,{body,files,confirmed,root=SOCIAL_DRAFT_DIR
     const coverAFile=replaceMedia('coverA',data.coverA,data.aType);
     const coverBFile=data.bType?replaceMedia('coverB',data.coverB,data.bType):null;
     const next={...previous,kind:data.kind,titleA:data.titleA,titleB:data.titleB,
-      youtubeNoAi:data.youtubeNoAi,youtubeNoPromotion:data.youtubeNoPromotion,
       description:data.description,tags:data.tags,platforms:data.platforms,
       scheduledAt:data.scheduledAt,media:{video:videoFile,coverA:coverAFile,coverB:coverBFile},
       fileName:data.video?path.basename(data.video.originalname).slice(0,160):previous.fileName,

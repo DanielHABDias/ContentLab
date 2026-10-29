@@ -17,20 +17,17 @@ test('atraso entre ações do crawler é explícito e tags usam Enter individual
     ['primeira','segunda']);
   assert.equal(calls.filter(x=>x[0]==='Input.dispatchKeyEvent'&&x[1].type==='keyDown').length,2);
 });
-test('declarações negativas só são aplicadas quando confirmadas no rascunho',async()=>{
+test('declarações de IA e promoção paga são aplicadas como Não por padrão',async()=>{
   const calls=[];
   const cdp={async eval(expression){calls.push(expression);return true;}};
-  const unconfirmed=await applyYouTubeDisclosures(cdp,{youtubeNoAi:false,youtubeNoPromotion:false},{delayMs:0});
-  assert.equal(unconfirmed.length,2);
-  assert.equal(calls.length,0);
-  const confirmed=await applyYouTubeDisclosures(cdp,{youtubeNoAi:true,youtubeNoPromotion:true},{delayMs:0});
-  assert.equal(confirmed.length,0);
-  assert.equal(calls.length,2);
+  const result=await applyYouTubeDisclosures(cdp,{}, {delayMs:0});
+  assert.equal(result.length,0);
+  assert.equal(calls.length,2,'as duas respostas são tentadas mesmo sem campos no rascunho');
   assert.match(disclosureExpression('altered'),/conteúdo alterado/);
   assert.match(disclosureExpression('promotion'),/promoção paga/);
-  const missing=await applyYouTubeDisclosures({eval:async()=>false},
-    {youtubeNoAi:true,youtubeNoPromotion:true},{delayMs:0});
-  assert.equal(missing.length,2,'não deve afirmar que marcou opções que não encontrou');
+  const missing=await applyYouTubeDisclosures({eval:async()=>false},{}, {delayMs:0});
+  assert.equal(missing.length,2,'não afirmar que selecionou opções ausentes');
+  assert.ok(missing.every(x=>x.includes('Confira')||x.includes('confira')));
 });
 test('agendamento seleciona somente cartão/radio Schedule e não botão final',async()=>{
   const expr=selectScheduleCardExpression();

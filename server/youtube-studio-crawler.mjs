@@ -149,18 +149,17 @@ export function disclosureExpression(type){
     'if(boxes.length===1){if(isChecked(boxes[0]))boxes[0].click();return true;}}'+
     '}}return false;})()';
 }
-export async function applyYouTubeDisclosures(cdp,video,{delayMs=YOUTUBE_ACTION_DELAY_MS}={}){
+export async function applyYouTubeDisclosures(cdp,_video,{delayMs=YOUTUBE_ACTION_DELAY_MS}={}){
+  // Padrão do Content Lab definido pelo criador: não há conteúdo sintético
+  // realista nem promoção paga. Se um vídeo for uma exceção, ele altera a
+  // declaração no YouTube Studio durante a revisão antes de publicar.
   const warnings=[];
-  for(const [key,label,type] of [
-    ['youtubeNoAi','Conteúdo alterado/IA','altered'],
-    ['youtubeNoPromotion','Promoção paga','promotion']
+  for(const [label,type] of [
+    ['Conteúdo alterado/IA','altered'],
+    ['Promoção paga','promotion']
   ]){
-    if(video[key]!==true){
-      warnings.push(label+': não confirmado no rascunho; revise manualmente.');
-      continue;
-    }
     const applied=await cdp.eval(disclosureExpression(type)).catch(()=>false);
-    if(!applied)warnings.push(label+': controle não identificado, revise manualmente.');
+    if(!applied)warnings.push(label+': não consegui aplicar a resposta padrão "Não"; confira no YouTube Studio.');
     else await pauseForStudio(delayMs);
   }
   return warnings;

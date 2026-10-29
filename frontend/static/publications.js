@@ -4,7 +4,7 @@
   if(!$('socialBrowserSelect')||!$('publishComposerDialog')||!window.ContentLabPublicationPlanning)return;
   const planning=window.ContentLabPublicationPlanning;
   const platforms=['youtube','tiktok','instagram'],names={youtube:'YouTube',tiktok:'TikTok',instagram:'Instagram'};
-  let settings=null,ready=false,opened=new Set(),loading=false,drafts=[],videoUrl=null,coverUrls=[],captured=null,selectedVideo=null;
+  let settings=null,ready=false,opened=new Set(),loading=false,drafts=[],videoUrl=null,captured=null,selectedVideo=null;
   let editingId=null,selectedIds=new Set(),session=null;
   let socialJobId=null,socialPoll=null,socialResults={},socialTaskKey=null;
   const notice=(message,error=false)=>{
@@ -159,10 +159,11 @@
   }
   function releaseVideo(){
     if(videoUrl){URL.revokeObjectURL(videoUrl);videoUrl=null;}
-    for(const url of coverUrls)URL.revokeObjectURL(url);
-    coverUrls=[];
+    for(const url of imageObjectUrls.values())URL.revokeObjectURL(url);
+    imageObjectUrls.clear();
     const video=$('publishFrameVideo');
     video.pause();video.removeAttribute('src');video.load();
+    video.classList.remove('is-under-cover');
     $('publishFrameImage').hidden=true;
     $('publishFrameImage').removeAttribute('src');
     captured=null;selectedVideo=null;
@@ -196,11 +197,30 @@
     applySuggestedSchedule();
   }
   document.querySelectorAll('#publishComposerForm input[name="kind"]').forEach(el=>el.addEventListener('change',refreshKind));
+  // Cada thumbnail selecionada substitui imediatamente a antiga na prévia.
+  const imageObjectUrls=new Map();
   function previewImage(file,id){
-    const image=$(id);image.hidden=!file;
-    if(!file){image.removeAttribute('src');return;}
+    const image=$(id),previous=imageObjectUrls.get(id);
+    if(!file){
+      image.hidden=true;image.removeAttribute('src');
+      if(previous){URL.revokeObjectURL(previous);imageObjectUrls.delete(id);}
+      return;
+    }
     const url=URL.createObjectURL(file);
-    coverUrls.push(url);image.src=url;
+    imageObjectUrls.set(id,url);
+    image.onload=()=>{if(image.src===url)image.hidden=false;};
+    image.onerror=()=>{
+      if(image.src===url){
+        image.hidden=true;
+        feedback('Não consegui visualizar '+file.name+'. Confira o arquivo de imagem.',true);
+      }
+    };
+    image.src=url;image.hidden=false;
+    if(previous)URL.revokeObjectURL(previous);
+    if(id==='publishFrameImage'){
+      $('publishFramePlaceholder').hidden=true;
+      $('publishFrameVideo').classList.add('is-under-cover');
+    }
   }
   for(const [field,preview,name] of [['publishCoverA','publishLongPreviewA','publishCoverNameA'],['publishCoverB','publishLongPreviewB','publishCoverNameB']]){
     $(field).addEventListener('change',()=>{
@@ -210,12 +230,14 @@
   }
   $('publishVideoFile').addEventListener('change',()=>{
     const file=$('publishVideoFile').files[0];
-    releaseVideo();selectedVideo=file||null;
+    // Atualizar o vídeo não cancela nem oculta a imagem de capa escolhida.
+    if(videoUrl){URL.revokeObjectURL(videoUrl);videoUrl=null;}
+    selectedVideo=file||null;
     $('publishFileCaption').textContent=file?file.name:'Selecionar vídeo do computador';
     $('publishVideoMeta').textContent=file?(file.size/1024/1024).toFixed(1)+' MB · prévia disponível abaixo':'';
     $('publishFrameSeek').disabled=true;
     $('publishCaptureFrame').disabled=true;
-    $('publishFramePlaceholder').hidden=!file;
+    $('publishFramePlaceholder').hidden=!file||!$('publishFrameImage').hidden;
     if(!file)return;
     videoUrl=URL.createObjectURL(file);
     const video=$('publishFrameVideo');video.src=videoUrl;video.load();
@@ -233,7 +255,11 @@
     const seconds=Number($('publishFrameSeek').value);
     $('publishFrameTime').textContent=timecode(seconds);
     frameVideo.currentTime=seconds;
-    $('publishFrameImage').hidden=true;
+    // Arrastar o controle de frames não deve ocultar uma thumbnail carregada.
+    if(!$('publishShortCoverFile').files[0]){
+      $('publishFrameImage').hidden=true;
+      $('publishFrameVideo').classList.remove('is-under-cover');
+    }
     captured=null;
   });
   const frameBlob=()=>new Promise((resolve,reject)=>{
@@ -266,13 +292,17 @@
         const old=drafts.find(d=>d.id===editingId);
         if(old?.media?.coverA){
           const image=$('publishFrameImage');
-          image.src=safeUrl(editingId,'coverA')+'?restored='+Date.now();
+          previewImage(null,'publishFrameImage');
+          image.src=safeUrl(editingId,'coverA',old.updatedAt||old.createdAt);
           image.hidden=false;
+          $('publishFramePlaceholder').hidden=true;
+          $('publishFrameVideo').classList.add('is-under-cover');
           $('publishShortCoverName').textContent='Capa atual preservada';
           $('publishCoverFeedback').textContent='Nenhuma nova imagem selecionada. A capa salva anteriormente será mantida.';
         }
       }else{
-        $('publishFrameImage').hidden=true;
+        previewImage(null,'publishFrameImage');
+        $('publishFrameVideo').classList.remove('is-under-cover');
         $('publishShortCoverName').textContent='Nenhuma imagem selecionada';
         $('publishCoverFeedback').textContent='Selecione um frame do vídeo para criar sua thumbnail.';
       }
@@ -311,8 +341,6 @@
       $('publishDescription').value=current.description||'';
       $('publishTags').value=(current.tags||[]).join(', ');
       $('publishScheduleAt').value=current.scheduledAt||'';
-      $('publishYouTubeNoAi').checked=current.youtubeNoAi===true;
-      $('publishYouTubeNoPromotion').checked=current.youtubeNoPromotion===true;
       $('publishScheduleAdvice').textContent='Data do vídeo mantida. Altere se quiser.';
       $('publishFileCaption').textContent=current.fileName||'Vídeo salvo';
       $('publishVideoMeta').textContent='Vídeo salvo na lista · escolha outro arquivo somente para trocar';
@@ -323,8 +351,13 @@
       updateDestinations();
       const setExisting=(id,kind,name)=>{
         if(!current.media?.[kind])return;
-        $(id).src=safeUrl(current.id,kind);$(id).hidden=false;
-        $(name).textContent='Imagem atual · selecione outra para trocar';
+        $(id).src=safeUrl(current.id,kind,current.updatedAt||current.createdAt);
+        $(id).hidden=false;
+        if(id==='publishFrameImage'){
+          $('publishFramePlaceholder').hidden=true;
+          $('publishFrameVideo').classList.add('is-under-cover');
+        }
+        $(name).textContent='Imagem atual salva · selecione outra para trocar';
       };
       if(current.kind==='long'){
         setExisting('publishLongPreviewA','coverA','publishCoverNameA');
@@ -355,7 +388,8 @@
     if(textValue!==undefined)item.textContent=textValue;
     return item;
   }
-  const safeUrl=(id,type)=>'/api/social-browser/drafts/'+encodeURIComponent(id)+'/media/'+type;
+  const safeUrl=(id,type,version='')=>'/api/social-browser/drafts/'+encodeURIComponent(id)+'/media/'+type+
+    (version?'?v='+encodeURIComponent(version):'');
   // Importação em lote: análise prévia -> ordenação visual -> confirmação explícita.
   let importRows=[],importBusy=false,draggedImport=null;
   const importMessage=(text,bad=false)=>{
@@ -541,7 +575,7 @@
       });
       picker.append(check,el('span','','Selecionar'));
       const thumb=el('div','publish-draft-thumb '+(item.kind==='short'?'is-short':'is-long'));
-      const img=el('img');img.alt='Capa do vídeo';img.loading='lazy';img.src=safeUrl(item.id,'coverA');
+      const img=el('img');img.alt='Capa do vídeo';img.loading='lazy';img.src=safeUrl(item.id,'coverA',item.updatedAt||item.createdAt);
       thumb.append(img,el('span','publish-draft-thumb-label',item.kind==='long'?'VÍDEO LONGO':'SHORT'));
       const content=el('div','publish-draft-content');
       const meta=el('div','publish-draft-meta');
@@ -615,8 +649,6 @@
       if(coverB)form.append('coverB',coverB);
       for(const key of ['titleA','titleB','description','tags','scheduledAt'])form.append(key, $('publish'+({titleA:'TitleA',titleB:'TitleB',description:'Description',tags:'Tags',scheduledAt:'ScheduleAt'}[key])).value);
       form.append('kind',kind());form.append('platforms',JSON.stringify(chosen));
-      form.append('youtubeNoAi',String($('publishYouTubeNoAi').checked));
-      form.append('youtubeNoPromotion',String($('publishYouTubeNoPromotion').checked));
       button.disabled=true;button.textContent='Salvando vídeo...';feedback('Copiando o vídeo e as imagens para a lista local...');
       const edited=Boolean(editingId);
       const data=await request(edited?'/api/social-browser/drafts/'+encodeURIComponent(editingId):'/api/social-browser/drafts',

@@ -93,19 +93,14 @@ test('edição mantém mídia antiga, muda metadados e substitui vídeo e capas 
   assert.throws(()=>updateSocialDraft('../outside',{body:{},files:{},confirmed,root:f.root}),/inválido/);
 });
 
-test('declarações de IA e promoção são opções opt-in, armazenadas por vídeo',t=>{
+test('declarações do YouTube deixam de fazer parte do formulário do rascunho',t=>{
   const f=fixture(t);
   const body={kind:'short',titleA:'Conteúdo original',platforms:'["youtube"]'};
   const item=createSocialDraft({root:f.root,body,files:{video:[f.video],coverA:[f.a]},confirmed});
-  assert.equal(item.youtubeNoAi,false);
-  assert.equal(item.youtubeNoPromotion,false);
-  const edited=updateSocialDraft(item.id,{root:f.root,body:{...body,
-    youtubeNoAi:'true',youtubeNoPromotion:'true'},files:{},confirmed});
-  assert.equal(edited.youtubeNoAi,true);
-  assert.equal(edited.youtubeNoPromotion,true);
-  assert.equal(listSocialDrafts(f.root)[0].youtubeNoAi,true);
-  const reverted=updateSocialDraft(item.id,{root:f.root,body:{...body,
-    youtubeNoAi:'false',youtubeNoPromotion:'false'},files:{},confirmed});
-  assert.equal(reverted.youtubeNoAi,false);
-  assert.equal(reverted.youtubeNoPromotion,false);
+  assert.equal(Object.hasOwn(item,'youtubeNoAi'),false);
+  assert.equal(Object.hasOwn(item,'youtubeNoPromotion'),false);
+  const edited=updateSocialDraft(item.id,{root:f.root,body,files:{},confirmed});
+  assert.equal(Object.hasOwn(edited,'youtubeNoAi'),false);
+  assert.equal(Object.hasOwn(edited,'youtubeNoPromotion'),false);
+  assert.ok(fs.existsSync(socialDraftMedia(item.id,'coverA',f.root)));
 });
