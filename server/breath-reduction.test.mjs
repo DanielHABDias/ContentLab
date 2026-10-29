@@ -37,7 +37,9 @@ test('attenuation preserves samples and voice; disabled copies; cancellation cle
     await reduceBreaths(input,output,{reduceBreaths:false});assert.deepEqual(fs.readFileSync(output),fs.readFileSync(input));fs.unlinkSync(output);
     await reduceBreaths(input,output,{reduceBreaths:true,breathReductionStrength:0});assert.deepEqual(fs.readFileSync(output),fs.readFileSync(input));fs.unlinkSync(output);
     const result=await reduceBreaths(input,output,{reduceBreaths:true,breathReductionStrength:60});
-    assert.equal(result.applied,true);
+    assert.equal(result.applied,true);assert.equal(result.attenuationDb,12);
+    const extreme=await reduceBreaths(input,path.join(root,'extreme.wav'),{reduceBreaths:true,breathReductionStrength:100});
+    assert.equal(extreme.attenuationDb,40);
     await run('ffmpeg',['-v','error','-i',output,'-f','f32le',decoded]);
     const actual=fs.readFileSync(decoded);assert.equal(actual.length,samples.length);
     const energy=(data,a,b)=>{let sum=0;for(let i=Math.round(a*48000);i<Math.round(b*48000);i++)sum+=data.readFloatLE(i*4)**2;return sum;};

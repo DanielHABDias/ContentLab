@@ -5,8 +5,6 @@ import {run} from './exec.mjs';
 import {voiceStudioFolder} from './voice-studio.mjs';
 import {probeAudioDuration} from './audio.mjs';
 import {transcribeAudio,transcriptTextLines} from './transcribe.mjs';
-import {enhanceVoice,enhancementOptions} from './voice-enhancement.mjs';
-import {recordingTreatmentOptions,treatRecording} from './recording-treatment.mjs';
 
 const pattern=/^(recording-|narration\.ai-)[a-f0-9-]{36}\.wav$/;
 const manifest='narration.takes.json';
@@ -102,13 +100,12 @@ export function transcriptionOptions(raw={}){
   if(!['tiny','base','small','medium'].includes(model)||!['pt','en','es',''].includes(language)||!['words','segments'].includes(detail))throw Error('Opções de transcrição inválidas.');
   return {model,language,detail};
 }
-export async function finalizeTakes(folder,{kind='recording',transcription={},enhancement={},treatment=null,signal,update=()=>{},transcriber=transcribeAudio,enhancer=enhanceVoice,ffmpeg='ffmpeg',ffprobe='ffprobe'}={}){
+export async function finalizeTakes(folder,{kind='recording',transcription={},signal,update=()=>{},transcriber=transcribeAudio,ffmpeg='ffmpeg',ffprobe='ffprobe'}={}){
   const root=voiceStudioFolder(folder),directory=audioDirectory(root);
   if(!['recording','qwen'].includes(kind))throw Error('Tipo de narração inválido.');
   const takes=takeList(root).takes.filter(t=>t.kind===kind&&t.selected);
   if(!takes.length||takes.length>100)throw Error('Selecione de 1 a 100 tomadas.');
-  const options=transcriptionOptions(transcription),enhanceOptions=enhancementOptions(enhancement),revision=takeList(root).revision;
-  const recordingConfig=kind==='recording'&&treatment!==null?recordingTreatmentOptions(treatment):null;
+  const options=transcriptionOptions(transcription),revision=takeList(root).revision;
   const staging=fs.mkdtempSync(path.join(root,'.narration-assembly-'));
   const destinations=['audio/narration.wav','transcript.json','transcript.txt','transcript.srt','narration.build.json','transcript.build.json'];
   try{
@@ -120,14 +117,7 @@ export async function finalizeTakes(folder,{kind='recording',transcription={},en
     filters.push(inputs.map((_,i)=>`[a${i}]`).join('')+`concat=n=${inputs.length}:v=0:a=1[out]`);
     const assembled=path.join(staging,'narration.wav');
     await run(ffmpeg,['-hide_banner','-loglevel','error',...inputs.flatMap(f=>['-i',f]),'-filter_complex',filters.join(';'),'-map','[out]','-c:a',kind==='recording'?'pcm_s24le':'pcm_s16le',assembled],{signal});
-    let enhancementResult={applied:false},treatmentResult=null;
-    if(recordingConfig){
-      const treated=path.join(staging,'treated.wav');treatmentResult=await treatRecording(assembled,treated,recordingConfig,{ffmpeg,ffprobe,signal,update,enhancer});enhancementResult=treatmentResult.enhancement;fs.renameSync(treated,assembled);
-    }else if(enhanceOptions.enhancementEngine!=='off'&&enhanceOptions.enhancementStrength>0){
-      const enhanced=path.join(staging,'enhanced.wav');
-      enhancementResult=await enhancer(assembled,enhanced,enhanceOptions,{ffmpeg,ffprobe,signal,update});
-      fs.renameSync(enhanced,assembled);
-    }
+    // Finalização não processa áudio: todos os tratamentos ocorrem somente na aba Tratamento.
     update('Transcrevendo a narração final, já unificada...');
     const result=await transcriber(assembled,staging,{...options,signal,update});
     for(const name of ['transcript.json','transcript.txt','transcript.srt'])if(!fs.existsSync(path.join(staging,name)))throw Error('A transcrição não produziu '+name);
@@ -149,11 +139,11 @@ export async function finalizeTakes(folder,{kind='recording',transcription={},en
       for(const name of ['transcript.json','transcript.txt','transcript.srt'])atomic(path.join(staging,name),path.join(root,name));
       const stat=fs.statSync(path.join(directory,'narration.wav'));
       const meta={version:1,mode:'voice-studio',kind,source,output:'audio/narration.wav',neutral:source,outputIdentity:{size:stat.size,mtimeMs:stat.mtimeMs},duration,
-        options:recordingConfig||{voicePreset:'original',pitchSemitones:0,removeMiddleSilence:false,...enhanceOptions},enhancement:enhancementResult,treatment:treatmentResult,processing:treatmentResult?.processing||(enhancementResult.applied?['deepfilter']:[]),takes:takes.map(t=>t.name),...options,generatedAt:new Date().toISOString()};
+        options:{voicePreset:'original',pitchSemitones:0,removeMiddleSilence:false,enhancementEngine:'off'},enhancement:{applied:false},treatment:null,processing:[],takes:takes.map(t=>t.name),...options,generatedAt:new Date().toISOString()};
       for(const name of ['narration.build.json','transcript.build.json']){const tmp=path.join(staging,name);fs.writeFileSync(tmp,JSON.stringify({...meta,narrationStamp:null},null,2));atomic(tmp,path.join(root,name));}
     }catch(error){
       for(const name of destinations){if(previous.includes(name))atomic(path.join(backup,name),path.join(root,name));else fs.rmSync(path.join(root,name),{force:true});}throw error;
     }
-    return {...result,treatment:treatmentResult?{applied:treatmentResult.applied,processing:treatmentResult.processing}:null,wordCount:transcript.words.length,segmentCount:transcript.segments.length,preview:text.slice(0,4500),relative:'audio/narration.wav',source,duration,takeCount:takes.length,projectRoot:root,backup:backup?path.basename(backup):null};
+    return {...result,treatment:null,wordCount:transcript.words.length,segmentCount:transcript.segments.length,preview:text.slice(0,4500),relative:'audio/narration.wav',source,duration,takeCount:takes.length,projectRoot:root,backup:backup?path.basename(backup):null};
   }finally{fs.rmSync(staging,{recursive:true,force:true});}
 }

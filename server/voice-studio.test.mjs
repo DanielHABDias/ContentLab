@@ -65,7 +65,11 @@ test('silence parser trims edges and keeps an intentionally short middle gap',()
   assert.equal(voiceOptions({voicePreset:'deep'}).pitchSemitones,VOICE_PRESETS.deep.pitchSemitones);
   assert.throws(()=>voiceOptions({voicePreset:'not-capcut'}),/não reconhecido/);
   assert.deepEqual(keepRanges(2.34,detectedSilences(events,2.34),{trimEdges:false,removeMiddleSilence:false}).cuts,[{start:0,end:2.34}]);
-  for(const raw of [{targetLufs:0},{highpassHz:900},{normalize:'yes'},{compression:'false'}])assert.throws(()=>voiceOptions(raw));
+  for(const raw of [{targetLufs:0},{highpassHz:900},{normalize:'yes'},{compression:'false'},{minSilence:.14},{thresholdDb:-23}])assert.throws(()=>voiceOptions(raw));
+  assert.equal(voiceOptions({minSilence:.15,thresholdDb:-24}).minSilence,.15);
+  const aggressive=keepRanges(1,[{start:.2,end:.42}],{trimEdges:false,removeMiddleSilence:true,minSilence:.15,thresholdDb:-24});
+  assert.equal(aggressive.removed.length,1);
+  assert.ok(aggressive.duration<.9);
 });
 
 test('standalone narration generates final WAV and transcript without edit_plan.json', {skip:!ffmpegOk},async()=>{

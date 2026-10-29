@@ -55,10 +55,10 @@ export function voiceOptions(raw={}){
   const bassGainDb=preset?.bassGainDb??0;
   if(typeof raw.removeMiddleSilence!=='boolean'&&raw.removeMiddleSilence!==undefined)
     throw Error('Remoção de silêncio interno inválida.');
-  if(!Number.isFinite(minSilence)||minSilence<.45||minSilence>2.5)
-    throw Error('Silêncio interno mínimo deve ficar entre 0,45 e 2,5 segundos.');
-  if(!Number.isFinite(thresholdDb)||thresholdDb< -55||thresholdDb> -30)
-    throw Error('Limite de silêncio deve ficar entre -55 dB e -30 dB.');
+  if(!Number.isFinite(minSilence)||minSilence<.15||minSilence>2.5)
+    throw Error('Silêncio interno mínimo deve ficar entre 0,15 e 2,5 segundos.');
+  if(!Number.isFinite(thresholdDb)||thresholdDb< -55||thresholdDb> -24)
+    throw Error('Limite de silêncio deve ficar entre -55 dB e -24 dB.');
   if(!Number.isFinite(pitchSemitones)||pitchSemitones< -3||pitchSemitones>0)
     throw Error('Pitch permitido: de -3 a 0 semitons.');
   return {removeMiddleSilence:raw.removeMiddleSilence!==false,minSilence,
@@ -87,8 +87,10 @@ export function keepRanges(duration,detected,options={}){
     if(!cut)continue;
     // Boundary silence must be removed almost entirely; the small 20ms
     // guard keeps a natural seam without leaving audible dead air.
-    const trimStart=edgeStart?0:edgeEnd?begin+.020:begin+.085;
-    const trimEnd=edgeEnd?duration:edgeStart?end-.020:end-.085;
+    // O modo extremo deixa menor margem, sem remover a proteção dos encontros entre falas.
+    const margin=config.minSilence<.45?.025:.085;
+    const trimStart=edgeStart?0:edgeEnd?begin+.020:begin+margin;
+    const trimEnd=edgeEnd?duration:edgeStart?end-.020:end-margin;
     if(trimEnd-trimStart<=.035)continue;
     if(trimStart>cursor+.005)keep.push({start:cursor,end:trimStart});
     removed.push({start:trimStart,end:trimEnd});
@@ -103,7 +105,7 @@ export function keepRanges(duration,detected,options={}){
 export async function analyzeVoice(file,options={}, {ffmpeg='ffmpeg',ffprobe='ffprobe',signal}={}){
   const config=voiceOptions(options),duration=await probeAudioDuration(file,{ffprobe,signal});
   const {stderr}=await run(ffmpeg,['-hide_banner','-nostats','-loglevel','info','-i',file,
-    '-af','silencedetect=noise='+config.thresholdDb+'dB:d=0.18','-f','null','-'],{signal});
+    '-af','silencedetect=noise='+config.thresholdDb+'dB:d='+Math.min(.18,config.minSilence*.7).toFixed(3),'-f','null','-'],{signal});
   return keepRanges(duration,detectedSilences(stderr,duration),config);
 }
 async function applyVoiceStyle(input,output,options,{ffmpeg='ffmpeg',ffprobe='ffprobe',signal}={}){

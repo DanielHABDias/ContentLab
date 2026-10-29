@@ -60,7 +60,8 @@ export async function reduceBreaths(input,output,raw={}, {ffmpeg='ffmpeg',signal
     if(!ranges.length){fs.copyFileSync(input,output);return {applied:false,ranges};}
     await run(ffmpeg,['-v','error','-y','-i',input,'-vn','-ac','1','-ar','48000','-f','f32le',pcm],{signal});
     const source=fs.openSync(pcm,'r'),destination=fs.openSync(treated,'w'),buffer=Buffer.alloc(48000*4);
-    let sample=0,index=0;const minimum=Math.pow(10,-options.breathReductionStrength*.2/20);
+    let sample=0,index=0;const attenuationDb=options.breathReductionStrength<=60?options.breathReductionStrength*.2:12+(options.breathReductionStrength-60)*.7;
+    const minimum=Math.pow(10,-attenuationDb/20);
     try{
       for(;;){signal?.throwIfAborted();const n=fs.readSync(source,buffer,0,buffer.length,null);if(!n)break;
         for(let j=0;j<n;j+=4,sample++){
@@ -71,6 +72,6 @@ export async function reduceBreaths(input,output,raw={}, {ffmpeg='ffmpeg',signal
       }
     }finally{fs.closeSync(source);fs.closeSync(destination);}
     await run(ffmpeg,['-v','error','-y','-f','f32le','-ar','48000','-ac','1','-i',treated,'-c:a','pcm_s24le',output],{signal});
-    return {applied:true,ranges,attenuationDb:options.breathReductionStrength*.2};
+    return {applied:true,ranges,attenuationDb};
   }finally{fs.rmSync(stage,{recursive:true,force:true});}
 }

@@ -67,18 +67,16 @@ test('mouse cut, undo, continuation and close export only the edited clip as WAV
  assert.equal(new DataView(saved).getUint32(40,true),3*48000*2);
  assert.equal(h.element('voiceRecordStart').textContent,'Gravar');
 });
-test('recording forwards breath attenuation including zero, and recipes control import independently',async()=>{
+test('recording finalization never sends audio treatment; recipes remain exclusive to treatment tab',async()=>{
   let body;
   const h=harness({fetcher:async(url,options)=>{
     if(url==='/api/voice/finalize')body=JSON.parse(options.body);
-    return {ok:true,json:async()=>url==='/api/voice/finalize'?{jobId:'breath'}:{status:'done',result:{duration:1,takeCount:1}}};
+    return {ok:true,json:async()=>url==='/api/voice/finalize'?{jobId:'raw'}:{status:'done',result:{duration:1,takeCount:1}}};
   }});
-  h.element('voiceRecordReduceBreaths').checked=true;h.element('voiceRecordBreathStrength').value='0';
   await h.element('voiceRecordFinalize').onclick();
-  assert.equal(body.treatment.reduceBreaths,true);assert.equal(body.treatment.breathReductionStrength,0);
+  assert.equal(body.kind,'recording');assert.equal(body.treatment,undefined);assert.equal(body.enhancement,undefined);
   h.element('voiceTreatmentRecipe').value='preserve';h.element('voiceTreatmentRecipe').onchange();
   assert.equal(h.element('transcriptionReduceBreaths').checked,false);
-  assert.equal(h.element('voiceRecordReduceBreaths').checked,true);
   h.element('voiceTreatmentRecipe').value='strong';h.element('voiceTreatmentRecipe').onchange();
   assert.equal(h.element('transcriptionReduceBreaths').checked,true);
   h.element('transcriptionBreathStrength').listeners.change();assert.equal(h.element('voiceTreatmentRecipe').value,'custom');
@@ -108,7 +106,7 @@ test('finalization clearly completes beside recorder without waiting for AI mode
   assert.equal(h.element('voiceFinalDetails').open,true);
   assert.equal(h.element('voiceFinalTranscript').value,'Minha narração pronta');
   assert.equal(h.element('voiceRecordStart').disabled,false);
-  assert.equal(h.element('voiceRecordFinalize').textContent,'Finalizar narração e transcrever');
+  assert.equal(h.element('voiceRecordFinalize').textContent,'Unir tomadas e transcrever (sem tratamento)');
 });
 test('enhancement preview forwards controls and exposes before/after without replacing final narration',async()=>{
   let submitted;
@@ -148,7 +146,7 @@ test('saved voices render before optional runtime discovery completes',async()=>
   assert.match(card.children[2].src,/profiles\/voice-one\/audio$/);
   release();await loading;
 });
-test('treatment recipes configure controls without applying them to recording finalization',async()=>{
+test('treatment recipes do not apply when recording joins and transcribes',async()=>{
   let body;
   const h=harness({fetcher:async(url,options)=>({ok:true,json:async()=>{
     if(url==='/api/voice/finalize'){body=JSON.parse(options.body);return {jobId:'final'};}
@@ -156,13 +154,12 @@ test('treatment recipes configure controls without applying them to recording fi
     return {takes:[],revision:'new'};
   }})});
   h.element('voiceTreatmentRecipe').value='strong';h.element('voiceTreatmentRecipe').onchange();
-  assert.equal(h.element('transcriptionCompression').checked,true);assert.equal(h.element('transcriptionDeesser').checked,true);
+  assert.equal(h.element('transcriptionCompression').checked,true);
   assert.equal(h.element('voiceEnhancementEngine').value,'deepfilter');
-  await h.element('voiceRecordFinalize').onclick();assert.equal(body.enhancement.enhancementEngine,'off');
-  assert.equal(body.treatment.enabled,true);assert.equal(body.treatment.enhancementEngine,'deepfilter');assert.equal(body.treatment.enhancementMode,'strong');assert.equal(body.treatment.removeMiddleSilence,false);
-  h.element('voiceRecordTreatmentEnabled').checked=false;await h.element('voiceRecordFinalize').onclick();assert.equal(body.treatment.enabled,false);
+  await h.element('voiceRecordFinalize').onclick();
+  assert.equal(body.enhancement,undefined);assert.equal(body.treatment,undefined);
   h.element('voiceTreatmentRecipe').value='preserve';h.element('voiceTreatmentRecipe').onchange();
-  assert.equal(h.element('transcriptionRemoveMiddle').checked,false);assert.equal(h.element('transcriptionNormalize').checked,true);
+  assert.equal(h.element('transcriptionRemoveMiddle').checked,false);
 });
 test('expressive voice presets reach generation and select isolated installer',async()=>{
   const calls=[];

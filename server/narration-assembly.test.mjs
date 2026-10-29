@@ -38,8 +38,10 @@ test('takes persist, reorder, exclude and finalize with a transcript on the fina
   await assert.rejects(finalizeTakes(root,{transcriber:async()=>{throw Error('Whisper indisponível');}}),/Whisper/);
   assert.deepEqual(fs.readFileSync(path.join(root,'audio/narration.wav')),original);
   let enhanced=false;
-  const second=await finalizeTakes(root,{transcriber,enhancement:{enhancementEngine:'deepfilter'},enhancer:async(input,output)=>{enhanced=true;fs.copyFileSync(input,output);return {applied:true};}});assert.ok(second.backup);
-  assert.equal(enhanced,true);
+  const second=await finalizeTakes(root,{transcriber,enhancement:{enhancementEngine:'deepfilter'},treatment:{enabled:true},enhancer:async()=>{enhanced=true;throw Error('Never treat at finalization');}});assert.ok(second.backup);
+  assert.equal(enhanced,false,'Neither explicit enhancement nor treatment runs when joining takes');
+  assert.equal(second.treatment,null);
+  assert.deepEqual(fs.readFileSync(path.join(root,'audio/narration.wav')),original);
   assert.ok(fs.existsSync(path.join(root,second.backup,'transcript.json')));
   assert.equal(fs.existsSync(path.join(root,'edit_plan.json')),false);
   for(const take of current.takes)assert.ok(fs.existsSync(path.join(root,'audio','takes',take.name)));

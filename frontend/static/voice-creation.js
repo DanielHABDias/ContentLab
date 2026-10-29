@@ -1,4 +1,4 @@
-/* Recording has explicit finalization treatment; local TTS and import treatment remain separate. */
+/* Recording and TTS produce raw narration; treatment is exclusive to the Treatment tab. */
 (()=>{
   const $=id=>document.getElementById(id);if(!$('voiceRecordStart'))return;
   const expressiveModel='chatterbox-multilingual';
@@ -130,7 +130,7 @@
           try{
             const result=await request('/api/voice/takes/'+encodeURIComponent(take.name),{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({projectRoot:folder,revision})});
             if(folder===$('transcriptionProjectRoot').value.trim()){
-              takeState={folder,...result};renderTakes();status('Tomada excluída. Clique em Finalizar narração e transcrever para gerar o áudio com as restantes. Recuperação: '+result.recovery);
+              takeState={folder,...result};renderTakes();status('Tomada excluída. Una novamente as tomadas para atualizar a narração bruta. Recuperação: '+result.recovery);
             }
           }catch(error){if(folder===$('transcriptionProjectRoot').value.trim())await loadTakes();throw error;}
           finally{remove.disabled=false;}
@@ -147,14 +147,7 @@
   }
   async function finalize(kind){
     if(savingTake||unsavedTake||(recorder&&recorder.state!=='inactive'))throw Error('Finalize e salve a tomada antes de unir a narração.');
-    const treatment=kind==='recording'?{
-      enabled:$('voiceRecordTreatmentEnabled').checked!==false,
-      enhancementEngine:$('voiceRecordAi').checked!==false?'deepfilter':'off',enhancementMode:$('voiceRecordAiMode').value||'strong',enhancementStrength:Number($('voiceRecordAiStrength').value||100),
-      compression:$('voiceRecordCompression').checked!==false,deesser:$('voiceRecordDeesser').checked!==false,normalize:$('voiceRecordNormalize').checked!==false,
-      reduceBreaths:$('voiceRecordReduceBreaths').checked!==false,breathReductionStrength:Number($('voiceRecordBreathStrength').value||60),
-      targetLufs:Number($('voiceRecordLufs').value||-16),highpassHz:Number($('voiceRecordHighpass').value||70),trimEdges:$('voiceRecordTrim').checked!==false,removeMiddleSilence:$('voiceRecordMiddle').checked===true
-    }:undefined;
-    const result=await post('/api/voice/finalize',{projectRoot:root(),kind,treatment,transcription:automaticTranscription(),enhancement:{enhancementEngine:'off'}});await watch(result.jobId);
+    const result=await post('/api/voice/finalize',{projectRoot:root(),kind,transcription:automaticTranscription()});await watch(result.jobId);
   }
   $('voiceRecordFinalize').onclick=safe(()=>finalize('recording'));
   $('voiceAiFinalize').onclick=safe(()=>finalize('qwen'));
@@ -166,7 +159,7 @@
     savingTake=true;$('voiceRecordStart').disabled=true;$('voiceRecordSave').disabled=true;
     try{const result=await request('/api/voice/recordings',{method:'POST',body:form});unsavedTake=false;
       if(folder===$('transcriptionProjectRoot').value.trim()){takeState={folder,takes:result.takes,revision:result.revision};renderTakes();}
-      status('Tomada salva automaticamente. Grave a próxima ou clique em Finalizar narração e transcrever.');
+      status('Tomada bruta salva automaticamente. Grave a próxima ou una as tomadas sem tratamento.');
     }finally{savingTake=false;$('voiceRecordStart').disabled=polling;$('voiceRecordSave').disabled=!unsavedTake;$('voiceRecordSave').hidden=!unsavedTake;}
   }
   $('voiceRecordSave').onclick=safe(()=>timeline.state==='paused'?timeline.finish():saveTake(recordingFolder||root()));
@@ -206,7 +199,7 @@
   async function watch(id){
     if(polling)return;const requestedFolder=$('transcriptionProjectRoot').value.trim();let completed=false;
     polling=true;jobId=id;busy(true);enhancementControls();
-    $('voiceRecordFinalize').textContent='Finalizando e transcrevendo…';
+    $('voiceRecordFinalize').textContent='Unindo tomadas e transcrevendo…';
     try{
       while(true){
         const job=await request('/api/voice/jobs/'+id);status(job.error||job.message);
@@ -214,7 +207,7 @@
           if(job.status==='done'&&job.result?.relative){
             completed=true;
             if(requestedFolder===$('transcriptionProjectRoot').value.trim()){
-              await useAudio(id,job.result);status('Concluído! '+(job.result.treatment?.applied?'Gravação tratada. ':'')+'Narração e transcrição salvas. Ouça o resultado no bloco “Narração e transcrição prontas”. Tomadas originais em audio/takes/; áudio final em audio/narration.wav.',true);
+              await useAudio(id,job.result);status('Concluído! Narração bruta e transcrição salvas. Faça a limpeza e os cortes na aba Tratamento. Tomadas originais em audio/takes/; áudio unificado em audio/narration.wav.',true);
             }else status('Narração e transcrição prontas em '+job.result.projectRoot+'. Selecione essa pasta para revisar.');
           }
           if(job.result?.preview)completed=true;
@@ -223,7 +216,7 @@
         await new Promise(resolve=>setTimeout(resolve,1200));
       }
     }finally{
-      polling=false;busy(false);enhancementControls();$('voiceRecordFinalize').textContent='Finalizar narração e transcrever';
+      polling=false;busy(false);enhancementControls();$('voiceRecordFinalize').textContent='Unir tomadas e transcrever (sem tratamento)';
       // Optional model discovery must never delay or replace a successful recording result.
       if(!completed)await refresh().catch(()=>{});
       if($('transcriptionProjectRoot').value.trim())await loadTakes().catch(()=>{});
@@ -273,6 +266,9 @@
     $('voiceEnhancementEngine').value=strong?'deepfilter':'off';$('voiceEnhancementMode').value=strong?'strong':'natural';$('voiceEnhancementStrength').value=strong?'100':'80';enhancementControls();
   };
   for(const id of ['transcriptionReduceBreaths','transcriptionBreathStrength','transcriptionTrimEdges','transcriptionRemoveMiddle','transcriptionMinSilence','transcriptionThreshold','transcriptionNormalize','transcriptionTargetLufs','transcriptionHighpass','transcriptionCompression','transcriptionDeesser','transcriptionVoicePreset','voiceEnhancementEngine','voiceEnhancementMode','voiceEnhancementStrength'])$(id).addEventListener('change',()=>{$('voiceTreatmentRecipe').value='custom';});
+  // Ao sair da gravação, selecione a narração oficial em vez da transcrição avulsa.
+  const nextTreatment=$('voiceCaptureTools').querySelector('a[href="#transcription"]');
+  if(nextTreatment)nextTreatment.onclick=()=>{const scope=$('transcriptionScope');scope.value='narration';scope.dispatchEvent?.(new Event('change'));};
   window.addEventListener('workspacechange',event=>workspaceEntered(event.detail.name));
   window.addEventListener('projectwillchange',event=>{if(savingTake||unsavedTake||(recorder&&recorder.state!=='inactive')){event.preventDefault();status('Finalize e salve a tomada antes de trocar ou recarregar o projeto.');}});
   window.addEventListener('projectchanged',()=>{takeState=null;$('voiceFinalDetails').hidden=true;renderTakes();loadTakes().catch(error=>status(error.message));});

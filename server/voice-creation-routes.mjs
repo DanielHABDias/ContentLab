@@ -8,7 +8,6 @@ import {takeList,addTake,editTakes,deleteTake,finalizeTakes,transcriptionOptions
 import {probeAudioDuration} from './audio.mjs';
 import {VOICE_MODELS,generationOptions,profile,profiles,saveProfile,saveRecording,modelState,setupRuntime,qwenTask} from './voice-creation.mjs';
 import {CHATTERBOX_MODEL,setupChatterbox,chatterboxTask} from './chatterbox.mjs';
-import {recordingTreatmentOptions} from './recording-treatment.mjs';
 import {enhanceVoice,enhancementOptions} from './voice-enhancement.mjs';
 import {run} from './exec.mjs';
 import {sendNarrationAudio} from './audio-waveform.mjs';
@@ -120,7 +119,7 @@ export function mountVoiceCreationRoutes(app,api,{isProjectBusy=()=>false}={}){
         fs.writeFileSync(file+'.json',JSON.stringify({version:1,kind:'qwen',engine:options.model===CHATTERBOX_MODEL?'chatterbox':'qwen',checkpoint:options.model===CHATTERBOX_MODEL?'multilingual-v3':undefined,model:options.model,profileId:voice.id,language:options.language,exaggeration:options.exaggeration,cfgWeight:options.cfgWeight,processing:[],createdAt:new Date().toISOString()}),{flag:'wx'});
         const duration=await probeAudioDuration(file);
         addTake(root,{relative,duration,kind:'qwen'},req.body.append!==true);
-        const result=await finalizeTakes(root,{kind:'qwen',transcription,enhancement,signal,update});
+        const result=await finalizeTakes(root,{kind:'qwen',transcription,signal,update});
         job.file=path.join(root,result.source);
         return result;
       }finally{fs.rmSync(staging,{recursive:true,force:true});}
@@ -163,13 +162,12 @@ export function mountVoiceCreationRoutes(app,api,{isProjectBusy=()=>false}={}){
   }));
   app.post('/api/voice/finalize',api(async(req,res)=>{
     const root=voiceStudioFolder(req.body.projectRoot),kind=req.body.kind||'recording';
-    const treatment=kind==='recording'?recordingTreatmentOptions(req.body.treatment??{}):null;
+    // A API de finalização nunca aplica tratamento, mesmo para clientes antigos.
     const transcription=transcriptionOptions(req.body.transcription);
-    const enhancement=enhancementOptions(req.body.enhancement);
     if(isProjectBusy(root))return res.status(409).json({error:'Há processamento de áudio ou render neste projeto.'});
     if(!['recording','qwen'].includes(kind)||!takeList(root).takes.some(t=>t.kind===kind&&t.selected))return res.status(400).json({error:'Selecione pelo menos uma tomada.'});
     res.status(202).json({jobId:start(async(job,update,signal)=>{
-      const result=await finalizeTakes(root,{kind,transcription,enhancement,treatment,signal,update});job.file=path.join(root,result.source);return result;
+      const result=await finalizeTakes(root,{kind,transcription,signal,update});job.file=path.join(root,result.source);return result;
     },{projectRoot:root})});
   }));
   app.get('/api/voice/jobs/:id',api(async(req,res)=>{

@@ -1006,6 +1006,37 @@ function updateTranscriptionScope(){
   $('transcriptionFile').parentElement.querySelector('.helper-text').textContent=avulso?'Obrigatório: áudio do computador. Não substitui arquivos do projeto.':'Selecione outro áudio ou deixe vazio para tratar a narração atual do projeto.';
 }
 $('transcriptionScope').addEventListener('change',updateTranscriptionScope);updateTranscriptionScope();
+// Preferências locais: sem dados salvos, prevalecem os padrões do formulário.
+const audioTreatmentStorageKey='contentlab.audio-treatment.settings.v1';
+const audioTreatmentIds=['voiceTreatmentRecipe','transcriptionTrimEdges','transcriptionRemoveMiddle','transcriptionMinSilence','transcriptionThreshold','transcriptionNormalize','transcriptionTargetLufs','transcriptionHighpass','transcriptionCompression','transcriptionDeesser','transcriptionVoicePreset','transcriptionReduceBreaths','transcriptionBreathStrength','voiceEnhancementEngine','voiceEnhancementMode','voiceEnhancementStrength'];
+function restoreAudioTreatmentSettings(){
+  try{
+    const raw=window.localStorage?.getItem(audioTreatmentStorageKey);
+    if(!raw)return;
+    const stored=JSON.parse(raw);
+    if(stored?.version!==1||!stored.controls||typeof stored.controls!=='object')return;
+    for(const id of audioTreatmentIds){
+      const node=$(id),value=stored.controls[id];
+      if(node.type==='checkbox'){if(typeof value==='boolean')node.checked=value;}
+      else if(typeof value==='string'){
+        if(node.tagName==='SELECT'&&![...node.options].some(option=>option.value===value))continue;
+        if(node.type==='number'||node.type==='range'){
+          const number=Number(value);
+          if(!Number.isFinite(number)||(node.min!==''&&number<Number(node.min))||(node.max!==''&&number>Number(node.max)))continue;
+        }
+        node.value=value;
+      }
+    }
+  }catch(_){/* Storage ausente ou inválido: manter padrões. */}
+}
+function saveAudioTreatmentSettings(){
+  try{
+    const controls={};
+    for(const id of audioTreatmentIds){const node=$(id);controls[id]=node.type==='checkbox'?node.checked:String(node.value);}
+    window.localStorage?.setItem(audioTreatmentStorageKey,JSON.stringify({version:1,controls}));
+  }catch(_){/* Processamento continua se armazenamento local estiver indisponível. */}
+}
+restoreAudioTreatmentSettings();
 $("transcriptionStart").addEventListener("click", async () => {
   const root = $("transcriptionProjectRoot").value.trim();
   const file = $("transcriptionFile").files[0];
@@ -1061,6 +1092,7 @@ $("transcriptionStart").addEventListener("click", async () => {
           document.querySelector('.voice-studio-compare').classList.add('hidden');
           return;
         }
+        saveAudioTreatmentSettings();
         latestVoiceJobId = data.jobId;
         document.querySelector('#transcriptionResult > .helper-text').textContent='Narração e transcrição oficiais salvas no projeto: audio/narration.wav, audio/narration.prepared.wav e transcript.json/TXT/SRT.';
         document.querySelector('.voice-studio-compare').classList.remove('hidden');
