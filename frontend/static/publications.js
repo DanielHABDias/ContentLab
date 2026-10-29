@@ -252,19 +252,30 @@
       const file=$('publishShortCoverFile');file.value='';
       $('publishShortCoverName').textContent='Frame capturado em '+timecode(frameVideo.currentTime);
       previewImage(new File([captured],'frame.png',{type:'image/png'}),'publishFrameImage');
-      $('publishCoverFeedback').textContent='Frame de '+timecode(frameVideo.currentTime)+' capturado como thumbnail. A imagem será salva com o vídeo.';
+      $('publishCoverFeedback').textContent='PRÉVIA DO NOVO FRAME ('+timecode(frameVideo.currentTime)+'): ainda não foi salvo. Clique em Salvar alterações para trocar a capa.';
     }catch(error){feedback(error.message,true);}
   };
   $('publishShortCoverFile').addEventListener('change',()=>{
     const image=$('publishShortCoverFile').files[0];
     if(image){
       captured=null;previewImage(image,'publishFrameImage');
-      $('publishShortCoverName').textContent=image.name;
-      $('publishCoverFeedback').textContent='Thumbnail personalizada selecionada: '+image.name;
+      $('publishShortCoverName').textContent='Nova capa selecionada · '+image.name;
+      $('publishCoverFeedback').textContent='PRÉVIA DA NOVA CAPA: '+image.name+' (ainda não salva). Clique em Salvar alterações para substituir a anterior.';
     }else{
-      $('publishFrameImage').hidden=true;
-      $('publishShortCoverName').textContent='Nenhuma imagem selecionada';
-      $('publishCoverFeedback').textContent='Selecione um frame do vídeo para criar sua thumbnail.';
+      if(editingId){
+        const old=drafts.find(d=>d.id===editingId);
+        if(old?.media?.coverA){
+          const image=$('publishFrameImage');
+          image.src=safeUrl(editingId,'coverA')+'?restored='+Date.now();
+          image.hidden=false;
+          $('publishShortCoverName').textContent='Capa atual preservada';
+          $('publishCoverFeedback').textContent='Nenhuma nova imagem selecionada. A capa salva anteriormente será mantida.';
+        }
+      }else{
+        $('publishFrameImage').hidden=true;
+        $('publishShortCoverName').textContent='Nenhuma imagem selecionada';
+        $('publishCoverFeedback').textContent='Selecione um frame do vídeo para criar sua thumbnail.';
+      }
     }
   });
   async function openComposer(item=null){
@@ -300,6 +311,8 @@
       $('publishDescription').value=current.description||'';
       $('publishTags').value=(current.tags||[]).join(', ');
       $('publishScheduleAt').value=current.scheduledAt||'';
+      $('publishYouTubeNoAi').checked=current.youtubeNoAi===true;
+      $('publishYouTubeNoPromotion').checked=current.youtubeNoPromotion===true;
       $('publishScheduleAdvice').textContent='Data do vídeo mantida. Altere se quiser.';
       $('publishFileCaption').textContent=current.fileName||'Vídeo salvo';
       $('publishVideoMeta').textContent='Vídeo salvo na lista · escolha outro arquivo somente para trocar';
@@ -321,7 +334,7 @@
       }
       const video=$('publishFrameVideo');
       video.src=safeUrl(current.id,'video');video.load();
-      $('publishCoverFeedback').textContent='Thumbnail atual preservada. Você pode escolher outra imagem ou capturar um novo frame.';
+      $('publishCoverFeedback').textContent='CAPA ATUAL SALVA: será preservada se você não escolher outra imagem nem capturar outro frame.';
     }
     dialog.showModal();
   }
@@ -602,6 +615,8 @@
       if(coverB)form.append('coverB',coverB);
       for(const key of ['titleA','titleB','description','tags','scheduledAt'])form.append(key, $('publish'+({titleA:'TitleA',titleB:'TitleB',description:'Description',tags:'Tags',scheduledAt:'ScheduleAt'}[key])).value);
       form.append('kind',kind());form.append('platforms',JSON.stringify(chosen));
+      form.append('youtubeNoAi',String($('publishYouTubeNoAi').checked));
+      form.append('youtubeNoPromotion',String($('publishYouTubeNoPromotion').checked));
       button.disabled=true;button.textContent='Salvando vídeo...';feedback('Copiando o vídeo e as imagens para a lista local...');
       const edited=Boolean(editingId);
       const data=await request(edited?'/api/social-browser/drafts/'+encodeURIComponent(editingId):'/api/social-browser/drafts',

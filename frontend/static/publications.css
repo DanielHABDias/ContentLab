@@ -373,3 +373,12 @@
   .publish-import-thumb{width:74px;height:104px}.publish-import-row-actions{grid-column:1/-1;justify-content:flex-end}
   .publish-import-drag{width:auto;margin-right:auto}
   .publish-import-header,.publish-import-body{padding:17px}.publish-import-footer{padding:14px}}
+
+/* Confirmações do upload YouTube, exigem declaração consciente por vídeo. */
+.publish-dialog .publish-youtube-disclosures{margin:16px 0 0;padding:15px 17px;
+  border:1px solid #d8e4f5;background:#f7faff;border-radius:12px}
+.publish-dialog .publish-youtube-disclosures legend{font-size:12px;font-weight:800;color:#35567e;padding:0 7px}
+.publish-dialog .publish-youtube-disclosures p{font-size:11px;color:#687e9b;line-height:1.5}
+.publish-dialog .publish-youtube-disclosures label{display:flex;gap:10px;align-items:flex-start;
+  font-size:12px;line-height:1.6;margin:11px 0 0;color:#3f5576}
+.publish-dialog .publish-youtube-disclosures input{margin-top:3px;accent-color:#477bc5;flex-shrink:0}

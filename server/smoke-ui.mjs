@@ -198,6 +198,7 @@ try{
         const item={id:'00000000-1111-4444-8888-'+String(items.length+1).padStart(12,'0'),
           kind:form.get('kind'),titleA:form.get('titleA'),titleB:form.get('titleB'),description:form.get('description'),
           tags:form.get('tags').split(',').map(x=>x.trim()).filter(Boolean),
+          youtubeNoAi:form.get('youtubeNoAi')==='true',youtubeNoPromotion:form.get('youtubeNoPromotion')==='true',
           platforms:JSON.parse(form.get('platforms')),fileName:form.get('video').name,scheduledAt:form.get('scheduledAt'),
           media:{video:'video.mp4',coverA:'coverA.png',coverB:form.get('kind')==='long'?'coverB.png':null}};
         items.unshift(item);
@@ -208,6 +209,8 @@ try{
         const index=items.findIndex(item=>item.id===endpoint.split('/').at(-1)),form=options.body;
         const item={...items[index],kind:form.get('kind'),titleA:form.get('titleA'),titleB:form.get('titleB'),
           description:form.get('description'),tags:form.get('tags').split(',').filter(Boolean),
+          youtubeNoAi:form.get('youtubeNoAi')==='true',
+          youtubeNoPromotion:form.get('youtubeNoPromotion')==='true',
           platforms:JSON.parse(form.get('platforms')),scheduledAt:form.get('scheduledAt'),
           fileName:form.get('video')?.name||items[index].fileName};
         items[index]=item;
@@ -399,12 +402,29 @@ try{
     'Edit dialog loads saved metadata');
   assert.equal(await evaluate('document.getElementById("publishVideoFile").required'),false,
     'Editing keeps video file when no replacement is supplied');
+  assert.equal(await evaluate('document.getElementById("publishYouTubeNoAi").checked'),false,
+    'No AI declaration requires explicit creator confirmation');
+  await evaluate(`(() => {
+    const input=document.getElementById('publishShortCoverFile'),transfer=new DataTransfer();
+    transfer.items.add(new File([new Uint8Array([137,80,78,71,13,10,26,10])],'nova-capa.png',{type:'image/png'}));
+    input.files=transfer.files;input.dispatchEvent(new Event('change',{bubbles:true}));
+    document.getElementById('publishYouTubeNoAi').checked=true;
+    document.getElementById('publishYouTubeNoPromotion').checked=true;
+  })()`);
+  assert.equal(await evaluate('document.getElementById("publishFrameImage").src.startsWith("blob:")'),true,
+    'Changing thumbnail previews the NEW file, not the old saved image');
+  assert.equal(await evaluate('document.getElementById("publishCoverFeedback").textContent.includes("ainda não salva")'),true,
+    'Thumbnail preview clearly distinguishes pending change from saved thumbnail');
   await evaluate('document.getElementById("publishTitleA").value="Short atualizado";document.getElementById("publishComposerForm").dispatchEvent(new Event("submit",{bubbles:true,cancelable:true}))');
   try{await wait(()=>evaluate('document.getElementById("publishComposerDialog").open===false'),'Edit saves');}
   catch(error){const details=await evaluate('JSON.stringify({feedback:document.getElementById("publishComposerFeedback").textContent,saveDisabled:document.getElementById("publishComposerSave").disabled,editing:document.getElementById("publishComposerTitle").textContent,videoRequired:document.getElementById("publishVideoFile").required})');
     throw Error(error.message+' · '+details);
   }
   assert.equal(await evaluate('document.querySelector(".publish-draft-content h4").textContent'),"Short atualizado");
+  assert.equal(await evaluate('window.__socialDraftItems[0].youtubeNoAi'),true,
+    'Creator confirmation persists with draft');
+  assert.equal(await evaluate('window.__socialDraftItems[0].youtubeNoPromotion'),true);
+
   await evaluate('document.querySelectorAll(".publish-draft-picker input")[0].click()');
   assert.equal(await evaluate('document.getElementById("publishSelectionBar").hidden'),false,
     'Selecting an item reveals publication preparation');

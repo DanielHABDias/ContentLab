@@ -97,6 +97,81 @@ function setField(selectors,value){
     node.dispatchEvent(new Event('change',{bubbles:true,composed:true}));
     return true;})()`;
 }
+export const YOUTUBE_ACTION_DELAY_MS=1100;
+const pauseForStudio=ms=>sleep(Math.max(0,ms));
+const TAG_SELECTORS=[
+  'ytcp-free-text-chip-bar input','ytcp-form-input-container#tags-container input',
+  '#tags-container input','input[aria-label="Tags"]','input[aria-label="Etiquetas"]'
+];
+export function findStudioTagsExpression(){
+  return '(()=>{'+browserDOM+'return nodes.some(n=>'+JSON.stringify(TAG_SELECTORS)+
+    '.some(sel=>n.matches?.(sel))&&n.getClientRects().length>0);})()';
+}
+export async function fillYouTubeTags(cdp,tags,{delayMs=YOUTUBE_ACTION_DELAY_MS}={}){
+  if(!Array.isArray(tags)||!tags.length)return true;
+  if(!await waitUntil(cdp,findStudioTagsExpression(),8000))return false;
+  for(const raw of tags){
+    const tag=String(raw||'').trim().replace(/^#/,'');
+    if(!tag)continue;
+    const expression='(()=>{'+browserDOM+
+      'const selectors='+JSON.stringify(TAG_SELECTORS)+';'+
+      'const n=selectors.map(s=>nodes.find(x=>x.matches?.(s)&&x.getClientRects().length)).find(Boolean);'+
+      'if(!n)return false;n.focus();return n.getRootNode()?.activeElement===n;})()';
+    if(!await cdp.eval(expression))return false;
+    // Input.insertText + Enter nativos formam um chip por tag no Studio.
+    await cdp.send('Input.insertText',{text:tag});
+    await pauseForStudio(Math.max(150,delayMs/3));
+    await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',
+      windowsVirtualKeyCode:13,nativeVirtualKeyCode:13});
+    await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',
+      windowsVirtualKeyCode:13,nativeVirtualKeyCode:13});
+    await pauseForStudio(delayMs);
+  }
+  return true;
+}
+export function disclosureExpression(type){
+  const headings=type==='altered'?
+    ['altered content','conteúdo alterado','contenido alterado','synthetic content','conteúdo sintético']:
+    ['paid promotion','promoção paga','paid promotions','promoção remunerada','branded content'];
+  return '(()=>{'+browserDOM+
+    'const headings='+JSON.stringify(headings)+',type='+JSON.stringify(type)+';'+
+    "const text=n=>(n.getAttribute('aria-label')||n.textContent||'').trim().toLowerCase();"+
+    "const headingsFound=nodes.filter(n=>n.getClientRects().length&&headings.some(h=>text(n)===h));"+
+    "const selector='ytcp-radio-button,tp-yt-paper-radio-button,[role=\"radio\"],input[type=\"radio\"],ytcp-checkbox-lit,tp-yt-paper-checkbox,[role=\"checkbox\"],input[type=\"checkbox\"]';"+
+    "const isChecked=n=>n.checked===true||n.getAttribute('aria-checked')==='true'||n.hasAttribute('checked');"+
+    "const within=(node,ancestor)=>{let n=node;while(n){if(n===ancestor)return true;n=n.parentElement||n.getRootNode()?.host;}return false;};"+
+    'for(const head of headingsFound){let section=head;for(let depth=0;depth<8&&section;depth++,section=section.parentElement||section.getRootNode()?.host){'+
+    "const controls=nodes.filter(n=>n!==section&&n.matches?.(selector)&&n.getClientRects().length&&within(n,section));"+
+    "if(type==='altered'){const radios=controls.filter(n=>n.matches?.('ytcp-radio-button,tp-yt-paper-radio-button,[role=\"radio\"],input[type=\"radio\"]'));"+
+    "const target=radios.find(n=>/^(no|não|nao)(\\b|,)/i.test((n.getAttribute('aria-label')||n.getAttribute('value')||n.innerText||n.closest('label')?.innerText||'').trim()));"+
+    'if(target){if(!isChecked(target))target.click();return true;}}'+
+    "else{const boxes=controls.filter(n=>n.matches?.('ytcp-checkbox-lit,tp-yt-paper-checkbox,[role=\"checkbox\"],input[type=\"checkbox\"]'));"+
+    'if(boxes.length===1){if(isChecked(boxes[0]))boxes[0].click();return true;}}'+
+    '}}return false;})()';
+}
+export async function applyYouTubeDisclosures(cdp,video,{delayMs=YOUTUBE_ACTION_DELAY_MS}={}){
+  const warnings=[];
+  for(const [key,label,type] of [
+    ['youtubeNoAi','Conteúdo alterado/IA','altered'],
+    ['youtubeNoPromotion','Promoção paga','promotion']
+  ]){
+    if(video[key]!==true){
+      warnings.push(label+': não confirmado no rascunho; revise manualmente.');
+      continue;
+    }
+    const applied=await cdp.eval(disclosureExpression(type)).catch(()=>false);
+    if(!applied)warnings.push(label+': controle não identificado, revise manualmente.');
+    else await pauseForStudio(delayMs);
+  }
+  return warnings;
+}
+export function selectScheduleCardExpression(){
+  return '(()=>{'+browserDOM+
+    "const options=nodes.filter(n=>n.matches?.('ytcp-radio-button,tp-yt-paper-radio-button,[role=\"radio\"],input[type=\"radio\"],ytcp-visibility-option,ytcp-video-visibility-option')&&n.getClientRects().length);"+
+    "const target=options.find(n=>/(schedule|programar|agendar)/i.test((n.getAttribute('aria-label')||'')+' '+(n.innerText||n.closest('label')?.innerText||'')));"+
+    "if(!target)return false;if(!(target.checked||target.getAttribute('aria-checked')==='true'))target.click();return true;})()";
+}
+
 async function waitUntil(cdp,expression,ms=12000){
   const end=Date.now()+ms;
   while(Date.now()<end){
@@ -132,16 +207,32 @@ const scheduleParts=value=>{
   const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(String(value||''));
   return m?{date:m[1]+'-'+m[2]+'-'+m[3],time:m[4]+':'+m[5]}:null;
 };
-async function prepareYouTubeSchedule(cdp,value){
+export async function prepareYouTubeSchedule(cdp,value,{delayMs=YOUTUBE_ACTION_DELAY_MS}={}){
   const parts=scheduleParts(value);if(!parts)return false;
   for(let step=0;step<3;step++){
-    if(!await waitUntil(cdp,clickText(['próximo','next']),7000))return false;
-    await sleep(500);
+    if(!await waitUntil(cdp,clickText(['próximo','next']),12000))return false;
+    await pauseForStudio(delayMs);
   }
-  if(!await waitUntil(cdp,clickText(['programar','schedule']),7000))return false;
-  const date=await cdp.eval(setField(['input[type="date"]','input[aria-label*="data"]','input[aria-label*="date"]'],parts.date)).catch(()=>false);
-  const time=await cdp.eval(setField(['input[type="time"]','input[aria-label*="hora"]','input[aria-label*="time"]'],parts.time)).catch(()=>false);
-  return Boolean(date&&time);
+  // A última etapa é Visibilidade: clicar no CARTÃO, não no botão final.
+  const card=await waitUntil(cdp,clickSelector(['#schedule-radio-button',
+    'ytcp-visibility-scheduler #schedule-radio-button']),2500);
+  if(!card&&!await waitUntil(cdp,selectScheduleCardExpression(),9000))return false;
+  await pauseForStudio(delayMs);
+  const dates=['ytcp-datetime-picker input[type="date"]',
+    'ytcp-date-time-picker input[type="date"]','input[type="date"]',
+    'ytcp-date-time-picker input[aria-label*="Date"]',
+    'ytcp-date-time-picker input[aria-label*="Data"]'];
+  const times=['ytcp-datetime-picker input[type="time"]',
+    'ytcp-date-time-picker input[type="time"]','input[type="time"]',
+    'ytcp-date-time-picker input[aria-label*="Time"]',
+    'ytcp-date-time-picker input[aria-label*="Hora"]'];
+  const date=await cdp.eval(setField(dates,parts.date)).catch(()=>false);
+  if(!date)return false;
+  await pauseForStudio(delayMs);
+  const time=await cdp.eval(setField(times,parts.time)).catch(()=>false);
+  if(!time)return false;
+  await pauseForStudio(delayMs);
+  return true; // Não clica em "Programar", "Salvar" nem "Publicar".
 }
 const readActivePort=profile=>{
   const file=path.join(profile,'DevToolsActivePort');
@@ -181,59 +272,80 @@ export async function prepareYouTubeUpload(browser,video,{videoPath,coverAPath,c
   if(!fs.existsSync(videoPath))throw Error('O vídeo local foi removido.');
   const currentUrl=await cdp.eval('location.href');
   if(!currentUrl?.startsWith('https://studio.youtube.com/'))throw new YouTubeLoginRequired();
+  const delayMs=YOUTUBE_ACTION_DELAY_MS;
   progress('Localizando a opção Criar no YouTube Studio...');
+  await pauseForStudio(delayMs);
   let clicked=await waitUntil(cdp,clickSelector(['#create-icon','ytcp-button#create-icon','button[aria-label="Create"]','button[aria-label="Criar"]']),10000);
   if(!clicked)clicked=await waitUntil(cdp,clickText(['criar','create']),6000);
   if(!clicked)throw new YouTubeStudioChanged('o botão Criar');
+  await pauseForStudio(delayMs);
   progress('Abrindo a tela de envio...');
-  clicked=await waitUntil(cdp,clickText(['enviar vídeos','upload videos','fazer upload de vídeos','upload video']),8000);
+  clicked=await waitUntil(cdp,clickText(['enviar vídeos','upload videos','fazer upload de vídeos','upload video']),10000);
   if(!clicked)throw new YouTubeStudioChanged('a opção Enviar vídeos');
+  await pauseForStudio(delayMs);
   progress('Selecionando o arquivo no computador...');
-  await sleep(450);
   await setFile(cdp,videoPath);
+  await pauseForStudio(delayMs);
   progress('Aguardando campos de título e descrição...');
   const titleSelectors=['ytcp-social-suggestions-textbox#title-textarea #textbox',
     '#title-textarea #textbox','ytcp-social-suggestions-textbox#title-textarea [contenteditable="true"]',
     'ytcp-mention-textbox#title-textarea [contenteditable="true"]'];
   const descSelectors=['ytcp-social-suggestions-textbox#description-textarea #textbox',
     '#description-textarea #textbox','ytcp-mention-textbox#description-textarea [contenteditable="true"]'];
-  const ready=await waitUntil(cdp,`(()=>{${browserDOM}return nodes.some(n=>${JSON.stringify(titleSelectors)}.some(sel=>n.matches?.(sel)));})()`,45000);
+  const ready=await waitUntil(cdp,'(()=>{'+browserDOM+'return nodes.some(n=>'+
+    JSON.stringify(titleSelectors)+'.some(sel=>n.matches?.(sel)));})()',45000);
   if(!ready)throw new YouTubeStudioChanged('o campo Título após selecionar o arquivo');
   if(!await cdp.eval(setField(titleSelectors,video.titleA)))throw new YouTubeStudioChanged('o campo Título');
-  if(video.description&&!await cdp.eval(setField(descSelectors,video.description)))
-    throw new YouTubeStudioChanged('o campo Descrição');
-  progress('Título e descrição preenchidos. Procurando tags e miniatura...');
-  const warnings=[];
-  if(video.tags?.length){
-    await cdp.eval(clickText(['mostrar mais','show more'])).catch(()=>false);
-    const tagSelectors=['ytcp-form-input-container#tags-container input','ytcp-free-text-chip-bar input',
-      '#tags-container input','input[aria-label="Tags"]','input[aria-label="Etiquetas"]'];
-    const filled=await cdp.eval(setField(tagSelectors,video.tags.join(',')));
-    if(!filled)warnings.push('Tags: campo não encontrado automaticamente; revise em Mostrar mais.');
+  await pauseForStudio(delayMs);
+  if(video.description){
+    if(!await cdp.eval(setField(descSelectors,video.description)))
+      throw new YouTubeStudioChanged('o campo Descrição');
+    await pauseForStudio(delayMs);
   }
-  // O YouTube expõe frequentemente um único controle de miniatura no upload.
-  // O A/B de título/capa requer recursos avançados e controle específico da conta.
+  const warnings=[];
+  progress('Abrindo Mostrar mais / Show more na primeira etapa...');
+  const expanded=await waitUntil(cdp,clickText(['mostrar mais','show more','more options','mais opções']),7000);
+  if(!expanded)warnings.push('Não encontrei o botão Mostrar mais / Show more. Revise as opções avançadas.');
+  await pauseForStudio(delayMs);
+  if(video.tags?.length){
+    progress('Inserindo as tags individualmente no YouTube...');
+    const tags=await fillYouTubeTags(cdp,video.tags,{delayMs}).catch(()=>false);
+    if(!tags)warnings.push('Tags: não consegui criar os chips; verifique o campo Tags em Mostrar mais.');
+  }
+  progress('Revisando conteúdo alterado/IA e promoção paga...');
+  warnings.push(...await applyYouTubeDisclosures(cdp,video,{delayMs}));
+  await pauseForStudio(delayMs);
+  // O YouTube pode ter uma miniatura própria; arquivo de thumbnail é uma etapa separada.
   if(coverAPath){
+    progress('Preparando thumbnail A...');
     try{await setFile(cdp,coverAPath,{role:'image'});}
-    catch{warnings.push('Thumbnail principal: revise e carregue manualmente no Studio, se necessário.');}
+    catch{warnings.push('Thumbnail A: confira manualmente o arquivo selecionado.');}
+    await pauseForStudio(delayMs);
   }
   if(video.kind==='long'&&coverBPath){
-    progress('Tentando preparar o teste A/B de título e thumbnail...');
+    progress('Tentando configurar o teste A/B...');
     const opened=await cdp.eval(clickText(['teste a/b','a/b test'])).catch(()=>false);
     if(opened){
-      await sleep(500);
+      await pauseForStudio(delayMs);
       await cdp.eval(clickText(['título e miniatura','title and thumbnail'])).catch(()=>false);
+      await pauseForStudio(delayMs);
       const secondTitle=await cdp.eval(setField([
         '[role="dialog"] input[type="text"]','[role="dialog"] [contenteditable="true"]',
         'ytcp-dialog input[type="text"]','ytcp-dialog [contenteditable="true"]'],video.titleB||'')).catch(()=>false);
+      await pauseForStudio(delayMs);
       const secondCover=await setLastImageFile(cdp,coverBPath).catch(()=>false);
-      if(!secondTitle||!secondCover)warnings.push('Teste A/B: a janela abriu, mas confira manualmente o título B e a segunda thumbnail.');
-    }else warnings.push('Teste A/B: o recurso não apareceu nesta conta; configure título B e segunda thumbnail manualmente.');
+      if(!secondTitle||!secondCover)warnings.push('Teste A/B: revise manualmente o título B e a segunda thumbnail.');
+    }else warnings.push('Teste A/B: recurso indisponível. Configure o título B e a segunda capa no Studio.');
+    await pauseForStudio(delayMs);
   }
-  if(video.kind==='short')warnings.push('Shorts não têm teste A/B de títulos/miniaturas; verifique a thumbnail do Short no Studio.');
-  if(video.scheduledAt&&!await prepareYouTubeSchedule(cdp,video.scheduledAt))
-    warnings.push('Agendamento: não consegui preencher os controles atuais; use '+video.scheduledAt.replace('T',' às ')+'.');
-  warnings.push('Revise manualmente: público infantil, uso de IA/conteúdo alterado, promoção paga, direitos autorais, tela final e horário. Cards e vídeo relacionado permanecem manuais.');
+  if(video.kind==='short')
+    warnings.push('Shorts: confira a thumbnail no YouTube Studio; teste A/B indisponível.');
+  if(video.scheduledAt){
+    progress('Avançando pelas etapas até Visibilidade e abrindo o cartão Agendar...');
+    if(!await prepareYouTubeSchedule(cdp,video.scheduledAt,{delayMs}))
+      warnings.push('Agendamento: não consegui selecionar o cartão e/ou preencher data/hora. Configure manualmente '+video.scheduledAt.replace('T',' às ')+'.');
+  }
+  warnings.push('Confira fuso horário, público infantil, uso de IA, promoção paga, direitos autorais e horário. A confirmação final de Programar/Publicar permanece manual.');
   return {status:'awaiting_review',warnings,videoUrl:await detectYouTubeLink(cdp)};
 }
 export async function detectYouTubeLink(cdp){

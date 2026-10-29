@@ -92,3 +92,20 @@ test('edição mantém mídia antiga, muda metadados e substitui vídeo e capas 
   assert.equal(listSocialDrafts(f.root)[0].titleA,'Short novamente');
   assert.throws(()=>updateSocialDraft('../outside',{body:{},files:{},confirmed,root:f.root}),/inválido/);
 });
+
+test('declarações de IA e promoção são opções opt-in, armazenadas por vídeo',t=>{
+  const f=fixture(t);
+  const body={kind:'short',titleA:'Conteúdo original',platforms:'["youtube"]'};
+  const item=createSocialDraft({root:f.root,body,files:{video:[f.video],coverA:[f.a]},confirmed});
+  assert.equal(item.youtubeNoAi,false);
+  assert.equal(item.youtubeNoPromotion,false);
+  const edited=updateSocialDraft(item.id,{root:f.root,body:{...body,
+    youtubeNoAi:'true',youtubeNoPromotion:'true'},files:{},confirmed});
+  assert.equal(edited.youtubeNoAi,true);
+  assert.equal(edited.youtubeNoPromotion,true);
+  assert.equal(listSocialDrafts(f.root)[0].youtubeNoAi,true);
+  const reverted=updateSocialDraft(item.id,{root:f.root,body:{...body,
+    youtubeNoAi:'false',youtubeNoPromotion:'false'},files:{},confirmed});
+  assert.equal(reverted.youtubeNoAi,false);
+  assert.equal(reverted.youtubeNoPromotion,false);
+});
