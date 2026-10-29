@@ -375,7 +375,10 @@ try{
   assert.equal(await evaluate('document.getElementById("publishVideoFile").required'),false,
     'Editing keeps video file when no replacement is supplied');
   await evaluate('document.getElementById("publishTitleA").value="Short atualizado";document.getElementById("publishComposerForm").dispatchEvent(new Event("submit",{bubbles:true,cancelable:true}))');
-  await wait(()=>evaluate('document.getElementById("publishComposerDialog").open===false'),'Edit saves');
+  try{await wait(()=>evaluate('document.getElementById("publishComposerDialog").open===false'),'Edit saves');}
+  catch(error){const details=await evaluate('JSON.stringify({feedback:document.getElementById("publishComposerFeedback").textContent,saveDisabled:document.getElementById("publishComposerSave").disabled,editing:document.getElementById("publishComposerTitle").textContent,videoRequired:document.getElementById("publishVideoFile").required})');
+    throw Error(error.message+' · '+details);
+  }
   assert.equal(await evaluate('document.querySelector(".publish-draft-content h4").textContent'),"Short atualizado");
   await evaluate('document.querySelectorAll(".publish-draft-picker input")[0].click()');
   assert.equal(await evaluate('document.getElementById("publishSelectionBar").hidden'),false,
