@@ -11,8 +11,8 @@ import {validateStudioUrl,StudioLoginRequired,StudioChanged} from './social-stud
 const mp4=Buffer.from([0,0,0,20,102,116,121,112,105,115,111,109,0,0,0,0]);
 const png=Buffer.from([137,80,78,71,13,10,26,10,0,0,0,0,73,72,68,82]);
 const confirmed={youtube:true,tiktok:true,instagram:true};
-const urls={youtube:'https://studio.youtube.com/',tiktok:'https://www.tiktok.com/tiktokstudio',
-  instagram:'https://www.instagram.com/'};
+const urls={youtube:'https://studio.youtube.com/',tiktok:'https://www.tiktok.com/tiktokstudio/upload?from=creator_center&tab=video',
+  instagram:'https://www.instagram.com/scheduled_content/'};
 const config={browser:'chrome',confirmed,urls};
 function fixture(t){
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),'cl-social-pipeline-'));
