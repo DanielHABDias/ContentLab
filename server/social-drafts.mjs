@@ -8,7 +8,7 @@ const MAX_DRAFTS=100;
 const PLATFORMS=['youtube','instagram','tiktok'];
 const allowed={short:['youtube','instagram','tiktok'],long:['instagram','tiktok']};
 const text=(v,max)=>typeof v==='string'&&v.trim()&&v.trim().length<=max?v.trim():null;
-const idValid=id=>typeof id==='string'&&/^[0-9a-f]{8}-[0-9a-f-]{28,}$/.test(id);
+const idValid=id=>typeof id==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id);
 const reject=message=>{throw Error(message);};
 const storeReady=root=>{
   fs.mkdirSync(root,{recursive:true,mode:0o700});
