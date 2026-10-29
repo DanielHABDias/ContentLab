@@ -46,12 +46,12 @@ class Cdp {
   }
   close(){try{this.ws.close();}catch{}}
 }
-async function connect(portNumber){
+async function connect(portNumber,attempts=100){
   let target=null;
-  for(let attempt=0;attempt<100;attempt++){
+  for(let attempt=0;attempt<attempts;attempt++){
     try{
       const r=await fetch('http://127.0.0.1:'+portNumber+'/json/list');
-      if(r.ok){const list=await r.json();target=list.find(x=>x.type==='page'&&x.webSocketDebuggerUrl);if(target)break;}
+      if(r.ok){const list=await r.json();target=list.find(x=>x.type==='page'&&x.webSocketDebuggerUrl&&x.url?.includes('studio.youtube.com'))||list.find(x=>x.type==='page'&&x.webSocketDebuggerUrl);if(target)break;}
     }catch{}
     await sleep(200);
   }
@@ -119,14 +119,31 @@ async function setFile(cdp,file,{role='video'}={}){
   await cdp.send('DOM.setFileInputFiles',{files:[file],objectId:remote.objectId});
   await cdp.send('Runtime.releaseObject',{objectId:remote.objectId}).catch(()=>{});
 }
+const readActivePort=profile=>{
+  const file=path.join(profile,'DevToolsActivePort');
+  try{
+    if(!fs.existsSync(file)||fs.lstatSync(file).isSymbolicLink()||fs.statSync(file).size>2048)return null;
+    const n=Number(fs.readFileSync(file,'utf8').split(/\r?\n/)[0]);
+    return Number.isInteger(n)&&n>1024&&n<=65535?n:null;
+  }catch{return null;}
+};
 export async function openYouTubeStudio({browser,url,profile=YOUTUBE_PROFILE,launch=spawn,commandBuilder=publicationLaunchCommand}={}){
   if(typeof url!=='string'||!url.startsWith('https://studio.youtube.com/'))throw Error('URL de YouTube Studio inválida.');
-  const portNumber=await port();
   const command=commandBuilder(browser,[url]);
   if(!['chrome','edge','brave'].includes(command.browser))throw Error(
     'Para automatizar o YouTube Studio, selecione Chrome, Edge ou Brave em Configurações. Firefox não oferece o controle CDP necessário.');
   fs.mkdirSync(profile,{recursive:true,mode:0o700});
   if(fs.lstatSync(profile).isSymbolicLink())throw Error('Perfil do navegador inseguro.');
+  // Reutiliza a janela que permaneceu aberta após outra fila, inclusive se
+  // o serviço Node foi reiniciado. Não inicia Chrome duas vezes com o mesmo perfil.
+  const existing=readActivePort(profile);
+  if(existing){
+    try{
+      const cdp=await connect(existing,5);
+      return {cdp,port:existing,profile,close:()=>cdp.close()};
+    }catch{/* Chrome fechado ou porta desatualizada: iniciar uma nova janela. */}
+  }
+  const portNumber=await port();
   const args=[...command.args,`--remote-debugging-port=${portNumber}`,'--remote-debugging-address=127.0.0.1',
     '--user-data-dir='+profile,'--remote-allow-origins=http://127.0.0.1:'+portNumber,'--no-first-run'];
   const child=launch(command.command,args,{detached:true,stdio:'ignore',windowsHide:false,shell:false});
