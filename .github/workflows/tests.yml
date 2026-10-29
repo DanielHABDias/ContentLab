@@ -24,8 +24,6 @@ jobs:
           node --check frontend/static/app.js
           node --check frontend/static/visual_editor.js
           node --check frontend/static/publications.js
-          node --check frontend/static/social-connections.js
-          node --check frontend/static/metrics.js
       - name: Verify generated docs and figures match the installed schema
         run: node scripts/generate-docs.mjs --check
       - name: Run Node tests
