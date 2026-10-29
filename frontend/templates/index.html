@@ -8,7 +8,6 @@
 <link rel="stylesheet" href="/static/style.css">
 <link rel="stylesheet" href="/static/studio.css">
 <link rel="stylesheet" href="/static/publications.css">
-<link rel="stylesheet" href="/static/metrics.css">
 <link rel="stylesheet" href="/static/media-library.css">
 <link rel="stylesheet" href="/static/thumbnail-studio.css">
 <link rel="stylesheet" href="/static/voice-creation.css">
@@ -42,9 +41,8 @@
         <button class="workspace-tab workspace-group-trigger" id="workspace-group-social-trigger" type="button" aria-expanded="false" aria-controls="workspace-group-social-items" aria-label="Expandir opções de Redes sociais">
           <span>04</span><strong>Redes sociais</strong><svg class="workspace-group-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <div class="workspace-subtabs" id="workspace-group-social-items" role="group" aria-label="Distribuição e métricas" hidden>
+        <div class="workspace-subtabs" id="workspace-group-social-items" role="group" aria-label="Publicações" hidden>
           <button class="workspace-tab workspace-subtab" id="tab-publications" role="tab" aria-selected="false" aria-controls="panel-publications" type="button" data-workspace="publications"><span aria-hidden="true">•</span> Publicações</button>
-          <button class="workspace-tab workspace-subtab" id="tab-metrics" role="tab" aria-selected="false" aria-controls="panel-metrics" type="button" data-workspace="metrics"><span aria-hidden="true">•</span> Métricas</button>
         </div>
       </div>
 
@@ -492,195 +490,25 @@
     </div>
 
     <div id="panel-publications" class="workspace-panel hidden" role="tabpanel" aria-labelledby="tab-publications" hidden>
-      <div class="workspace-intro">
-        <span class="eyebrow">STUDIO / DISTRIBUIÇÃO</span>
-        <h2>Publicações.<br><span class="heading-muted">Seu conteúdo, em todos os lugares.</span></h2>
-        <p>Organize os Shorts finalizados, prepare títulos e descrições e visualize um calendário de envios para YouTube, Instagram e TikTok.</p>
-      </div>
-      <section id="publishConnectionGate" class="block settings-access-gate" aria-label="Conecte uma conta para publicar">
-        <span class="eyebrow">CONTAS E DISTRIBUIÇÃO</span>
-        <div class="settings-gate-illustration" aria-hidden="true">↗</div>
-        <h3>Conecte sua primeira conta para publicar.</h3>
-        <p>Seus vídeos, descrições e agendamentos aparecerão aqui depois de autorizar YouTube, Instagram ou TikTok nas Configurações.</p>
-        <button id="publishGoSettings" class="btn btn-primary" type="button">Ir para Configurações</button>
+      <div class="workspace-intro"><span class="eyebrow">REDES SOCIAIS / PUBLICAÇÃO</span><h2>Publicações.<br><span class="heading-muted">Prepare suas contas primeiro.</span></h2>
+      <p>O Content Lab abre as plataformas no seu navegador. Nenhum vídeo é enviado automaticamente nesta etapa.</p></div>
+      <section id="publishSetupGate" class="block social-setup-gate" aria-label="Configuração inicial das redes sociais">
+        <span class="eyebrow">PRIMEIRO ACESSO</span><h3>Configure o navegador e confira seus logins.</h3>
+        <p>Escolha o navegador em Configurações, ajuste as URLs para seus perfis e abra TikTok Studio, Instagram e YouTube Studio. Depois confirme os acessos.</p>
+        <button id="publishGoSettings" class="btn btn-primary" type="button">Ir para Configurações de redes sociais</button>
       </section>
-      <div id="publishConnectedContent" hidden>
-        <section class="block" aria-label="Status das plataformas">
-          <div class="publish-note"><span class="publish-dot" aria-hidden="true"></span>
-            <div><strong>Pronto para distribuir.</strong> Use apenas as redes conectadas. Para conectar outra conta ou alterar autorizações, acesse <button type="button" id="publishManageAccounts" class="settings-inline-link">Configurações</button>.</div>
-          </div>
-        </section>
-
-      <div class="publish-layout">
-        <section class="block" aria-labelledby="publishLibraryHeading">
-          <div class="publish-section-heading">
-            <div><span class="eyebrow">01 / BIBLIOTECA</span><h3 id="publishLibraryHeading">Vídeos finalizados</h3></div>
-            <span id="publishVideoCount" class="publish-counter">0 selecionado(s)</span>
-          </div>
-          <label for="publishFiles" class="block-label">Selecione os MP4s finalizados</label>
-          <input id="publishFiles" class="publish-file-input" type="file" accept="video/mp4,.mp4" multiple>
-          <p class="helper-text">Escolha os vídeos na pasta <code>output/final/final.mp4</code> dos projetos. Os MP4s são enviados apenas depois de clicar em Enviar e confirmar. O arquivo original permanece intacto.</p>
-          <div class="row">
-            <button id="publishSelectAll" type="button" class="btn btn-ghost btn-sm">Selecionar todos</button>
-            <button id="publishSelectNone" type="button" class="btn btn-ghost btn-sm">Desmarcar todos</button>
-          </div>
-          <div id="publishVideoList" class="publish-video-list" aria-live="polite"></div>
-        </section>
-
-        <section class="block" aria-labelledby="publishEditorHeading">
-          <div class="publish-section-heading">
-            <div><span class="eyebrow">02 / INFORMAÇÕES</span><h3 id="publishEditorHeading">Preparar vídeo</h3></div>
-            <span id="publishCurrentVideo" class="publish-muted">Escolha um vídeo</span>
-          </div>
-          <fieldset id="publishEditorFields" class="publish-fieldset" disabled>
-            <div class="publish-field"><label for="publishFormat">Formato deste vídeo</label><select id="publishFormat"><option value="9:16">9:16 · Vertical (todas as redes)</option><option value="16:9">16:9 · Horizontal (YouTube e Instagram)</option></select><p id="publishFormatHint" class="helper-text">O formato será conferido também a partir do arquivo.</p></div>
-            <div class="publish-field">
-              <label for="publishTitle">Título do Short</label>
-              <input id="publishTitle" maxlength="150" type="text" placeholder="Escreva o título para o YouTube...">
-            </div>
-            <div class="publish-field">
-              <label for="publishDescription">Descrição e hashtags</label>
-              <textarea id="publishDescription" placeholder="Escreva a descrição para o YouTube..."></textarea>
-              <p class="helper-text">No Instagram e TikTok, o título virá antes da descrição, separado por uma linha em branco. A hashtag <code>#Shorts</code> vira <code>#Viral</code> apenas nessas duas redes.</p>
-            </div>
-            <div class="publish-media">
-              <div>
-                <label class="block-label" for="publishPreviewVideo">Prévia do MP4</label>
-                <div class="publish-player"><video id="publishPreviewVideo" controls muted playsinline preload="metadata" aria-label="Prévia do vídeo selecionado"></video></div>
-              </div>
-              <div class="publish-cover-controls">
-                <div class="publish-field">
-                  <label for="publishCoverTime">Capa pelo frame: <output id="publishCoverTimeLabel" for="publishCoverTime">00:00.000</output></label>
-                  <input id="publishCoverTime" type="range" min="0" max="30" step="0.1" value="0">
-                  <p class="helper-text">Deslize para ver o instante desejado na prévia.</p>
-                </div>
-                <div class="publish-field">
-                  <label for="publishCoverFile">Ou usar imagem externa (opcional)</label>
-                  <input id="publishCoverFile" type="file" accept="image/png,image/jpeg,image/webp">
-                  <img id="publishCoverImage" class="publish-cover-image" alt="Imagem de capa escolhida" hidden>
-                  <button id="publishRemoveCover" class="publish-mini-action" type="button" hidden>Remover imagem</button>
-                </div>
-                <p class="helper-text">A compatibilidade da capa será tratada por plataforma na integração futura.</p>
-              </div>
-            </div>
-          </fieldset>
-        </section>
-      </div>
-
-      <section class="block" aria-labelledby="publishScheduleHeading">
-        <div class="publish-section-heading">
-          <div><span class="eyebrow">03 / DISTRIBUIÇÃO</span><h3 id="publishScheduleHeading">Destinos e calendário</h3></div>
-          <span id="publishQueueSummary" class="publish-counter">0 vídeo(s) · 0 destino(s)</span>
+      <section id="publishReady" class="block social-ready" hidden>
+        <span class="eyebrow">CONFIGURAÇÃO CONCLUÍDA</span><h3>Suas três plataformas estão preparadas.</h3>
+        <p>Os links estão salvos e você confirmou o login no navegador selecionado. Esta é somente a primeira etapa da nova aba; nenhuma publicação ou agendamento está habilitado.</p>
+        <div class="social-ready-actions">
+          <button class="btn btn-secondary" id="publishOpen-tiktok" type="button">Abrir TikTok Studio</button>
+          <button class="btn btn-secondary" id="publishOpen-instagram" type="button">Abrir Instagram</button>
+          <button class="btn btn-secondary" id="publishOpen-youtube" type="button">Abrir YouTube Studio</button>
+          <button class="btn btn-ghost" id="publishManageAccounts" type="button">Alterar configurações</button>
         </div>
-        <p class="helper-text">YouTube: um envio agendado por dia na ordem dos arquivos. Instagram e TikTok: publicação após o envio. TikTok é desabilitado automaticamente para 16:9; para 9:16, as três plataformas são possíveis.</p>
-        <div class="publish-choice-grid" role="group" aria-label="Redes sociais de destino">
-          <label class="publish-choice"><input id="publishPlatform-youtube" type="checkbox" checked> YouTube Shorts</label>
-          <label class="publish-choice"><input id="publishPlatform-instagram" type="checkbox" checked> Instagram Reels</label>
-          <label id="publishTiktokChoice" class="publish-choice"><input id="publishPlatform-tiktok" type="checkbox" checked> TikTok</label>
-        </div><p id="publishTiktokUnavailable" class="helper-text" role="status">Vídeos 16:9 não serão enviados ao TikTok.</p>
-        <div class="publish-date-fields">
-          <div class="publish-field"><label for="publishStartDate">Primeiro dia no YouTube</label><input id="publishStartDate" type="date"></div>
-          <div class="publish-field"><label for="publishStartTime">Horário diário (local)</label><input id="publishStartTime" type="time" value="18:00"></div>
-        </div>
-        <div class="publish-publishing-controls">
-          <div class="publish-field"><label for="publishMadeForKids">YouTube · Público infantil?</label><select id="publishMadeForKids"><option value="">Selecione uma opção</option><option value="false">Não, não é feito para crianças</option><option value="true">Sim, é feito para crianças</option></select></div>
-          <div class="publish-field"><label for="publishTikTokPrivacy">TikTok · Privacidade da publicação</label><div class="publish-inline-controls"><select id="publishTikTokPrivacy"><option value="">Conecte o TikTok e consulte as opções</option></select><button type="button" id="publishTikTokLoadPrivacy" class="btn btn-secondary btn-sm">Consultar conta</button></div></div>
-          <label class="publish-consent"><input type="checkbox" id="publishRights"> Confirmo que tenho os direitos de uso dos vídeos e autorizo o envio às plataformas selecionadas.</label>
-          <p class="helper-text">TikTok exige escolha explícita de visibilidade antes do envio e pode restringir contas ou aplicativos não auditados. Vídeos enviados podem aguardar moderação.</p>
-        </div>
-        <div class="publish-section-heading">
-          <div><span class="eyebrow">PRÉVIA POR PLATAFORMA</span><h3>Como ficará o texto</h3></div>
-        </div>
-        <div class="publish-preview-grid">
-          <div class="publish-preview-card" id="publishPreview-youtube">
-            <strong>▶ YouTube</strong>
-            <span>Título</span><div id="publishYoutubeTitle" class="publish-copy publish-title"></div>
-            <span>Descrição</span><div id="publishYoutubeDescription" class="publish-copy"></div>
-          </div>
-          <div class="publish-preview-card" id="publishPreview-instagram">
-            <strong>◎ Instagram</strong><span>Legenda única</span>
-            <div id="publishInstagramText" class="publish-copy"></div>
-          </div>
-          <div class="publish-preview-card" id="publishPreview-tiktok">
-            <strong>♪ TikTok</strong><span>Descrição única</span>
-            <div id="publishTiktokText" class="publish-copy"></div>
-          </div>
-        </div>
-        <div class="publish-section-heading" style="margin-top:26px">
-          <div><span class="eyebrow">CALENDÁRIO SIMULADO</span><h3>Ordem de publicação no YouTube</h3></div>
-        </div>
-        <ul id="publishScheduleList" class="publish-schedule-list" aria-live="polite"></ul>
-        <p id="publishImmediateNotice" class="helper-text"></p>
-        <div class="publish-send-results" id="publishSendResults" aria-live="polite"></div>
-        <div class="publish-footer">
-          <p id="publishRunMessage">Selecione vídeos e plataformas, conecte as contas e confirme os direitos de uso antes de enviar. O planejamento não é salvo automaticamente.</p>
-          <button id="publishSubmit" class="btn btn-primary" type="button" disabled>Enviar e agendar vídeos</button>
-        </div>
+        <p id="publishStatus" class="helper-text" role="status" aria-live="polite"></p>
       </section>
-      </div>
     </div>
-
-    <div id="panel-metrics" class="workspace-panel hidden" role="tabpanel" aria-labelledby="tab-metrics" hidden>
-      <div class="workspace-intro">
-        <span class="eyebrow">STUDIO / DESEMPENHO</span>
-        <h2>Seu conteúdo.<br><span class="heading-muted">Tudo em uma visão.</span></h2>
-        <p>Acompanhe os últimos vídeos, as visualizações e as publicações programadas sem abrir cada rede social.</p>
-      </div>
-      <section id="metricsConnectionGate" class="block metrics-gate" aria-label="Conecte suas redes sociais">
-        <div class="metrics-gate-icon" aria-hidden="true">↗</div>
-        <span class="eyebrow">PRIMEIRO PASSO</span>
-        <h3>Conecte suas contas para ver os resultados.</h3>
-        <p>Autorize YouTube, Instagram ou TikTok em Configurações. As estatísticas aparecerão aqui após a conexão.</p>
-        <button id="metricsGoConnect" class="btn btn-primary" type="button">Ir para Configurações e conectar</button>
-      </section>
-      <div id="metricsDashboard" class="metrics-dashboard" hidden>
-        <section class="block metrics-toolbar" aria-label="Selecionar plataforma">
-          <div class="metrics-toolbar-head">
-            <div><span class="eyebrow">VISÃO DE DESEMPENHO</span>
-              <h3 id="metricsViewTitle">Visão geral</h3>
-              <p id="metricsUpdated" class="helper-text">Conectando aos serviços...</p></div>
-            <button id="metricsRefresh" class="btn btn-secondary btn-sm" type="button">↻ Atualizar dados</button>
-          </div>
-          <div class="metrics-platform-filters" role="group" aria-label="Filtrar métricas por rede social">
-            <button type="button" class="metrics-filter" id="metricsFilter-youtube" data-metrics-platform="youtube" aria-pressed="false">
-              <span class="metrics-filter-icon metrics-youtube" aria-hidden="true">▶</span><span><strong>YouTube</strong><small id="metricsFilterStatus-youtube">Verificar conexão</small></span>
-            </button>
-            <button type="button" class="metrics-filter" id="metricsFilter-instagram" data-metrics-platform="instagram" aria-pressed="false">
-              <span class="metrics-filter-icon metrics-instagram" aria-hidden="true">◎</span><span><strong>Instagram</strong><small id="metricsFilterStatus-instagram">Verificar conexão</small></span>
-            </button>
-            <button type="button" class="metrics-filter" id="metricsFilter-tiktok" data-metrics-platform="tiktok" aria-pressed="false">
-              <span class="metrics-filter-icon metrics-tiktok" aria-hidden="true">♪</span><span><strong>TikTok</strong><small id="metricsFilterStatus-tiktok">Verificar conexão</small></span>
-            </button>
-          </div>
-          <p class="helper-text metrics-toggle-help">Clique em uma rede para ver só os dados dela. Clique novamente para voltar à visão geral.</p>
-          <p id="metricsFeedback" role="status" aria-live="polite" class="helper-text"></p>
-        </section>
-        <div class="metrics-stat-grid" id="metricsStatGrid" aria-label="Indicadores principais"></div>
-        <div class="metrics-detail-grid">
-          <section class="block" aria-labelledby="metricsRecentTitle">
-            <div class="metrics-heading"><span class="eyebrow">ÚLTIMAS PUBLICAÇÕES</span><h3 id="metricsRecentTitle">Vídeos recentes</h3></div>
-            <div id="metricsRecent" class="metrics-video-list"></div>
-          </section>
-          <section class="block" aria-labelledby="metricsScheduledTitle">
-            <div class="metrics-heading"><span class="eyebrow">PRÓXIMOS ENVIOS</span><h3 id="metricsScheduledTitle">Agendados no YouTube</h3></div>
-            <div id="metricsScheduled" class="metrics-video-list"></div>
-            <p class="helper-text">Somente agendamentos que a API do YouTube disponibiliza. O TikTok Studio e o Instagram não disponibilizam aqui seus próprios calendários.</p>
-          </section>
-        </div>
-        <section class="block" id="metricsHistorySection" aria-labelledby="metricsHistoryTitle" hidden>
-          <div class="metrics-heading"><span class="eyebrow">YOUTUBE ANALYTICS</span><h3 id="metricsHistoryTitle">Desempenho diário do canal</h3></div>
-          <p class="helper-text" id="metricsHistorySummary">Dados oficiais de visualizações, tempo assistido e inscritos no período.</p>
-          <div id="metricsHistoryBars" class="metrics-history-bars" role="img" aria-label="Visualizações por dia do YouTube"></div>
-        </section>
-        <section class="block" aria-labelledby="metricsTopTitle">
-          <div class="metrics-heading"><span class="eyebrow">MAIS ASSISTIDOS</span><h3 id="metricsTopTitle">Destaques dos vídeos recentes</h3></div>
-          <p class="helper-text">Comparação de visualizações dos vídeos retornados pelas APIs, não de todo o histórico dos perfis.</p>
-          <div id="metricsBars" class="metrics-bars"></div>
-        </section>
-        <div id="metricsNotes" class="metrics-notes" aria-live="polite"></div>
-      </div>
-    </div>
-
 
     <div id="panel-thumbnails" class="workspace-panel hidden" role="tabpanel" aria-labelledby="tab-thumbnails" hidden>
       <div class="workspace-intro">
@@ -847,137 +675,49 @@
     </div>
 
     <div id="panel-settings" class="workspace-panel hidden" role="tabpanel" aria-labelledby="tab-settings" hidden>
-      <div class="workspace-intro">
-        <span class="eyebrow">CONTENT LAB / PREFERÊNCIAS</span>
-        <h2>Configurações.<br><span class="heading-muted">Suas contas, conectadas.</span></h2>
-        <p>Conecte as redes sociais uma vez e use-as em Publicações e Métricas. Gerencie as autorizações sem sair do seu estúdio.</p>
-      </div>
-      <section class="block settings-connection-panel" aria-labelledby="settingsAccountsHeading">
-        <div class="settings-panel-heading">
-          <div>
-            <span class="eyebrow">01 / SUAS CONTAS</span>
-            <h3 id="settingsAccountsHeading">Conexões e permissões</h3>
-            <p class="helper-text">A autorização é feita nos sites oficiais. O Content Lab guarda tokens locais, não senhas de contas.</p>
-          </div>
-          <span id="settingsConnectedCount" class="settings-connected-count">Verificando contas...</span>
-        </div>
-        <div class="settings-account-grid">
-          <article class="settings-account-card" id="settingsAccount-youtube">
-            <div class="settings-account-top">
-              <span class="settings-account-icon settings-youtube" aria-hidden="true">▶</span>
-              <span id="socialStatus-youtube" class="settings-account-status">Verificando...</span>
-            </div>
-            <h4>YouTube</h4>
-            <p>Escolha sua conta Google e autorize publicações e métricas do canal.</p>
-            <button type="button" class="btn btn-primary settings-connect-btn" id="socialConnect-youtube">Conectar com Google</button>
-            <p class="settings-account-identity" id="socialIdentity-youtube" hidden></p>
-            <p class="settings-account-permissions" id="socialPermissions-youtube" hidden></p>
-            <button type="button" class="settings-disconnect" id="socialVerify-youtube" hidden>Verificar conexão</button>
-            <button type="button" class="settings-disconnect" id="socialDisconnect-youtube" hidden>Desconectar YouTube</button>
-          </article>
-          <article class="settings-account-card" id="settingsAccount-instagram">
-            <div class="settings-account-top">
-              <span class="settings-account-icon settings-instagram" aria-hidden="true">◎</span>
-              <span id="socialStatus-instagram" class="settings-account-status">Verificando...</span>
-            </div>
-            <h4>Instagram</h4>
-            <p>Autorize sua conta profissional do Instagram para publicar e ver resultados.</p>
-            <button type="button" class="btn btn-secondary settings-connect-btn" id="socialConnect-instagram">Conectar Instagram</button>
-            <p class="settings-account-identity" id="socialIdentity-instagram" hidden></p>
-            <p class="settings-account-permissions" id="socialPermissions-instagram" hidden></p>
-            <button type="button" class="settings-disconnect" id="socialVerify-instagram" hidden>Verificar conexão</button>
-            <button type="button" class="settings-disconnect" id="socialDisconnect-instagram" hidden>Desconectar Instagram</button>
-          </article>
-          <article class="settings-account-card" id="settingsAccount-tiktok">
-            <div class="settings-account-top">
-              <span class="settings-account-icon settings-tiktok" aria-hidden="true">♪</span>
-              <span id="socialStatus-tiktok" class="settings-account-status">Verificando...</span>
-            </div>
-            <h4>TikTok</h4>
-            <p>Abra a autorização oficial do TikTok para seus vídeos e estatísticas.</p>
-            <button type="button" class="btn btn-secondary settings-connect-btn" id="socialConnect-tiktok">Conectar TikTok</button>
-            <p class="settings-account-identity" id="socialIdentity-tiktok" hidden></p>
-            <p class="settings-account-permissions" id="socialPermissions-tiktok" hidden></p>
-            <button type="button" class="settings-disconnect" id="socialVerify-tiktok" hidden>Verificar conexão</button>
-            <button type="button" class="settings-disconnect" id="socialDisconnect-tiktok" hidden>Desconectar TikTok</button>
-          </article>
-        </div>
-        <p id="socialAuthMessage" class="settings-auth-message helper-text" role="status" aria-live="polite">Lendo as conexões locais...</p>
-        <div class="settings-account-note">
-          <span aria-hidden="true">ⓘ</span>
-          <p>Mesmo que você entre no Instagram e no TikTok usando uma conta Google, cada plataforma precisa autorizar o Content Lab separadamente. O login nunca solicita sua senha dentro do aplicativo.</p>
-        </div>
+      <div class="workspace-intro"><span class="eyebrow">CONFIGURAÇÕES / REDES SOCIAIS</span><h2>Seu navegador. Suas contas.</h2>
+        <p>Uma configuração local, sem Google Cloud, tokens OAuth, JSON de credenciais ou senhas no Content Lab.</p></div>
+      <section class="block social-setup-card" aria-labelledby="socialBrowserTitle">
+        <span class="eyebrow">01 / NAVEGADOR</span><h3 id="socialBrowserTitle">Qual navegador você usa para suas redes?</h3>
+        <p class="helper-text">Tentamos identificar o navegador padrão e os navegadores instalados. Se não for possível detectar, escolha “Padrão do sistema”.</p>
+        <label class="block-label" for="socialBrowserSelect">Navegador para abrir as plataformas</label>
+        <select id="socialBrowserSelect"><option value="system">Padrão do sistema</option></select>
+        <p id="socialBrowserDetection" class="helper-text" role="status">Procurando navegadores disponíveis...</p>
       </section>
-
-      <section class="block settings-setup-assistant" id="settingsSetupGuide" aria-labelledby="settingsSetupTitle" hidden>
-        <div class="settings-guide-head">
-          <div>
-            <span class="eyebrow">ASSISTENTE DE CONEXÃO · SÓ NA PRIMEIRA VEZ</span>
-            <h3 id="settingsSetupTitle">Preparar conexão</h3>
-            <p id="settingsSetupIntro" class="helper-text">Acompanhe o cadastro inicial do aplicativo. Depois, o login será feito pelo botão da rede social.</p>
-          </div>
-          <button id="settingsSetupClose" type="button" class="btn btn-ghost btn-sm" aria-label="Fechar o guia">Fechar</button>
+      <section class="block social-setup-card" aria-labelledby="socialLinksTitle">
+        <span class="eyebrow">02 / LINKS PERSONALIZADOS</span><h3 id="socialLinksTitle">Endereços das suas três plataformas</h3>
+        <p class="helper-text">Se você utiliza diferentes perfis, abra a conta desejada no navegador e copie seu endereço completo. No YouTube Studio, por exemplo, é possível utilizar o caminho do canal ou a conta Google selecionada.</p>
+        <div class="social-links-grid">
+          <article class="social-link-card" data-social="tiktok">
+            <div class="social-link-heading"><strong>TikTok Studio</strong><span id="socialState-tiktok">Não conferido</span></div>
+            <label for="socialUrl-tiktok">URL do TikTok Studio</label>
+            <input id="socialUrl-tiktok" type="url" spellcheck="false" autocomplete="off" value="https://www.tiktok.com/tiktokstudio">
+            <button type="button" id="socialOpen-tiktok" class="btn btn-secondary">Abrir e verificar login</button>
+            <button type="button" id="socialConfirm-tiktok" class="btn btn-ghost" disabled>Conferi: estou logado</button>
+          </article>
+          <article class="social-link-card" data-social="instagram">
+            <div class="social-link-heading"><strong>Instagram</strong><span id="socialState-instagram">Não conferido</span></div>
+            <label for="socialUrl-instagram">URL do Instagram</label>
+            <input id="socialUrl-instagram" type="url" spellcheck="false" autocomplete="off" value="https://www.instagram.com/">
+            <button type="button" id="socialOpen-instagram" class="btn btn-secondary">Abrir e verificar login</button>
+            <button type="button" id="socialConfirm-instagram" class="btn btn-ghost" disabled>Conferi: estou logado</button>
+          </article>
+          <article class="social-link-card" data-social="youtube">
+            <div class="social-link-heading"><strong>YouTube Studio</strong><span id="socialState-youtube">Não conferido</span></div>
+            <label for="socialUrl-youtube">URL do YouTube Studio</label>
+            <input id="socialUrl-youtube" type="url" spellcheck="false" autocomplete="off" value="https://studio.youtube.com/">
+            <button type="button" id="socialOpen-youtube" class="btn btn-secondary">Abrir e verificar login</button>
+            <button type="button" id="socialConfirm-youtube" class="btn btn-ghost" disabled>Conferi: estou logado</button>
+          </article>
         </div>
-        <div class="settings-guide-grid">
-          <div class="settings-guide-instructions">
-            <ol id="settingsSetupSteps" class="settings-guide-steps"></ol>
-            <a id="settingsSetupPortal" class="btn btn-secondary btn-sm" href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer">Abrir portal oficial <span aria-hidden="true">↗</span></a>
-            <a id="settingsSetupDocs" class="settings-guide-docs" href="https://developers.google.com/identity/protocols/oauth2/native-app" target="_blank" rel="noopener noreferrer">Ver orientações oficiais</a>
-          </div>
-          <div class="settings-guide-return">
-            <span class="eyebrow">RETORNO AO CONTENT LAB</span>
-            <p id="settingsSetupRedirectHint" class="helper-text">A plataforma precisa saber para onde voltar após o login.</p>
-            <div class="settings-guide-copy">
-              <code id="settingsSetupRedirect" tabindex="0">127.0.0.1</code>
-              <button id="settingsSetupCopyRedirect" type="button" class="btn btn-ghost btn-sm">Copiar</button>
-            </div>
-            <div id="settingsInstagramBridge" class="settings-google-import" hidden>
-              <strong>Conectar Instagram com a ponte local</strong>
-              <p>Não é necessário publicar o Content Lab. Execute os comandos em terminais separados e cadastre na Meta a URL HTTPS estável do túnel com o caminho <code>/api/social/oauth/instagram/callback</code>. Encaminhe <strong>somente a porta 5151</strong>.</p>
-              <p><code>node server/instagram-bridge.mjs</code></p>
-              <p><code>ngrok http 5151</code></p>
-              <a class="settings-guide-docs" href="https://ngrok.com/docs" target="_blank" rel="noopener noreferrer">Como instalar e usar o túnel HTTPS</a>
-            </div>
-            <div id="settingsGoogleImport" class="settings-google-import" hidden>
-              <strong>Atalho para YouTube</strong>
-              <p>Depois de criar um cliente OAuth do tipo <b>App para computador</b> no Google Cloud, baixe o arquivo JSON. Importe aqui para preencher a configuração automaticamente e abrir a tela do Google.</p>
-              <label for="settingsGoogleJSON" class="btn btn-primary btn-sm settings-import-label">Importar JSON do Google</label>
-              <input type="file" id="settingsGoogleJSON" accept=".json,application/json" hidden>
-            </div>
-            <button id="settingsSetupManual" type="button" class="settings-guide-manual">Já tenho as credenciais do aplicativo →</button>
-          </div>
-        </div>
-        <p id="settingsSetupMessage" class="helper-text" role="status" aria-live="polite"></p>
+        <p class="helper-text">Ao clicar em “Abrir”, o site é aberto no navegador escolhido. Por segurança, o Content Lab não lê cookies nem sabe se o login deu certo; a confirmação é sua. URLs só podem apontar para os domínios oficiais.</p>
+        <div class="social-setup-footer"><button type="button" class="btn btn-primary" id="socialSaveSettings">Salvar navegador e URLs</button>
+          <p id="socialSetupStatus" role="status" aria-live="polite" class="helper-text"></p></div>
       </section>
-
-      <section class="block settings-advanced-panel" aria-labelledby="settingsAdvancedHeading">
-        <div class="settings-panel-heading">
-          <div><span class="eyebrow">02 / INTEGRAÇÕES</span><h3 id="settingsAdvancedHeading">Configuração do aplicativo</h3>
-          <p class="helper-text">Último recurso: configuração do aplicativo exigida pelas plataformas quando ele ainda não está registrado. O login comum nunca pede tokens.</p></div>
-        </div>
-        <details class="social-auth-setup" id="settingsOAuthAdvanced">
-          <summary>Configuração avançada <span>Client ID, chave do aplicativo e retorno OAuth</span></summary>
-          <p class="helper-text">O portal oficial fornece as credenciais do <strong>aplicativo OAuth</strong> uma única vez. Elas não são senhas da sua conta. Depois de configurar, basta clicar em Conectar e autorizar a plataforma. Os tokens de sessão são obtidos automaticamente; nunca é necessário copiar um token manualmente.</p>
-          <form id="socialCredentialsForm">
-            <div class="social-auth-form-grid">
-              <div><label for="socialProvider">Plataforma</label>
-                <select id="socialProvider"><option value="youtube">YouTube / Google</option><option value="instagram">Instagram / Meta</option><option value="tiktok">TikTok</option></select>
-              </div>
-              <div><label for="socialClientId">Client ID / Client Key da aplicação</label>
-                <input id="socialClientId" autocomplete="off" placeholder="ID do aplicativo OAuth">
-              </div>
-              <div><label for="socialClientSecret">Client Secret da aplicação</label>
-                <input id="socialClientSecret" type="password" autocomplete="new-password" placeholder="Secret do aplicativo (não é sua senha)">
-              </div>
-              <div id="socialInstagramRedirectField" hidden><label for="socialInstagramRedirect">Retorno HTTPS do Instagram</label>
-                <input id="socialInstagramRedirect" type="url" placeholder="https://seu-dominio/api/social/oauth/instagram/callback">
-              </div>
-            </div>
-            <p id="socialRedirectHint" class="helper-text"></p>
-            <button type="submit" class="btn btn-primary btn-sm">Salvar configuração local</button>
-          </form>
-        </details>
-        <p class="helper-text settings-security-foot">As credenciais e os tokens ficam no arquivo <code>.env</code> local, ignorado pelo Git. Se mudar de computador, você poderá transferi-lo com segurança ou simplesmente se autenticar novamente.</p>
+      <section class="block social-setup-card social-checklist">
+        <span class="eyebrow">03 / CONFIRMAÇÃO</span><h3>Preparação para publicar</h3>
+        <p id="socialSetupSummary">Confirme o login nas três plataformas para liberar a aba Publicações.</p>
+        <button id="socialGoPublications" class="btn btn-primary" type="button" disabled>Continuar para Publicações</button>
       </section>
     </div>
 
@@ -1028,7 +768,6 @@
 <script src="/static/narration-player.js"></script>
 <script src="/static/visual_editor.js"></script>
 <script src="/static/publications.js"></script>
-<script src="/static/metrics.js"></script>
 <script src="/static/media-library.js"></script>
 <script src="/static/workspace-project.js"></script>
 <script src="/static/thumbnail-studio.js"></script>
