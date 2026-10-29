@@ -293,3 +293,31 @@
 #panel-publications .publish-youtube-completed a,.publish-draft-chips .publish-youtube-result{
   color:#2f62a4;font-size:11px;font-weight:750}
 #panel-publications #publishYoutubeStart:disabled{opacity:.5;cursor:not-allowed}
+
+/* Pipeline por vídeo e confirmação por rede. */
+#panel-publications .publish-social-panel{border-color:#bbd1f2;background:linear-gradient(120deg,#f2f7ff,#fff)}
+#panel-publications .publish-social-tabs{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin:13px 0 16px}
+#panel-publications .publish-social-tab{display:inline-flex;align-items:center;gap:6px;border-radius:22px;
+  border:1px solid #d6e1f0;color:#6480a3;background:#fff;padding:8px 13px;font-size:11px;font-weight:750}
+#panel-publications .publish-social-tab.is-active{background:#e1edff;border-color:#779ed7;color:#2556a2;
+  box-shadow:0 0 0 2px #7c9fe32b}
+#panel-publications #publishSocialLoginActions[hidden],
+#panel-publications #publishSocialReviewActions[hidden],
+#panel-publications #publishSocialPanel[hidden]{display:none!important}
+#panel-publications .publish-social-result-modes{display:flex;gap:12px;flex-wrap:wrap;margin:14px 0}
+#panel-publications .publish-social-result-modes label{display:flex;align-items:center;gap:8px;
+  border:1px solid #cadaed;border-radius:11px;padding:10px 13px;
+  background:#f6f9ff;color:#385c8d;font-weight:750;font-size:12px;cursor:pointer}
+#panel-publications .publish-social-result-modes input{accent-color:#527fbd}
+#panel-publications .publish-social-panel #publishSocialReviewActions,
+#panel-publications .publish-social-panel #publishSocialLoginActions{
+  padding:17px;background:#fff;border:1px solid #dbe6f6;border-radius:12px}
+#panel-publications .publish-social-panel #publishSocialReviewActions p,
+#panel-publications .publish-social-panel #publishSocialLoginActions p{font-size:12px;line-height:1.65;color:#546d91}
+#panel-publications .publish-social-panel #publishSocialReviewActions label[for="publishSocialUrl"]{
+  display:block;margin:12px 0 7px;font-size:11px;font-weight:800;color:#375782}
+#panel-publications .publish-social-panel #publishSocialUrl{flex:1;min-width:170px;border:1px solid #c7d8ee;
+  border-radius:9px;padding:11px;font:inherit;font-size:12px}
+#panel-publications .publish-social-panel #publishSocialReviewActions small{
+  display:block;margin-top:9px;color:#8193ab;font-size:10px}
+#panel-publications #publishSocialStart:disabled{opacity:.5;cursor:not-allowed}

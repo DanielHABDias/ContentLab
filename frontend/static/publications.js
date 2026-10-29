@@ -1,4 +1,4 @@
-/* Publicações: preparação local de vídeos, sem envio a redes sociais. */
+/* Publicações: rascunhos e envio assistido com revisão humana, sem postagem silenciosa. */
 (()=>{
   const $=id=>document.getElementById(id);
   if(!$('socialBrowserSelect')||!$('publishComposerDialog')||!window.ContentLabPublicationPlanning)return;
@@ -7,6 +7,7 @@
   let settings=null,ready=false,opened=new Set(),loading=false,drafts=[],videoUrl=null,coverUrls=[],captured=null,selectedVideo=null;
   let editingId=null,selectedIds=new Set(),session=null;
   let youtubeJobId=null,youtubePoll=null,youtubeResults={};
+  let socialJobId=null,socialPoll=null,socialResults={},socialTaskKey=null;
   const notice=(message,error=false)=>{
     $('socialSetupStatus').textContent=message||'';
     $('socialSetupStatus').classList.toggle('social-error',error);
@@ -346,6 +347,7 @@
     $('publishPrepareBrowser').disabled=count===0;
     const ytReady=settings?.confirmed.youtube===true&&!changed()&&drafts.some(d=>selectedIds.has(d.id)&&d.platforms?.includes('youtube'));
     $('publishYoutubeStart').disabled=!ytReady;
+    $('publishSocialStart').disabled=count===0||!settings?.browser||changed();
   }
   $('publishClearSelection').onclick=()=>{selectedIds.clear();renderDrafts();};
   function renderDrafts(){
@@ -380,6 +382,14 @@
       for(const p of item.platforms||[])chips.append(el('span','publish-chip platform-'+p,names[p]||p));
       if(item.scheduledAt)chips.append(el('span','publish-chip','◷ '+item.scheduledAt.replace('T',' · ')));
       if(item.titleB)chips.append(el('span','publish-chip','A/B: 2 títulos + 2 capas'));
+      for(const p of platforms){
+        const result=socialResults[item.id]?.[p];
+        if(!result)continue;
+        if(result.url){
+          const link=el('a','publish-youtube-result','↗ '+names[p]+' · '+(result.status==='scheduled'?'Agendado':'Publicado'));
+          link.href=result.url;link.target='_blank';link.rel='noopener noreferrer';chips.append(link);
+        }else if(result.status==='scheduled')chips.append(el('span','publish-chip','◷ '+names[p]+' · Agendado (sem link)'));
+      }
       if(youtubeResults[item.id]?.url){
         const youtubeLink=el('a','publish-youtube-result','▶ Publicação no YouTube');
         youtubeLink.href=youtubeResults[item.id].url;
@@ -463,6 +473,106 @@
     }
     $('publishSessionVideos').textContent=result.videos.length+' vídeo(s) vinculados às abas, conforme os destinos escolhidos.';
   }
+  function socialResultMode(){
+    return document.querySelector('#publishSocialReviewActions input[name="publishSocialResultMode"]:checked')?.value||'published';
+  }
+  function updateSocialResultInput(){
+    const scheduled=socialResultMode()==='scheduled';
+    $('publishSocialUrl').required=!scheduled;
+    $('publishSocialUrlRequirement').textContent=scheduled?'(opcional para agendados)':'(obrigatório para publicações)';
+    $('publishSocialConfirm').textContent=scheduled?'✓ Agendado · próximo destino':'✓ Publicado · próximo destino';
+  }
+  for(const radio of document.querySelectorAll('input[name="publishSocialResultMode"]'))
+    radio.addEventListener('change',updateSocialResultInput);
+  async function renderSocialJob(job){
+    socialJobId=job.id;
+    $('publishSocialPanel').hidden=false;
+    $('publishSocialTitle').textContent=job.current?.title||'Fila concluída';
+    $('publishSocialProgress').textContent=job.current?names[job.platform]+' · '+job.message:job.message;
+    $('publishSocialCounter').textContent=Math.min(job.index+1,job.total)+' / '+job.total+' · '+job.status.replaceAll('_',' ');
+    const key=job.current?.id+':'+job.platform;
+    if(key!==socialTaskKey){
+      socialTaskKey=key;
+      $('publishSocialUrl').value=job.videoUrl||'';
+      document.querySelector('input[name="publishSocialResultMode"][value="published"]').checked=true;
+      updateSocialResultInput();
+    }
+    $('publishSocialLoginActions').hidden=job.status!=='awaiting_login';
+    $('publishSocialReviewActions').hidden=!['awaiting_review','needs_manual'].includes(job.status);
+    $('publishSocialCancel').disabled=['done','cancelled'].includes(job.status);
+    const warnings=$('publishSocialWarnings');warnings.replaceChildren();
+    for(const message of job.warnings||[])warnings.append(el('p','',message));
+    const tabs=$('publishSocialTabs');tabs.replaceChildren();
+    for(const tab of job.tabs||[]){
+      const node=el('span','publish-social-tab'+(tab.platform===job.platform?' is-active':''),tab.index+' · '+names[tab.platform]);
+      node.title='Aba controlada: '+tab.targetId;tabs.append(node);
+    }
+    const completed=$('publishSocialCompleted');completed.replaceChildren();
+    for(const item of job.completed||[]){
+      const row=el('li','');
+      if(item.url){
+        const link=el('a','',names[item.platform]+' · '+item.title+' ('+item.status+')');
+        link.href=item.url;link.target='_blank';link.rel='noopener noreferrer';row.append(link);
+      }else row.textContent=names[item.platform]+' · '+item.title+' · Agendado sem link';
+      completed.append(row);
+    }
+    if(['done','cancelled'].includes(job.status)){
+      if(socialPoll){clearInterval(socialPoll);socialPoll=null;}
+      const saved=await request('/api/social-browser/pipeline/results').catch(()=>({results:socialResults}));
+      socialResults=saved.results||{};renderDrafts();
+    }
+  }
+  async function pollSocial(){
+    if(!socialJobId)return;
+    try{
+      const data=await request('/api/social-browser/pipeline/jobs/'+encodeURIComponent(socialJobId));
+      await renderSocialJob(data.job);
+    }catch(error){
+      status(error.message,true);
+      if(socialPoll){clearInterval(socialPoll);socialPoll=null;}
+    }
+  }
+  $('publishSocialStart').onclick=async()=>{
+    try{
+      $('publishSocialStart').disabled=true;
+      const selected=drafts.filter(item=>selectedIds.has(item.id)).reverse().map(item=>item.id);
+      const response=await post('/api/social-browser/pipeline/jobs',{draftIds:selected});
+      await renderSocialJob(response.job);
+      if(socialPoll)clearInterval(socialPoll);
+      socialPoll=setInterval(pollSocial,1400);
+      await pollSocial();
+    }catch(error){status(error.message,true);}
+    finally{updateSelection();}
+  };
+  $('publishSocialResume').onclick=async()=>{
+    if(!socialJobId)return;
+    try{const data=await post('/api/social-browser/pipeline/jobs/'+encodeURIComponent(socialJobId)+'/resume');
+      await renderSocialJob(data.job);
+    }catch(error){status(error.message,true);}
+  };
+  $('publishSocialConfirm').onclick=async()=>{
+    if(!socialJobId)return;
+    try{
+      const scheduled=socialResultMode()==='scheduled',videoUrl=$('publishSocialUrl').value.trim();
+      if(!scheduled&&!videoUrl)throw Error('Cole o link da postagem publicada antes de avançar.');
+      if(!window.confirm(scheduled?
+        'Você concluiu o agendamento no site e conferiu o horário?':
+        'Você publicou no site e confirmou que este link pertence ao vídeo atual?'))return;
+      const result=await post('/api/social-browser/pipeline/jobs/'+encodeURIComponent(socialJobId)+'/complete',{videoUrl,scheduled});
+      await renderSocialJob(result.job);
+      const latest=await request('/api/social-browser/pipeline/results');
+      socialResults=latest.results||{};renderDrafts();
+    }catch(error){status(error.message,true);}
+  };
+  $('publishSocialCancel').onclick=async()=>{
+    if(!socialJobId||!window.confirm('Interromper a fila? Confira uploads iniciados antes de recomeçar.'))return;
+    try{const result=await post('/api/social-browser/pipeline/jobs/'+encodeURIComponent(socialJobId)+'/cancel');
+      await renderSocialJob(result.job);
+    }catch(error){status(error.message,true);}
+  };
+  request('/api/social-browser/pipeline/results').then(data=>{
+    socialResults=data.results||{};renderDrafts();
+  }).catch(()=>{});
   async function renderYouTubeJob(job){
     youtubeJobId=job.id;
     $('publishYoutubePanel').hidden=false;

@@ -1,3 +1,4 @@
+import {startSocialPipeline,getSocialPipeline,resumeSocialPipeline,confirmSocialPipeline,cancelSocialPipeline,readSocialPipelineResults} from './social-pipeline-jobs.mjs';
 import {startYouTubeQueue,getYouTubeJob,resumeYouTubeJob,confirmYouTubePublished,cancelYouTubeJob,readYouTubeResults} from './youtube-upload-jobs.mjs';
 import {preparePublicationSession,readPublicationSession} from './social-publication-session.mjs';
 import multer from 'multer';
@@ -76,6 +77,37 @@ export function mountSocialDraftRoutes(app,api){
   app.get('/api/social-browser/youtube/results',api(async(req,res)=>{
     if(!sameOrigin(req))return res.status(403).end();
     res.set('Cache-Control','no-store').json({results:readYouTubeResults()});
+  }));
+  app.post('/api/social-browser/pipeline/jobs',api(async(req,res)=>{
+    if(!sameOrigin(req))return res.status(403).json({error:'Origem não autorizada.'});
+    try{res.status(202).set('Cache-Control','no-store').json({job:startSocialPipeline(req.body?.draftIds)});}
+    catch(error){res.status(409).json({error:error.message});}
+  }));
+  app.get('/api/social-browser/pipeline/jobs/:id',api(async(req,res)=>{
+    if(!sameOrigin(req))return res.status(403).end();
+    try{res.set('Cache-Control','no-store').json({job:getSocialPipeline(req.params.id)});}
+    catch(error){res.status(404).json({error:error.message});}
+  }));
+  app.post('/api/social-browser/pipeline/jobs/:id/resume',api(async(req,res)=>{
+    if(!sameOrigin(req))return res.status(403).end();
+    try{res.set('Cache-Control','no-store').json({job:await resumeSocialPipeline(req.params.id)});}
+    catch(error){res.status(409).json({error:error.message});}
+  }));
+  app.post('/api/social-browser/pipeline/jobs/:id/complete',api(async(req,res)=>{
+    if(!sameOrigin(req))return res.status(403).end();
+    try{res.set('Cache-Control','no-store').json({job:confirmSocialPipeline(req.params.id,{
+      videoUrl:req.body?.videoUrl,scheduled:req.body?.scheduled===true
+    })});}
+    catch(error){res.status(409).json({error:error.message});}
+  }));
+  app.post('/api/social-browser/pipeline/jobs/:id/cancel',api(async(req,res)=>{
+    if(!sameOrigin(req))return res.status(403).end();
+    try{res.set('Cache-Control','no-store').json({job:cancelSocialPipeline(req.params.id)});}
+    catch(error){res.status(409).json({error:error.message});}
+  }));
+  app.get('/api/social-browser/pipeline/results',api(async(req,res)=>{
+    if(!sameOrigin(req))return res.status(403).end();
+    res.set('Cache-Control','no-store').json({results:readSocialPipelineResults()});
   }));
   app.delete('/api/social-browser/drafts/:id',api(async(req,res)=>{
     if(!sameOrigin(req))return res.status(403).json({error:'Origem não autorizada.'});

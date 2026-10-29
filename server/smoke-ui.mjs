@@ -212,6 +212,30 @@ try{
           fileName:form.get('video')?.name||items[index].fileName};
         items[index]=item;
         return Promise.resolve(new Response(JSON.stringify({item}),{status:200,headers:{'Content-Type':'application/json'}}));
+      }else if(endpoint==='/api/social-browser/pipeline/results'){
+        return Promise.resolve(new Response(JSON.stringify({results:window.__socialPipelineResults||{}}),{status:200,headers:{'Content-Type':'application/json'}}));
+      }else if(endpoint==='/api/social-browser/pipeline/jobs'&&options?.method==='POST'){
+        const chosen=items.filter(item=>body.draftIds.includes(item.id)).reverse();
+        window.__socialPipelineTasks=chosen.flatMap(item=>['youtube','tiktok','instagram'].filter(p=>item.platforms.includes(p)).map(platform=>({item,platform})));
+        window.__socialPipelineResults={};
+        window.__socialPipelineJob={id:'social-test',index:0,total:window.__socialPipelineTasks.length,status:'awaiting_review',
+          message:'Revisar postagem',warnings:['Confira agendamento e política de IA'],completed:[],
+          tabs:['youtube','tiktok','instagram'].map((p,i)=>({platform:p,index:i+1,targetId:'cdp-'+p,url:urls[p]})),
+          ...(()=>{const task=window.__socialPipelineTasks[0];return {platform:task.platform,current:{id:task.item.id,title:task.item.titleA,kind:task.item.kind}};})()};
+        return Promise.resolve(new Response(JSON.stringify({job:window.__socialPipelineJob}),{status:202,headers:{'Content-Type':'application/json'}}));
+      }else if(endpoint==='/api/social-browser/pipeline/jobs/social-test'&&!options?.method){
+        return Promise.resolve(new Response(JSON.stringify({job:window.__socialPipelineJob}),{status:200,headers:{'Content-Type':'application/json'}}));
+      }else if(endpoint==='/api/social-browser/pipeline/jobs/social-test/complete'){
+        const job=window.__socialPipelineJob,task=window.__socialPipelineTasks[job.index];
+        const record={status:body.scheduled?'scheduled':'published',url:body.videoUrl||null,confirmedAt:new Date().toISOString()};
+        window.__socialPipelineResults[task.item.id]={...(window.__socialPipelineResults[task.item.id]||{}),[task.platform]:record};
+        job.completed.push({id:task.item.id,title:task.item.titleA,platform:task.platform,...record});
+        job.index++;
+        const next=window.__socialPipelineTasks[job.index];
+        Object.assign(job,{status:next?'awaiting_review':'done',
+          message:next?'Revisar próximo destino':'Concluído',platform:next?.platform||null,
+          current:next?{id:next.item.id,title:next.item.titleA,kind:next.item.kind}:null});
+        return Promise.resolve(new Response(JSON.stringify({job}),{status:200,headers:{'Content-Type':'application/json'}}));
       }else if(endpoint==='/api/social-browser/youtube/results'){
         return Promise.resolve(new Response(JSON.stringify({results:window.__ytTestResults||{}}),{status:200,headers:{'Content-Type':'application/json'}}));
       }else if(endpoint==='/api/social-browser/youtube/jobs'&&options?.method==='POST'){
@@ -368,6 +392,26 @@ try{
   await wait(()=>evaluate('window.__ytTestJob?.status==="done"'),'Only confirmation advances YouTube queue');
   await wait(()=>evaluate('!!document.querySelector(".publish-youtube-result")'),
     'Confirmed YouTube link returns to the saved video card');
+  await evaluate('window.confirm=window.__confirmOriginal');
+  assert.equal(await evaluate('document.getElementById("publishSocialStart").disabled'),false,
+    'Universal pipeline is enabled when a confirmed network is selected');
+  await evaluate('document.getElementById("publishSocialStart").click()');
+  await wait(()=>evaluate('document.getElementById("publishSocialPanel").hidden===false'),
+    'Universal upload progress panel appears');
+  assert.equal(await evaluate('document.getElementById("publishSocialTabs").textContent.includes("Instagram")'),true,
+    'Browser tabs are identified by stable CDP target IDs');
+  assert.equal(await evaluate('document.getElementById("publishSocialReviewActions").hidden'),false,
+    'Each platform stops for human review');
+  await evaluate('window.__confirmOriginal=window.confirm;window.confirm=()=>true;document.getElementById("publishSocialUrl").value="https://www.youtube.com/watch?v=ABCdef12345";document.getElementById("publishSocialConfirm").click()');
+  await wait(()=>evaluate('window.__socialPipelineJob?.platform==="tiktok"'),'TikTok follows YouTube for the same Short');
+  await evaluate('document.getElementById("publishSocialUrl").value="https://www.tiktok.com/@diazverso/video/7312345678901234567";document.getElementById("publishSocialConfirm").click()');
+  await wait(()=>evaluate('window.__socialPipelineJob?.platform==="instagram"'),'Instagram follows TikTok on the same Short');
+  await evaluate('document.querySelector("#publishSocialReviewActions input[value=scheduled]").click()');
+  assert.equal(await evaluate('document.getElementById("publishSocialUrl").required'),false,
+    'Scheduled Instagram content need not have an immediate public URL');
+  await evaluate('document.getElementById("publishSocialConfirm").click()');
+  await wait(()=>evaluate('window.__socialPipelineJob?.index===3'),'Short finishes all three destinations');
+  assert.equal(await evaluate('window.__socialPipelineResults[window.__socialPipelineTasks[2].item.id].instagram.status'),'scheduled');
   await evaluate('window.confirm=window.__confirmOriginal');
   await evaluate('document.getElementById("publishPrepareBrowser").click()');
   await wait(()=>evaluate('document.getElementById("publishSessionPanel").hidden===false'),

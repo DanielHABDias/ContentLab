@@ -514,11 +514,40 @@
           <button id="publishAddVideo" class="btn btn-primary publish-main-cta" type="button">＋ Adicionar vídeo</button>
         </section>
         <div id="publishSelectionBar" class="publish-selection-bar" hidden>
-          <div><strong><span id="publishSelectedCount">0</span> vídeo(s) selecionado(s)</strong><small>Abra as redes em uma janela visível, com uma aba por conta confirmada. O envio será uma etapa futura.</small></div>
-          <button id="publishPrepareBrowser" class="btn btn-secondary" type="button">↗ Abrir redes</button>
-          <button id="publishYoutubeStart" class="btn btn-primary" type="button">▶ Enviar para YouTube · assistido</button>
+          <div><strong><span id="publishSelectedCount">0</span> vídeo(s) selecionado(s)</strong><small>Envio assistido na sequência vídeo → YouTube, TikTok e Instagram, conforme cada destino marcado.</small></div>
+          <button id="publishSocialStart" class="btn btn-primary" type="button">▶ Enviar nas redes · assistido</button>
+          <button id="publishPrepareBrowser" class="btn btn-secondary" type="button">↗ Apenas abrir redes</button>
+          <button id="publishYoutubeStart" class="btn btn-secondary" type="button">▶ Somente YouTube</button>
           <button id="publishClearSelection" class="btn btn-secondary" type="button">Limpar seleção</button>
         </div>
+        <section id="publishSocialPanel" class="publish-youtube-panel publish-social-panel" hidden aria-label="Fila assistida das redes sociais">
+          <div class="publish-youtube-head"><div>
+            <span class="eyebrow">PIPELINE / YOUTUBE · TIKTOK · INSTAGRAM</span>
+            <h4 id="publishSocialTitle">Preparando envio...</h4>
+            <p id="publishSocialProgress" role="status" aria-live="polite"></p>
+          </div><span id="publishSocialCounter" class="publish-youtube-counter"></span></div>
+          <div id="publishSocialTabs" class="publish-social-tabs" aria-label="Abas do navegador"></div>
+          <div id="publishSocialWarnings" class="publish-youtube-warnings"></div>
+          <div id="publishSocialLoginActions" hidden>
+            <p>Entre na conta indicada na janela visível e confira se está no perfil correto. O Content Lab usa um perfil de automação local separado.</p>
+            <button id="publishSocialResume" type="button" class="btn btn-secondary">✓ Já fiz login · continuar</button>
+          </div>
+          <div id="publishSocialReviewActions" hidden>
+            <p>Confira capa, legenda, opções de privacidade, conteúdo comercial/IA e data de publicação diretamente no site. <strong>Conclua Publicar ou Agendar manualmente</strong> antes de confirmar aqui. O aplicativo não verifica automaticamente se a publicação aconteceu.</p>
+            <div class="publish-social-result-modes">
+              <label><input type="radio" name="publishSocialResultMode" value="published" checked> Publicado</label>
+              <label><input type="radio" name="publishSocialResultMode" value="scheduled"> Agendado</label>
+            </div>
+            <label for="publishSocialUrl">Link da publicação <span id="publishSocialUrlRequirement">(obrigatório para publicação imediata)</span></label>
+            <div class="publish-youtube-link-row">
+              <input id="publishSocialUrl" type="url" autocomplete="off" placeholder="Cole o link da postagem">
+              <button id="publishSocialConfirm" type="button" class="btn btn-primary">✓ Confirmar e avançar</button>
+            </div>
+            <small>Para postagem agendada, o link ainda pode não existir. Nesse caso, confirme como Agendado e adicione o link depois da publicação.</small>
+          </div>
+          <div class="publish-youtube-controls"><button id="publishSocialCancel" type="button" class="btn btn-secondary btn-sm">Interromper fila</button></div>
+          <ol id="publishSocialCompleted" class="publish-youtube-completed"></ol>
+        </section>
         <section id="publishYoutubePanel" class="publish-youtube-panel" hidden aria-label="Automação assistida YouTube">
           <div class="publish-youtube-head"><div><span class="eyebrow">YOUTUBE STUDIO / ENVIO ASSISTIDO</span>
             <h4 id="publishYoutubeTitle">Preparando navegador...</h4>
@@ -549,7 +578,7 @@
           <span class="publish-empty-thumb"><span class="publish-empty-play">▶</span><span class="publish-empty-film">🎞</span></span>
           <span class="publish-empty-copy"><strong>Seu primeiro vídeo entra aqui</strong><span>Selecione um arquivo, configure o título e a descrição e crie o primeiro item da lista.</span><em>＋ Adicionar primeiro vídeo</em></span>
         </button>
-        <div class="publish-local-hint"><span>✦</span> Os rascunhos ficam neste computador. O botão Publicar abre as abas; o envio às redes será implementado depois.</div>
+        <div class="publish-local-hint"><span>✦</span> Rascunhos e resultados ficam neste computador. O envio assistido prepara mídia e metadados; a confirmação final de cada rede ainda é manual.</div>
         <p id="publishStatus" class="helper-text" role="status" aria-live="polite"></p>
       </section>
 
