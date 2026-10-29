@@ -55,7 +55,7 @@ function inspectFile(file,kind){
   return {extension:format==='jpg'?'jpg':format,mime:formats[format].mime};
 }
 const pickFile=(files,key)=>Array.isArray(files?.[key])?files[key][0]:null;
-function validateInput(body,files,confirmed){
+function validateInput(body,files,confirmed,{existing=null,root=SOCIAL_DRAFT_DIR}={}){
   const kind=body?.kind;
   if(!Object.hasOwn(allowed,kind))reject('Escolha vídeo longo ou Short.');
   const titleA=text(body.titleA,150);
@@ -74,9 +74,19 @@ function validateInput(body,files,confirmed){
   if(scheduledAt&&!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(scheduledAt))
     reject('Data e horário do agendamento inválidos.');
   const video=pickFile(files,'video'),coverA=pickFile(files,'coverA'),coverB=pickFile(files,'coverB');
-  const videoType=inspectFile(video,'video');
-  const aType=inspectFile(coverA,'image');
-  const bType=kind==='long'?inspectFile(coverB,'image'):null;
+  const existingMedia=(key,mediaKind)=>{
+    if(!existing?.media?.[key])reject('Selecione o arquivo de '+(key==='video'?'vídeo':'thumbnail')+'.');
+    const name=existing.media[key],extension=path.extname(name).slice(1);
+    if(!new RegExp('^'+key+'\\.(mp4|webm|png|jpg|webp)$').test(name))reject('Arquivo anterior inválido.');
+    if(mediaKind==='video'&&!['mp4','webm'].includes(extension)||
+       mediaKind==='image'&&!['png','jpg','webp'].includes(extension))reject('Arquivo anterior incompatível.');
+    const file=path.join(root,existing.id,name);
+    if(!fs.existsSync(file)||fs.lstatSync(file).isSymbolicLink()||!fs.statSync(file).isFile())reject('Mídia anterior não encontrada.');
+    return {extension,mime:formats[extension].mime,path:file};
+  };
+  const videoType=video?inspectFile(video,'video'):existingMedia('video','video');
+  const aType=coverA?inspectFile(coverA,'image'):existingMedia('coverA','image');
+  const bType=kind==='long'?(coverB?inspectFile(coverB,'image'):existingMedia('coverB','image')):null;
   if(kind==='short'&&coverB)reject('Shorts aceitam somente uma thumbnail.');
   return {kind,titleA,titleB,description,tags,platforms,scheduledAt,video,coverA,coverB,videoType,aType,bType};
 }
@@ -104,6 +114,45 @@ export function createSocialDraft({body,files,confirmed,root=SOCIAL_DRAFT_DIR}){
     writeItems(root,[item,...items]);
     return item;
   }catch(error){fs.rmSync(folder,{recursive:true,force:true});throw error;}
+}
+export function updateSocialDraft(id,{body,files,confirmed,root=SOCIAL_DRAFT_DIR}={}){
+  if(!idValid(id))reject('Vídeo inválido.');
+  const items=readItems(root),index=items.findIndex(item=>item.id===id);
+  if(index<0)reject('Vídeo não encontrado.');
+  const previous=items[index];
+  const data=validateInput(body,files,confirmed,{existing:previous,root});
+  storeReady(root);
+  const stage=path.join(root,'.edit-'+crypto.randomUUID()),folder=path.join(root,id);
+  const backup=path.join(root,'.backup-'+crypto.randomUUID());
+  fs.mkdirSync(stage,{mode:0o700});
+  const replaceMedia=(key,uploaded,info)=>{
+    const name=key+'.'+info.extension;
+    const original=uploaded?.path||path.join(folder,previous.media[key]);
+    if(!fs.existsSync(original)||fs.lstatSync(original).isSymbolicLink()||!fs.statSync(original).isFile())
+      reject('Arquivo de mídia não encontrado.');
+    fs.copyFileSync(original,path.join(stage,name),fs.constants.COPYFILE_EXCL);
+    return name;
+  };
+  let backedUp=false,installed=false;
+  try{
+    const videoFile=replaceMedia('video',data.video,data.videoType);
+    const coverAFile=replaceMedia('coverA',data.coverA,data.aType);
+    const coverBFile=data.bType?replaceMedia('coverB',data.coverB,data.bType):null;
+    const next={...previous,kind:data.kind,titleA:data.titleA,titleB:data.titleB,
+      description:data.description,tags:data.tags,platforms:data.platforms,
+      scheduledAt:data.scheduledAt,media:{video:videoFile,coverA:coverAFile,coverB:coverBFile},
+      fileName:data.video?path.basename(data.video.originalname).slice(0,160):previous.fileName,
+      bytes:fs.statSync(path.join(stage,videoFile)).size,updatedAt:new Date().toISOString()};
+    fs.renameSync(folder,backup);backedUp=true;
+    fs.renameSync(stage,folder);installed=true;
+    writeItems(root,items.map((row,i)=>i===index?next:row));
+    fs.rmSync(backup,{recursive:true,force:true});backedUp=false;
+    return next;
+  }catch(error){
+    if(installed)fs.rmSync(folder,{recursive:true,force:true});
+    if(backedUp)fs.renameSync(backup,folder);
+    throw error;
+  }finally{fs.rmSync(stage,{recursive:true,force:true});}
 }
 export function deleteSocialDraft(id,root=SOCIAL_DRAFT_DIR){
   if(!idValid(id))reject('Vídeo inválido.');

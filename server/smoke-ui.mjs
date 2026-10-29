@@ -203,6 +203,24 @@ try{
         return Promise.resolve(new Response(JSON.stringify({item}),{status:201,headers:{'Content-Type':'application/json'}}));
       }else if(endpoint==='/api/social-browser/drafts'){
         return Promise.resolve(new Response(JSON.stringify({items}),{status:200,headers:{'Content-Type':'application/json'}}));
+      }else if(endpoint.startsWith('/api/social-browser/drafts/')&&options?.method==='PUT'){
+        const index=items.findIndex(item=>item.id===endpoint.split('/').at(-1)),form=options.body;
+        const item={...items[index],kind:form.get('kind'),titleA:form.get('titleA'),titleB:form.get('titleB'),
+          description:form.get('description'),tags:form.get('tags').split(',').filter(Boolean),
+          platforms:JSON.parse(form.get('platforms')),scheduledAt:form.get('scheduledAt'),
+          fileName:form.get('video')?.name||items[index].fileName};
+        items[index]=item;
+        return Promise.resolve(new Response(JSON.stringify({item}),{status:200,headers:{'Content-Type':'application/json'}}));
+      }else if(endpoint==='/api/social-browser/session'){
+        return Promise.resolve(new Response(JSON.stringify({session:null}),{status:200,headers:{'Content-Type':'application/json'}}));
+      }else if(endpoint==='/api/social-browser/prepare'){
+        const chosen=items.filter(item=>body.draftIds.includes(item.id));
+        const active=['youtube','tiktok','instagram'].filter(p=>settings.confirmed[p]);
+        const tabs=active.map((platform,i)=>({platform,index:i+1,url:settings.urls[platform]}));
+        const session={id:'example',tabs,status:'prepared',videos:chosen.map(item=>({
+          id:item.id,destinations:item.platforms.map(p=>({platform:p,tab:tabs.find(t=>t.platform===p)?.index}))}))};
+        window.__socialPreparedSession=session;
+        return Promise.resolve(new Response(JSON.stringify({session}),{status:200,headers:{'Content-Type':'application/json'}}));
       }
       const ready=!!settings.browser&&keys.some(p=>settings.confirmed[p]);
       const result=endpoint.includes('/open/')?
@@ -307,6 +325,29 @@ try{
   await wait(()=>evaluate('document.getElementById("publishDraftCount").textContent==="2"'),
     'Second short adds to existing list without sending to platforms');
   assert.equal(await evaluate('document.querySelectorAll(".publish-draft-card").length'),2);
+  assert.equal(await evaluate('document.querySelectorAll(".publish-draft-edit").length'),2,
+    'Every draft has an edit action');
+  await evaluate('document.querySelector(".publish-draft-edit").click()');
+  await wait(()=>evaluate('document.getElementById("publishComposerDialog").open===true'),'Edit dialog opens');
+  assert.equal(await evaluate('document.getElementById("publishTitleA").value'),"Meu Short",
+    'Edit dialog loads saved metadata');
+  assert.equal(await evaluate('document.getElementById("publishVideoFile").required'),false,
+    'Editing keeps video file when no replacement is supplied');
+  await evaluate('document.getElementById("publishTitleA").value="Short atualizado";document.getElementById("publishComposerForm").dispatchEvent(new Event("submit",{bubbles:true,cancelable:true}))');
+  await wait(()=>evaluate('document.getElementById("publishComposerDialog").open===false'),'Edit saves');
+  assert.equal(await evaluate('document.querySelector(".publish-draft-content h4").textContent'),"Short atualizado");
+  await evaluate('document.querySelectorAll(".publish-draft-picker input")[0].click()');
+  assert.equal(await evaluate('document.getElementById("publishSelectionBar").hidden'),false,
+    'Selecting an item reveals publication preparation');
+  await evaluate('document.getElementById("publishPrepareBrowser").click()');
+  await wait(()=>evaluate('document.getElementById("publishSessionPanel").hidden===false'),
+    'Preparing publication creates a visible session map');
+  assert.equal(await evaluate('window.__socialPreparedSession.tabs.length'),3,
+    'All three confirmed platforms are mapped in order');
+  assert.equal(await evaluate('document.getElementById("publishSessionTabs").textContent.includes("TikTok")'),true,
+    'The UI shows mapped browser tabs');
+  await evaluate('document.getElementById("publishClearSelection").click()');
+  assert.equal(await evaluate('document.getElementById("publishSelectionBar").hidden'),true);
   await evaluate('document.getElementById("publishManageAccounts").click()');
   await evaluate('document.getElementById("socialUrl-youtube").value="https://studio.youtube.com/channel/UCother";document.getElementById("socialSaveSettings").click()');
   await wait(()=>evaluate('document.getElementById("socialGoPublications").disabled===false'),

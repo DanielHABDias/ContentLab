@@ -513,12 +513,23 @@
           <p>Adicione vídeos longos ou Shorts, personalize textos, capas e destinos.</p></div>
           <button id="publishAddVideo" class="btn btn-primary publish-main-cta" type="button">＋ Adicionar vídeo</button>
         </section>
+        <div id="publishSelectionBar" class="publish-selection-bar" hidden>
+          <div><strong><span id="publishSelectedCount">0</span> vídeo(s) selecionado(s)</strong><small>Abra as redes em uma janela visível, com uma aba por conta confirmada. O envio será uma etapa futura.</small></div>
+          <button id="publishPrepareBrowser" class="btn btn-primary" type="button">↗ Publicar · abrir navegador</button>
+          <button id="publishClearSelection" class="btn btn-secondary" type="button">Limpar seleção</button>
+        </div>
         <div id="publishDraftList" class="publish-draft-list" aria-live="polite"></div>
+        <section id="publishSessionPanel" class="publish-session-panel" hidden aria-label="Abas preparadas no navegador">
+          <div><span class="eyebrow">NAVEGADOR PREPARADO</span><h4>Abas abertas para a publicação</h4>
+          <p>As abas estão no navegador visível. Esta etapa não envia vídeos, não agenda postagens e não confirma logins automaticamente.</p></div>
+          <ol id="publishSessionTabs"></ol><p id="publishSessionVideos" class="publish-session-videos"></p>
+          <small>A ordem mostrada é a ordem solicitada ao navegador. Abas antigas, extensões ou mudanças manuais podem alterar a posição real.</small>
+        </section>
         <button id="publishEmptyCard" class="publish-empty-card" type="button">
           <span class="publish-empty-thumb"><span class="publish-empty-play">▶</span><span class="publish-empty-film">🎞</span></span>
           <span class="publish-empty-copy"><strong>Seu primeiro vídeo entra aqui</strong><span>Selecione um arquivo, configure o título e a descrição e crie o primeiro item da lista.</span><em>＋ Adicionar primeiro vídeo</em></span>
         </button>
-        <div class="publish-local-hint"><span>✦</span> Lista e arquivos salvos somente neste computador. Publicação nas redes: próxima etapa.</div>
+        <div class="publish-local-hint"><span>✦</span> Os rascunhos ficam neste computador. O botão Publicar abre as abas; o envio às redes será implementado depois.</div>
         <p id="publishStatus" class="helper-text" role="status" aria-live="polite"></p>
       </section>
 
@@ -540,6 +551,7 @@
                 <input id="publishVideoFile" name="video" class="publish-native-file-input" type="file" accept=".mp4,.webm,.mov,.m4v,video/mp4,video/webm" required>
               </label>
               <p id="publishVideoMeta" class="publish-file-meta"></p>
+              <p id="publishEditMediaHint" class="publish-edit-media-hint" hidden>Os arquivos atuais serão mantidos se você não escolher outros. Para trocar, selecione um novo vídeo ou novas thumbnails.</p>
             </section>
             <section class="publish-composer-section">
               <span class="eyebrow">02 / IDENTIDADE</span><h4>Título e detalhes</h4>
@@ -573,6 +585,7 @@
                 <label class="publish-destination" data-platform="instagram"><input type="checkbox" name="platform" value="instagram"><span>◎ Instagram</span></label>
               </div>
               <p id="publishDestinationHint" class="helper-text">Somente redes com login confirmado são selecionáveis.</p>
+              <p id="publishUnavailableWarning" class="publish-destination-warning" role="alert" hidden></p>
               <label class="publish-form-field publish-date-field" for="publishScheduleAt"><span>Data e horário desejados</span><input id="publishScheduleAt" name="scheduledAt" type="datetime-local"><small>Planejamento local, sem disparo automático por enquanto.</small></label>
               <div class="publish-schedule-note"><span class="publish-schedule-sparkle">✦</span><span id="publishScheduleAdvice">O próximo horário será sugerido automaticamente.</span><button id="publishScheduleReset" type="button">↻ Reaplicar sugestão</button></div>
             </section>

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {createSocialDraft,listSocialDrafts,deleteSocialDraft,socialDraftMedia} from './social-drafts.mjs';
+import {createSocialDraft,updateSocialDraft,listSocialDrafts,deleteSocialDraft,socialDraftMedia} from './social-drafts.mjs';
 
 const png=Buffer.from([137,80,78,71,13,10,26,10,0,0,0,0,73,72,68,82]);
 const mp4=Buffer.from([0,0,0,20,102,116,121,112,105,115,111,109,0,0,0,0]);
@@ -50,4 +50,45 @@ test('não aceita caminho forjado, vídeo inválido nem redes não confirmadas',
   const invalid={...f.video,originalname:'virus.mp4',path:f.a.path};
   assert.throws(()=>createSocialDraft({root:f.root,body,files:{video:[invalid],coverA:[f.a]},confirmed}),/Formato/);
   assert.throws(()=>socialDraftMedia('../../outside','video',f.root));
+});
+
+test('edição mantém mídia antiga, muda metadados e substitui vídeo e capas com segurança',t=>{
+  const f=fixture(t);
+  const item=createSocialDraft({root:f.root,body:{kind:'short',titleA:'Short inicial',
+    platforms:'["youtube"]',scheduledAt:'2026-11-04T12:00'},
+    files:{video:[f.video],coverA:[f.a]},confirmed});
+  const content=fs.readFileSync(socialDraftMedia(item.id,'video',f.root));
+  const updated=updateSocialDraft(item.id,{root:f.root,body:{kind:'short',titleA:'Short revisado',
+    description:'Agora com descrição',tags:'diazverso, nerd',platforms:'["tiktok"]',scheduledAt:'2026-11-05T12:00'},
+    files:{},confirmed});
+  assert.equal(updated.id,item.id);
+  assert.equal(updated.createdAt,item.createdAt);
+  assert.equal(updated.titleA,'Short revisado');
+  assert.equal(updated.scheduledAt,'2026-11-05T12:00');
+  assert.deepEqual(updated.platforms,['tiktok']);
+  assert.deepEqual(fs.readFileSync(socialDraftMedia(item.id,'video',f.root)),content);
+  assert.deepEqual(listSocialDrafts(f.root).map(x=>x.id),[item.id]);
+  const newVideo=Buffer.concat([mp4,Buffer.from('replacement')]);
+  fs.writeFileSync(f.video.path,newVideo);
+  const changed=updateSocialDraft(item.id,{root:f.root,body:{kind:'short',titleA:'Arquivo substituído',
+    platforms:'["youtube"]'},files:{video:[f.video]},confirmed});
+  assert.equal(changed.fileName,'video.mp4');
+  assert.deepEqual(fs.readFileSync(socialDraftMedia(item.id,'video',f.root)),newVideo);
+  assert.throws(()=>updateSocialDraft(item.id,{root:f.root,body:{kind:'long',titleA:'Longo',
+    titleB:'B',platforms:'["youtube"]'},files:{},confirmed}),/thumbnail/);
+  assert.equal(listSocialDrafts(f.root)[0].kind,'short','falha não altera lista');
+  const a=fs.readFileSync(socialDraftMedia(item.id,'coverA',f.root));
+  const altered=updateSocialDraft(item.id,{root:f.root,body:{kind:'long',titleA:'Longo',
+    titleB:'Outra chamada',platforms:'["youtube"]'},files:{coverB:[f.b]},confirmed});
+  assert.equal(altered.kind,'long');
+  assert.ok(fs.existsSync(socialDraftMedia(item.id,'coverB',f.root)));
+  assert.deepEqual(fs.readFileSync(socialDraftMedia(item.id,'coverA',f.root)),a);
+  const short=updateSocialDraft(item.id,{root:f.root,body:{kind:'short',titleA:'Short novamente',
+    platforms:'["youtube"]'},files:{},confirmed});
+  assert.equal(short.media.coverB,null);
+  assert.throws(()=>socialDraftMedia(item.id,'coverB',f.root));
+  assert.throws(()=>updateSocialDraft(item.id,{root:f.root,body:{kind:'short',titleA:'Invalido',
+    platforms:'["instagram"]'},files:{},confirmed}),/confirmada/);
+  assert.equal(listSocialDrafts(f.root)[0].titleA,'Short novamente');
+  assert.throws(()=>updateSocialDraft('../outside',{body:{},files:{},confirmed,root:f.root}),/inválido/);
 });

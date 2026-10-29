@@ -5,6 +5,7 @@
   const planning=window.ContentLabPublicationPlanning;
   const platforms=['youtube','tiktok','instagram'],names={youtube:'YouTube',tiktok:'TikTok',instagram:'Instagram'};
   let settings=null,ready=false,opened=new Set(),loading=false,drafts=[],videoUrl=null,coverUrls=[],captured=null,selectedVideo=null;
+  let editingId=null,selectedIds=new Set(),session=null;
   const notice=(message,error=false)=>{
     $('socialSetupStatus').textContent=message||'';
     $('socialSetupStatus').classList.toggle('social-error',error);
@@ -132,6 +133,8 @@
       if(selectDefaults)input.checked=enabled;
       else if(!enabled)input.checked=false;
       node.classList.toggle('is-disabled',!enabled);
+      node.classList.toggle('is-unconfigured',settings?.confirmed[p]!==true||changed());
+      node.classList.toggle('is-incompatible',!compatible.includes(p));
       node.classList.toggle('is-selected',input.checked);
       if(enabled)available.push(names[p]);
     }
@@ -141,6 +144,17 @@
   }
   for(const el of document.querySelectorAll('#publishDestinations input')){
     el.addEventListener('change',()=>updateDestinations());
+  }
+  for(const node of document.querySelectorAll('#publishDestinations .publish-destination')){
+    node.addEventListener('click',event=>{
+      const platform=node.dataset.platform;
+      if(settings?.confirmed[platform]===true&&!changed())return;
+      event.preventDefault();
+      const message=names[platform]+' ainda não foi configurado. Abra Configurações de redes sociais, confirme o login e volte para selecionar.';
+      $('publishUnavailableWarning').hidden=false;
+      $('publishUnavailableWarning').textContent=message;
+      feedback(message,true);
+    });
   }
   function releaseVideo(){
     if(videoUrl){URL.revokeObjectURL(videoUrl);videoUrl=null;}
@@ -169,6 +183,7 @@
     $('publishScheduleAdvice').textContent='Data ajustada manualmente. Você pode reaplicar a sugestão.';
   });
   function refreshKind(){
+    $('publishUnavailableWarning').hidden=true;
     const long=kind()==='long';
     $('publishTitleBWrap').hidden=!long;
     $('publishTitleB').required=long;
@@ -251,13 +266,20 @@
       $('publishCoverFeedback').textContent='Selecione um frame do vídeo para criar sua thumbnail.';
     }
   });
-  async function openComposer(){
+  async function openComposer(item=null){
     if(!ready||changed())return goSettings();
     // Atualizar a lista antes da sugestão, inclusive se outra aba adicionou um item.
     try{const data=await request('/api/social-browser/drafts');drafts=data.items||[];renderDrafts();}
     catch(error){status(error.message,true);return;}
     const dialog=$('publishComposerDialog');
+    const current=item?.id?drafts.find(d=>d.id===item.id):null;
+    editingId=current?.id||null;
     $('publishComposerForm').reset();releaseVideo();
+    $('publishComposerTitle').textContent=editingId?'Editar vídeo da lista':'Preparar publicação';
+    $('publishComposerSave').textContent=editingId?'Salvar alterações':'＋ Adicionar à lista';
+    $('publishEditMediaHint').hidden=!editingId;
+    $('publishVideoFile').required=!editingId;
+    $('publishUnavailableWarning').hidden=true;
     $('publishFileCaption').textContent='Selecionar vídeo do computador';
     $('publishVideoMeta').textContent='';
     for(const id of ['publishCoverNameA','publishCoverNameB','publishShortCoverName'])$(id).textContent='Nenhuma imagem selecionada';
@@ -269,14 +291,45 @@
     feedback('');
     for(const id of ['publishLongPreviewA','publishLongPreviewB','publishFrameImage'])$(id).hidden=true;
     refreshKind();
+    if(current){
+      document.querySelector('#publishComposerForm input[name="kind"][value="'+current.kind+'"]').checked=true;
+      refreshKind();
+      $('publishTitleA').value=current.titleA||'';
+      $('publishTitleB').value=current.titleB||'';
+      $('publishDescription').value=current.description||'';
+      $('publishTags').value=(current.tags||[]).join(', ');
+      $('publishScheduleAt').value=current.scheduledAt||'';
+      $('publishScheduleAdvice').textContent='Data do vídeo mantida. Altere se quiser.';
+      $('publishFileCaption').textContent=current.fileName||'Vídeo salvo';
+      $('publishVideoMeta').textContent='Vídeo salvo na lista · escolha outro arquivo somente para trocar';
+      for(const p of platforms){
+        const input=document.querySelector('#publishDestinations input[value="'+p+'"]');
+        input.checked=!input.disabled&&current.platforms.includes(p);
+      }
+      updateDestinations();
+      const setExisting=(id,kind,name)=>{
+        if(!current.media?.[kind])return;
+        $(id).src=safeUrl(current.id,kind);$(id).hidden=false;
+        $(name).textContent='Imagem atual · selecione outra para trocar';
+      };
+      if(current.kind==='long'){
+        setExisting('publishLongPreviewA','coverA','publishCoverNameA');
+        setExisting('publishLongPreviewB','coverB','publishCoverNameB');
+      }else{
+        setExisting('publishFrameImage','coverA','publishShortCoverName');
+      }
+      const video=$('publishFrameVideo');
+      video.src=safeUrl(current.id,'video');video.load();
+      $('publishCoverFeedback').textContent='Thumbnail atual preservada. Você pode escolher outra imagem ou capturar um novo frame.';
+    }
     dialog.showModal();
   }
-  const closeComposer=()=>{releaseVideo();$('publishComposerDialog').close();};
-  $('publishAddVideo').onclick=openComposer;
-  $('publishEmptyCard').onclick=openComposer;
+  const closeComposer=()=>{releaseVideo();$('publishComposerDialog').close();editingId=null;};
+  $('publishAddVideo').onclick=()=>openComposer();
+  $('publishEmptyCard').onclick=()=>openComposer();
   $('publishComposerClose').onclick=closeComposer;
   $('publishComposerCancel').onclick=closeComposer;
-  $('publishComposerDialog').addEventListener('close',releaseVideo);
+  $('publishComposerDialog').addEventListener('close',()=>{releaseVideo();editingId=null;});
   function el(tag,className,textValue){
     const item=document.createElement(tag);
     if(className)item.className=className;
@@ -284,6 +337,14 @@
     return item;
   }
   const safeUrl=(id,type)=>'/api/social-browser/drafts/'+encodeURIComponent(id)+'/media/'+type;
+  function updateSelection(){
+    selectedIds=new Set([...selectedIds].filter(id=>drafts.some(d=>d.id===id)));
+    const count=selectedIds.size;
+    $('publishSelectionBar').hidden=count===0;
+    $('publishSelectedCount').textContent=String(count);
+    $('publishPrepareBrowser').disabled=count===0;
+  }
+  $('publishClearSelection').onclick=()=>{selectedIds.clear();renderDrafts();};
   function renderDrafts(){
     const list=$('publishDraftList');list.replaceChildren();
     $('publishDraftCount').textContent=String(drafts.length);
@@ -294,6 +355,15 @@
       drafts.length?'＋ Preparar próximo vídeo':'＋ Adicionar primeiro vídeo';
     for(const [index,item] of drafts.entries()){
       const card=el('article','publish-draft-card');
+      card.classList.toggle('is-picked',selectedIds.has(item.id));
+      const picker=el('label','publish-draft-picker');
+      const check=el('input');check.type='checkbox';check.checked=selectedIds.has(item.id);
+      check.setAttribute('aria-label','Selecionar '+item.titleA+' para abrir redes');
+      check.addEventListener('change',()=>{
+        if(check.checked)selectedIds.add(item.id);else selectedIds.delete(item.id);
+        card.classList.toggle('is-picked',check.checked);updateSelection();
+      });
+      picker.append(check,el('span','','Selecionar'));
       const thumb=el('div','publish-draft-thumb '+(item.kind==='short'?'is-short':'is-long'));
       const img=el('img');img.alt='Capa do vídeo';img.loading='lazy';img.src=safeUrl(item.id,'coverA');
       thumb.append(img,el('span','publish-draft-thumb-label',item.kind==='long'?'VÍDEO LONGO':'SHORT'));
@@ -311,6 +381,8 @@
       content.append(chips);
       const tail=el('div','publish-draft-tail');
       tail.append(el('span','publish-file-label',item.fileName||'Vídeo local'));
+      const edit=el('button','publish-draft-edit','✎ Editar');
+      edit.type='button';edit.onclick=()=>openComposer(item);
       const preview=el('a','publish-draft-preview','↗ Ver vídeo');
       preview.href=safeUrl(item.id,'video');preview.target='_blank';preview.rel='noopener noreferrer';
       const remove=el('button','publish-draft-remove','Excluir');
@@ -322,9 +394,10 @@
           drafts=drafts.filter(d=>d.id!==item.id);renderDrafts();status('Vídeo removido da lista.');
         }catch(error){status(error.message,true);}
       };
-      tail.append(preview,remove);content.append(tail);
-      card.append(thumb,content);list.append(card);
+      tail.append(edit,preview,remove);content.append(tail);
+      card.append(picker,thumb,content);list.append(card);
     }
+    updateSelection();
   }
   async function loadDrafts(){
     try{const data=await request('/api/social-browser/drafts');drafts=data.items||[];renderDrafts();}
@@ -337,28 +410,63 @@
     try{
       if(!ready||changed())throw Error('Confirme uma rede em Configurações.');
       const video=$('publishVideoFile').files[0],long=kind()==='long';
-      if(!video)throw Error('Selecione um vídeo do computador.');
+      if(!video&&!editingId)throw Error('Selecione um vídeo do computador.');
       if(!/\.(mp4|webm|mov|m4v)$/i.test(video.name))throw Error('Use vídeo MP4 ou WebM.');
       const coverA=long?$('publishCoverA').files[0]:$('publishShortCoverFile').files[0]||
         (captured?new File([captured],'frame.png',{type:'image/png'}):null);
       const coverB=long?$('publishCoverB').files[0]:null;
-      if(!coverA||long&&!coverB)throw Error(long?'Selecione as duas thumbnails para o teste A/B.':'Escolha uma thumbnail ou capture um frame do vídeo.');
+      const previous=editingId?drafts.find(d=>d.id===editingId):null;
+      const retainA=previous?.media?.coverA;
+      const retainB=long&&previous?.media?.coverB;
+      if((!coverA&&!retainA)||(long&&!coverB&&!retainB))
+        throw Error(long?'Selecione as duas thumbnails para o teste A/B.':'Escolha uma thumbnail ou capture um frame do vídeo.');
       if(long&&$('publishTitleA').value.trim()===$('publishTitleB').value.trim())
         throw Error('O teste A/B precisa de títulos diferentes.');
       const chosen=platforms.filter(p=>document.querySelector('#publishDestinations input[value="'+p+'"]').checked);
       if(!chosen.length)throw Error('Selecione pelo menos um destino habilitado.');
       const form=new FormData();
-      form.append('video',video);form.append('coverA',coverA);
+      if(video)form.append('video',video);
+      if(coverA)form.append('coverA',coverA);
       if(coverB)form.append('coverB',coverB);
       for(const key of ['titleA','titleB','description','tags','scheduledAt'])form.append(key, $('publish'+({titleA:'TitleA',titleB:'TitleB',description:'Description',tags:'Tags',scheduledAt:'ScheduleAt'}[key])).value);
       form.append('kind',kind());form.append('platforms',JSON.stringify(chosen));
       button.disabled=true;button.textContent='Salvando vídeo...';feedback('Copiando o vídeo e as imagens para a lista local...');
-      const data=await request('/api/social-browser/drafts',{method:'POST',body:form});
-      drafts.unshift(data.item);renderDrafts();closeComposer();
-      status('Vídeo adicionado e salvo localmente. Nenhum arquivo foi enviado às redes.');
+      const edited=Boolean(editingId);
+      const data=await request(edited?'/api/social-browser/drafts/'+encodeURIComponent(editingId):'/api/social-browser/drafts',
+        {method:edited?'PUT':'POST',body:form});
+      if(edited)drafts=drafts.map(d=>d.id===editingId?data.item:d);
+      else drafts.unshift(data.item);
+      renderDrafts();closeComposer();
+      status(edited?'Informações e arquivos do vídeo atualizados localmente.':'Vídeo adicionado e salvo localmente. Nenhum arquivo foi enviado às redes.');
     }catch(error){feedback(error.message,true);}
-    finally{button.disabled=false;button.textContent='＋ Adicionar à lista';}
+    finally{button.disabled=false;button.textContent=editingId?'Salvar alterações':'＋ Adicionar à lista';}
   });
+  function renderPublicationSession(result){
+    session=result;
+    const panel=$('publishSessionPanel'),tabs=$('publishSessionTabs');
+    tabs.replaceChildren();panel.hidden=!result;
+    if(!result)return;
+    for(const tab of result.tabs){
+      const row=el('li','');
+      row.append(el('strong','',String(tab.index).padStart(2,'0')+' · '+names[tab.platform]));
+      const link=el('a','',tab.url);link.href=tab.url;link.target='_blank';link.rel='noopener noreferrer';
+      row.append(link);tabs.append(row);
+    }
+    $('publishSessionVideos').textContent=result.videos.length+' vídeo(s) vinculados às abas, conforme os destinos escolhidos.';
+  }
+  $('publishPrepareBrowser').onclick=async()=>{
+    const button=$('publishPrepareBrowser');button.disabled=true;
+    try{
+      const result=await request('/api/social-browser/prepare',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({draftIds:[...selectedIds]})
+      });
+      renderPublicationSession(result.session);
+      status('Navegador visível solicitado com '+result.session.tabs.length+' aba(s). Nenhum vídeo foi enviado.');
+    }catch(error){status(error.message,true);}
+    finally{button.disabled=selectedIds.size===0;}
+  };
+  request('/api/social-browser/session').then(data=>renderPublicationSession(data.session)).catch(()=>{});
   window.addEventListener('workspacechange',event=>{
     if(event.detail.name==='publications'){
       if(!settings){loadSettings();return;}
