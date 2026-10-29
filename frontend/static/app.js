@@ -1005,14 +1005,24 @@ function updateTranscriptionScope(){
   $('transcriptionStart').textContent=avulso?'Transcrever arquivo avulso':'Tratar e transcrever narração oficial';
   $('transcriptionFileLabel').textContent=avulso?'01 / Áudio para transcrever':'01 / Áudio para tratar';
   $('transcriptionDefaultSource').hidden=avulso;
-  $('transcriptionFile').parentElement.querySelectorAll('.helper-text')[1].textContent=avulso?'Obrigatório: áudio do computador. Não substitui arquivos do projeto.':'Opcional: selecione outro áudio para substituir audio/narration.wav somente neste tratamento.';
+  $('transcriptionFile').parentElement.querySelectorAll('.helper-text')[1].textContent=avulso?'Obrigatório: áudio do computador. Não substitui arquivos do projeto.':'Opcional: escolha outro áudio bruto. Sem arquivo, reutilizamos o original preservado quando já houve tratamento, evitando filtros acumulados.';
   updateTranscriptionDefaultSource(window.ContentLabProject?.snapshot);
 }
-function updateTranscriptionDefaultSource(project){
+function updateTranscriptionDefaultSource(project=window.ContentLabProject?.snapshot){
   const status=$('transcriptionDefaultSourceStatus');if(!status)return;
-  const root=project?.projectRoot||$('transcriptionProjectRoot').value.trim();
-  status.textContent=project?.hasNarration?' · encontrado no projeto':root?' · ainda não encontrado no projeto':' · selecione um projeto';
+  const root=$('transcriptionProjectRoot').value.trim();
+  if(!root){status.textContent=' · selecione um projeto';return;}
+  // A informação só vale para a pasta inspecionada. Nunca aproveite o status
+  // de outro projeto depois de uma troca manual de pasta.
+  if(!project?.projectRoot||project.projectRoot!==root){
+    status.textContent=' · arquivo ainda não verificado nesta pasta';
+    return;
+  }
+  status.textContent=project.hasNarration?' · encontrado no projeto':' · ainda não encontrado no projeto';
 }
+$('transcriptionProjectRoot').addEventListener('input',()=>updateTranscriptionDefaultSource());
+$('transcriptionProjectRoot').addEventListener('change',()=>updateTranscriptionDefaultSource());
+window.addEventListener('projectchanged',event=>updateTranscriptionDefaultSource(event.detail));
 $('transcriptionScope').addEventListener('change',updateTranscriptionScope);updateTranscriptionScope();
 // Preferências locais: sem dados salvos, prevalecem os padrões do formulário.
 const audioTreatmentStorageKey='contentlab.audio-treatment.settings.v1';
@@ -1109,6 +1119,7 @@ $("transcriptionStart").addEventListener("click", async () => {
           return;
         }
         saveAudioTreatmentSettings();
+        updateTranscriptionDefaultSource({projectRoot:job.projectRoot,hasNarration:true});
         latestVoiceJobId = data.jobId;
         document.querySelector('#transcriptionResult > .helper-text').textContent='Narração e transcrição oficiais salvas no projeto: audio/narration.wav, audio/narration.prepared.wav e transcript.json/TXT/SRT.';
         document.querySelector('.voice-studio-compare').classList.remove('hidden');

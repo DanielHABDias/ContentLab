@@ -27,6 +27,10 @@ export function voiceStudioFolder(folder){
   }
   return root;
 }
+// O usuário pode finalizar novas tomadas, que são a nova fonte bruta, ou
+// retratar uma narração já processada. Só reutilize o original quando o
+// manifesto comprovar que ele corresponde ao WAV atual. Não basta procurar
+// um narration.original.* antigo: ele pode pertencer à gravação anterior.
 export function officialNarrationSource(folder,{required=true}={}){
   const root=voiceStudioFolder(folder),file=path.join(root,NARRATION_OUTPUT);
   if(!fs.existsSync(file)){
@@ -35,7 +39,29 @@ export function officialNarrationSource(folder,{required=true}={}){
   }
   const stat=fs.lstatSync(file);
   if(stat.isSymbolicLink()||!stat.isFile())throw Error('A narração padrão audio/narration.wav é inválida.');
-  return file;
+  const marker=path.join(root,VOICE_STUDIO_BUILD);
+  if(!fs.existsSync(marker))return file; // Projeto novo: a narração ainda é bruta.
+  const markerStat=fs.lstatSync(marker);
+  if(markerStat.isSymbolicLink()||!markerStat.isFile()||markerStat.size>1024*1024)
+    throw Error('O manifesto da narração é inválido.');
+  let build;
+  try{build=JSON.parse(fs.readFileSync(marker,'utf8'));}
+  catch{throw Error('Não foi possível ler o manifesto da narração. Preserve o áudio e recarregue o projeto.');}
+  if(build?.mode!=='voice-studio')return file;
+  const identity=build.outputIdentity;
+  // Se o WAV atual foi substituído (por exemplo, por novas tomadas), seu
+  // manifesto anterior não deve apontar para o áudio original antigo.
+  if(!identity||identity.size!==stat.size||
+      !Number.isFinite(identity.mtimeMs)||Math.abs(identity.mtimeMs-stat.mtimeMs)>=1)
+    return file;
+  if(build.source===NARRATION_OUTPUT)return file; // Finalização bruta de tomadas.
+  if(typeof build.source!=='string'||
+      !/^audio\/narration\.original\.(wav|mp3|m4a|aac|flac|ogg|opus)$/.test(build.source))
+    throw Error('O manifesto não aponta para um original de narração válido.');
+  const original=path.join(root,build.source),originalStat=fs.existsSync(original)?fs.lstatSync(original):null;
+  if(!originalStat||originalStat.isSymbolicLink()||!originalStat.isFile())
+    throw Error('O áudio original preservado não foi encontrado. Selecione o arquivo bruto novamente para evitar tratamento acumulado.');
+  return original;
 }
 // Profiles are intentionally gentler than the previous pitch-only filter.
 // CapCut does not disclose Super Deep's processing parameters: none of these

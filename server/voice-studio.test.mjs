@@ -37,6 +37,54 @@ test('official treatment defaults to the current project narration.wav',t=>{
   fs.writeFileSync(path.join(root,'audio','narration.original.wav'),'older-source');
   assert.equal(officialNarrationSource(root),narration);
 });
+test('retratamento usa o original vinculado ao WAV atual, nunca um original antigo',t=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'contentlab-source-selection-'));
+  t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
+  const audio=path.join(root,'audio');fs.mkdirSync(audio);
+  const current=path.join(audio,'narration.wav');
+  const original=path.join(audio,'narration.original.wav');
+  fs.writeFileSync(current,'TRATADO');fs.writeFileSync(original,'BRUTO PRESERVADO');
+  assert.equal(officialNarrationSource(root),current,'sem manifesto, usar WAV bruto atual');
+  const masterStat=fs.statSync(current);
+  const meta={mode:'voice-studio',source:'audio/narration.original.wav',
+    outputIdentity:{size:masterStat.size,mtimeMs:masterStat.mtimeMs}};
+  const marker=path.join(root,'narration.build.json');
+  fs.writeFileSync(marker,JSON.stringify(meta));
+  assert.equal(officialNarrationSource(root),original,'com tratamento vigente, reutilizar o original');
+  const raw=fs.readFileSync(original);
+  fs.writeFileSync(current,'NOVA GRAVACAO');
+  assert.equal(officialNarrationSource(root),current,'nova narração invalida o original anterior');
+  assert.deepEqual(fs.readFileSync(original),raw,'original antigo não é sobrescrito ao selecionar a nova fonte');
+  fs.writeFileSync(marker,JSON.stringify({...meta,source:'audio/narration.wav'}));
+  assert.equal(officialNarrationSource(root),current,'finalização bruta usa a narração atual');
+  const freshStat=fs.statSync(current);
+  fs.writeFileSync(marker,JSON.stringify({...meta,outputIdentity:{size:freshStat.size,mtimeMs:freshStat.mtimeMs}}));
+  assert.equal(officialNarrationSource(root),original);
+  fs.rmSync(original);
+  assert.throws(()=>officialNarrationSource(root),/original preservado não foi encontrado/,'não retratar áudio tratado se o bruto sumir');
+  fs.writeFileSync(original,'BRUTO NOVO');
+  fs.writeFileSync(marker,JSON.stringify({...meta,source:'../../outside.wav',outputIdentity:{size:freshStat.size,mtimeMs:freshStat.mtimeMs}}));
+  assert.throws(()=>officialNarrationSource(root),/original de narração válido/,'não seguir caminhos arbitrários no manifesto');
+});
+test('duas execuções de tratamento preservam os bytes do bruto', {skip:!ffmpegOk},async t=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'contentlab-retratamento-'));
+  t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
+  const raw=await createVoice(root);
+  const sourceBytes=fs.readFileSync(raw);
+  const audio=path.join(root,'audio');fs.mkdirSync(audio);
+  fs.copyFileSync(raw,path.join(audio,'narration.wav'));
+  const selectedFirst=officialNarrationSource(root);
+  assert.equal(selectedFirst,path.join(audio,'narration.wav'));
+  await prepareStandaloneNarration(root,{sourceFile:selectedFirst,
+    options:{removeMiddleSilence:true,minSilence:.7,voicePreset:'original'},transcriber});
+  const original=path.join(audio,'narration.original.wav');
+  assert.deepEqual(fs.readFileSync(original),sourceBytes);
+  assert.equal(officialNarrationSource(root),original);
+  await prepareStandaloneNarration(root,{sourceFile:officialNarrationSource(root),
+    options:{removeMiddleSilence:false,trimEdges:false,normalize:false,voicePreset:'warm'},transcriber});
+  assert.deepEqual(fs.readFileSync(original),sourceBytes,'segundo tratamento não troca o original pelo áudio processado');
+  assert.equal(officialNarrationSource(root),original,'terceiro tratamento também usará a fonte bruta');
+});
 const transcriber=async(audio,dest,{detail}={})=>{
   const dur=await probeAudioDuration(audio);
   const doc={language:'pt',segments:[{start:0,end:dur,text:'Exemplo de voz'}],

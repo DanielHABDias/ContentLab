@@ -89,6 +89,20 @@ try{
     'studio-panel-appear','Narration workspace animates on navigation');
   assert.equal(await evaluate('document.getElementById("panel-videos").hidden'),true,
     'Inactive workspace must stay hidden and non-interactive');
+  await evaluate(`(() => {
+    const scope=document.getElementById('transcriptionScope');
+    scope.value='narration';scope.dispatchEvent(new Event('change'));
+    document.getElementById('transcriptionProjectRoot').value='/example/project-a';
+    window.dispatchEvent(new CustomEvent('projectchanged',{
+      detail:{projectRoot:'/example/project-a',hasNarration:true}}));
+  })()`);
+  assert.equal(await evaluate('document.getElementById("transcriptionDefaultSourceStatus").textContent.includes("encontrado no projeto")'),true,
+    'Selecting a project refreshes narration availability immediately');
+  await evaluate('document.getElementById("transcriptionProjectRoot").value="/example/project-b";document.getElementById("transcriptionProjectRoot").dispatchEvent(new Event("input"))');
+  assert.equal(await evaluate('document.getElementById("transcriptionDefaultSourceStatus").textContent.includes("não verificado")'),true,
+    'Typing a different project must not reuse the prior project narration status');
+  await evaluate('document.getElementById("transcriptionProjectRoot").value="";document.getElementById("transcriptionScope").value="standalone";document.getElementById("transcriptionScope").dispatchEvent(new Event("change"))');
+
   assert.equal(await evaluate('getComputedStyle(document.getElementById("loadBtn")).transitionProperty.includes("transform")'),true,
     'Buttons must provide a transform-based tactile response');
   await evaluate('document.getElementById("tab-videos").click()');
