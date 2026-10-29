@@ -1,7 +1,8 @@
 /* Publicações: preparação local de vídeos, sem envio a redes sociais. */
 (()=>{
   const $=id=>document.getElementById(id);
-  if(!$('socialBrowserSelect')||!$('publishComposerDialog'))return;
+  if(!$('socialBrowserSelect')||!$('publishComposerDialog')||!window.ContentLabPublicationPlanning)return;
+  const planning=window.ContentLabPublicationPlanning;
   const platforms=['youtube','tiktok','instagram'],names={youtube:'YouTube',tiktok:'TikTok',instagram:'Instagram'};
   let settings=null,ready=false,opened=new Set(),loading=false,drafts=[],videoUrl=null,coverUrls=[],captured=null,selectedVideo=null;
   const notice=(message,error=false)=>{
@@ -119,8 +120,8 @@
     };
   }
   const kind=()=>document.querySelector('#publishComposerForm input[name="kind"]:checked')?.value||'short';
-  const allowed=()=>kind()==='short'?platforms:['tiktok','instagram'];
-  function updateDestinations(){
+  const allowed=()=>planning.compatiblePlatforms(kind());
+  function updateDestinations(selectDefaults=false){
     const compatible=allowed(),available=[];
     for(const p of platforms){
       const node=document.querySelector('#publishDestinations [data-platform="'+p+'"]');
@@ -128,17 +129,18 @@
       const input=node.querySelector('input');
       const enabled=!!settings?.confirmed[p]&&compatible.includes(p)&&!changed();
       input.disabled=!enabled;
-      if(!enabled)input.checked=false;
+      if(selectDefaults)input.checked=enabled;
+      else if(!enabled)input.checked=false;
       node.classList.toggle('is-disabled',!enabled);
       node.classList.toggle('is-selected',input.checked);
       if(enabled)available.push(names[p]);
     }
     $('publishDestinationHint').textContent=available.length?
-      'Disponíveis para este formato: '+available.join(', ')+'. Selecione os destinos.':
+      'Pré-selecionadas: '+available.join(', ')+'. Você pode desmarcar qualquer destino.':
       'Nenhuma rede compatível foi confirmada para este formato. Volte às Configurações para habilitar uma.';
   }
   for(const el of document.querySelectorAll('#publishDestinations input')){
-    el.addEventListener('change',updateDestinations);
+    el.addEventListener('change',()=>updateDestinations());
   }
   function releaseVideo(){
     if(videoUrl){URL.revokeObjectURL(videoUrl);videoUrl=null;}
@@ -154,6 +156,18 @@
     const seconds=Math.max(0,Number(value)||0);
     return String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(Math.floor(seconds%60)).padStart(2,'0');
   };
+  function applySuggestedSchedule(){
+    const input=$('publishScheduleAt');
+    input.value=planning.suggestSchedule(kind(),drafts,new Date());
+    const hasPrevious=drafts.some(item=>planning.parseLocal(item.scheduledAt));
+    $('publishScheduleAdvice').textContent=hasPrevious?
+      'Sugestão automática: próximo dia depois do último vídeo da lista.':
+      'Sugestão automática: primeiro horário com pelo menos 2 horas de antecedência.';
+  }
+  $('publishScheduleReset').addEventListener('click',applySuggestedSchedule);
+  $('publishScheduleAt').addEventListener('input',()=>{
+    $('publishScheduleAdvice').textContent='Data ajustada manualmente. Você pode reaplicar a sugestão.';
+  });
   function refreshKind(){
     const long=kind()==='long';
     $('publishTitleBWrap').hidden=!long;
@@ -162,7 +176,8 @@
     $('publishLongCovers').hidden=!long;
     $('publishShortCover').hidden=long;
     $('publishCoverHeading').textContent=long?'Duas thumbnails para teste A/B':'Sua thumbnail · imagem ou frame do vídeo';
-    updateDestinations();
+    updateDestinations(true);
+    applySuggestedSchedule();
   }
   document.querySelectorAll('#publishComposerForm input[name="kind"]').forEach(el=>el.addEventListener('change',refreshKind));
   function previewImage(file,id){
@@ -171,8 +186,12 @@
     const url=URL.createObjectURL(file);
     coverUrls.push(url);image.src=url;
   }
-  $('publishCoverA').addEventListener('change',()=>previewImage($('publishCoverA').files[0],'publishLongPreviewA'));
-  $('publishCoverB').addEventListener('change',()=>previewImage($('publishCoverB').files[0],'publishLongPreviewB'));
+  for(const [field,preview,name] of [['publishCoverA','publishLongPreviewA','publishCoverNameA'],['publishCoverB','publishLongPreviewB','publishCoverNameB']]){
+    $(field).addEventListener('change',()=>{
+      const file=$(field).files[0];previewImage(file,preview);
+      $(name).textContent=file?file.name:'Nenhuma imagem selecionada';
+    });
+  }
   $('publishVideoFile').addEventListener('change',()=>{
     const file=$('publishVideoFile').files[0];
     releaseVideo();selectedVideo=file||null;
@@ -215,6 +234,7 @@
     try{
       captured=await frameBlob();
       const file=$('publishShortCoverFile');file.value='';
+      $('publishShortCoverName').textContent='Frame capturado em '+timecode(frameVideo.currentTime);
       previewImage(new File([captured],'frame.png',{type:'image/png'}),'publishFrameImage');
       $('publishCoverFeedback').textContent='Frame de '+timecode(frameVideo.currentTime)+' capturado como thumbnail. A imagem será salva com o vídeo.';
     }catch(error){feedback(error.message,true);}
@@ -223,18 +243,24 @@
     const image=$('publishShortCoverFile').files[0];
     if(image){
       captured=null;previewImage(image,'publishFrameImage');
+      $('publishShortCoverName').textContent=image.name;
       $('publishCoverFeedback').textContent='Thumbnail personalizada selecionada: '+image.name;
     }else{
       $('publishFrameImage').hidden=true;
+      $('publishShortCoverName').textContent='Nenhuma imagem selecionada';
       $('publishCoverFeedback').textContent='Selecione um frame do vídeo para criar sua thumbnail.';
     }
   });
-  function openComposer(){
+  async function openComposer(){
     if(!ready||changed())return goSettings();
+    // Atualizar a lista antes da sugestão, inclusive se outra aba adicionou um item.
+    try{const data=await request('/api/social-browser/drafts');drafts=data.items||[];renderDrafts();}
+    catch(error){status(error.message,true);return;}
     const dialog=$('publishComposerDialog');
     $('publishComposerForm').reset();releaseVideo();
     $('publishFileCaption').textContent='Selecionar vídeo do computador';
     $('publishVideoMeta').textContent='';
+    for(const id of ['publishCoverNameA','publishCoverNameB','publishShortCoverName'])$(id).textContent='Nenhuma imagem selecionada';
     $('publishFramePlaceholder').hidden=false;
     $('publishFrameSeek').disabled=true;
     $('publishCaptureFrame').disabled=true;

@@ -183,6 +183,7 @@ try{
     const urls={tiktok:'https://www.tiktok.com/tiktokstudio',instagram:'https://www.instagram.com/',youtube:'https://studio.youtube.com/'};
     let settings={browser:null,urls,confirmed:{tiktok:false,instagram:false,youtube:false}};
     const items=[];
+    window.__socialDraftItems=items;
     window.fetch=(url,options)=>{
       if(!String(url).startsWith('/api/social-browser/'))return window.__socialOriginalFetch(url,options);
       const endpoint=String(url),body=typeof options?.body==='string'?JSON.parse(options.body):null;
@@ -228,15 +229,47 @@ try{
   assert.equal(await evaluate('document.getElementById("publishNetwork-youtube").classList.contains("is-disabled")'),true);
   assert.equal(await evaluate('document.getElementById("publishDraftCount").textContent'),'0');
   assert.equal(await evaluate('document.getElementById("publishEmptyCard").classList.contains("is-first")'),true);
+  await evaluate('document.getElementById("publishManageAccounts").click()');
+  for(const p of ['youtube','instagram']){
+    await evaluate('document.getElementById("socialOpen-"+'+JSON.stringify(p)+').click()');
+    await wait(()=>evaluate('document.getElementById("socialConfirm-"+'+JSON.stringify(p)+').disabled===false'),
+      'Open and confirm '+p);
+    await evaluate('document.getElementById("socialConfirm-"+'+JSON.stringify(p)+').click()');
+    await wait(()=>evaluate('document.getElementById("socialState-"+'+JSON.stringify(p)+').textContent==="Login conferido"'),
+      'Persist '+p+' confirmation');
+  }
+  await evaluate('document.getElementById("socialGoPublications").click()');
   await evaluate('document.getElementById("publishEmptyCard").click()');
-  assert.equal(await evaluate('document.getElementById("publishComposerDialog").open'),true);
+  await wait(()=>evaluate('document.getElementById("publishComposerDialog").open===true'),
+    'Composer opens after reading local drafts');
   assert.equal(await evaluate('document.getElementById("publishLongCovers").hidden'),true,
     'Short has one cover and optional visual frame extraction');
+  assert.equal(await evaluate('["youtube","tiktok","instagram"].every(p=>document.querySelector("#publishDestinations input[value="+p+"]").checked)'),true,
+    'All three confirmed networks start selected for Shorts');
+  assert.equal(await evaluate('document.getElementById("publishScheduleAt").value.endsWith("T12:00")'),true,
+    'Short automatically suggests noon');
+  assert.equal(await evaluate('getComputedStyle(document.getElementById("publishVideoFile")).opacity'),"0",
+    'The upload is a custom styled file picker, not a native file button');
+  await evaluate('document.getElementById("publishScheduleAt").value="2026-11-20T09:30";document.getElementById("publishScheduleAt").dispatchEvent(new Event("input"))');
+  assert.equal(await evaluate('document.getElementById("publishScheduleAt").value'),"2026-11-20T09:30",
+    'User can override the proposed publication date');
+  await evaluate('document.querySelector("#publishDestinations input[value=instagram]").click()');
+  assert.equal(await evaluate('document.querySelector("#publishDestinations input[value=instagram]").checked'),false,
+    'Users can uncheck a destination manually');
   await evaluate('document.querySelector("#publishComposerForm input[value=long]").click()');
   assert.equal(await evaluate('document.getElementById("publishLongCovers").hidden'),false);
-  assert.equal(await evaluate('document.querySelector("#publishDestinations input[value=youtube]").disabled'),true,
-    'Long format excludes YouTube as specified');
-  assert.equal(await evaluate('document.querySelector("#publishDestinations input[value=tiktok]").disabled'),false);
+  assert.equal(await evaluate('document.querySelector("#publishDestinations input[value=youtube]").checked'),true,
+    'Long video auto-selects YouTube');
+  assert.equal(await evaluate('document.querySelector("#publishDestinations input[value=instagram]").checked'),true,
+    'Long video auto-selects Instagram');
+  assert.equal(await evaluate('document.querySelector("#publishDestinations input[value=tiktok]").disabled'),true,
+    'TikTok is unavailable for long videos');
+  assert.equal(await evaluate('document.getElementById("publishScheduleAt").value.endsWith("T17:00")'),true,
+    'Long video automatically suggests 5pm');
+  await evaluate('document.querySelector("#publishComposerForm input[value=short]").click()');
+  assert.equal(await evaluate('["youtube","tiktok","instagram"].every(p=>document.querySelector("#publishDestinations input[value="+p+"]").checked)'),true,
+    'Returning to Shorts reselects all three compatible destinations');
+  await evaluate('document.querySelector("#publishComposerForm input[value=long]").click()');
   await evaluate(`(() => {
     const assign=(id,file)=>{
       const input=document.getElementById(id),files=new DataTransfer();
@@ -249,13 +282,18 @@ try{
     assign('publishCoverB',new File([png],'b.png',{type:'image/png'}));
     document.getElementById('publishTitleA').value='Título A';
     document.getElementById('publishTitleB').value='Título B';
-    document.querySelector('#publishDestinations input[value=tiktok]').click();
     document.getElementById('publishComposerForm').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
   })()`);
   await wait(()=>evaluate('document.getElementById("publishDraftCount").textContent==="1"'),
     'Long-form A/B draft is added to the board');
   assert.equal(await evaluate('document.querySelector(".publish-draft-ab").textContent.includes("Título B")'),true);
   await evaluate('document.getElementById("publishAddVideo").click()');
+  await wait(()=>evaluate('document.getElementById("publishComposerDialog").open===true'),
+    'Second composer opens with latest queue');
+  assert.equal(await evaluate('document.getElementById("publishScheduleAt").value===window.ContentLabPublicationPlanning.suggestSchedule("short",window.__socialDraftItems,new Date())'),true,
+    'Second video is scheduled the day after the last entry, at noon');
+  assert.equal(await evaluate('["youtube","tiktok","instagram"].every(p=>document.querySelector("#publishDestinations input[value="+p+"]").checked)'),true,
+    'Every new Short starts with all compatible networks checked');
   await evaluate(`(() => {
     const input=document.getElementById('publishVideoFile'),files=new DataTransfer();
     files.items.add(new File([new Uint8Array([0,0,0,20,102,116,121,112,105,115,111,109])],'curto.mp4',{type:'video/mp4'}));
@@ -264,7 +302,6 @@ try{
     covers.items.add(new File([new Uint8Array([137,80,78,71,13,10,26,10])],'capa.png',{type:'image/png'}));
     cover.files=covers.files;cover.dispatchEvent(new Event('change',{bubbles:true}));
     document.getElementById('publishTitleA').value='Meu Short';
-    document.querySelector('#publishDestinations input[value=tiktok]').click();
     document.getElementById('publishComposerForm').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
   })()`);
   await wait(()=>evaluate('document.getElementById("publishDraftCount").textContent==="2"'),

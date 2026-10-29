@@ -33,13 +33,13 @@ test('Shorts: aceita uma rede confirmada e uma thumbnail; salva no disco local',
   assert.equal(deleteSocialDraft(item.id,f.root),true);
   assert.equal(listSocialDrafts(f.root).length,0);
 });
-test('longos: apenas TikTok e Instagram, dois títulos diferentes e duas capas',t=>{
+test('longos: apenas YouTube e Instagram, dois títulos diferentes e duas capas',t=>{
   const f=fixture(t);
-  const body={kind:'long',titleA:'Título A',titleB:'Título B',platforms:'["tiktok"]',description:'',tags:''};
+  const body={kind:'long',titleA:'Título A',titleB:'Título B',platforms:'["youtube"]',description:'',tags:''};
   const item=createSocialDraft({root:f.root,body,files:{video:[f.video],coverA:[f.a],coverB:[f.b]},confirmed});
   assert.equal(item.titleB,'Título B');
   assert.ok(fs.existsSync(socialDraftMedia(item.id,'coverB',f.root)));
-  assert.throws(()=>createSocialDraft({root:f.root,body:{...body,platforms:'["youtube"]'},files:{video:[f.video],coverA:[f.a],coverB:[f.b]},confirmed}),/compatível/);
+  assert.throws(()=>createSocialDraft({root:f.root,body:{...body,platforms:'["tiktok"]'},files:{video:[f.video],coverA:[f.a],coverB:[f.b]},confirmed}),/compatível/);
   assert.throws(()=>createSocialDraft({root:f.root,body:{...body,platforms:'["instagram"]'},files:{video:[f.video],coverA:[f.a],coverB:[f.b]},confirmed}),/confirmada/);
   assert.throws(()=>createSocialDraft({root:f.root,body:{...body,titleB:'Título A'},files:{video:[f.video],coverA:[f.a],coverB:[f.b]},confirmed}),/títulos diferentes/);
   assert.throws(()=>createSocialDraft({root:f.root,body,files:{video:[f.video],coverA:[f.a]},confirmed}),/thumbnail/);

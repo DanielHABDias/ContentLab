@@ -535,8 +535,9 @@
                 <label class="publish-kind-choice"><input type="radio" name="kind" value="short" checked><span>▣ <strong>Short / vídeo curto</strong><small>Uma capa e um título</small></span></label>
                 <label class="publish-kind-choice"><input type="radio" name="kind" value="long"><span>▰ <strong>Vídeo longo</strong><small>Duas capas e títulos A/B</small></span></label>
               </div>
-              <label class="publish-upload-drop" for="publishVideoFile"><span class="publish-upload-icon">↥</span><strong id="publishFileCaption">Selecionar vídeo do computador</strong><small>MP4 ou WebM · arquivo local</small>
-                <input id="publishVideoFile" name="video" type="file" accept=".mp4,.webm,.mov,.m4v,video/mp4,video/webm" required>
+              <label class="publish-upload-drop" for="publishVideoFile"><span class="publish-upload-icon">↥</span><strong id="publishFileCaption">Seu vídeo começa aqui</strong><small>MP4 ou WebM · arquivo local</small>
+                <span class="publish-file-action"><span class="publish-file-action-symbol">↥</span> Escolher vídeo <span class="publish-file-action-arrow">↗</span></span>
+                <input id="publishVideoFile" name="video" class="publish-native-file-input" type="file" accept=".mp4,.webm,.mov,.m4v,video/mp4,video/webm" required>
               </label>
               <p id="publishVideoMeta" class="publish-file-meta"></p>
             </section>
@@ -552,11 +553,11 @@
             <section class="publish-composer-section">
               <span class="eyebrow">03 / VISUAL</span><h4 id="publishCoverHeading">Sua thumbnail</h4>
               <div id="publishLongCovers" class="publish-cover-grid" hidden>
-                <label class="publish-cover-upload" for="publishCoverA"><span>OPÇÃO A</span><strong>Escolher primeira thumbnail</strong><img id="publishLongPreviewA" alt="Prévia da thumbnail A" hidden><small>PNG, JPG ou WebP</small><input id="publishCoverA" type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"></label>
-                <label class="publish-cover-upload" for="publishCoverB"><span>OPÇÃO B</span><strong>Escolher segunda thumbnail</strong><img id="publishLongPreviewB" alt="Prévia da thumbnail B" hidden><small>PNG, JPG ou WebP</small><input id="publishCoverB" type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"></label>
+                <label class="publish-cover-upload" for="publishCoverA"><span>OPÇÃO A</span><strong>Thumbnail principal</strong><img id="publishLongPreviewA" alt="Prévia da thumbnail A" hidden><small id="publishCoverNameA" class="publish-cover-file-name">Nenhuma imagem selecionada</small><span class="publish-file-action publish-file-action-light">✦ Escolher imagem</span><input id="publishCoverA" class="publish-native-file-input" type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"></label>
+                <label class="publish-cover-upload" for="publishCoverB"><span>OPÇÃO B</span><strong>Thumbnail alternativa</strong><img id="publishLongPreviewB" alt="Prévia da thumbnail B" hidden><small id="publishCoverNameB" class="publish-cover-file-name">Nenhuma imagem selecionada</small><span class="publish-file-action publish-file-action-light">✦ Escolher imagem</span><input id="publishCoverB" class="publish-native-file-input" type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"></label>
               </div>
               <div id="publishShortCover" class="publish-short-cover">
-                <label class="publish-form-field" for="publishShortCoverFile"><span>Enviar uma imagem (opcional)</span><input id="publishShortCoverFile" type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"></label>
+                <label class="publish-form-field publish-short-file-field" for="publishShortCoverFile"><span>Enviar uma imagem (opcional)</span><span class="publish-short-file-action"><span class="publish-file-action publish-file-action-light">✦ Escolher thumbnail</span><span id="publishShortCoverName" class="publish-cover-file-name">Nenhuma imagem selecionada</span></span><input id="publishShortCoverFile" class="publish-native-file-input" type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"></label>
                 <div class="publish-frame-extractor">
                   <div class="publish-frame-preview"><video id="publishFrameVideo" muted playsinline preload="metadata"></video><img id="publishFrameImage" alt="Thumbnail do frame escolhido" hidden><div id="publishFramePlaceholder">Selecione um vídeo para escolher um frame</div></div>
                   <div class="publish-frame-controls"><label for="publishFrameSeek">Escolha o momento da capa <strong id="publishFrameTime">00:00</strong></label><input type="range" id="publishFrameSeek" min="0" max="0" step=".1" value="0" disabled><button id="publishCaptureFrame" class="btn btn-secondary btn-sm" type="button" disabled>▣ Usar este frame como capa</button></div>
@@ -572,7 +573,8 @@
                 <label class="publish-destination" data-platform="instagram"><input type="checkbox" name="platform" value="instagram"><span>◎ Instagram</span></label>
               </div>
               <p id="publishDestinationHint" class="helper-text">Somente redes com login confirmado são selecionáveis.</p>
-              <label class="publish-form-field publish-date-field" for="publishScheduleAt"><span>Data e horário desejados (opcional)</span><input id="publishScheduleAt" name="scheduledAt" type="datetime-local"><small>Planejamento local, sem disparo automático por enquanto.</small></label>
+              <label class="publish-form-field publish-date-field" for="publishScheduleAt"><span>Data e horário desejados</span><input id="publishScheduleAt" name="scheduledAt" type="datetime-local"><small>Planejamento local, sem disparo automático por enquanto.</small></label>
+              <div class="publish-schedule-note"><span class="publish-schedule-sparkle">✦</span><span id="publishScheduleAdvice">O próximo horário será sugerido automaticamente.</span><button id="publishScheduleReset" type="button">↻ Reaplicar sugestão</button></div>
             </section>
           </div>
           <footer class="publish-composer-footer">
@@ -841,6 +843,7 @@
 <script src="/static/voice-creation.js"></script>
 <script src="/static/narration-player.js"></script>
 <script src="/static/visual_editor.js"></script>
+<script src="/static/publication-planning.js"></script>
 <script src="/static/publications.js"></script>
 <script src="/static/media-library.js"></script>
 <script src="/static/workspace-project.js"></script>
