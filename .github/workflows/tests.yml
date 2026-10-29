@@ -45,6 +45,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Install Node dependencies
         run: npm install --no-audit --no-fund
+      - name: Check that retratamento preserves raw narration with FFmpeg
+        run: node --test --test-name-pattern="duas execuções de tratamento preservam os bytes do bruto" server/voice-studio.test.mjs
       - name: Verify edge-trimmed sound cues and ripple narration
         run: node server/smoke-audio-sync.mjs
       - name: Require rendered 100ms fade and slide/blur pixel checks
