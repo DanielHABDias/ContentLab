@@ -99,8 +99,24 @@ async function step(job){
     if(job.stopped)return;
     job.warnings=result?.warnings||[];
     job.videoUrl=platformUrl(platform,result?.videoUrl);
+    if(platform==='instagram'&&result?.status==='scheduled'&&result?.verified===true){
+      // Só registrar o agendamento quando o Instagram mostrar confirmação
+      // explícita após o clique final; não aceitar apenas formulário preenchido.
+      const record={status:'scheduled',url:null,scheduledAt:video.scheduledAt,
+        confirmedAt:new Date().toISOString(),verification:'instagram_ui',
+        confirmationText:String(result.confirmationText||'').slice(0,480)};
+      persistResult(job.resultsFile,video.id,platform,record);
+      job.completed.push({id:video.id,title:video.titleA,platform,...record});
+      job.index++;
+      job.status='queued';
+      job.message='Instagram confirmou o agendamento de '+video.titleA+'. Avançando na fila...';
+      void step(job);
+      return;
+    }
     job.status='awaiting_review';
-    job.message='Confira o upload e conclua a publicação ou programação de '+video.titleA+
+    job.message=platform==='instagram'&&result?.status==='awaiting_review'?
+      'O Instagram recebeu o comando Programar, mas não retornou confirmação confiável. Confira Conteúdo programado antes de confirmar, sem reenviar o Reels.':
+      'Confira o upload e conclua a publicação ou programação de '+video.titleA+
       ' no '+platform+'. Depois confirme para prosseguir.';
   }catch(error){
     if(job.stopped)return;

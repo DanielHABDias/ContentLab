@@ -6,7 +6,7 @@ import path from 'node:path';
 import {socialUrl,readSocialBrowser,saveSocialBrowser,openSocialBrowser,
   confirmSocialBrowser,socialBrowserReady,detectBrowsers} from './social-browser.mjs';
 
-const urls={tiktok:'https://www.tiktok.com/tiktokstudio',instagram:'https://www.instagram.com/',youtube:'https://studio.youtube.com/'};
+const urls={tiktok:'https://www.tiktok.com/tiktokstudio',instagram:'https://www.instagram.com/scheduled_content/',youtube:'https://studio.youtube.com/'};
 const browsers=[{id:'system',available:true,label:'Padrão do sistema'},{id:'chrome',available:true,label:'Google Chrome'},
   {id:'firefox',available:false,label:'Firefox (crawler indisponível)'}];
 test('URLs só aceitam hosts HTTPS oficiais',()=>{
@@ -79,4 +79,20 @@ test('configuração corrompida usa padrões sem acessar arquivos de credenciais
   assert.equal(detected[0].id,'system');
   assert.equal(detected[0].available,true);
   assert.equal(detected.find(x=>x.id==='firefox').available,false);
+});
+
+test('Instagram migra a URL raiz anterior para /scheduled_content/ sem perder login',t=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'cl-instagram-url-migrate-'));
+  t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
+  const file=path.join(root,'social-browser.json');
+  fs.writeFileSync(file,JSON.stringify({version:2,browser:'chrome',
+    urls:{...urls,instagram:'https://www.instagram.com/'},
+    confirmed:{youtube:false,tiktok:false,instagram:true}}));
+  const loaded=readSocialBrowser(file);
+  assert.equal(loaded.urls.instagram,'https://www.instagram.com/scheduled_content/');
+  assert.equal(loaded.confirmed.instagram,true);
+  assert.equal(socialUrl('instagram','https://instagram.com/'),
+    'https://instagram.com/scheduled_content/');
+  const saved=saveSocialBrowser({browser:'chrome',urls},{file,browsers});
+  assert.equal(saved.confirmed.instagram,true);
 });

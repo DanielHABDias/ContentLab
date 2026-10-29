@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {resetSocialStudioTabs} from './social-studio-browser.mjs';
+import {resetSocialStudioTabs,validateStudioUrl} from './social-studio-browser.mjs';
 
 const urls={
   youtube:'https://studio.youtube.com/',
   tiktok:'https://www.tiktok.com/tiktokstudio',
-  instagram:'https://www.instagram.com/'
+  instagram:'https://www.instagram.com/scheduled_content/'
 };
 function fakeBrowser(initial=[]){
   const pages=new Map(initial.map(p=>[p.targetId,{...p,type:'page'}]));
@@ -119,4 +119,12 @@ test('Não fecha perfis/cookies ou alvos de serviço: apenas páginas do navegad
   await resetSocialStudioTabs(mock.control,{ordered:['youtube'],urls,connectTarget:mock.connectTarget});
   assert.ok(!mock.closed.includes('worker'));
   assert.ok(!mock.history.some(x=>/clearBrowserCookies|clearDataForOrigin|disposeBrowserContext/i.test(x.method)));
+});
+
+test('navegação do Instagram sempre resolve para Conteúdo programado',()=>{
+  assert.equal(validateStudioUrl('instagram','https://www.instagram.com/'),
+    'https://www.instagram.com/scheduled_content/');
+  assert.equal(validateStudioUrl('instagram','https://www.instagram.com/p/ABC123/?foo=1'),
+    'https://www.instagram.com/scheduled_content/');
+  assert.throws(()=>validateStudioUrl('instagram','https://instagram.com.attacker.example/scheduled_content/'),/oficial/);
 });

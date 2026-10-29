@@ -7,7 +7,7 @@ import {execFileSync} from 'node:child_process';
 export const SOCIAL_BROWSER_FILE=path.join(os.homedir(),'.contentlab','social-browser.json');
 export const SOCIAL_PLATFORMS=Object.freeze({
   tiktok:{label:'TikTok Studio',url:'https://www.tiktok.com/tiktokstudio',hosts:['tiktok.com','www.tiktok.com']},
-  instagram:{label:'Instagram',url:'https://www.instagram.com/',hosts:['instagram.com','www.instagram.com']},
+  instagram:{label:'Instagram',url:'https://www.instagram.com/scheduled_content/',hosts:['instagram.com','www.instagram.com']},
   youtube:{label:'YouTube Studio',url:'https://studio.youtube.com/',hosts:['studio.youtube.com']}
 });
 const BROWSERS={
@@ -28,6 +28,12 @@ export function socialUrl(platform,value){
     throw Error('Use somente a URL HTTPS oficial de '+def.label+'.');
   if(/[\r\n\0]/.test(value))throw Error('URL inválida.');
   parsed.hash='';
+  // Todo acesso do crawler ao Instagram começa em Conteúdo programado.
+  // Normaliza inclusive a URL antiga /, sem invalidar o login confirmado.
+  if(platform==='instagram'){
+    parsed.pathname='/scheduled_content/';
+    parsed.search='';
+  }
   return parsed.href;
 }
 const defaults=()=>Object.fromEntries(Object.entries(SOCIAL_PLATFORMS).map(([key,v])=>[key,v.url]));

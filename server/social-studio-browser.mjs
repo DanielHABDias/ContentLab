@@ -18,6 +18,11 @@ export function validateStudioUrl(platform,value){
   let parsed;try{parsed=new URL(value);}catch{throw Error('URL da rede inválida.');}
   if(parsed.protocol!=='https:'||parsed.username||parsed.password||parsed.port||
     !HOSTS[platform].includes(parsed.hostname.toLowerCase()))throw Error('URL social deve ser HTTPS e oficial.');
+  if(platform==='instagram'){
+    parsed.pathname='/scheduled_content/';
+    parsed.search='';
+    parsed.hash='';
+  }
   return parsed.href;
 }
 export class StudioLoginRequired extends Error{

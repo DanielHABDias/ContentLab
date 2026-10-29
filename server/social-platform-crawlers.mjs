@@ -1,10 +1,12 @@
-/* Upload assistido em TikTok Studio e Instagram Web. Sem click em publicar. */
+import {prepareInstagramScheduledReel,instagramCaption} from './instagram-scheduler.mjs';
+/* Upload TikTok assistido e fluxo de agendamento específico do Instagram. */
 import fs from 'node:fs';
 import {validateStudioUrl,StudioLoginRequired,StudioChanged,DEEP_DOM,
   clickText,setText,waitFor,uploadFile} from './social-studio-browser.mjs';
 
 export function socialCaption(item,platform){
   if(!['instagram','tiktok'].includes(platform))throw Error('Destino inválido.');
+  if(platform==='instagram')return instagramCaption(item).text;
   const title=String(item.titleA||'').trim(),description=String(item.description||'').trim();
   const hashtags=(item.tags||[]).map(x=>'#'+String(x).replace(/^#/,'').replace(/[^\p{L}\p{N}_]/gu,'')).filter(x=>x.length>1);
   const caption=[title,description,hashtags.join(' ')].filter(Boolean).join('\n\n');
@@ -32,8 +34,7 @@ export function validateScheduleWindow(platform,scheduledAt,now=new Date()){
     const gap=date.getTime()-now.getTime();
     if(gap<15*60*1000||gap>10*86400000)
       return 'TikTok costuma permitir agendamento na web apenas entre 15 minutos e 10 dias; ajuste o horário manualmente no Studio.';
-  }else if(platform==='instagram')
-    return 'O agendamento pelo Instagram no desktop pode exigir uma conta profissional vinculada ao Meta Business Suite. Verifique manualmente.';
+  }
   return null;
 }
 export function scheduleParts(value){
@@ -104,54 +105,7 @@ export async function prepareTikTokUpload(session,item,{videoPath,coverAPath,pro
   warnings.push('Confirme visibilidade, direitos autorais, rotulagem de IA, conteúdo comercial, capa e agendamento antes de clicar em Publicar/Agendar.');
   return {status:'awaiting_review',warnings,videoUrl:null};
 }
-export async function prepareInstagramUpload(session,item,{videoPath,coverAPath,progress=()=>{}}={}){
-  const cdp=await session.navigate('instagram');
-  progress('Abrindo o criador do Instagram...');
-  if(await cdp.eval(hasLogin('instagram')))throw new StudioLoginRequired('Instagram');
-  const opened=await waitFor(cdp,clickText(['criar','create','nova publicação','new post'],
-    ['button','a','[role="button"]','div[role="button"]','span[role="button"]']),12000);
-  if(!opened){
-    if(await cdp.eval(hasLogin('instagram')))throw new StudioLoginRequired('Instagram');
-    throw new StudioChanged('Instagram','o botão Criar');
-  }
-  await cdp.eval(clickText(['publicação','post','reel','reels'],['button','div[role="button"]','[role="menuitem"]'])).catch(()=>false);
-  const fileSelector='(()=>{'+DEEP_DOM+"return nodes.some(n=>n.matches?.('input[type=\"file\"]'));})()";
-  if(!await waitFor(cdp,fileSelector,12000))throw new StudioChanged('Instagram','o seletor de mídia');
-  progress('Carregando o vídeo para o Instagram...');
-  if(!await uploadFile(cdp,videoPath))throw new StudioChanged('Instagram','o campo de arquivo de vídeo');
-  await cdp.eval(clickText(['selecionar corte','select crop','cortar'],['button','[role="button"]','div[role="button"]'])).catch(()=>false);
-  await cdp.eval(clickText(['original'],['button','[role="button"]','div[role="button"]'])).catch(()=>false);
-  // Em desktop, o Instagram apresenta etapas de recorte e edição antes da legenda.
-  const fields=['textarea[aria-label*="legenda"]','textarea[aria-label*="caption"]',
-    '[contenteditable="true"][aria-label*="legenda"]','[contenteditable="true"][aria-label*="caption"]',
-    'textarea[placeholder*="legenda"]','textarea[placeholder*="caption"]','[role="textbox"][contenteditable="true"]'];
-  const caption=socialCaption(item,'instagram');
-  let done=false;
-  for(let step=0;step<3&&!done;step++){
-    done=!!await waitFor(cdp,setText(fields,caption),2300);
-    if(!done){
-      const next=await cdp.eval(clickText(['avançar','next'],['button','[role="button"]','div[role="button"]'])).catch(()=>false);
-      if(!next)break;
-      await new Promise(r=>setTimeout(r,800));
-    }
-  }
-  if(!done)throw new StudioChanged('Instagram','a etapa de legenda (vídeo já selecionado)');
-  const warnings=[];
-  await cdp.eval(clickText(['configurações avançadas','advanced settings'],
-    ['button','[role="button"]','div[role="button"]'])).catch(()=>false);
-  const likesHidden=await cdp.eval(enableOption(['ocultar número de curtidas e visualizações','hide like and view counts'])).catch(()=>false);
-  if(!likesHidden)warnings.push('Instagram: confira manualmente “Ocultar número de curtidas e visualizações”.');
-  if(coverAPath&&fs.existsSync(coverAPath)){
-    try{
-      const doneCover=await uploadFile(cdp,coverAPath,{image:true});
-      if(!doneCover)warnings.push(imageNotice('instagram'));
-    }catch{warnings.push(imageNotice('instagram'));}
-  }
-  const schedule=validateScheduleWindow('instagram',item.scheduledAt);
-  if(schedule)warnings.push(schedule);
-  if(item.scheduledAt&&!await applySchedule(cdp,'instagram',item.scheduledAt))
-    warnings.push('Agendamento: o Instagram não expôs os controles nesta conta; use a data e o horário preparados no Content Lab.');
-  if(item.kind==='long')warnings.push('Instagram não executa o mesmo teste A/B de dois títulos/capas do YouTube. Revise a opção A, sem aplicar a alternativa B.');
-  warnings.push('Confirme conta, público, parcerias e conteúdo de IA. Publique ou programe manualmente no Instagram/Meta Business Suite.');
-  return {status:'awaiting_review',warnings,videoUrl:null};
+// O fluxo nativo de Conteúdo programado foi isolado para testar cada etapa.
+export async function prepareInstagramUpload(session,item,options={}){
+  return prepareInstagramScheduledReel(session,item,options);
 }

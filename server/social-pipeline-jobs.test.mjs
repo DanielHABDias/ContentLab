@@ -38,8 +38,8 @@ test('legenda combina título, descrição e hashtags, respeitando limite da pla
   const caption=socialCaption({titleA:'Filme A',description:'Uma análise',
     tags:['nerd','cultura pop']},'tiktok');
   assert.equal(caption,'Filme A\n\nUma análise\n\n#nerd #culturapop');
-  assert.equal(socialCaption({titleA:'Olá',tags:[]},'instagram'),'Olá');
-  assert.throws(()=>socialCaption({titleA:'x'.repeat(2201)},'instagram'),/2.200/);
+  assert.equal(socialCaption({titleA:'Olá',tags:[]},'instagram'),'Olá\nLink na bio');
+  assert.equal(socialCaption({titleA:'x'.repeat(2201)},'instagram').length,2200);
 });
 test('links TikTok e Instagram validados por host HTTPS e formato real de postagem',()=>{
   assert.equal(normalizeSocialPostUrl('tiktok','https://www.tiktok.com/@diazverso/video/7312345678901234567'),
@@ -55,11 +55,11 @@ test('links TikTok e Instagram validados por host HTTPS e formato real de postag
   assert.throws(()=>validateStudioUrl('instagram','https://www.instagram.com.evil.test/'),/oficial/);
   assert.equal(validateStudioUrl('tiktok',urls.tiktok),urls.tiktok);
 });
-test('TikTok avisa sobre janela de agendamento e Instagram indica revisão desktop',()=>{
+test('TikTok avisa sobre janela de agendamento e Instagram usa fluxo próprio',()=>{
   const now=new Date('2026-10-29T12:00:00');
   assert.match(validateScheduleWindow('tiktok','2026-12-01T12:00',now),/10 dias/);
   assert.equal(validateScheduleWindow('tiktok','2026-11-02T12:00',now),null);
-  assert.match(validateScheduleWindow('instagram','2026-11-02T12:00',now),/Meta Business Suite/);
+  assert.equal(validateScheduleWindow('instagram','2026-11-02T12:00',now),null);
   assert.deepEqual(scheduleParts('2026-11-02T12:35'),{date:'2026-11-02',time:'12:35'});
   assert.equal(scheduleParts('02/11/2026 12:35'),null);
 });
@@ -149,5 +149,43 @@ test('falha de seletor continua exigindo revisão manual, sem confirmar postagem
     }});
   await until(()=>getSocialPipeline(job.id).status==='needs_manual');
   assert.match(getSocialPipeline(job.id).message,/manualmente/);
+  cancelSocialPipeline(job.id);
+});
+
+test('Instagram avança e grava agendamento automaticamente somente quando recebeu confirmação do site',async t=>{
+  const f=fixture(t),draft=f.create('Reels confirmado',['instagram']);
+  const cfg={...config,urls:{...urls,instagram:'https://www.instagram.com/scheduled_content/'}};
+  let attempts=0;
+  const job=startSocialPipeline([draft.id],{config:cfg,drafts:listSocialDrafts(f.root),
+    resultsFile:f.resultsFile,root:f.root,adapters:{
+      open:async()=>({tabs:[],close(){}}),youtube:async()=>{},tiktok:async()=>{},
+      instagram:async()=>{attempts++;return {
+        status:'scheduled',verified:true,confirmationText:'Reels programado para sexta-feira',
+        warnings:[],videoUrl:null
+      };}
+    }});
+  await until(()=>getSocialPipeline(job.id).status==='done');
+  const rows=readSocialPipelineResults(f.resultsFile);
+  assert.equal(attempts,1);
+  assert.equal(rows[draft.id].instagram.status,'scheduled');
+  assert.equal(rows[draft.id].instagram.verification,'instagram_ui');
+  assert.equal(rows[draft.id].instagram.scheduledAt,draft.scheduledAt);
+  assert.match(rows[draft.id].instagram.confirmationText,/programado/);
+  assert.equal(getSocialPipeline(job.id).completed.length,1);
+  assert.equal(buildSocialTasks([draft.id],{config:cfg,drafts:listSocialDrafts(f.root),results:rows}).length,0,
+    'não reenviar Reels confirmado na próxima execução');
+});
+test('sem confirmação do Instagram, não avançar automaticamente nem persistir resultado',async t=>{
+  const f=fixture(t),draft=f.create('Reels pendente',['instagram']);
+  const job=startSocialPipeline([draft.id],{config,drafts:listSocialDrafts(f.root),
+    resultsFile:f.resultsFile,root:f.root,adapters:{
+      open:async()=>({tabs:[],close(){}}),youtube:async()=>{},tiktok:async()=>{},
+      instagram:async()=>({status:'awaiting_review',verified:false,
+        warnings:['Não repetir o upload sem verificar a conta'],videoUrl:null})
+    }});
+  await until(()=>getSocialPipeline(job.id).status==='awaiting_review');
+  assert.deepEqual(readSocialPipelineResults(f.resultsFile),{});
+  assert.equal(getSocialPipeline(job.id).completed.length,0);
+  assert.match(getSocialPipeline(job.id).message,/não retornou confirmação/);
   cancelSocialPipeline(job.id);
 });
