@@ -198,7 +198,8 @@ try{
         const item={id:'00000000-1111-4444-8888-'+String(items.length+1).padStart(12,'0'),
           kind:form.get('kind'),titleA:form.get('titleA'),titleB:form.get('titleB'),description:form.get('description'),
           tags:form.get('tags').split(',').map(x=>x.trim()).filter(Boolean),
-          platforms:JSON.parse(form.get('platforms')),fileName:form.get('video').name,scheduledAt:form.get('scheduledAt')};
+          platforms:JSON.parse(form.get('platforms')),fileName:form.get('video').name,scheduledAt:form.get('scheduledAt'),
+          media:{video:'video.mp4',coverA:'coverA.png',coverB:form.get('kind')==='long'?'coverB.png':null}};
         items.unshift(item);
         return Promise.resolve(new Response(JSON.stringify({item}),{status:201,headers:{'Content-Type':'application/json'}}));
       }else if(endpoint==='/api/social-browser/drafts'){
