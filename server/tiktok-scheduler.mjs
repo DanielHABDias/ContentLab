@@ -106,8 +106,8 @@ export function tiktokScheduleSuccessObserver(){
 const confirmation=()=>'(window.__contentlabTikTokScheduleSuccess||null)';
 const disconnect=()=>'(window.__contentlabTikTokScheduleObserver?.disconnect?.(),true)';
 async function dateAndTime(cdp,parts,delayMs){
-  let date=await cdp.eval(dateInput(parts.date)).catch(()=>false);
-  if(!date)date=await cdp.eval(textDateInput(parts.date)).catch(()=>false);
+  let date=await waitFor(cdp,dateInput(parts.date),9000).catch(()=>false);
+  if(!date)date=await waitFor(cdp,textDateInput(parts.date),4000).catch(()=>false);
   if(!date){
     if(!await cdp.eval(datePickerTrigger()).catch(()=>false))return false;
     await sleep(delayMs);
@@ -115,7 +115,7 @@ async function dateAndTime(cdp,parts,delayMs){
     if(!date)return false;
   }
   await sleep(delayMs);
-  if(!await cdp.eval(timeInput(parts.time)).catch(()=>false))return false;
+  if(!await waitFor(cdp,timeInput(parts.time),9000).catch(()=>false))return false;
   await sleep(delayMs);
   return true;
 }
@@ -164,7 +164,9 @@ export async function prepareTikTokScheduledVideo(session,item,{
   progress('Preparando a confirmação do TikTok...');
   await cdp.eval(tiktokScheduleSuccessObserver());
   // Uma única tentativa do botão final Agendar; nunca repetir após timeout.
-  if(!await cdp.eval(tiktokButtonExpression(['agendar','schedule'])).catch(()=>false))
+  // O botão só fica habilitado quando o vídeo termina de processar.
+  // A primeira tentativa bem-sucedida clica UMA vez; nunca reenviar após clique.
+  if(!await awaitStep(cdp,tiktokButtonExpression(['agendar','schedule']),45000))
     throw new StudioChanged('TikTok Studio','o botão final Agendar');
   progress('Aguardando a confirmação do agendamento (sem reenviar)...');
   const confirmed=await awaitStep(cdp,confirmation(),confirmTimeout).catch(()=>null);
