@@ -69,7 +69,7 @@
     const selector=$('socialBrowserSelect');
     selector.replaceChildren();
     for(const entry of browsers){
-      const option=new Option(entry.label+(entry.available?'':' · não encontrado'),entry.id);
+      const option=new Option(entry.label+(entry.available?'':' · não disponível'),entry.id);
       option.disabled=!entry.available;selector.add(option);
     }
     $('socialBrowserDetection').textContent=browsers[0]?.label||'Use o navegador padrão do sistema.';
@@ -82,7 +82,7 @@
       settings=data.settings;ready=data.ready===true;opened.clear();
       $('socialBrowserSelect').value=settings.browser||'system';
       for(const p of platforms)$('socialUrl-'+p).value=settings.urls[p];
-      notice(settings.browser?'Configuração local carregada.':'Primeiro acesso: escolha o navegador e salve as URLs.');
+      notice(settings.browser?'Sessão de publicação carregada. Abra cada rede aqui para confirmar o login no perfil do crawler.':'Primeiro acesso: escolha Chrome, Edge ou Brave e salve as URLs.');
       renderConnections();
       if(location.hash==='#publications'&&!ready)goSettings();
     }catch(error){notice(error.message,true);}
@@ -97,7 +97,7 @@
     try{
       const data=await post('/api/social-browser/settings',draftSettings());
       settings=data.settings;ready=data.ready;opened.clear();
-      notice('Navegador e URLs salvos neste computador.');
+      notice('Navegador e URLs salvos. A verificação deve ser feita na mesma sessão persistente do crawler.');
       renderConnections();
     }catch(error){notice(error.message,true);}
     finally{button.disabled=false;}
@@ -108,7 +108,7 @@
         if(changed())throw Error('Salve primeiro o navegador e as URLs.');
         const data=await post('/api/social-browser/open/'+p);
         if(!data.opened)throw Error('Não foi possível abrir a página.');
-        opened.add(p);notice('Abrimos '+data.label+'. Confira o login no navegador e confirme abaixo.');
+        opened.add(p);notice('Abrimos '+data.label+' na sessão persistente do crawler. Faça login ali uma vez, confira a conta e confirme abaixo.');
         renderConnections();
       }catch(error){notice(error.message,true);}
     };
@@ -116,7 +116,7 @@
       try{
         const data=await post('/api/social-browser/confirm/'+p);
         settings=data.settings;ready=data.ready;opened.delete(p);
-        notice(names[p]+' confirmado por você. '+(ready?'A aba Publicações está liberada.':'Confirme pelo menos uma rede para continuar.'));
+        notice(names[p]+' confirmado na sessão persistente. O crawler reutilizará esse login enquanto a plataforma o mantiver válido. '+(ready?'Publicações liberadas.':''));
         renderConnections();
       }catch(error){notice(error.message,true);}
     };
@@ -493,7 +493,7 @@
       document.querySelector('input[name="publishSocialResultMode"][value="published"]').checked=true;
       updateSocialResultInput();
     }
-    $('publishSocialLoginActions').hidden=job.status!=='awaiting_login';
+    $('publishSocialLoginActions').hidden=!['needs_configuration','awaiting_login'].includes(job.status);
     $('publishSocialReviewActions').hidden=!['awaiting_review','needs_manual'].includes(job.status);
     $('publishSocialCancel').disabled=['done','cancelled'].includes(job.status);
     const warnings=$('publishSocialWarnings');warnings.replaceChildren();
@@ -540,12 +540,7 @@
     }catch(error){status(error.message,true);}
     finally{updateSelection();}
   };
-  $('publishSocialResume').onclick=async()=>{
-    if(!socialJobId)return;
-    try{const data=await post('/api/social-browser/pipeline/jobs/'+encodeURIComponent(socialJobId)+'/resume');
-      await renderSocialJob(data.job);
-    }catch(error){status(error.message,true);}
-  };
+  $('publishSocialResume').onclick=()=>goSettings();
   $('publishSocialConfirm').onclick=async()=>{
     if(!socialJobId)return;
     try{
@@ -577,7 +572,7 @@
         body:JSON.stringify({draftIds:[...selectedIds]})
       });
       renderPublicationSession(result.session);
-      status('Navegador visível solicitado com '+result.session.tabs.length+' aba(s). Nenhum vídeo foi enviado.');
+      status('A sessão persistente do crawler foi aberta com '+result.session.tabs.length+' aba(s). Seus logins configurados são reutilizados; nenhum vídeo foi enviado.');
     }catch(error){status(error.message,true);}
     finally{button.disabled=selectedIds.size===0;}
   };

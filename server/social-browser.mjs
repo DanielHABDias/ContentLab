@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import {spawn,execFileSync} from 'node:child_process';
+import {execFileSync} from 'node:child_process';
 
 export const SOCIAL_BROWSER_FILE=path.join(os.homedir(),'.contentlab','social-browser.json');
 export const SOCIAL_PLATFORMS=Object.freeze({
@@ -55,16 +55,17 @@ export function detectBrowsers(options={}){
     const detected=Object.entries({chrome:['chrome','google-chrome'],edge:['edge','msedge','microsoft-edge'],firefox:['firefox'],brave:['brave']}).find(([,tokens])=>tokens.some(t=>raw.includes(t)))?.[0];
     if(detected)systemLabel+=' (detectado: '+BROWSERS[detected].label+')';
   }catch{}
-  return [{id:'system',label:systemLabel,available:true},...Object.entries(BROWSERS).map(([id,b])=>({id,label:b.label,available:!!lookupBrowser(id,options)}))];
+  return [{id:'system',label:systemLabel,available:true},...Object.entries(BROWSERS).map(([id,b])=>({id,label:id==='firefox'?b.label+' (crawler indisponível)':b.label,available:id!=='firefox'&&!!lookupBrowser(id,options)}))];
 }
 export function readSocialBrowser(file=SOCIAL_BROWSER_FILE){
   const fallback={browser:null,urls:defaults(),confirmed:Object.fromEntries(Object.keys(SOCIAL_PLATFORMS).map(p=>[p,false]))};
   try{
     if(!fs.existsSync(file)||fs.lstatSync(file).isSymbolicLink()||fs.statSync(file).size>8192)return fallback;
     const data=JSON.parse(fs.readFileSync(file,'utf8'));
-    if(data?.version!==1||!['system',...Object.keys(BROWSERS)].includes(data.browser))return fallback;
+    if(![1,2].includes(data?.version)||!['system',...Object.keys(BROWSERS)].includes(data.browser))return fallback;
     const urls=Object.fromEntries(Object.keys(SOCIAL_PLATFORMS).map(p=>[p,socialUrl(p,data.urls?.[p]||fallback.urls[p])]));
-    const confirmed=Object.fromEntries(Object.keys(SOCIAL_PLATFORMS).map(p=>[p,data.confirmed?.[p]===true]));
+    // Confirmações antigas foram feitas no perfil pessoal e não valem para o crawler.
+    const confirmed=Object.fromEntries(Object.keys(SOCIAL_PLATFORMS).map(p=>[p,data.version===2&&data.confirmed?.[p]===true]));
     return {browser:data.browser,urls,confirmed};
   }catch{return fallback;}
 }
@@ -83,37 +84,35 @@ function writeSocialBrowser(config,file){
   if(fs.lstatSync(folder).isSymbolicLink()||(fs.existsSync(file)&&fs.lstatSync(file).isSymbolicLink()))
     throw Error('Arquivo de configurações inseguro.');
   const temp=file+'.next-'+crypto.randomUUID();
-  try{fs.writeFileSync(temp,JSON.stringify({version:1,...config},null,2)+'\n',{flag:'wx',mode:0o600});fs.renameSync(temp,file);}
+  try{fs.writeFileSync(temp,JSON.stringify({version:2,...config},null,2)+'\n',{flag:'wx',mode:0o600});fs.renameSync(temp,file);}
   finally{fs.rmSync(temp,{force:true});}
 }
 const openings=new Map();
-export async function openSocialBrowser(platform,{file=SOCIAL_BROWSER_FILE,browsers=detectBrowsers(),launch=spawn}={}){
+// A configuração abre a mesma sessão Chromium persistente usada pela fila.
+// O perfil vive em ~/.contentlab/social-studio-profile; o Content Lab não
+// importa cookies do perfil pessoal, não lê senhas e não guarda tokens em JSON.
+export async function openSocialBrowser(platform,{
+  file=SOCIAL_BROWSER_FILE,browsers=detectBrowsers(),openSession
+}={}){
   const provider=clean(platform),config=readSocialBrowser(file);
   if(!config.browser)throw Error('Salve primeiro seu navegador em Configurações.');
-  if(!browsers.some(b=>b.id===config.browser&&b.available))throw Error('Navegador selecionado não está disponível neste computador.');
+  if(!browsers.some(b=>b.id===config.browser&&b.available))
+    throw Error('Navegador selecionado não está disponível neste computador.');
   const url=socialUrl(platform,config.urls[platform]);
-  let command,args;
-  if(config.browser==='system'){
-    if(process.platform==='win32'){command='rundll32.exe';args=['url.dll,FileProtocolHandler',url];}
-    else if(process.platform==='darwin'){command='open';args=[url];}
-    else{command='xdg-open';args=[url];}
-  }else{
-    const location=lookupBrowser(config.browser);
-    if(!location)throw Error('Navegador selecionado não foi encontrado.');
-    if(process.platform==='darwin'){command='open';args=['-a',location,url];}
-    else{command=location;args=[url];}
-  }
-  await new Promise((resolve,reject)=>{
-    const child=launch(command,args,{detached:true,stdio:'ignore',windowsHide:true,shell:false});
-    child.once('error',reject);child.once('spawn',()=>{child.unref?.();resolve();});
-  });
-  openings.set(platform,{browser:config.browser,url,at:Date.now()});
-  return {platform,label:provider.label,opened:true,loginVerified:false};
+  const opener=openSession||((opts)=>import('./social-studio-browser.mjs').then(m=>m.openSocialStudioWindow(opts)));
+  const session=await opener({config,platforms:[platform]});
+  try{
+    await session.navigate(platform);
+    openings.set(platform,{browser:config.browser,url,at:Date.now(),
+      profile:'social-studio-profile'});
+  }finally{session.close?.();} // Apenas fecha o canal CDP; o navegador e login ficam abertos.
+  return {platform,label:provider.label,opened:true,loginVerified:false,
+    profile:'social-studio-profile'};
 }
 export function confirmSocialBrowser(platform,{file=SOCIAL_BROWSER_FILE}={}){
   clean(platform);
   const config=readSocialBrowser(file),opened=openings.get(platform);
-  if(!opened||Date.now()-opened.at>30*60*1000||opened.browser!==config.browser||opened.url!==config.urls[platform])
+  if(!opened||Date.now()-opened.at>30*60*1000||opened.browser!==config.browser||opened.url!==config.urls[platform]||opened.profile!=='social-studio-profile')
     throw Error('Abra a plataforma neste navegador antes de confirmar seu login.');
   config.confirmed[platform]=true;
   writeSocialBrowser(config,file);openings.delete(platform);

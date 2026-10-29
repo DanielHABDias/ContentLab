@@ -257,8 +257,8 @@ try{
       }else if(endpoint==='/api/social-browser/prepare'){
         const chosen=items.filter(item=>body.draftIds.includes(item.id));
         const active=['youtube','tiktok','instagram'].filter(p=>settings.confirmed[p]);
-        const tabs=active.map((platform,i)=>({platform,index:i+1,url:settings.urls[platform]}));
-        const session={id:'example',tabs,status:'prepared',videos:chosen.map(item=>({
+        const tabs=active.map((platform,i)=>({platform,index:i+1,url:settings.urls[platform],targetId:'crawler-tab-'+platform}));
+        const session={id:'example',tabs,profile:'social-studio-profile',status:'prepared',videos:chosen.map(item=>({
           id:item.id,destinations:item.platforms.map(p=>({platform:p,tab:tabs.find(t=>t.platform===p)?.index}))}))};
         window.__socialPreparedSession=session;
         return Promise.resolve(new Response(JSON.stringify({session}),{status:200,headers:{'Content-Type':'application/json'}}));
@@ -410,6 +410,11 @@ try{
     'Preparing publication creates a visible session map');
   assert.equal(await evaluate('window.__socialPreparedSession.tabs.length'),3,
     'All three confirmed platforms are mapped in order');
+  assert.equal(await evaluate('window.__socialPreparedSession.profile'),"social-studio-profile",
+    'Open redes uses the persistent crawler profile, never the personal browser');
+  assert.equal(await evaluate('window.__socialPreparedSession.tabs.every(tab=>tab.targetId.startsWith("crawler-tab-"))'),true,
+    'The session maps real browser-tab identifiers for each social network');
+
   assert.equal(await evaluate('document.getElementById("publishSessionTabs").textContent.includes("TikTok")'),true,
     'The UI shows mapped browser tabs');
   await evaluate('document.getElementById("publishClearSelection").click()');

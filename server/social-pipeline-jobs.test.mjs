@@ -123,23 +123,31 @@ test('rede desconectada bloqueia fila inteira antes do primeiro upload',t=>{
   assert.throws(()=>startSocialPipeline([draft.id],
     {config:cfg,drafts:listSocialDrafts(f.root),root:f.root,resultsFile:f.resultsFile}),/não confirmadas/);
 });
-test('login pausa a fila; erro de seletor exige intervenção; cancelar não confirma publicação',async t=>{
-  const f=fixture(t),draft=f.create('Login',['instagram']);
+test('sessão expirada interrompe pipeline e exige reconfiguração, sem pedir login durante upload',async t=>{
+  const f=fixture(t),draft=f.create('Sessão expirada',['instagram']);
   let attempts=0;
-  const adapters={open:async()=>({tabs:[],close(){}}),youtube:async()=>{},
-    tiktok:async()=>{},instagram:async()=>{
-      attempts++;
-      if(attempts===1)throw new StudioLoginRequired('Instagram');
-      throw new StudioChanged('Instagram','o editor de legenda');
-    }};
+  const adapters={open:async()=>({tabs:[],close(){}}),youtube:async()=>{},tiktok:async()=>{},
+    instagram:async()=>{attempts++;throw new StudioLoginRequired('Instagram');}};
   const job=startSocialPipeline([draft.id],{config,drafts:listSocialDrafts(f.root),
     resultsFile:f.resultsFile,root:f.root,adapters});
-  await until(()=>getSocialPipeline(job.id).status==='awaiting_login');
-  await resumeSocialPipeline(job.id);
-  await until(()=>getSocialPipeline(job.id).status==='needs_manual');
-  assert.equal(attempts,2);
-  assert.throws(()=>confirmSocialPipeline(job.id,{videoUrl:'',scheduled:false}),/Cole o link/);
+  await until(()=>getSocialPipeline(job.id).status==='needs_configuration');
+  assert.match(getSocialPipeline(job.id).message,/Configurações/);
+  assert.equal(attempts,1);
+  await assert.rejects(()=>resumeSocialPipeline(job.id),/Configurações/);
+  assert.equal(attempts,1,'pipeline não reenvia após expiração de login');
+  assert.throws(()=>confirmSocialPipeline(job.id,{videoUrl:'',scheduled:false}),/Conclua o envio/);
   const result=cancelSocialPipeline(job.id);
   assert.equal(result.status,'cancelled');
   assert.deepEqual(readSocialPipelineResults(f.resultsFile),{});
+});
+test('falha de seletor continua exigindo revisão manual, sem confirmar postagem',async t=>{
+  const f=fixture(t),draft=f.create('Novo layout',['instagram']);
+  const job=startSocialPipeline([draft.id],{config,drafts:listSocialDrafts(f.root),root:f.root,
+    resultsFile:f.resultsFile,adapters:{
+      open:async()=>({tabs:[],close(){}}),youtube:async()=>{},tiktok:async()=>{},
+      instagram:async()=>{throw new StudioChanged('Instagram','o editor de legenda');}
+    }});
+  await until(()=>getSocialPipeline(job.id).status==='needs_manual');
+  assert.match(getSocialPipeline(job.id).message,/manualmente/);
+  cancelSocialPipeline(job.id);
 });

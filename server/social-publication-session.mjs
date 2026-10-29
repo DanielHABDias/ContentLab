@@ -2,8 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import {spawn} from 'node:child_process';
-import {detectBrowsers,readSocialBrowser,socialUrl,SOCIAL_PLATFORMS} from './social-browser.mjs';
+import {detectBrowsers,readSocialBrowser,SOCIAL_PLATFORMS} from './social-browser.mjs';
 import {listSocialDrafts} from './social-drafts.mjs';
 
 export const PUBLICATION_SESSION_FILE=path.join(os.homedir(),'.contentlab','publication-session.json');
@@ -45,11 +44,6 @@ export function publicationLaunchCommand(browser,urls,{platform=process.platform
   return platform==='darwin'?{command:'open',args:['-a',bin,'--args',...args],browser:id}:
     {command:bin,args,browser:id};
 }
-const launchVisible=(command,args,launch)=>new Promise((resolve,reject)=>{
-  const child=launch(command,args,{detached:true,stdio:'ignore',windowsHide:false,shell:false});
-  child.once('error',reject);
-  child.once('spawn',()=>{child.unref?.();resolve();});
-});
 function persistSession(file,session){
   fs.mkdirSync(path.dirname(file),{recursive:true,mode:0o700});
   if(fs.lstatSync(path.dirname(file)).isSymbolicLink()||
@@ -63,7 +57,7 @@ function persistSession(file,session){
 }
 export async function preparePublicationSession(draftIds,{
   config=readSocialBrowser(),drafts=listSocialDrafts(),sessionFile=PUBLICATION_SESSION_FILE,
-  launch=spawn,buildCommand=publicationLaunchCommand
+  openSession
 }={}){
   if(!Array.isArray(draftIds)||!draftIds.length||draftIds.length>100||
     draftIds.some(id=>typeof id!=='string')||new Set(draftIds).size!==draftIds.length)
@@ -77,23 +71,26 @@ export async function preparePublicationSession(draftIds,{
     throw Error('Há vídeos com rede não confirmada ou incompatível. Revise os destinos em Editar.');
   const enabled=ORDER.filter(p=>config.confirmed?.[p]===true);
   if(!enabled.length)throw Error('Confirme pelo menos uma rede em Configurações.');
-  const tabs=enabled.map((platform,index)=>({
-    platform,index:index+1,label:SOCIAL_PLATFORMS[platform].label,
-    url:socialUrl(platform,config.urls[platform])
-  }));
-  const command=buildCommand(config.browser,tabs.map(tab=>tab.url));
-  // Salvar antes da abertura mantém um registro recuperável, mesmo que o
-  // navegador permaneça independente do processo Node.
-  const session={
-    id:crypto.randomUUID(),status:'prepared',browser:command.browser,
-    createdAt:new Date().toISOString(),tabs,
-    videos:selected.map(item=>({id:item.id,title:item.titleA,kind:item.kind,scheduledAt:item.scheduledAt,
-      destinations:item.platforms.map(p=>({platform:p,tab:tabs.find(tab=>tab.platform===p).index}))})),
-    note:'Ordem planejada de abertura; a numeração real pode mudar se o usuário reorganizar abas. Nenhum upload ou publicação foi executado.'
-  };
-  await launchVisible(command.command,command.args,launch);
-  persistSession(sessionFile,session);
-  return session;
+  const opener=openSession||((opts)=>import('./social-studio-browser.mjs').then(m=>m.openSocialStudioWindow(opts)));
+  // Exatamente o mesmo perfil e as mesmas abas do login nas Configurações.
+  const browserSession=await opener({config,platforms:enabled});
+  try{
+    const tabs=browserSession.tabs.map(({platform,index,targetId,url})=>({
+      platform,index,targetId,label:SOCIAL_PLATFORMS[platform].label,url
+    }));
+    const session={
+      id:crypto.randomUUID(),status:'prepared',browser:browserSession.browser,
+      profile:'social-studio-profile',createdAt:new Date().toISOString(),tabs,
+      videos:selected.map(item=>({id:item.id,title:item.titleA,kind:item.kind,scheduledAt:item.scheduledAt,
+        destinations:item.platforms.map(p=>({
+          platform:p,tab:tabs.find(tab=>tab.platform===p).index,
+          targetId:tabs.find(tab=>tab.platform===p).targetId
+        }))})),
+      note:'Abas reutilizadas do perfil de configuração; targetId do CDP identifica cada aba. Nenhum upload foi iniciado.'
+    };
+    persistSession(sessionFile,session);
+    return session;
+  }finally{browserSession.close?.();} // Preserva a janela e os cookies do perfil.
 }
 export function readPublicationSession(file=PUBLICATION_SESSION_FILE){
   try{

@@ -94,6 +94,22 @@ export async function openSocialStudioWindow({config,platforms,profile=SOCIAL_ST
     throw Error('Para enviar vídeos, selecione Chrome, Edge ou Brave em Configurações.');
   fs.mkdirSync(profile,{recursive:true,mode:0o700});
   if(fs.lstatSync(profile).isSymbolicLink())throw Error('Perfil do navegador inseguro.');
+  // O perfil inicial (das versões anteriores) continua funcionando sem
+  // perder cookies. Se trocar Chrome por Edge/Brave, usar outro perfil,
+  // sem tentar reaproveitar um processo do navegador antigo.
+  const existingMarker=path.join(profile,'.contentlab-browser');
+  if(fs.existsSync(existingMarker)&&fs.lstatSync(existingMarker).isSymbolicLink())
+    throw Error('Marcador do perfil do navegador inseguro.');
+  const previousBrowser=fs.existsSync(existingMarker)?
+    fs.readFileSync(existingMarker,'utf8').trim():null;
+  if(previousBrowser&&previousBrowser!==cmd.browser)profile=profile+'-'+cmd.browser;
+  fs.mkdirSync(profile,{recursive:true,mode:0o700});
+  if(fs.lstatSync(profile).isSymbolicLink())throw Error('Perfil do navegador inseguro.');
+  const marker=path.join(profile,'.contentlab-browser');
+  if(fs.existsSync(marker)){
+    if(fs.lstatSync(marker).isSymbolicLink()||fs.readFileSync(marker,'utf8').trim()!==cmd.browser)
+      throw Error('Perfil do navegador pertence a outro navegador. Selecione o navegador correto em Configurações.');
+  }else fs.writeFileSync(marker,cmd.browser+'\n',{flag:'wx',mode:0o600});
   let n=previousPort(profile),control=null,fresh=false;
   if(n)try{control=await connectBrowser(n,4);}catch{control=null;}
   if(!control){
@@ -108,26 +124,34 @@ export async function openSocialStudioWindow({config,platforms,profile=SOCIAL_ST
   }
   const targets=new Map(),clients=new Map();
   try{
-    // O Chrome já abriu a primeira página ao iniciar: reutilizá-la evita
-    // uma aba duplicada da primeira rede na janela visível.
-    let first=null;
-    if(fresh){
-      const response=await control.send('Target.getTargets');
-      const pages=(response.targetInfos||[]).filter(t=>t.type==='page');
-      first=pages.find(t=>{try{return new URL(t.url).hostname===new URL(urls[ordered[0]]).hostname;}catch{return false;}})
-        ||pages.find(t=>!t.url?.startsWith('devtools:'))||null;
-    }
+    // Cada nova chamada, seja configuração, abertura manual ou pipeline,
+    // reaproveita a aba real deste perfil. Não criar outra janela/perfil.
+    const response=await control.send('Target.getTargets');
+    const pages=(response.targetInfos||[]).filter(t=>t.type==='page');
+    const used=new Set();
+    const forPlatform=platform=>pages.find(t=>{
+      if(used.has(t.targetId))return false;
+      try{return new URL(t.url).hostname===new URL(urls[platform]).hostname;}
+      catch{return false;}
+    });
     for(const platform of ordered){
-      const selected=platform===ordered[0]&&first?.targetId?
-        {targetId:first.targetId}:
-        await control.send('Target.createTarget',{url:urls[platform],newWindow:false});
-      if(!selected.targetId)throw Error('Não foi possível abrir a aba '+platform);
+      let selected=forPlatform(platform);
+      let shouldNavigate=false;
+      if(!selected&&fresh&&targets.size===0){
+        // Reutilizar a aba criada pelo Chrome na primeira inicialização.
+        selected=pages.find(t=>!used.has(t.targetId)&&!t.url?.startsWith('devtools:'))||null;
+        shouldNavigate=Boolean(selected);
+      }
+      if(!selected){
+        selected=await control.send('Target.createTarget',{url:urls[platform],newWindow:false});
+      }
+      if(!selected.targetId)throw Error('Não foi possível localizar a aba '+platform);
+      used.add(selected.targetId);
       targets.set(platform,selected.targetId);
       clients.set(platform,await connectTab(n,selected.targetId));
-      if(platform===ordered[0]&&first?.targetId){
-        await clients.get(platform).send('Page.navigate',{url:urls[platform]});
-      }
+      if(shouldNavigate)await clients.get(platform).send('Page.navigate',{url:urls[platform]});
     }
+    await control.send('Target.activateTarget',{targetId:targets.get(ordered[0])});
   }catch(error){for(const c of clients.values())c.close();control.close();throw error;}
   return {
     port:n,browser:cmd.browser,tabs:ordered.map((p,i)=>({platform:p,index:i+1,targetId:targets.get(p),url:urls[p]})),

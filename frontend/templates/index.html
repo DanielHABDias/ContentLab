@@ -528,8 +528,8 @@
           <div id="publishSocialTabs" class="publish-social-tabs" aria-label="Abas do navegador"></div>
           <div id="publishSocialWarnings" class="publish-youtube-warnings"></div>
           <div id="publishSocialLoginActions" hidden>
-            <p>Entre na conta indicada na janela visível e confira se está no perfil correto. Esta sessão fica salva para os próximos envios.</p>
-            <button id="publishSocialResume" type="button" class="btn btn-secondary">✓ Já fiz login · continuar</button>
+            <p>O login é configurado antes de publicar. Se a plataforma encerrou sua sessão, volte às Configurações e revalide a conta no navegador do Content Lab.</p>
+            <button id="publishSocialResume" type="button" class="btn btn-secondary">⚙ Revalidar login nas Configurações</button>
           </div>
           <div id="publishSocialReviewActions" hidden>
             <p>Confira capa, legenda, opções de privacidade, conteúdo comercial/IA e data de publicação diretamente no site. <strong>Conclua Publicar ou Agendar manualmente</strong> antes de confirmar aqui. O aplicativo não verifica automaticamente se a publicação aconteceu.</p>
@@ -550,9 +550,9 @@
         <div id="publishDraftList" class="publish-draft-list" aria-live="polite"></div>
         <section id="publishSessionPanel" class="publish-session-panel" hidden aria-label="Abas preparadas no navegador">
           <div><span class="eyebrow">NAVEGADOR PREPARADO</span><h4>Abas abertas para a publicação</h4>
-          <p>As abas estão no navegador visível. Esta etapa não envia vídeos, não agenda postagens e não confirma logins automaticamente.</p></div>
+          <p>Abas do mesmo perfil persistente usado nos logins das Configurações e no envio assistido. Esta ação não envia nem agenda vídeos.</p></div>
           <ol id="publishSessionTabs"></ol><p id="publishSessionVideos" class="publish-session-videos"></p>
-          <small>A ordem mostrada é a ordem solicitada ao navegador. Abas antigas, extensões ou mudanças manuais podem alterar a posição real.</small>
+          <small>Cada aba é identificada pelo targetId do navegador; a posição visual pode mudar sem perder a associação da rede.</small>
         </section>
         <button id="publishEmptyCard" class="publish-empty-card" type="button">
           <span class="publish-empty-thumb"><span class="publish-empty-play">▶</span><span class="publish-empty-film">🎞</span></span>
@@ -794,11 +794,11 @@
 
     <div id="panel-settings" class="workspace-panel hidden" role="tabpanel" aria-labelledby="tab-settings" hidden>
       <div class="workspace-intro"><span class="eyebrow">CONFIGURAÇÕES / REDES SOCIAIS</span><h2>Seu navegador. Suas contas.</h2>
-        <p>Uma configuração local, sem Google Cloud, tokens OAuth, JSON de credenciais ou senhas no Content Lab.</p></div>
+        <p>Configure aqui a sessão persistente que será usada pelos crawlers. Faça login uma única vez em cada rede, dentro da janela do Content Lab.</p></div>
       <section class="block social-setup-card" aria-labelledby="socialBrowserTitle">
         <span class="eyebrow">01 / NAVEGADOR</span><h3 id="socialBrowserTitle">Qual navegador você usa para suas redes?</h3>
-        <p class="helper-text">Tentamos identificar o navegador padrão e os navegadores instalados. Se não for possível detectar, escolha “Padrão do sistema”.</p>
-        <label class="block-label" for="socialBrowserSelect">Navegador para abrir as plataformas</label>
+        <p class="helper-text">Escolha Chrome, Edge ou Brave (ou o padrão do sistema, se for um desses). A janela visível usa um perfil próprio e persistente, separado do navegador pessoal, para que a pipeline reutilize seus logins.</p>
+        <label class="block-label" for="socialBrowserSelect">Navegador da sessão de publicação (o mesmo da configuração e do crawler)</label>
         <select id="socialBrowserSelect"><option value="system">Padrão do sistema</option></select>
         <p id="socialBrowserDetection" class="helper-text" role="status">Procurando navegadores disponíveis...</p>
       </section>
@@ -828,7 +828,7 @@
             <button type="button" id="socialConfirm-youtube" class="btn btn-ghost" disabled>Conferi: estou logado</button>
           </article>
         </div>
-        <p class="helper-text">Ao clicar em “Abrir”, o site é aberto no navegador escolhido. Por segurança, o Content Lab não lê cookies nem sabe se o login deu certo; a confirmação é sua. URLs só podem apontar para os domínios oficiais.</p>
+        <p class="helper-text">Ao clicar em “Abrir e verificar login”, a rede abre na mesma sessão persistente usada pela pipeline e por “Apenas abrir redes” — não no perfil pessoal. Entre na conta desejada e confirme. Os cookies permanecem no perfil do navegador, sem cópia para o JSON do Content Lab. Confirmações antigas feitas no navegador pessoal precisam ser refeitas uma única vez.</p>
         <div class="social-setup-footer"><button type="button" class="btn btn-primary" id="socialSaveSettings">Salvar navegador e URLs</button>
           <p id="socialSetupStatus" role="status" aria-live="polite" class="helper-text"></p></div>
       </section>

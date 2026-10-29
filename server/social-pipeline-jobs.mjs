@@ -11,7 +11,7 @@ import {prepareYouTubeUpload,normalizeYouTubeVideoUrl,YouTubeLoginRequired,YouTu
 
 export const SOCIAL_PIPELINE_RESULTS=path.join(os.homedir(),'.contentlab','social-pipeline-results.json');
 const jobs=new Map();
-const terminal=new Set(['done','cancelled']);
+const terminal=new Set(['done','cancelled','needs_configuration']);
 const active=()=>[...jobs.values()].some(j=>!terminal.has(j.status));
 export function readSocialPipelineResults(file=SOCIAL_PIPELINE_RESULTS){
   try{
@@ -100,7 +100,10 @@ async function step(job){
     if(job.stopped)return;
     job.warnings=[error.message||'Erro de interface'];
     if(error instanceof StudioLoginRequired||error instanceof YouTubeLoginRequired){
-      job.status='awaiting_login';job.message=error.message;
+      // Login é uma etapa de Configurações. A fila não oferece login nem
+      // prossegue após expiração de cookies: exige revalidação do perfil.
+      job.status='needs_configuration';
+      job.message='Sessão de '+platform+' expirada ou sem login. Volte em Configurações, abra a rede no perfil do crawler e confirme novamente. Nenhum envio foi confirmado.';
     }else if(error instanceof StudioChanged||error instanceof YouTubeStudioChanged){
       job.status='needs_manual';
       job.message='O site mudou durante a preparação. Conclua o vídeo manualmente, sem repetir o upload.';
@@ -132,7 +135,7 @@ export function getSocialPipeline(id){
 }
 export async function resumeSocialPipeline(id){
   const job=jobs.get(id);if(!job)throw Error('Fila não encontrada.');
-  if(job.status!=='awaiting_login')throw Error('Continue somente após entrar na conta na janela aberta.');
+  if(job.status!=='awaiting_login')throw Error('Login só pode ser revalidado em Configurações. Cancele a fila e confirme a rede lá.');
   void step(job);
   return snapshot(job);
 }
