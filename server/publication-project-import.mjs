@@ -69,7 +69,9 @@ export function inspectPublicationProject(projectRoot){
       .sort((a,b)=>timestamp(b)-timestamp(a)||path.basename(b).localeCompare(path.basename(a)));
   }
   if(!images.length)throw Error('Nenhuma thumbnail PNG, JPG ou WebP encontrada na pasta thumbnails.');
-  const coverA=images[0],coverB=kind==='long'?(images[1]||images[0]):null;
+  // Em vídeos longos, A é a anterior e B a mais recente. Em Shorts, só A.
+  const coverA=kind==='long'?(images[1]||images[0]):images[0];
+  const coverB=kind==='long'?images[0]:null;
   return {projectRoot:root,name,kind,format:plan.project.format,
     videoPath:video,videoName:path.basename(video),videoBytes:fs.statSync(video).size,
     coverAPath:coverA,coverBPath:coverB,

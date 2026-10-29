@@ -44,6 +44,19 @@ test('reconhece edit_plan.json e output/final/final.mp4; a thumbnail mais nova Ã
   assert.equal(item.coverBName,null);
   assert.equal(item.name,'Short pronto');
 });
+test('vÃ­deo longo usa capa A anterior e capa B mais recente, incluindo arquivos copiados',t=>{
+  const f=fixture(t);
+  const folder=f.project('Longo com A/B','youtube_long',{twoCovers:true});
+  const preview=inspectPublicationProject(folder);
+  assert.equal(preview.coverAName,'older.png');
+  assert.equal(preview.coverBName,'newest.jpeg');
+  assert.equal(preview.needsReview,false);
+  const [saved]=importPublicationProjects([
+    {projectRoot:folder,scheduledAt:'2031-04-02T17:00'}
+  ],{root:f.drafts,confirmed,now:new Date('2026-10-29T10:00:00')});
+  assert.deepEqual(fs.readFileSync(socialDraftMedia(saved.id,'coverA',f.drafts)),png);
+  assert.deepEqual(fs.readFileSync(socialDraftMedia(saved.id,'coverB',f.drafts)),jpeg);
+});
 test('pasta pai encontra projetos imediatos, ignora subpastas internas e relata projetos incompletos',t=>{
   const f=fixture(t);
   const short=f.project('Um short');
