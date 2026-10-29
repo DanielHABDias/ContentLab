@@ -47,7 +47,7 @@ test('agendamento seleciona somente cartão/radio Schedule e não botão final',
 });
 test('falhas de campos do calendário interrompem com revisão manual, sem publicar',async()=>{
   const cdp={async eval(expression){
-    if(expression.includes('input[type="date"]'))return false;
+    if(expression.includes('ytcp-datetime-picker')&&expression.includes('2031-05-04'))return false;
     return true;
   }};
   assert.equal(await prepareYouTubeSchedule(cdp,'2031-05-04T12:00',{delayMs:0}),false);
