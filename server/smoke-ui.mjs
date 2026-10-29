@@ -212,6 +212,22 @@ try{
           fileName:form.get('video')?.name||items[index].fileName};
         items[index]=item;
         return Promise.resolve(new Response(JSON.stringify({item}),{status:200,headers:{'Content-Type':'application/json'}}));
+      }else if(endpoint==='/api/social-browser/youtube/results'){
+        return Promise.resolve(new Response(JSON.stringify({results:window.__ytTestResults||{}}),{status:200,headers:{'Content-Type':'application/json'}}));
+      }else if(endpoint==='/api/social-browser/youtube/jobs'&&options?.method==='POST'){
+        window.__ytTestQueue=body.draftIds;
+        window.__ytTestJob={id:'yt-test',status:'awaiting_review',index:0,total:body.draftIds.length,
+          current:{id:body.draftIds[0],title:'Short atualizado'},message:'Revisão no Studio',
+          completed:[],warnings:['Revise o uso de IA'],videoUrl:null};
+        return Promise.resolve(new Response(JSON.stringify({job:window.__ytTestJob}),{status:202,headers:{'Content-Type':'application/json'}}));
+      }else if(endpoint==='/api/social-browser/youtube/jobs/yt-test'&&!options?.method){
+        return Promise.resolve(new Response(JSON.stringify({job:window.__ytTestJob}),{status:200,headers:{'Content-Type':'application/json'}}));
+      }else if(endpoint==='/api/social-browser/youtube/jobs/yt-test/complete'){
+        const result={url:body.videoUrl};
+        window.__ytTestResults={[window.__ytTestQueue[0]]:result};
+        window.__ytTestJob={...window.__ytTestJob,status:'done',index:1,current:null,
+          completed:[{id:window.__ytTestQueue[0],title:'Short atualizado',url:body.videoUrl}],message:'Concluído'};
+        return Promise.resolve(new Response(JSON.stringify({job:window.__ytTestJob}),{status:200,headers:{'Content-Type':'application/json'}}));
       }else if(endpoint==='/api/social-browser/session'){
         return Promise.resolve(new Response(JSON.stringify({session:null}),{status:200,headers:{'Content-Type':'application/json'}}));
       }else if(endpoint==='/api/social-browser/prepare'){
@@ -340,6 +356,19 @@ try{
   await evaluate('document.querySelectorAll(".publish-draft-picker input")[0].click()');
   assert.equal(await evaluate('document.getElementById("publishSelectionBar").hidden'),false,
     'Selecting an item reveals publication preparation');
+  assert.equal(await evaluate('document.getElementById("publishYoutubeStart").disabled'),false,
+    'Confirmed YouTube destination enables assisted upload');
+  await evaluate('document.getElementById("publishYoutubeStart").click()');
+  await wait(()=>evaluate('document.getElementById("publishYoutubePanel").hidden===false'),
+    'Assisted upload panel opens');
+  assert.equal(await evaluate('document.getElementById("publishYoutubeReviewActions").hidden'),false,
+    'YouTube workflow pauses for manual declarations and final review');
+  await evaluate('document.getElementById("publishYoutubeUrl").value="https://www.youtube.com/watch?v=ABCdef12345"');
+  await evaluate('window.__confirmOriginal=window.confirm;window.confirm=()=>true;document.getElementById("publishYoutubeConfirm").click()');
+  await wait(()=>evaluate('window.__ytTestJob?.status==="done"'),'Only confirmation advances YouTube queue');
+  await wait(()=>evaluate('!!document.querySelector(".publish-youtube-result")'),
+    'Confirmed YouTube link returns to the saved video card');
+  await evaluate('window.confirm=window.__confirmOriginal');
   await evaluate('document.getElementById("publishPrepareBrowser").click()');
   await wait(()=>evaluate('document.getElementById("publishSessionPanel").hidden===false'),
     'Preparing publication creates a visible session map');

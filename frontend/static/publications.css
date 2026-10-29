@@ -261,3 +261,35 @@
 @media(max-width:650px){#panel-publications .publish-draft-card{padding-left:48px}
   #panel-publications .publish-selection-bar{align-items:stretch}
   #panel-publications .publish-selection-bar button{width:100%}}
+
+/* YouTube Studio: upload assistido, revisão e links verificados pelo usuário. */
+#panel-publications .publish-youtube-panel{margin:16px 0 21px;border:1px solid #c7d8f5;
+  background:linear-gradient(130deg,#f8faff,#f3f6fc 65%,#fff);border-radius:19px;
+  padding:22px 24px;color:#30445e;box-shadow:0 12px 30px -26px #233a63}
+#panel-publications .publish-youtube-panel[hidden],
+#panel-publications #publishYoutubeLoginActions[hidden],
+#panel-publications #publishYoutubeReviewActions[hidden]{display:none!important}
+#panel-publications .publish-youtube-head{display:flex;justify-content:space-between;gap:15px;flex-wrap:wrap}
+#panel-publications .publish-youtube-head h4{font-size:19px;margin:8px 0 6px;color:#243b65}
+#panel-publications .publish-youtube-head p{font-size:12px;color:#587296;line-height:1.5}
+#panel-publications .publish-youtube-counter{border-radius:20px;align-self:flex-start;
+  padding:8px 12px;background:#e2ecfb;color:#3c61a0;font-size:11px;font-weight:800}
+#panel-publications .publish-youtube-warnings{margin:10px 0;color:#6f5265}
+#panel-publications .publish-youtube-warnings p{margin:6px 0;padding:8px 12px;
+  background:#fffaf2;border-left:3px solid #dda66d;font-size:11px;line-height:1.5}
+#panel-publications #publishYoutubeReviewActions,
+#panel-publications #publishYoutubeLoginActions{background:#fff;border:1px solid #e0e8f5;
+  padding:17px;border-radius:13px;margin:12px 0}
+#panel-publications #publishYoutubeReviewActions p,
+#panel-publications #publishYoutubeLoginActions p{font-size:12px;line-height:1.65;color:#596f8c}
+#panel-publications #publishYoutubeReviewActions label{display:block;margin:12px 0 6px;
+  font-size:11px;font-weight:750;color:#2d4c7b}
+#panel-publications .publish-youtube-link-row{display:flex;gap:9px;flex-wrap:wrap}
+#panel-publications .publish-youtube-link-row input{min-width:190px;flex:1;border:1px solid #cedcf1;
+  padding:11px;border-radius:10px;font:inherit;font-size:12px}
+#panel-publications .publish-youtube-controls{display:flex;justify-content:flex-end;margin-top:12px}
+#panel-publications .publish-youtube-completed{margin:8px 0 0;padding-left:22px}
+#panel-publications .publish-youtube-completed li{padding:4px 0;font-size:12px}
+#panel-publications .publish-youtube-completed a,.publish-draft-chips .publish-youtube-result{
+  color:#2f62a4;font-size:11px;font-weight:750}
+#panel-publications #publishYoutubeStart:disabled{opacity:.5;cursor:not-allowed}

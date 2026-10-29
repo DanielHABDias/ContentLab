@@ -1,3 +1,4 @@
+import {startYouTubeQueue,getYouTubeJob,resumeYouTubeJob,confirmYouTubePublished,cancelYouTubeJob,readYouTubeResults} from './youtube-upload-jobs.mjs';
 import {preparePublicationSession,readPublicationSession} from './social-publication-session.mjs';
 import multer from 'multer';
 import os from 'node:os';
@@ -46,6 +47,35 @@ export function mountSocialDraftRoutes(app,api){
       const session=await preparePublicationSession(req.body?.draftIds);
       res.set('Cache-Control','no-store').json({session});
     }catch(error){res.status(422).json({error:error.message});}
+  }));
+  app.post('/api/social-browser/youtube/jobs',api(async(req,res)=>{
+    if(!sameOrigin(req))return res.status(403).json({error:'Origem não autorizada.'});
+    try{res.status(202).set('Cache-Control','no-store').json({job:startYouTubeQueue(req.body?.draftIds)});}
+    catch(error){res.status(409).json({error:error.message});}
+  }));
+  app.get('/api/social-browser/youtube/jobs/:id',api(async(req,res)=>{
+    if(!sameOrigin(req))return res.status(403).end();
+    try{res.set('Cache-Control','no-store').json({job:getYouTubeJob(req.params.id)});}
+    catch(error){res.status(404).json({error:error.message});}
+  }));
+  app.post('/api/social-browser/youtube/jobs/:id/resume',api(async(req,res)=>{
+    if(!sameOrigin(req))return res.status(403).end();
+    try{res.set('Cache-Control','no-store').json({job:await resumeYouTubeJob(req.params.id)});}
+    catch(error){res.status(409).json({error:error.message});}
+  }));
+  app.post('/api/social-browser/youtube/jobs/:id/complete',api(async(req,res)=>{
+    if(!sameOrigin(req))return res.status(403).end();
+    try{res.set('Cache-Control','no-store').json({job:confirmYouTubePublished(req.params.id,{videoUrl:req.body?.videoUrl})});}
+    catch(error){res.status(409).json({error:error.message});}
+  }));
+  app.post('/api/social-browser/youtube/jobs/:id/cancel',api(async(req,res)=>{
+    if(!sameOrigin(req))return res.status(403).end();
+    try{res.set('Cache-Control','no-store').json({job:cancelYouTubeJob(req.params.id)});}
+    catch(error){res.status(409).json({error:error.message});}
+  }));
+  app.get('/api/social-browser/youtube/results',api(async(req,res)=>{
+    if(!sameOrigin(req))return res.status(403).end();
+    res.set('Cache-Control','no-store').json({results:readYouTubeResults()});
   }));
   app.delete('/api/social-browser/drafts/:id',api(async(req,res)=>{
     if(!sameOrigin(req))return res.status(403).json({error:'Origem não autorizada.'});
