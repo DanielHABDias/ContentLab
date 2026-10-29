@@ -56,8 +56,14 @@ export function buildSocialTasks(draftIds,{config,drafts,results={}}){
     v.platforms.some(p=>!SOCIAL_ORDER.includes(p)||config.confirmed?.[p]!==true||
       (p==='tiktok'&&v.kind==='long'))))
     throw Error('Há redes não confirmadas ou incompatíveis. Revise os destinos em Editar.');
-  // A lista é mais recente primeiro: processar o vídeo mais antigo primeiro.
-  const ordered=drafts.slice().reverse().filter(v=>draftIds.includes(v.id));
+  // A lista normal exibe os mais recentes primeiro. A fila respeita a
+  // programação escolhida (incluindo importação em lote). Para empates,
+  // conserva a ordem de criação mais antiga primeiro.
+  const ordered=drafts.slice().reverse().filter(v=>draftIds.includes(v.id))
+    .sort((a,b)=>{
+      const first=Date.parse(a.scheduledAt||''),second=Date.parse(b.scheduledAt||'');
+      return Number.isFinite(first)&&Number.isFinite(second)?first-second:0;
+    });
   const tasks=[];
   for(const video of ordered)for(const platform of SOCIAL_ORDER){
     if(!video.platforms.includes(platform))continue;

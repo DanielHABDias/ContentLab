@@ -212,6 +212,31 @@ try{
           fileName:form.get('video')?.name||items[index].fileName};
         items[index]=item;
         return Promise.resolve(new Response(JSON.stringify({item}),{status:200,headers:{'Content-Type':'application/json'}}));
+      }else if(endpoint==='/api/social-browser/projects/preview'){
+        window.__importPreviewFolders=body.folders;
+        const rows=[{projectRoot:'/tmp/contentlab/Short-01',name:'Short importado',kind:'short',
+            format:'youtube_short',videoName:'final.mp4',coverAName:'capa-mais-recente.png',
+            coverBName:null,needsReview:false,alreadyImported:false},
+          {projectRoot:'/tmp/contentlab/Longo-02',name:'Longo importado',kind:'long',
+            format:'youtube_long',videoName:'final.mp4',coverAName:'capa-a.png',
+            coverBName:'capa-a.png',needsReview:true,alreadyImported:false,
+            warning:'Capa B provisória; edite depois.'}];
+        return Promise.resolve(new Response(JSON.stringify({items:rows,skipped:[]}),
+          {status:200,headers:{'Content-Type':'application/json'}}));
+      }else if(endpoint==='/api/social-browser/projects/import'){
+        window.__importedEntries=body.entries;
+        const added=body.entries.map((entry,index)=>{
+          const kind=entry.projectRoot.includes('Short')?'short':'long';
+          return {id:'aaaaaaaa-bbbb-4ccc-8ddd-'+String(index+1).padStart(12,'0'),
+            sourceProject:entry.projectRoot,needsReview:kind==='long',
+            kind,titleA:entry.titleA,titleB:kind==='long'?'Alternativo':null,description:'',
+            tags:[],platforms:kind==='short'?['youtube','tiktok','instagram']:['youtube','instagram'],
+            scheduledAt:entry.scheduledAt,fileName:'final.mp4',
+            media:{video:'video.mp4',coverA:'coverA.png',coverB:kind==='long'?'coverB.png':null}};
+        });
+        for(const item of added)items.unshift(item);
+        return Promise.resolve(new Response(JSON.stringify({items:added}),
+          {status:201,headers:{'Content-Type':'application/json'}}));
       }else if(endpoint==='/api/social-browser/pipeline/results'){
         return Promise.resolve(new Response(JSON.stringify({results:window.__socialPipelineResults||{}}),{status:200,headers:{'Content-Type':'application/json'}}));
       }else if(endpoint==='/api/social-browser/pipeline/jobs'&&options?.method==='POST'){
@@ -419,6 +444,30 @@ try{
     'The UI shows mapped browser tabs');
   await evaluate('document.getElementById("publishClearSelection").click()');
   assert.equal(await evaluate('document.getElementById("publishSelectionBar").hidden'),true);
+  await evaluate('document.getElementById("publishImportProjects").click()');
+  await wait(()=>evaluate('document.getElementById("publishImportDialog").open===true'),
+    'Batch project import dialog opens');
+  await evaluate('document.getElementById("publishImportPaths").value="/tmp/contentlab";document.getElementById("publishImportScan").click()');
+  await wait(()=>evaluate('document.querySelectorAll(".publish-import-row").length===2'),
+    'Parent folder discovers a short and a long project');
+  assert.equal(await evaluate('document.querySelectorAll(".publish-import-row")[0].textContent.includes("Short importado")'),true);
+  const originalFirstDate=await evaluate('document.querySelectorAll(".publish-import-fields input[type=datetime-local]")[0].value');
+  assert.equal(originalFirstDate.includes('T12:00'),true,'Short gets noon planning suggestion');
+  await evaluate('document.querySelectorAll(".publish-import-row-actions button")[1].click()');
+  assert.equal(await evaluate('document.querySelectorAll(".publish-import-row")[0].textContent.includes("Longo importado")'),true,
+    'Accessible arrow reorders projects before import');
+  const firstDate=await evaluate('document.querySelectorAll(".publish-import-fields input[type=datetime-local]")[0].value');
+  const secondDate=await evaluate('document.querySelectorAll(".publish-import-fields input[type=datetime-local]")[1].value');
+  assert.equal(firstDate.includes('T17:00'),true,'Long project suggests 17:00 after reorder');
+  assert.equal(secondDate.includes('T12:00'),true,'Short project suggests 12:00');
+  assert.ok(secondDate>firstDate,'Later project is planned for later date');
+  await evaluate('document.getElementById("publishImportConfirm").click()');
+  await wait(()=>evaluate('document.getElementById("publishImportDialog").open===false'),
+    'Confirmation copies batch into publication list');
+  assert.deepEqual(await evaluate('window.__importedEntries.map(entry=>entry.projectRoot)'),
+    ['/tmp/contentlab/Longo-02','/tmp/contentlab/Short-01']);
+  assert.equal(await evaluate('document.querySelectorAll(".publish-draft-card").length'),4,
+    'Two projects are added to the prior two drafts');
   await evaluate('document.getElementById("publishManageAccounts").click()');
   await evaluate('document.getElementById("socialUrl-youtube").value="https://studio.youtube.com/channel/UCother";document.getElementById("socialSaveSettings").click()');
   await wait(()=>evaluate('document.getElementById("socialGoPublications").disabled===false'),

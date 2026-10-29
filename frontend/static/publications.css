@@ -321,3 +321,55 @@
 #panel-publications .publish-social-panel #publishSocialReviewActions small{
   display:block;margin-top:9px;color:#8193ab;font-size:10px}
 #panel-publications #publishSocialStart:disabled{opacity:.5;cursor:not-allowed}
+
+/* Importação em lote de projetos — revisão antes de salvar. */
+#panel-publications .publish-import-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.publish-import-dialog{width:min(1040px,calc(100vw - 24px));max-height:min(92vh,960px);
+  border:1px solid #cbd9ed;border-radius:20px;padding:0;background:#fff;color:#2d4263;
+  box-shadow:0 26px 78px #0e203e55}
+.publish-import-dialog::backdrop{background:#0c1b31b8}
+.publish-import-shell{display:flex;flex-direction:column;max-height:90vh}
+.publish-import-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+  padding:23px 26px;background:linear-gradient(110deg,#edf4ff,#fff);border-bottom:1px solid #dce6f5}
+.publish-import-header h3{font-size:24px;margin:7px 0;color:#294264}
+.publish-import-header p{max-width:700px;color:#70839e;font-size:12px;line-height:1.6;margin:5px 0 0}
+.publish-import-body{overflow:auto;padding:23px 26px;flex:1;min-height:0}
+.publish-import-toolbar{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:14px}
+.publish-import-body #publishImportPaths{display:block;width:100%;min-height:112px;box-sizing:border-box;
+  resize:vertical;border:1px solid #cbd9ed;border-radius:12px;background:#f8fbff;color:#304e77;
+  font:12px/1.6 monospace;padding:12px;margin:8px 0 10px}
+.publish-import-body #publishImportPick>label{font-size:12px;font-weight:800}
+.publish-import-body #publishImportPick>small{color:#758aa6;font-size:11px;line-height:1.5}
+.publish-import-review-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:17px}
+.publish-import-review-head strong{font-size:18px}
+.publish-import-review-head p{font-size:11px;color:#7186a3;margin:5px 0}
+.publish-import-rows{display:flex;flex-direction:column;gap:13px}
+.publish-import-row{display:grid;grid-template-columns:116px minmax(0,1fr) 80px;align-items:start;gap:17px;
+  padding:16px;border:1px solid #dbe6f5;background:#fbfdff;border-radius:16px}
+.publish-import-row:hover{border-color:#9db8dc}
+.publish-import-thumb{display:block;width:116px;height:150px;object-fit:cover;border-radius:10px;
+  background:#e8eef7;border:1px solid #d6e3f3}
+.publish-import-content{min-width:0}
+.publish-import-row-heading{display:flex;align-items:baseline;flex-wrap:wrap;gap:9px}
+.publish-import-row-heading strong{font-size:15px;color:#293f64}
+.publish-import-kind{background:#e8f0ff;padding:4px 8px;border-radius:20px;color:#4d72a5;font-size:10px;font-weight:800}
+.publish-import-facts{font-size:11px;color:#7790ae;overflow-wrap:anywhere;margin:8px 0}
+.publish-import-warning{font-size:11px;color:#98582c;background:#fff6e8;padding:8px 11px;border-radius:9px}
+.publish-import-fields{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.publish-import-fields label{display:flex;flex:1 1 160px;flex-direction:column;gap:6px;color:#5f7795;font-size:10px;font-weight:800}
+.publish-import-fields input{box-sizing:border-box;width:100%;min-width:0;border:1px solid #c9d9ef;border-radius:8px;
+  padding:9px 10px;font:12px inherit;background:white;color:#334c72}
+.publish-import-fields input:focus-visible{outline:2px solid #5682c4;outline-offset:1px}
+.publish-import-row-actions{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-content:flex-start}
+.publish-import-row-actions button{min-width:34px}
+.publish-import-drag{width:100%;text-align:center;font-size:10px;color:#7890ad;cursor:grab;user-select:none}
+.publish-import-skipped{border:1px solid #ebcdad;background:#fffaf4;color:#875c3b;border-radius:12px;
+  padding:9px 14px;margin-top:15px;font-size:11px}
+.publish-import-skipped[hidden],.publish-import-dialog [hidden]{display:none!important}
+.publish-import-skipped p{margin:6px 0;overflow-wrap:anywhere}
+.publish-import-footer{display:flex;justify-content:flex-end;gap:10px;padding:17px 26px;
+  border-top:1px solid #dce6f5;background:#f6f9ff}
+@media(max-width:700px){.publish-import-row{grid-template-columns:74px minmax(0,1fr);gap:10px}
+  .publish-import-thumb{width:74px;height:104px}.publish-import-row-actions{grid-column:1/-1;justify-content:flex-end}
+  .publish-import-drag{width:auto;margin-right:auto}
+  .publish-import-header,.publish-import-body{padding:17px}.publish-import-footer{padding:14px}}

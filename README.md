@@ -103,6 +103,18 @@ Cada entrada possui **Selecionar** e **Editar**. Em Editar é possível alterar 
 
 **Apenas abrir redes** usa **a mesma sessão persistente do crawler** (nunca o perfil pessoal). Abre ou reaproveita as abas das redes confirmadas, em ordem YouTube → TikTok → Instagram. O mapa local em `~/.contentlab/publication-session.json` inclui os identificadores CDP (targetId) reais para cada destino. Essa ação não envia, agenda nem publica vídeos. Se o navegador padrão não for Chromium compatível, selecione Chrome, Edge ou Brave nas Configurações.
 
+### Importação em lote de projetos para Publicações
+
+No painel **Publicações**, use **Importar pastas de projetos** para adicionar vários vídeos sem precisar localizar o MP4 em cada projeto. O botão **Escolher pasta** pode ser utilizado repetidamente; também é possível colar os caminhos de diversas pastas (uma por linha). Se escolher uma **pasta pai**, o Content Lab encontra projetos em suas subpastas imediatas. Os projetos precisam seguir o layout usado pelo Editor:
+
+- `edit_plan.json`: o campo `project.format` define **Short** (`youtube_short`) ou **vídeo longo** (`youtube_long`). Para `custom`, o aplicativo só infere o formato se a resolução indicar claramente paisagem ou retrato. Em casos ambíguos, o projeto é ignorado com uma explicação, para evitar publicar no formato errado.
+- `output/final/final.mp4`: vídeo final renderizado, sem abrir o seletor de arquivos da pasta Output Final.
+- `thumbnails/`: a imagem PNG/JPG/WebP mais recente, considerando as datas de criação/alteração, é sugerida como thumbnail A. Em vídeos longos, a segunda imagem mais recente vira B; caso só haja uma, a segunda capa é uma **cópia provisória** e o cartão avisa para revisar o teste A/B. O título B recebe uma indicação provisória até você editar.
+
+A importação tem **duas etapas**: analisar as pastas e **revisar antes de confirmar**. Na revisão, são mostrados formato, título (editável), capa e data sugerida. Você pode **arrastar os cartões** ou usar as setas de reordenação para definir a sequência. A primeira data segue as regras já utilizadas no botão Adicionar vídeo (Short às 12h, longo às 17h, com antecedência); os demais recebem dias sucessivos. Alterar a ordem recalcula as datas automáticas, enquanto as datas alteradas manualmente são mantidas e servem de referência para as próximas. Nada é copiado até clicar em **Confirmar e adicionar à lista**.
+
+O backend verifica novamente os caminhos e os arquivos antes de copiar, **bloqueia projetos já importados**, rejeita mídias inválidas e remove itens parciais se o lote falhar. Os vídeos aparecem na mesma lista de rascunhos, podem ser editados normalmente e conservam as datas selecionadas na revisão. A pipeline de envio processa vídeos por **data de planejamento crescente**, respeitando YouTube → TikTok → Instagram dentro de cada vídeo. O limite permanece 100 itens na lista. A seleção de pastas usa o diálogo local já existente, por isso funciona com uma pasta por clique, ou com uma pasta pai contendo diversos projetos.
+
 ### Envio assistido
 
 A seleção oferece dois caminhos: **Apenas abrir redes** reutiliza a sessão configurada para conferir os logins; **Enviar nas redes · assistido** usa **exatamente a mesma sessão** e inicia uma fila única em ordem **YouTube → TikTok → Instagram** para cada vídeo. O antigo botão duplicado **Somente YouTube** não faz mais parte da interface.

@@ -511,7 +511,10 @@
         <section class="publish-queue-head">
           <div><span class="eyebrow">MINHA LISTA</span><h3>Publicações preparadas <span id="publishDraftCount" class="publish-queue-count">0</span></h3>
           <p>Adicione vídeos longos ou Shorts, personalize textos, capas e destinos.</p></div>
-          <button id="publishAddVideo" class="btn btn-primary publish-main-cta" type="button">＋ Adicionar vídeo</button>
+          <div class="publish-import-actions">
+            <button id="publishImportProjects" class="btn btn-secondary" type="button">▤ Importar pastas de projetos</button>
+            <button id="publishAddVideo" class="btn btn-primary publish-main-cta" type="button">＋ Adicionar vídeo</button>
+          </div>
         </section>
         <div id="publishSelectionBar" class="publish-selection-bar" hidden>
           <div><strong><span id="publishSelectedCount">0</span> vídeo(s) selecionado(s)</strong><small>Envio assistido na sequência vídeo → YouTube, TikTok e Instagram, conforme cada destino marcado.</small></div>
@@ -561,6 +564,41 @@
         <div class="publish-local-hint"><span>✦</span> Rascunhos e resultados ficam neste computador. O envio assistido prepara mídia e metadados; a confirmação final de cada rede ainda é manual.</div>
         <p id="publishStatus" class="helper-text" role="status" aria-live="polite"></p>
       </section>
+
+      <dialog id="publishImportDialog" class="publish-import-dialog" aria-labelledby="publishImportTitle">
+        <div class="publish-import-shell">
+          <header class="publish-import-header">
+            <div><span class="eyebrow">IMPORTAÇÃO EM LOTE / PROJETOS CONTENT LAB</span>
+              <h3 id="publishImportTitle">Dos projetos para a lista</h3>
+              <p>Escolha uma pasta de projeto ou a pasta pai com vários projetos. Usaremos edit_plan.json, output/final/final.mp4 e as imagens mais recentes de thumbnails.</p></div>
+            <button id="publishImportClose" class="publish-close" type="button" aria-label="Fechar importação">×</button>
+          </header>
+          <div class="publish-import-body">
+            <div id="publishImportPick">
+              <div class="publish-import-toolbar">
+                <button id="publishImportChoose" class="btn btn-secondary" type="button">▤ Escolher pasta</button>
+                <button id="publishImportScan" class="btn btn-primary" type="button">↻ Analisar projetos</button>
+              </div>
+              <label for="publishImportPaths">Pastas selecionadas — uma por linha</label>
+              <textarea id="publishImportPaths" rows="4" placeholder="Escolha as pastas no botão acima ou cole os caminhos locais, um por linha."></textarea>
+              <small>É possível repetir “Escolher pasta” para adicionar mais projetos. Se selecionar uma pasta pai, o Content Lab procura os projetos em suas subpastas imediatas.</small>
+            </div>
+            <div id="publishImportReview" hidden>
+              <div class="publish-import-review-head"><div><strong>Organize sua programação</strong>
+                <p>Arraste os cartões ou use ↑ ↓ para mudar a ordem. As datas serão recalculadas. Você também pode personalizar cada horário antes de importar.</p></div>
+                <button id="publishImportBack" class="btn btn-secondary btn-sm" type="button">↩ Alterar pastas</button>
+              </div>
+              <div id="publishImportRows" class="publish-import-rows"></div>
+            </div>
+            <div id="publishImportSkipped" class="publish-import-skipped" hidden></div>
+            <p id="publishImportStatus" role="status" aria-live="polite" class="helper-text"></p>
+          </div>
+          <footer class="publish-import-footer">
+            <button id="publishImportCancel" class="btn btn-secondary" type="button">Cancelar</button>
+            <button id="publishImportConfirm" class="btn btn-primary" type="button" hidden>＋ Confirmar e adicionar à lista</button>
+          </footer>
+        </div>
+      </dialog>
 
       <dialog id="publishComposerDialog" class="publish-dialog" aria-labelledby="publishComposerTitle">
         <form id="publishComposerForm" class="publish-composer">

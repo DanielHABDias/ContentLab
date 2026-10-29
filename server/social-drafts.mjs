@@ -90,7 +90,7 @@ function validateInput(body,files,confirmed,{existing=null,root=SOCIAL_DRAFT_DIR
   if(kind==='short'&&coverB)reject('Shorts aceitam somente uma thumbnail.');
   return {kind,titleA,titleB,description,tags,platforms,scheduledAt,video,coverA,coverB,videoType,aType,bType};
 }
-export function createSocialDraft({body,files,confirmed,root=SOCIAL_DRAFT_DIR}){
+export function createSocialDraft({body,files,confirmed,root=SOCIAL_DRAFT_DIR,sourceProject=null,needsReview=false}){
   const data=validateInput(body,files,confirmed);
   storeReady(root);
   const items=readItems(root);
@@ -109,7 +109,8 @@ export function createSocialDraft({body,files,confirmed,root=SOCIAL_DRAFT_DIR}){
       fileName:path.basename(data.video.originalname).slice(0,160),
       bytes:fs.statSync(path.join(folder,videoFile)).size,
       media:{video:videoFile,coverA:coverAFile,coverB:coverBFile},
-      createdAt:new Date().toISOString(),status:'draft'
+      createdAt:new Date().toISOString(),status:'draft',
+      ...(sourceProject?{sourceProject,needsReview:Boolean(needsReview)}:{})
     };
     writeItems(root,[item,...items]);
     return item;
@@ -142,7 +143,8 @@ export function updateSocialDraft(id,{body,files,confirmed,root=SOCIAL_DRAFT_DIR
       description:data.description,tags:data.tags,platforms:data.platforms,
       scheduledAt:data.scheduledAt,media:{video:videoFile,coverA:coverAFile,coverB:coverBFile},
       fileName:data.video?path.basename(data.video.originalname).slice(0,160):previous.fileName,
-      bytes:fs.statSync(path.join(stage,videoFile)).size,updatedAt:new Date().toISOString()};
+      bytes:fs.statSync(path.join(stage,videoFile)).size,updatedAt:new Date().toISOString(),
+      needsReview:false};
     fs.renameSync(folder,backup);backedUp=true;
     fs.renameSync(stage,folder);installed=true;
     writeItems(root,items.map((row,i)=>i===index?next:row));

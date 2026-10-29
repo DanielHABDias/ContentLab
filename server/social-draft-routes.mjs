@@ -1,3 +1,4 @@
+import {discoverPublicationProjects,importPublicationProjects,inspectPublicationProject} from './publication-project-import.mjs';
 import {startSocialPipeline,getSocialPipeline,resumeSocialPipeline,confirmSocialPipeline,cancelSocialPipeline,readSocialPipelineResults} from './social-pipeline-jobs.mjs';
 import {startYouTubeQueue,getYouTubeJob,resumeYouTubeJob,confirmYouTubePublished,cancelYouTubeJob,readYouTubeResults} from './youtube-upload-jobs.mjs';
 import {preparePublicationSession,readPublicationSession} from './social-publication-session.mjs';
@@ -17,6 +18,37 @@ export function mountSocialDraftRoutes(app,api){
   app.get('/api/social-browser/drafts',api(async(req,res)=>{
     if(!sameOrigin(req))return res.status(403).end();
     res.set('Cache-Control','no-store').json({items:listSocialDrafts()});
+  }));
+  app.post('/api/social-browser/projects/preview',api(async(req,res)=>{
+    if(!sameOrigin(req))return res.status(403).json({error:'Origem não autorizada.'});
+    try{
+      const discovered=discoverPublicationProjects(req.body?.folders);
+      const previous=new Set(listSocialDrafts().map(x=>x.sourceProject).filter(Boolean));
+      res.set('Cache-Control','no-store').json({
+        items:discovered.items.map(({videoPath,coverAPath,coverBPath,...item})=>({
+          ...item,alreadyImported:previous.has(item.projectRoot)
+        })),
+        skipped:discovered.skipped
+      });
+    }catch(error){res.status(422).json({error:error.message});}
+  }));
+  app.get('/api/social-browser/projects/cover',api(async(req,res)=>{
+    if(!sameOrigin(req))return res.status(403).end();
+    try{
+      const item=inspectPublicationProject(req.query.projectRoot);
+      const file=req.query.variant==='B'?item.coverBPath:item.coverAPath;
+      if(!file)return res.status(404).end();
+      res.set('Cache-Control','private, no-store').set('X-Content-Type-Options','nosniff').sendFile(file);
+    }catch(error){res.status(404).end();}
+  }));
+  app.post('/api/social-browser/projects/import',api(async(req,res)=>{
+    if(!sameOrigin(req))return res.status(403).json({error:'Origem não autorizada.'});
+    try{
+      const settings=readSocialBrowser();
+      if(!socialBrowserReady(settings))return res.status(409).json({error:'Confirme uma rede antes de importar.'});
+      const items=importPublicationProjects(req.body?.entries,{confirmed:settings.confirmed});
+      res.status(201).set('Cache-Control','no-store').json({items});
+    }catch(error){res.status(422).json({error:error.message});}
   }));
   app.post('/api/social-browser/drafts',form,api(async(req,res)=>{
     try{

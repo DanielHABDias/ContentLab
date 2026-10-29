@@ -343,6 +343,162 @@
     return item;
   }
   const safeUrl=(id,type)=>'/api/social-browser/drafts/'+encodeURIComponent(id)+'/media/'+type;
+  // Importação em lote: análise prévia -> ordenação visual -> confirmação explícita.
+  let importRows=[],importBusy=false,draggedImport=null;
+  const importMessage=(text,bad=false)=>{
+    $('publishImportStatus').textContent=text||'';
+    $('publishImportStatus').classList.toggle('social-error',bad);
+  };
+  const importDialog=$('publishImportDialog');
+  const closeImport=()=>{if(!importBusy)importDialog.close();};
+  $('publishImportClose').onclick=closeImport;
+  $('publishImportCancel').onclick=closeImport;
+  $('publishImportProjects').onclick=()=>{
+    if(!ready||changed())return goSettings();
+    importRows=[];
+    $('publishImportPaths').value='';
+    $('publishImportPick').hidden=false;
+    $('publishImportReview').hidden=true;
+    $('publishImportConfirm').hidden=true;
+    $('publishImportSkipped').hidden=true;
+    $('publishImportRows').replaceChildren();
+    importMessage('Selecione as pastas que contêm seus projetos (ou uma pasta pai).');
+    importDialog.showModal();
+  };
+  $('publishImportChoose').onclick=async()=>{
+    const btn=$('publishImportChoose');btn.disabled=true;
+    try{
+      const data=await post('/api/choose-folder');
+      if(data.folder){
+        const paths=$('publishImportPaths').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+        if(!paths.includes(data.folder))paths.push(data.folder);
+        $('publishImportPaths').value=paths.join('\n');
+        importMessage(paths.length+' pasta(s) selecionada(s). Você pode adicionar outras.');
+      }
+    }catch(error){importMessage(error.message,true);}
+    finally{btn.disabled=false;}
+  };
+  $('publishImportBack').onclick=()=>{
+    $('publishImportPick').hidden=false;
+    $('publishImportReview').hidden=true;
+    $('publishImportConfirm').hidden=true;
+    importMessage('Altere as pastas e analise novamente.');
+  };
+  function recalculateImportDates(){
+    const virtual=drafts.slice();
+    for(const row of importRows){
+      if(!row.manualDate)row.scheduledAt=planning.suggestSchedule(row.kind,virtual,new Date());
+      virtual.unshift({scheduledAt:row.scheduledAt});
+    }
+  }
+  const coverPreview=(item,variant='A')=>
+    '/api/social-browser/projects/cover?projectRoot='+encodeURIComponent(item.projectRoot)+'&variant='+variant;
+  function renderImportRows(){
+    const list=$('publishImportRows');list.replaceChildren();
+    for(let index=0;index<importRows.length;index++){
+      const item=importRows[index],card=el('article','publish-import-row');
+      card.draggable=true;
+      card.dataset.index=String(index);
+      const preview=el('img','publish-import-thumb');
+      preview.src=coverPreview(item);preview.alt='Thumbnail sugerida de '+item.name;
+      const details=el('div','publish-import-content');
+      const header=el('div','publish-import-row-heading');
+      header.append(el('strong','',String(index+1).padStart(2,'0')+' · '+item.name),
+        el('span','publish-import-kind',item.kind==='short'?'Short · 12h':'Longo · 17h'));
+      const facts=el('p','publish-import-facts','Vídeo: '+item.videoName+' · Capa: '+item.coverAName+
+        (item.kind==='long'?' · Capa B: '+item.coverBName:''));
+      details.append(header,facts);
+      if(item.needsReview)details.append(el('p','publish-import-warning',item.warning));
+      const fields=el('div','publish-import-fields');
+      const titleField=el('label','','Título sugerido');
+      const titleInput=el('input');titleInput.type='text';titleInput.maxLength=150;titleInput.value=item.titleA;
+      titleInput.addEventListener('input',()=>{item.titleA=titleInput.value;});
+      titleField.append(titleInput);fields.append(titleField);
+      if(item.kind==='long'){
+        const bField=el('label','','Título B (opcional agora; revisar depois)');
+        const bInput=el('input');bInput.type='text';bInput.maxLength=150;
+        bInput.value=item.titleB||'';
+        bInput.placeholder='Será criada uma versão provisória para editar';
+        bInput.addEventListener('input',()=>{item.titleB=bInput.value;});
+        bField.append(bInput);fields.append(bField);
+      }
+      const dateField=el('label','','Data e horário');
+      const dateInput=el('input');dateInput.type='datetime-local';dateInput.value=item.scheduledAt;
+      dateInput.addEventListener('change',()=>{
+        item.scheduledAt=dateInput.value;item.manualDate=true;
+        recalculateImportDates();renderImportRows();
+      });
+      dateField.append(dateInput);fields.append(dateField);details.append(fields);
+      const actions=el('div','publish-import-row-actions');
+      const mk=(label,delta)=>{
+        const b=el('button','btn btn-secondary btn-sm',label);b.type='button';
+        b.disabled=index+delta<0||index+delta>=importRows.length;
+        b.onclick=()=>{
+          const [row]=importRows.splice(index,1);
+          importRows.splice(index+delta,0,row);
+          recalculateImportDates();renderImportRows();
+        };
+        return b;
+      };
+      actions.append(el('span','publish-import-drag','⠿ Arrastar'),mk('↑',-1),mk('↓',1));
+      card.append(preview,details,actions);
+      card.addEventListener('dragstart',event=>{
+        draggedImport=index;event.dataTransfer.effectAllowed='move';
+        event.dataTransfer.setData('text/plain',String(index));
+      });
+      card.addEventListener('dragover',event=>{event.preventDefault();event.dataTransfer.dropEffect='move';});
+      card.addEventListener('drop',event=>{
+        event.preventDefault();
+        const from=draggedImport;draggedImport=null;
+        if(!Number.isInteger(from)||from===index||from<0||from>=importRows.length)return;
+        const [row]=importRows.splice(from,1);
+        importRows.splice(index,0,row);
+        recalculateImportDates();renderImportRows();
+      });
+      card.addEventListener('dragend',()=>{draggedImport=null;});
+      list.append(card);
+    }
+    $('publishImportConfirm').hidden=!importRows.length;
+    $('publishImportConfirm').textContent='＋ Confirmar e adicionar '+importRows.length+' vídeo(s)';
+  }
+  $('publishImportScan').onclick=async()=>{
+    const button=$('publishImportScan');button.disabled=true;
+    try{
+      const folders=[...new Set($('publishImportPaths').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean))];
+      if(!folders.length)throw Error('Selecione pelo menos uma pasta de projeto.');
+      importMessage('Analisando os projetos e suas capas...');
+      const data=await post('/api/social-browser/projects/preview',{folders});
+      const skipped=$('publishImportSkipped');skipped.replaceChildren();
+      for(const issue of data.skipped||[])skipped.append(el('p','',issue.folder+' — '+issue.reason));
+      for(const issue of (data.items||[]).filter(x=>x.alreadyImported))
+        skipped.append(el('p','',issue.name+' — já importado anteriormente.'));
+      skipped.hidden=!skipped.children.length;
+      importRows=(data.items||[]).filter(x=>!x.alreadyImported).map(x=>({
+        ...x,titleA:x.name,titleB:'',scheduledAt:'',manualDate:false
+      }));
+      if(!importRows.length)throw Error('Nenhum projeto novo pronto para importar. Confira os avisos.');
+      await loadDrafts();recalculateImportDates();renderImportRows();
+      $('publishImportPick').hidden=true;$('publishImportReview').hidden=false;
+      importMessage(importRows.length+' vídeo(s) pronto(s). Arraste para mudar a ordem e revise as datas.');
+    }catch(error){importMessage(error.message,true);}
+    finally{button.disabled=false;}
+  };
+  $('publishImportConfirm').onclick=async()=>{
+    if(importBusy||!importRows.length)return;
+    importBusy=true;$('publishImportConfirm').disabled=true;
+    try{
+      importMessage('Copiando vídeos e imagens para sua lista local...');
+      const entries=importRows.map(x=>({
+        projectRoot:x.projectRoot,scheduledAt:x.scheduledAt,titleA:x.titleA,titleB:x.titleB
+      }));
+      const result=await post('/api/social-browser/projects/import',{entries});
+      await loadDrafts();
+      selectedIds=new Set(result.items.map(x=>x.id));
+      renderDrafts();importDialog.close();
+      status(result.items.length+' projeto(s) importado(s). Confira os cartões e edite títulos ou capas A/B antes da publicação.');
+    }catch(error){importMessage(error.message,true);}
+    finally{importBusy=false;$('publishImportConfirm').disabled=false;}
+  };
   function updateSelection(){
     selectedIds=new Set([...selectedIds].filter(id=>drafts.some(d=>d.id===id)));
     const count=selectedIds.size;
@@ -384,6 +540,7 @@
       for(const p of item.platforms||[])chips.append(el('span','publish-chip platform-'+p,names[p]||p));
       if(item.scheduledAt)chips.append(el('span','publish-chip','◷ '+item.scheduledAt.replace('T',' · ')));
       if(item.titleB)chips.append(el('span','publish-chip','A/B: 2 títulos + 2 capas'));
+      if(item.needsReview)chips.append(el('span','publish-chip publish-import-warning-chip','⚠ Revisar capas e títulos A/B'));
       for(const p of platforms){
         const result=socialResults[item.id]?.[p];
         if(!result)continue;
