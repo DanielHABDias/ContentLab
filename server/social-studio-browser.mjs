@@ -115,7 +115,11 @@ export async function openSocialStudioWindow({config,platforms,profile=SOCIAL_ST
   if(!control){
     fresh=true;
     n=await port();
-    const args=[...cmd.args,'--remote-debugging-port='+n,'--remote-debugging-address=127.0.0.1',
+    // No macOS, "open -a" reutiliza o Chrome pessoal já aberto;
+    // "-n" força uma instância separada com o perfil persistente do crawler.
+    const baseArgs=cmd.command==='open'&&cmd.args[0]==='-a'?
+      ['-n',...cmd.args]:cmd.args;
+    const args=[...baseArgs,'--remote-debugging-port='+n,'--remote-debugging-address=127.0.0.1',
       '--remote-allow-origins=http://127.0.0.1:'+n,'--user-data-dir='+profile,'--no-first-run'];
     const child=launch(cmd.command,args,{detached:true,stdio:'ignore',windowsHide:false,shell:false});
     await new Promise((resolve,reject)=>{child.once('error',reject);child.once('spawn',resolve);});
@@ -131,7 +135,7 @@ export async function openSocialStudioWindow({config,platforms,profile=SOCIAL_ST
     const used=new Set();
     const forPlatform=platform=>pages.find(t=>{
       if(used.has(t.targetId))return false;
-      try{return new URL(t.url).hostname===new URL(urls[platform]).hostname;}
+      try{return HOSTS[platform].includes(new URL(t.url).hostname.toLowerCase());}
       catch{return false;}
     });
     for(const platform of ordered){
