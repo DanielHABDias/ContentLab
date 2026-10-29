@@ -199,6 +199,7 @@ try{
           kind:form.get('kind'),titleA:form.get('titleA'),titleB:form.get('titleB'),description:form.get('description'),
           tags:form.get('tags').split(',').map(x=>x.trim()).filter(Boolean),
           platforms:JSON.parse(form.get('platforms')),fileName:form.get('video').name,scheduledAt:form.get('scheduledAt'),
+          createdAt:new Date().toISOString(),
           media:{video:'video.mp4',coverA:'coverA.png',coverB:form.get('kind')==='long'?'coverB.png':null}};
         items.unshift(item);
         return Promise.resolve(new Response(JSON.stringify({item}),{status:201,headers:{'Content-Type':'application/json'}}));
@@ -209,7 +210,8 @@ try{
         const item={...items[index],kind:form.get('kind'),titleA:form.get('titleA'),titleB:form.get('titleB'),
           description:form.get('description'),tags:form.get('tags').split(',').filter(Boolean),
           platforms:JSON.parse(form.get('platforms')),scheduledAt:form.get('scheduledAt'),
-          fileName:form.get('video')?.name||items[index].fileName};
+          fileName:form.get('video')?.name||items[index].fileName,
+          updatedAt:new Date().toISOString()};
         items[index]=item;
         return Promise.resolve(new Response(JSON.stringify({item}),{status:200,headers:{'Content-Type':'application/json'}}));
       }else if(endpoint==='/api/social-browser/projects/preview'){
