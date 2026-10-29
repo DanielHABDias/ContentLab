@@ -226,10 +226,33 @@ export async function prepareYouTubeSchedule(cdp,value,{delayMs=YOUTUBE_ACTION_D
     'ytcp-date-time-picker input[type="time"]','input[type="time"]',
     'ytcp-date-time-picker input[aria-label*="Time"]',
     'ytcp-date-time-picker input[aria-label*="Hora"]'];
-  const date=await cdp.eval(setField(dates,parts.date)).catch(()=>false);
-  if(!date)return false;
+  let date=await cdp.eval(setField(dates,parts.date)).catch(()=>false);
+  if(!date){
+    // O YouTube frequentemente usa #datepicker-trigger em vez de input[type=date].
+    const opened=await cdp.eval(clickSelector(['#datepicker-trigger',
+      'ytcp-datetime-picker #datepicker-trigger'])).catch(()=>false);
+    if(!opened)return false;
+    await pauseForStudio(delayMs);
+    const locale=await cdp.eval('navigator.language').catch(()=>'en-US');
+    const [year,month,day]=parts.date.split('-');
+    const formatted=/^(pt|es|fr|de|it)/i.test(String(locale))?
+      day+'/'+month+'/'+year:month+'/'+day+'/'+year;
+    date=await cdp.eval(setField(['ytcp-date-picker tp-yt-paper-dialog input',
+      'ytcp-date-picker input[type="text"]','ytcp-date-picker input'],formatted)).catch(()=>false);
+    if(!date)return false;
+    await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
+    await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
+  }
   await pauseForStudio(delayMs);
-  const time=await cdp.eval(setField(times,parts.time)).catch(()=>false);
+  let time=await cdp.eval(setField(times,parts.time)).catch(()=>false);
+  if(!time){
+    const opened=await cdp.eval(clickSelector(['#time-of-day-trigger',
+      'ytcp-datetime-picker #time-of-day-trigger'])).catch(()=>false);
+    if(!opened)return false;
+    await pauseForStudio(delayMs);
+    time=await cdp.eval(clickText([parts.time],
+      ['ytcp-time-of-day-picker tp-yt-paper-item','tp-yt-paper-item'])).catch(()=>false);
+  }
   if(!time)return false;
   await pauseForStudio(delayMs);
   return true; // Não clica em "Programar", "Salvar" nem "Publicar".

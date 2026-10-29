@@ -48,7 +48,28 @@ test('agendamento seleciona somente cartão/radio Schedule e não botão final',
 test('falhas de campos do calendário interrompem com revisão manual, sem publicar',async()=>{
   const cdp={async eval(expression){
     if(expression.includes('ytcp-datetime-picker')&&expression.includes('2031-05-04'))return false;
+    if(expression.includes('#datepicker-trigger'))return false;
     return true;
   }};
   assert.equal(await prepareYouTubeSchedule(cdp,'2031-05-04T12:00',{delayMs:0}),false);
+});
+
+test('se o Studio usar calendário e menu de horário próprios, tentar ambos antes de pedir revisão',async()=>{
+  const visited=[];
+  const cdp={
+    async eval(expression){
+      visited.push(expression);
+      if(expression.includes('ytcp-datetime-picker')&&expression.includes('2031-05-04'))return false;
+      if(expression.includes('ytcp-datetime-picker')&&expression.includes('17:00'))return false;
+      if(expression==='navigator.language')return 'pt-BR';
+      return true;
+    },
+    async send(method,params){visited.push(method+':'+params.type);return {};}
+  };
+  assert.equal(await prepareYouTubeSchedule(cdp,'2031-05-04T17:00',{delayMs:0}),true);
+  assert.ok(visited.some(x=>x.includes('#datepicker-trigger')));
+  assert.ok(visited.some(x=>x.includes('04/05/2031')));
+  assert.ok(visited.some(x=>x.includes('#time-of-day-trigger')));
+  assert.ok(visited.some(x=>x.includes('ytcp-time-of-day-picker')));
+  assert.equal(visited.filter(x=>x.startsWith('Input.dispatchKeyEvent')).length,2);
 });
