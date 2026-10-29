@@ -119,6 +119,30 @@ async function setFile(cdp,file,{role='video'}={}){
   await cdp.send('DOM.setFileInputFiles',{files:[file],objectId:remote.objectId});
   await cdp.send('Runtime.releaseObject',{objectId:remote.objectId}).catch(()=>{});
 }
+async function setLastImageFile(cdp,file){
+  const remote=await cdp.eval(`(()=>{${browserDOM}
+    const inputs=nodes.filter(n=>n.matches?.('input[type="file"]')&&/image|png|jpe?g|webp/i.test(n.accept||''));
+    return inputs.at(-1)||null;})()`,false);
+  if(!remote?.objectId)return false;
+  try{await cdp.send('DOM.setFileInputFiles',{files:[file],objectId:remote.objectId});}
+  finally{await cdp.send('Runtime.releaseObject',{objectId:remote.objectId}).catch(()=>{});}
+  return true;
+}
+const scheduleParts=value=>{
+  const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(String(value||''));
+  return m?{date:m[1]+'-'+m[2]+'-'+m[3],time:m[4]+':'+m[5]}:null;
+};
+async function prepareYouTubeSchedule(cdp,value){
+  const parts=scheduleParts(value);if(!parts)return false;
+  for(let step=0;step<3;step++){
+    if(!await waitUntil(cdp,clickText(['próximo','next']),7000))return false;
+    await sleep(500);
+  }
+  if(!await waitUntil(cdp,clickText(['programar','schedule']),7000))return false;
+  const date=await cdp.eval(setField(['input[type="date"]','input[aria-label*="data"]','input[aria-label*="date"]'],parts.date)).catch(()=>false);
+  const time=await cdp.eval(setField(['input[type="time"]','input[aria-label*="hora"]','input[aria-label*="time"]'],parts.time)).catch(()=>false);
+  return Boolean(date&&time);
+}
 const readActivePort=profile=>{
   const file=path.join(profile,'DevToolsActivePort');
   try{
@@ -193,9 +217,23 @@ export async function prepareYouTubeUpload(browser,video,{videoPath,coverAPath,c
     try{await setFile(cdp,coverAPath,{role:'image'});}
     catch{warnings.push('Thumbnail principal: revise e carregue manualmente no Studio, se necessário.');}
   }
-  if(video.kind==='long'&&coverBPath)warnings.push('Teste A/B: configure o título B e a segunda thumbnail manualmente na opção Teste A/B do Studio (quando disponível).');
+  if(video.kind==='long'&&coverBPath){
+    progress('Tentando preparar o teste A/B de título e thumbnail...');
+    const opened=await cdp.eval(clickText(['teste a/b','a/b test'])).catch(()=>false);
+    if(opened){
+      await sleep(500);
+      await cdp.eval(clickText(['título e miniatura','title and thumbnail'])).catch(()=>false);
+      const secondTitle=await cdp.eval(setField([
+        '[role="dialog"] input[type="text"]','[role="dialog"] [contenteditable="true"]',
+        'ytcp-dialog input[type="text"]','ytcp-dialog [contenteditable="true"]'],video.titleB||'')).catch(()=>false);
+      const secondCover=await setLastImageFile(cdp,coverBPath).catch(()=>false);
+      if(!secondTitle||!secondCover)warnings.push('Teste A/B: a janela abriu, mas confira manualmente o título B e a segunda thumbnail.');
+    }else warnings.push('Teste A/B: o recurso não apareceu nesta conta; configure título B e segunda thumbnail manualmente.');
+  }
   if(video.kind==='short')warnings.push('Shorts não têm teste A/B de títulos/miniaturas; verifique a thumbnail do Short no Studio.');
-  warnings.push('Revise manualmente: público infantil, uso de IA/conteúdo alterado, promoção paga, direitos autorais, tela final e agendamento ('+(video.scheduledAt||'sem data')+').');
+  if(video.scheduledAt&&!await prepareYouTubeSchedule(cdp,video.scheduledAt))
+    warnings.push('Agendamento: não consegui preencher os controles atuais; use '+video.scheduledAt.replace('T',' às ')+'.');
+  warnings.push('Revise manualmente: público infantil, uso de IA/conteúdo alterado, promoção paga, direitos autorais, tela final e horário. Cards e vídeo relacionado permanecem manuais.');
   return {status:'awaiting_review',warnings,videoUrl:await detectYouTubeLink(cdp)};
 }
 export async function detectYouTubeLink(cdp){

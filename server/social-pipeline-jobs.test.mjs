@@ -6,7 +6,7 @@ import path from 'node:path';
 import {createSocialDraft,listSocialDrafts} from './social-drafts.mjs';
 import {buildSocialTasks,startSocialPipeline,getSocialPipeline,resumeSocialPipeline,
   confirmSocialPipeline,cancelSocialPipeline,readSocialPipelineResults} from './social-pipeline-jobs.mjs';
-import {socialCaption,normalizeSocialPostUrl,validateScheduleWindow} from './social-platform-crawlers.mjs';
+import {socialCaption,normalizeSocialPostUrl,validateScheduleWindow,scheduleParts} from './social-platform-crawlers.mjs';
 import {validateStudioUrl,StudioLoginRequired,StudioChanged} from './social-studio-browser.mjs';
 const mp4=Buffer.from([0,0,0,20,102,116,121,112,105,115,111,109,0,0,0,0]);
 const png=Buffer.from([137,80,78,71,13,10,26,10,0,0,0,0,73,72,68,82]);
@@ -60,6 +60,8 @@ test('TikTok avisa sobre janela de agendamento e Instagram indica revisão deskt
   assert.match(validateScheduleWindow('tiktok','2026-12-01T12:00',now),/10 dias/);
   assert.equal(validateScheduleWindow('tiktok','2026-11-02T12:00',now),null);
   assert.match(validateScheduleWindow('instagram','2026-11-02T12:00',now),/Meta Business Suite/);
+  assert.deepEqual(scheduleParts('2026-11-02T12:35'),{date:'2026-11-02',time:'12:35'});
+  assert.equal(scheduleParts('02/11/2026 12:35'),null);
 });
 test('fila preserva ordem vídeo por vídeo, alternando redes do mesmo vídeo',async t=>{
   const f=fixture(t);

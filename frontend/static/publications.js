@@ -6,7 +6,6 @@
   const platforms=['youtube','tiktok','instagram'],names={youtube:'YouTube',tiktok:'TikTok',instagram:'Instagram'};
   let settings=null,ready=false,opened=new Set(),loading=false,drafts=[],videoUrl=null,coverUrls=[],captured=null,selectedVideo=null;
   let editingId=null,selectedIds=new Set(),session=null;
-  let youtubeJobId=null,youtubePoll=null,youtubeResults={};
   let socialJobId=null,socialPoll=null,socialResults={},socialTaskKey=null;
   const notice=(message,error=false)=>{
     $('socialSetupStatus').textContent=message||'';
@@ -350,8 +349,6 @@
     $('publishSelectionBar').hidden=count===0;
     $('publishSelectedCount').textContent=String(count);
     $('publishPrepareBrowser').disabled=count===0;
-    const ytReady=settings?.confirmed.youtube===true&&!changed()&&drafts.some(d=>selectedIds.has(d.id)&&d.platforms?.includes('youtube'));
-    $('publishYoutubeStart').disabled=!ytReady;
     $('publishSocialStart').disabled=count===0||!settings?.browser||changed();
   }
   $('publishClearSelection').onclick=()=>{selectedIds.clear();renderDrafts();};
@@ -394,12 +391,6 @@
           const link=el('a','publish-youtube-result','↗ '+names[p]+' · '+(result.status==='scheduled'?'Agendado':'Publicado'));
           link.href=result.url;link.target='_blank';link.rel='noopener noreferrer';chips.append(link);
         }else if(result.status==='scheduled')chips.append(el('span','publish-chip','◷ '+names[p]+' · Agendado (sem link)'));
-      }
-      if(youtubeResults[item.id]?.url){
-        const youtubeLink=el('a','publish-youtube-result','▶ Publicação no YouTube');
-        youtubeLink.href=youtubeResults[item.id].url;
-        youtubeLink.target='_blank';youtubeLink.rel='noopener noreferrer';
-        chips.append(youtubeLink);
       }
       for(const t of (item.tags||[]).slice(0,4))chips.append(el('span','publish-tag','#'+t));
       content.append(chips);
@@ -578,83 +569,6 @@
   request('/api/social-browser/pipeline/results').then(data=>{
     socialResults=data.results||{};renderDrafts();
   }).catch(()=>{});
-  async function renderYouTubeJob(job){
-    youtubeJobId=job.id;
-    $('publishYoutubePanel').hidden=false;
-    $('publishYoutubeTitle').textContent=job.current?.title||'Fila YouTube concluída';
-    $('publishYoutubeProgress').textContent=job.message||'';
-    $('publishYoutubeCounter').textContent=Math.min(job.index+1,job.total)+' / '+job.total+' · '+job.status.replaceAll('_',' ');
-    const warnings=$('publishYoutubeWarnings');warnings.replaceChildren();
-    for(const message of job.warnings||[])warnings.append(el('p','',message));
-    $('publishYoutubeLoginActions').hidden=job.status!=='awaiting_login';
-    $('publishYoutubeReviewActions').hidden=!['awaiting_review','needs_manual'].includes(job.status);
-    $('publishYoutubeCancel').disabled=['done','cancelled'].includes(job.status);
-    $('publishYoutubeUrl').value=job.videoUrl||'';
-    const completed=$('publishYoutubeCompleted');completed.replaceChildren();
-    for(const item of job.completed||[]){
-      const li=el('li','');
-      const a=el('a','',item.title+' · ver no YouTube');
-      a.href=item.url;a.target='_blank';a.rel='noopener noreferrer';li.append(a);completed.append(li);
-    }
-    if(job.status==='done'||job.status==='cancelled'){
-      if(youtubePoll){clearInterval(youtubePoll);youtubePoll=null;}
-      const response=await request('/api/social-browser/youtube/results').catch(()=>({results:youtubeResults}));
-      youtubeResults=response.results||{};
-      renderDrafts();
-    }
-  }
-  async function pollYouTube(){
-    if(!youtubeJobId)return;
-    try{
-      const data=await request('/api/social-browser/youtube/jobs/'+encodeURIComponent(youtubeJobId));
-      await renderYouTubeJob(data.job);
-    }catch(error){status(error.message,true);if(youtubePoll){clearInterval(youtubePoll);youtubePoll=null;}}
-  }
-  $('publishYoutubeStart').onclick=async()=>{
-    const ids=drafts.filter(d=>selectedIds.has(d.id)&&d.platforms?.includes('youtube')).reverse().map(d=>d.id);
-    try{
-      $('publishYoutubeStart').disabled=true;
-      const data=await request('/api/social-browser/youtube/jobs',{
-        method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({draftIds:ids})
-      });
-      youtubeJobId=data.job.id;
-      $('publishYoutubePanel').hidden=false;
-      await renderYouTubeJob(data.job);
-      if(youtubePoll)clearInterval(youtubePoll);
-      youtubePoll=setInterval(pollYouTube,1400);
-      await pollYouTube();
-    }catch(error){status(error.message,true);}
-    finally{updateSelection();}
-  };
-  $('publishYoutubeResume').onclick=async()=>{
-    if(!youtubeJobId)return;
-    try{
-      const data=await request('/api/social-browser/youtube/jobs/'+encodeURIComponent(youtubeJobId)+'/resume',{method:'POST'});
-      await renderYouTubeJob(data.job);
-    }catch(error){status(error.message,true);}
-  };
-  $('publishYoutubeConfirm').onclick=async()=>{
-    if(!youtubeJobId)return;
-    try{
-      const link=$('publishYoutubeUrl').value.trim();
-      if(!window.confirm('Você concluiu a publicação ou programação deste vídeo no YouTube Studio e conferiu o link?'))return;
-      const data=await request('/api/social-browser/youtube/jobs/'+encodeURIComponent(youtubeJobId)+'/complete',{
-        method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({videoUrl:link})
-      });
-      await renderYouTubeJob(data.job);
-      const results=await request('/api/social-browser/youtube/results');youtubeResults=results.results||{};
-      renderDrafts();
-    }catch(error){status(error.message,true);}
-  };
-  $('publishYoutubeCancel').onclick=async()=>{
-    if(!youtubeJobId)return;
-    if(!window.confirm('Interromper a fila do YouTube? O upload já iniciado não será apagado do Studio.'))return;
-    try{
-      const data=await request('/api/social-browser/youtube/jobs/'+encodeURIComponent(youtubeJobId)+'/cancel',{method:'POST'});
-      await renderYouTubeJob(data.job);
-    }catch(error){status(error.message,true);}
-  };
-  request('/api/social-browser/youtube/results').then(data=>{youtubeResults=data.results||{};renderDrafts();}).catch(()=>{});
   $('publishPrepareBrowser').onclick=async()=>{
     const button=$('publishPrepareBrowser');button.disabled=true;
     try{

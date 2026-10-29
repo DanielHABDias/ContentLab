@@ -383,19 +383,8 @@ try{
   await evaluate('document.querySelectorAll(".publish-draft-picker input")[0].click()');
   assert.equal(await evaluate('document.getElementById("publishSelectionBar").hidden'),false,
     'Selecting an item reveals publication preparation');
-  assert.equal(await evaluate('document.getElementById("publishYoutubeStart").disabled'),false,
-    'Confirmed YouTube destination enables assisted upload');
-  await evaluate('document.getElementById("publishYoutubeStart").click()');
-  await wait(()=>evaluate('document.getElementById("publishYoutubePanel").hidden===false'),
-    'Assisted upload panel opens');
-  assert.equal(await evaluate('document.getElementById("publishYoutubeReviewActions").hidden'),false,
-    'YouTube workflow pauses for manual declarations and final review');
-  await evaluate('document.getElementById("publishYoutubeUrl").value="https://www.youtube.com/watch?v=ABCdef12345"');
-  await evaluate('window.__confirmOriginal=window.confirm;window.confirm=()=>true;document.getElementById("publishYoutubeConfirm").click()');
-  await wait(()=>evaluate('window.__ytTestJob?.status==="done"'),'Only confirmation advances YouTube queue');
-  await wait(()=>evaluate('!!document.querySelector(".publish-youtube-result")'),
-    'Confirmed YouTube link returns to the saved video card');
-  await evaluate('window.confirm=window.__confirmOriginal');
+  assert.equal(await evaluate('document.getElementById("publishYoutubeStart")===null'),true,
+    'The duplicate YouTube-only action is not exposed');
   assert.equal(await evaluate('document.getElementById("publishSocialStart").disabled'),false,
     'Universal pipeline is enabled when a confirmed network is selected');
   await evaluate('document.getElementById("publishSocialStart").click()');

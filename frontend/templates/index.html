@@ -491,7 +491,7 @@
 
     <div id="panel-publications" class="workspace-panel hidden" role="tabpanel" aria-labelledby="tab-publications" hidden>
       <div class="workspace-intro"><span class="eyebrow">REDES SOCIAIS / PUBLICAÇÃO</span><h2>Publicações.<br><span class="heading-muted">Prepare suas contas primeiro.</span></h2>
-      <p>O Content Lab abre as plataformas no seu navegador. Nenhum vídeo é enviado automaticamente nesta etapa.</p></div>
+      <p>O Content Lab prepara os dados, abre uma janela visível e conduz o envio assistido. Publicar ou agendar continua exigindo sua confirmação final.</p></div>
       <section id="publishSetupGate" class="block social-setup-gate" aria-label="Configuração inicial das redes sociais">
         <span class="eyebrow">PRIMEIRO ACESSO</span><h3>Configure o navegador e confirme sua primeira rede.</h3>
         <p>Escolha seu navegador, personalize as URLs e confira o login na rede que quiser usar. Uma única rede confirmada já libera esta área.</p>
@@ -500,7 +500,7 @@
       <section id="publishReady" class="publish-board" aria-label="Preparar lista de publicações" hidden>
         <header class="publish-board-head">
           <div><span class="eyebrow">ESTÚDIO DE PUBLICAÇÕES</span><h3>Seu próximo conteúdo começa aqui<span class="publish-accent">.</span></h3>
-          <p>Monte sua fila criativa e deixe tudo pronto. Nada será publicado ou agendado nas redes nesta etapa.</p></div>
+          <p>Monte a fila, defina data e horário e deixe o Content Lab preencher o que cada plataforma permitir. A confirmação final permanece com você.</p></div>
           <button id="publishManageAccounts" class="publish-manage" type="button" title="Gerenciar perfis e URLs">⚙ Gerenciar redes</button>
         </header>
         <div class="publish-connected-bar" aria-label="Redes sociais confirmadas">
@@ -517,7 +517,6 @@
           <div><strong><span id="publishSelectedCount">0</span> vídeo(s) selecionado(s)</strong><small>Envio assistido na sequência vídeo → YouTube, TikTok e Instagram, conforme cada destino marcado.</small></div>
           <button id="publishSocialStart" class="btn btn-primary" type="button">▶ Enviar nas redes · assistido</button>
           <button id="publishPrepareBrowser" class="btn btn-secondary" type="button">↗ Apenas abrir redes</button>
-          <button id="publishYoutubeStart" class="btn btn-secondary" type="button">▶ Somente YouTube</button>
           <button id="publishClearSelection" class="btn btn-secondary" type="button">Limpar seleção</button>
         </div>
         <section id="publishSocialPanel" class="publish-youtube-panel publish-social-panel" hidden aria-label="Fila assistida das redes sociais">
@@ -529,7 +528,7 @@
           <div id="publishSocialTabs" class="publish-social-tabs" aria-label="Abas do navegador"></div>
           <div id="publishSocialWarnings" class="publish-youtube-warnings"></div>
           <div id="publishSocialLoginActions" hidden>
-            <p>Entre na conta indicada na janela visível e confira se está no perfil correto. O Content Lab usa um perfil de automação local separado.</p>
+            <p>Entre na conta indicada na janela visível e confira se está no perfil correto. Esta sessão fica salva para os próximos envios.</p>
             <button id="publishSocialResume" type="button" class="btn btn-secondary">✓ Já fiz login · continuar</button>
           </div>
           <div id="publishSocialReviewActions" hidden>
@@ -547,25 +546,6 @@
           </div>
           <div class="publish-youtube-controls"><button id="publishSocialCancel" type="button" class="btn btn-secondary btn-sm">Interromper fila</button></div>
           <ol id="publishSocialCompleted" class="publish-youtube-completed"></ol>
-        </section>
-        <section id="publishYoutubePanel" class="publish-youtube-panel" hidden aria-label="Automação assistida YouTube">
-          <div class="publish-youtube-head"><div><span class="eyebrow">YOUTUBE STUDIO / ENVIO ASSISTIDO</span>
-            <h4 id="publishYoutubeTitle">Preparando navegador...</h4>
-            <p id="publishYoutubeProgress" role="status" aria-live="polite"></p></div>
-            <span id="publishYoutubeCounter" class="publish-youtube-counter"></span></div>
-          <div id="publishYoutubeWarnings" class="publish-youtube-warnings"></div>
-          <div id="publishYoutubeLoginActions" hidden>
-            <p>Entre na sua conta do YouTube na janela visível. O Content Lab usa um perfil local separado para automação.</p>
-            <button id="publishYoutubeResume" class="btn btn-secondary" type="button">✓ Já fiz login · continuar</button>
-          </div>
-          <div id="publishYoutubeReviewActions" hidden>
-            <p><strong>Revise no YouTube Studio:</strong> público, uso de IA e conteúdo alterado, promoções, direitos autorais, tela final, teste A/B quando disponível e data/hora de publicação. Finalize manualmente com <strong>Publicar</strong> ou <strong>Programar</strong> e só depois confirme aqui.</p>
-            <label for="publishYoutubeUrl">Link do vídeo concluído no YouTube</label>
-            <div class="publish-youtube-link-row"><input id="publishYoutubeUrl" type="url" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off">
-              <button id="publishYoutubeConfirm" class="btn btn-primary" type="button">✓ Concluí no YouTube · próximo vídeo</button></div>
-          </div>
-          <div class="publish-youtube-controls"><button id="publishYoutubeCancel" class="btn btn-secondary btn-sm" type="button">Interromper fila</button></div>
-          <ol id="publishYoutubeCompleted" class="publish-youtube-completed"></ol>
         </section>
         <div id="publishDraftList" class="publish-draft-list" aria-live="polite"></div>
         <section id="publishSessionPanel" class="publish-session-panel" hidden aria-label="Abas preparadas no navegador">
@@ -635,7 +615,7 @@
               </div>
               <p id="publishDestinationHint" class="helper-text">Somente redes com login confirmado são selecionáveis.</p>
               <p id="publishUnavailableWarning" class="publish-destination-warning" role="alert" hidden></p>
-              <label class="publish-form-field publish-date-field" for="publishScheduleAt"><span>Data e horário desejados</span><input id="publishScheduleAt" name="scheduledAt" type="datetime-local"><small>Planejamento local, sem disparo automático por enquanto.</small></label>
+              <label class="publish-form-field publish-date-field" for="publishScheduleAt"><span>Data e horário desejados</span><input id="publishScheduleAt" name="scheduledAt" type="datetime-local"><small>O crawler tentará aplicar este horário; confirme-o no site antes de finalizar.</small></label>
               <div class="publish-schedule-note"><span class="publish-schedule-sparkle">✦</span><span id="publishScheduleAdvice">O próximo horário será sugerido automaticamente.</span><button id="publishScheduleReset" type="button">↻ Reaplicar sugestão</button></div>
             </section>
           </div>

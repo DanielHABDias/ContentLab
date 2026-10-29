@@ -36,6 +36,26 @@ export function validateScheduleWindow(platform,scheduledAt,now=new Date()){
     return 'O agendamento pelo Instagram no desktop pode exigir uma conta profissional vinculada ao Meta Business Suite. Verifique manualmente.';
   return null;
 }
+export function scheduleParts(value){
+  const match=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(String(value||''));
+  return match?{date:match[1]+'-'+match[2]+'-'+match[3],time:match[4]+':'+match[5]}:null;
+}
+async function applySchedule(cdp,platform,scheduledAt){
+  const parts=scheduleParts(scheduledAt);if(!parts)return false;
+  if(platform==='instagram')await cdp.eval(clickText(['configurações avançadas','advanced settings'],
+    ['button','[role="button"]','div[role="button"]'])).catch(()=>false);
+  const toggled=await cdp.eval(clickText(['programar esta publicação','programar','schedule this post','schedule'],
+    ['button','label','[role="button"]','div[role="button"]'])).catch(()=>false);
+  if(!toggled)return false;
+  const date=await waitFor(cdp,setText(['input[type="date"]','input[name*="date"]','input[aria-label*="data"]','input[aria-label*="date"]'],parts.date),5000);
+  const time=await waitFor(cdp,setText(['input[type="time"]','input[name*="time"]','input[aria-label*="hora"]','input[aria-label*="time"]'],parts.time),5000);
+  return Boolean(date&&time);
+}
+const enableOption=labels=>'(()=>{'+DEEP_DOM+'const labels='+JSON.stringify(labels.map(x=>x.toLowerCase()))+
+  ";const text=n=>(n.innerText||n.getAttribute?.('aria-label')||'').trim().toLowerCase();"+
+  "const label=nodes.find(n=>n.getClientRects().length&&labels.some(v=>text(n).includes(v)));if(!label)return false;"+
+  "const control=label.matches?.('input,[role=\"switch\"]')?label:label.querySelector?.('input,[role=\"switch\"]')||label.closest?.('label')?.querySelector?.('input,[role=\"switch\"]');"+
+  "if(control&&(control.checked||control.getAttribute('aria-checked')==='true'))return true;(control||label).click();return true;})()";
 const hasLogin=platform=>'(()=>{const url=location.href.toLowerCase();'+
   'return url.includes("/login")||url.includes("/accounts/login")||url.includes("/signup");})()';
 const imageNotice=platform=>platform==='tiktok'?
@@ -79,6 +99,8 @@ export async function prepareTikTokUpload(session,item,{videoPath,coverAPath,pro
   }
   const schedule=validateScheduleWindow('tiktok',item.scheduledAt);
   if(schedule)warnings.push(schedule);
+  else if(item.scheduledAt&&!await applySchedule(cdp,'tiktok',item.scheduledAt))
+    warnings.push('Agendamento: não encontrei os controles atuais do TikTok; aplique a data e o horário preparados no Content Lab.');
   warnings.push('Confirme visibilidade, direitos autorais, rotulagem de IA, conteúdo comercial, capa e agendamento antes de clicar em Publicar/Agendar.');
   return {status:'awaiting_review',warnings,videoUrl:null};
 }
@@ -97,6 +119,8 @@ export async function prepareInstagramUpload(session,item,{videoPath,coverAPath,
   if(!await waitFor(cdp,fileSelector,12000))throw new StudioChanged('Instagram','o seletor de mídia');
   progress('Carregando o vídeo para o Instagram...');
   if(!await uploadFile(cdp,videoPath))throw new StudioChanged('Instagram','o campo de arquivo de vídeo');
+  await cdp.eval(clickText(['selecionar corte','select crop','cortar'],['button','[role="button"]','div[role="button"]'])).catch(()=>false);
+  await cdp.eval(clickText(['original'],['button','[role="button"]','div[role="button"]'])).catch(()=>false);
   // Em desktop, o Instagram apresenta etapas de recorte e edição antes da legenda.
   const fields=['textarea[aria-label*="legenda"]','textarea[aria-label*="caption"]',
     '[contenteditable="true"][aria-label*="legenda"]','[contenteditable="true"][aria-label*="caption"]',
@@ -113,6 +137,10 @@ export async function prepareInstagramUpload(session,item,{videoPath,coverAPath,
   }
   if(!done)throw new StudioChanged('Instagram','a etapa de legenda (vídeo já selecionado)');
   const warnings=[];
+  await cdp.eval(clickText(['configurações avançadas','advanced settings'],
+    ['button','[role="button"]','div[role="button"]'])).catch(()=>false);
+  const likesHidden=await cdp.eval(enableOption(['ocultar número de curtidas e visualizações','hide like and view counts'])).catch(()=>false);
+  if(!likesHidden)warnings.push('Instagram: confira manualmente “Ocultar número de curtidas e visualizações”.');
   if(coverAPath&&fs.existsSync(coverAPath)){
     try{
       const doneCover=await uploadFile(cdp,coverAPath,{image:true});
@@ -121,6 +149,8 @@ export async function prepareInstagramUpload(session,item,{videoPath,coverAPath,
   }
   const schedule=validateScheduleWindow('instagram',item.scheduledAt);
   if(schedule)warnings.push(schedule);
+  if(item.scheduledAt&&!await applySchedule(cdp,'instagram',item.scheduledAt))
+    warnings.push('Agendamento: o Instagram não expôs os controles nesta conta; use a data e o horário preparados no Content Lab.');
   if(item.kind==='long')warnings.push('Instagram não executa o mesmo teste A/B de dois títulos/capas do YouTube. Revise a opção A, sem aplicar a alternativa B.');
   warnings.push('Confirme conta, público, parcerias e conteúdo de IA. Publique ou programe manualmente no Instagram/Meta Business Suite.');
   return {status:'awaiting_review',warnings,videoUrl:null};
