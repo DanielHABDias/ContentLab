@@ -331,7 +331,12 @@
   $('publishEmptyCard').onclick=()=>openComposer();
   $('publishComposerClose').onclick=closeComposer;
   $('publishComposerCancel').onclick=closeComposer;
-  $('publishComposerDialog').addEventListener('close',()=>{releaseVideo();editingId=null;});
+  $('publishComposerDialog').addEventListener('close',()=>{
+    // O evento close pode chegar depois de um novo showModal().
+    // Não limpar o ID de um vídeo que já está sendo editado no modal reaberto.
+    if($('publishComposerDialog').open)return;
+    releaseVideo();editingId=null;
+  });
   function el(tag,className,textValue){
     const item=document.createElement(tag);
     if(className)item.className=className;
