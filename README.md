@@ -79,75 +79,18 @@ Ferramentas avaliadas: [yt-dlp](https://github.com/yt-dlp/yt-dlp), [gallery-dl](
 
 Remotion concentra a renderização visual; o FFmpeg continua responsável por áudio, cortes e composição final. O código de servidor utiliza exclusivamente Node.js.
 
-## Conexões sociais gerenciadas e métricas ampliadas
+## Redes sociais — novo fluxo local (primeira etapa)
 
-Inspirado no desenho de provedores do projeto Postiz, mas com implementação original para o servidor Node local:
+As antigas integrações com **OAuth, Google Cloud, JSON de credenciais, tokens, envio automático e métricas via API** foram retiradas do aplicativo. A área **Publicações** foi reconstruída do zero e, nesta etapa, **não realiza uploads, agendamentos ou publicação automática**.
 
-- **Configurações:** cada cartão apresenta a identidade do perfil conectado (quando devolvida pelo serviço), suas permissões de acesso e o botão **Verificar conexão**, que consulta a API oficial para validar o perfil.
-- **Sessões:** YouTube, Instagram e TikTok renovam a autorização quando necessário, com deduplicação de solicitações de renovação simultâneas. Falhas que exigem novo consentimento ficam identificadas para reconexão; os tokens permanecem somente no backend local.
-- **Permissões:** novo consentimento inclui `yt-analytics.readonly` (YouTube), `instagram_business_manage_insights` (Instagram), `user.info.profile` e `user.info.stats` (TikTok). Se uma plataforma não conceder tudo, Configurações mostra o que faltou. Para atualizar permissões de contas conectadas anteriormente, clique **Reconectar**.
-- **YouTube Analytics:** dados diários do canal (visualizações, tempo assistido e inscrições), com gráfico histórico separado das visualizações dos vídeos recentes. A YouTube Analytics API precisa estar habilitada no projeto Google Cloud e a permissão aprovada.
-- **Instagram:** continua usando Instagram Login oficial; pede acesso a insights, tenta coletar estatísticas da conta e dos vídeos, mas não mostra números não concedidos pela Meta.
-- **TikTok:** complementa métricas de vídeos recentes com informações do perfil quando a API autoriza. Permissões extras dependem da aprovação do aplicativo TikTok; a falha dos dados opcionais não interrompe o restante do painel.
-- **Instagram em computador local:** adicionado `node server/instagram-bridge.mjs`, um servidor loopback restrito a um único callback, destinado a receber exclusivamente um túnel HTTPS na porta 5151. Veja [guia completo de conexão Instagram local](docs/INSTAGRAM_OAUTH_LOCAL.md). Não faça túnel para a porta 5000 do Content Lab.
+1. Abra **Redes sociais → Publicações**. Se ainda não tiver feito a configuração inicial, o Content Lab encaminha você para **Configurações → Redes sociais**.
+2. O aplicativo tenta identificar o navegador padrão do sistema e os navegadores instalados. Escolha o navegador: **Padrão do sistema**, ou um navegador detectado e disponível, como Chrome, Edge, Firefox ou Brave.
+3. Confira as três URLs propostas: **TikTok Studio** (`https://www.tiktok.com/tiktokstudio`), **Instagram** (`https://www.instagram.com/`) e **YouTube Studio** (`https://studio.youtube.com/`). Cada campo é editável: para múltiplos perfis Google, selecione o caminho/canal correto ou parâmetros de conta na URL do YouTube Studio; os demais serviços também podem utilizar caminhos para as contas desejadas. URLs são validadas para aceitar somente domínios HTTPS oficiais.
+4. Clique **Salvar navegador e URLs**. As preferências são gravadas no perfil do usuário, em `~/.contentlab/social-browser.json` (equivalente no diretório pessoal do Windows), sem senhas ou tokens.
+5. Para cada plataforma, clique **Abrir e verificar login**. O Content Lab abre o endereço no navegador escolhido. Confira você mesmo se a conta correta está conectada e volte para clicar em **Conferi: estou logado**. O aplicativo **não lê cookies nem verifica automaticamente a sessão**: o estado indica somente sua confirmação.
+6. Depois que os três logins forem confirmados, a aba **Publicações** é liberada. Por enquanto ela mostra o acesso rápido aos três sites e o link para alterar configurações; as ferramentas de postagem serão implementadas numa etapa futura.
 
-As plataformas ainda exigem aplicativos OAuth cadastrados e permissões concedidas pelos portais oficiais. Código aberto não transfere as credenciais comerciais nem as aprovações do Postiz. Não usamos web scraping nem importamos código AGPL do Postiz. Nenhuma autorização real ou publicação foi executada pelos testes automatizados.
-
-## Login com um clique e configuração assistida
-
-O uso normal não pede tokens nem senhas pessoais. Em **Configurações**, clique em **Conectar com Google**, **Conectar Instagram** ou **Conectar TikTok**. Se o aplicativo OAuth já tiver sido registrado, o Content Lab redireciona diretamente para a página oficial da rede; depois da autorização, recebe e renova credenciais de sessão automaticamente no servidor local.
-
-**Se ainda não estiver configurado**, o botão abre um assistente da própria plataforma com instruções passo a passo, links para o portal e a documentação oficiais, permissões necessárias e URL de retorno para copiar quando aplicável. Os campos técnicos só aparecem se você clicar em **Já tenho as credenciais do aplicativo** (ou expandir a Configuração avançada).
-
-- **YouTube / Google:** abra [Google Cloud Console](https://console.cloud.google.com/apis/credentials), ative YouTube Data API v3, configure a tela de consentimento e crie um cliente OAuth **App para computador**. Baixe o JSON da aplicação e selecione **Importar JSON do Google** no assistente. O Content Lab lê apenas o Client ID/Secret desse arquivo, salva localmente e abre a escolha de conta Google automaticamente. O fluxo usa PKCE. Não se importa um JSON de conta de serviço ou um token.
-- **Instagram:** abra [Meta for Developers](https://developers.facebook.com/apps/), configure **Instagram API with Instagram Login** para uma conta profissional e solicite as permissões `instagram_business_basic` e `instagram_business_content_publish`. É obrigatória uma URL de retorno **HTTPS**, encaminhada com segurança para o callback local do Content Lab; configure-a no portal e no assistente. Veja também a [documentação da Meta](https://www.postman.com/meta/instagram/folder/6raa77c/instagram-api-with-instagram-login).
-- **TikTok:** abra [TikTok for Developers](https://developers.tiktok.com/) e adicione **Login Kit Desktop**, registrando a URL local `127.0.0.1` exibida pelo assistente. Configure `video.publish` e `video.list` onde aprovados, e preencha Client Key/Secret **do aplicativo** uma vez. Consulte o [guia Desktop](https://developers.tiktok.com/docs/en/login-kit-desktop).
-
-**Limitações:** não existe OAuth universal do Google que autorize automaticamente as APIs do Instagram e TikTok. Mesmo usando Google para entrar nessas redes, cada uma apresenta sua própria autorização. Os fornecedores exigem registro de um aplicativo OAuth para permitir publicação; não há um caminho legítimo para pular essa etapa se o Content Lab ainda não tiver credenciais de aplicativo configuradas. Também não é necessário buscar ou copiar tokens pessoais manualmente: o OAuth troca o código de autorização por tokens nos bastidores. A liberação de publicação pública pode exigir auditoria da Meta/Google/TikTok.
-
-## Configurações — contas e integrações
-
-A aba **Configurações**, depois de Métricas, é o único local para conectar/desconectar YouTube, Instagram e TikTok. O usuário encontra três cartões com indicadores de status e botões diretos: **Conectar com Google**, **Conectar Instagram** e **Conectar TikTok**. Com um aplicativo OAuth já configurado, basta clicar no botão e autorizar a conta no site oficial. Para YouTube, o Google solicita explicitamente a seleção de conta.
-
-Quando nenhuma conta está autorizada, **Publicações** esconde todo o editor e exibe apenas o convite para ir a Configurações; **Métricas** também mostra o convite, sem cartões. Assim que pelo menos uma conta é autorizada, ambos ficam disponíveis, e Publicações permite selecionar somente destinos conectados (além de manter a restrição 16:9/9:16 do TikTok).
-
-**Configuração avançada:** serviços OAuth não permitem obter tokens de publicação somente pela senha pessoal ou reutilizando a permissão do Google para as três redes. Cada plataforma exige um aplicativo OAuth registrado no respectivo portal e suas credenciais de integração. O formulário de Client ID/Secret, e URL HTTPS no Instagram, fica recolhido no final de Configurações e só precisa ser usado quando ainda não existir configuração local. Quem distribui uma instalação já configurada não precisa preencher novamente os dados do aplicativo.
-
-O Content Lab **não solicita nem armazena senhas pessoais de YouTube, Instagram ou TikTok**. Os sites oficiais realizam autenticação e consentimento, e apenas Client ID/Secret **do aplicativo**, tokens e dados OAuth são guardados no `.env` local ignorado pelo Git. Instagram e TikTok continuam exigindo autorizações próprias, mesmo quando o usuário entra nos sites usando uma conta Google. O `.env` deve ser mantido privado e transferido com segurança.
-## Métricas — painel de desempenho conectado
-
-A aba **Métricas**, localizada após Publicações, começa com um convite para conectar contas OAuth. Assim que pelo menos uma rede estiver autorizada, apresenta uma **Visão geral** com dados das plataformas conectadas. Clique no ícone de YouTube, Instagram ou TikTok para filtrar; clique novamente no ícone selecionado para voltar ao geral.
-
-- **YouTube:** últimos 50 uploads do canal (até 20 vídeos públicos mostrados), visualizações, curtidas, comentários e possíveis publicações futuras retornadas por `status.publishAt`. O app solicita também o escopo `youtube.readonly` além de `youtube.upload`.
-- **Instagram:** até 20 mídias recentes, com foco em vídeos, legendas, curtidas/comentários quando fornecidos e tentativa de consultar `views` para até oito vídeos. Métricas indisponíveis ficam como `—` em vez de zero. Não exibe agendamentos do Instagram.
-- **TikTok:** até 20 vídeos públicos recentes da Display API, com views, curtidas, comentários e compartilhamentos. Exige o escopo adicional `video.list` habilitado no aplicativo TikTok. Não apresenta rascunhos nem vídeos programados no TikTok Studio.
-- **Resumo:** últimas publicações, indicadores dos itens retornados, agendamentos disponíveis no YouTube e barras comparativas. Os totais são apenas da **amostra recente**, não do histórico inteiro dos perfis; nenhuma métrica é inventada.
-- **Atualização:** o backend conserva respostas por 2 minutos para economizar quotas. O botão Atualizar força nova leitura. Cada plataforma falha isoladamente e sugere reconexão quando faltarem permissões.
-
-Se você autorizou YouTube ou TikTok antes de incluir Métricas, use **Configurações → Reconectar** para conceder os novos escopos. O Content Lab guarda os tokens no `.env` local ignorado pelo Git e **não** envia tokens ao frontend do painel. A aba consulta `GET /api/social/metrics?platform=general|youtube|instagram|tiktok`; `refresh=1` ignora o cache temporário. Nenhuma informação fica agendada para atualização em segundo plano.
-
-## Publicações — envio e agendamento
-
-A aba **Publicações** permite selecionar vários MP4s locais, editar título/descrição por vídeo e publicar com OAuth nas três redes. Para Instagram e TikTok, título e descrição são unidos por uma linha vazia e `#Shorts` vira `#Viral`.
-
-- **16:9 horizontal:** somente YouTube e Instagram; TikTok é desabilitado e acinzentado. O servidor confirma o formato real com FFprobe.
-- **9:16 vertical:** YouTube, Instagram e TikTok. Outros formatos são rejeitados.
-- **YouTube:** envio com agendamento futuro via `publishAt`, exigindo indicação de público infantil.
-- **Instagram:** upload resumível local, processamento e publicação posterior.
-- **TikTok:** consulta de privacidade permitida, consentimento explícito, envio por partes e processamento/moderação após o upload.
-- **Lotes:** um Short por dia no YouTube; Instagram e TikTok enviam imediatamente, sem agendamento. Cada destino tem status próprio.
-
-**Atenção:** contas reais ainda não foram validadas com apps OAuth autorizados; APIs podem exigir auditoria para publicar vídeos públicos. Nunca reenvie automaticamente quando o resultado for incerto: confira a plataforma antes. MP4s locais são enviados ao servidor via formulário e transferidos às APIs, com limite local de 1 GiB. A seleção de imagem de capa externa permanece apenas visual, sem transferência para as redes; escolha de frame é usada onde a API suporta. Arquivos finais de projetos podem ser escolhidos manualmente em `output/final/final.mp4`; busca automática na pasta ainda não está disponível.
-### Configurando o acesso às redes sociais
-
-1. Abra **Configurações**. Se a rede já estiver pronta, clique em **Conectar** e autorize no provedor oficial. Caso contrário, use **Configuração avançada** para cadastrar uma única vez o aplicativo OAuth de cada serviço.
-2. Caso não haja integração pré-configurada, crie um aplicativo no portal de desenvolvedores e copie o **Client ID/Key** e o **Client Secret** para a configuração avançada. São credenciais da integração, não a senha da sua conta.
-3. Registre no portal a **URI de retorno** informada na tela. YouTube: um cliente OAuth Google; TikTok: **Desktop Login Kit** com permissão `video.publish`; Instagram: **Instagram API with Instagram Login** (conta profissional).
-4. Para o Instagram, a Meta normalmente requer uma URI pública **HTTPS**, encaminhada com segurança para `/api/social/oauth/instagram/callback` do servidor local. Apenas `http://127.0.0.1:5000` não é suficiente para essa integração.
-5. Clique em **Conectar**. Após a autorização no site oficial, os tokens retornados ficam somente no `.env` local, ignorado pelo Git e gravado com permissões de proprietário (quando o sistema permite).
-6. Para migrar de computador, transfira o `.env` apenas de maneira segura ou refaça o login. Tokens expiram, podem ser revogados e podem precisar ser renovados. Nunca publique o arquivo nem copie senhas pessoais para ele.
-
-O servidor HTTP escuta somente em `127.0.0.1`. O callback HTTPS do Instagram requer um encaminhamento externo configurado pelo usuário; o Content Lab não instala automaticamente túnel. As permissões de publicação real dependem das aprovações dos serviços. O backend inclui as rotas de envio `POST /api/social/publish` e consulta `GET /api/social/jobs/:id`, com autorização, validação do MP4 e respostas por serviço. A publicação real depende do usuário conectar cada conta e autorizar o envio.
+Mudar navegador ou URL invalida as confirmações afetadas para evitar confusão de contas. Sem configurações locais, são apresentados os padrões. Nenhum arquivo de autenticação antigo é lido pelo novo fluxo; se você possui um `.env` antigo no computador, pode revisá-lo e removê-lo **manualmente** após confirmar que não contém outras configurações úteis. O Content Lab não apaga arquivos pessoais existentes automaticamente.
 
 ## Multi-editor automático: fila sequencial
 

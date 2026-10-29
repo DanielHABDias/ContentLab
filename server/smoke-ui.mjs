@@ -92,7 +92,7 @@ try{
   assert.equal(await evaluate('getComputedStyle(document.getElementById("loadBtn")).transitionProperty.includes("transform")'),true,
     'Buttons must provide a transform-based tactile response');
   await evaluate('document.getElementById("tab-videos").click()');
-  assert.equal(await evaluate('document.querySelectorAll(".workspace-tab[data-workspace]").length'),13,
+  assert.equal(await evaluate('document.querySelectorAll(".workspace-tab[data-workspace]").length'),12,
     'Original workspaces, thumbnails, recording, AI narration and voice settings remain available');
   assert.equal(await evaluate('document.querySelectorAll(".workspace-tabs > .workspace-tab, .workspace-tabs > .workspace-group").length'),8,
     'Sidebar has eight top-level entries, with narration and settings grouped');
@@ -164,157 +164,67 @@ try{
   assert.equal(await evaluate('document.getElementById("panel-multieditor").hidden'),false,
     'Collapsing a category preserves the active editor panel');
 
+  await evaluate(`(() => {
+    window.__socialOriginalFetch=window.fetch;
+    const urls={tiktok:'https://www.tiktok.com/tiktokstudio',instagram:'https://www.instagram.com/',youtube:'https://studio.youtube.com/'};
+    let settings={browser:null,urls,confirmed:{tiktok:false,instagram:false,youtube:false}};
+    window.fetch=(url,options)=>{
+      if(!String(url).startsWith('/api/social-browser/'))return window.__socialOriginalFetch(url,options);
+      const path=String(url),body=options?.body?JSON.parse(options.body):null;
+      const keys=['tiktok','instagram','youtube'];
+      if(path==='/api/social-browser/settings'){
+        const confirmed=Object.fromEntries(keys.map(p=>[p,settings.browser===body.browser&&settings.urls[p]===body.urls[p]&&settings.confirmed[p]]));
+        settings={...body,confirmed};
+      }else if(path.includes('/confirm/')){
+        const p=path.split('/').at(-1);
+        settings.confirmed[p]=true;
+      }
+      const ready=!!settings.browser&&keys.every(p=>settings.confirmed[p]);
+      const result=path.endsWith('/open/tiktok')||path.endsWith('/open/instagram')||path.endsWith('/open/youtube')?
+        {opened:true,label:path.split('/').at(-1),loginVerified:false}:
+        {browsers:[{id:'system',label:'Padrão do sistema',available:true}],platforms:{},settings,ready};
+      return Promise.resolve(new Response(JSON.stringify(result),{status:200,headers:{'Content-Type':'application/json'}}));
+    };
+  })()`);
   await evaluate('document.getElementById("workspace-group-social-trigger").click()');
   assert.equal(await evaluate('document.getElementById("workspace-group-social-items").hidden'),false,
-    'Social category exposes Publications and Metrics');
-  assert.equal(await evaluate('document.getElementById("workspace-group-editor-items").hidden'),true,
-    'Only one category is expanded at a time');
+    'Social category includes Publications');
+  assert.equal(await evaluate('document.getElementById("tab-metrics")'),null,
+    'Old OAuth metrics tab is removed');
   await evaluate('document.getElementById("tab-publications").click()');
-  assert.equal(await evaluate('document.getElementById("workspace-group-social-trigger").getAttribute("aria-expanded")'),'true');
-  assert.equal(await evaluate('location.hash'),'#publications',
-    'Nested workspace retains its existing deep link');
-
-  await evaluate('document.getElementById("tab-publications").click()');
-  assert.equal(await evaluate('document.getElementById("panel-publications").hidden'),false,
-    'Publications workspace must open');
-  assert.equal(await evaluate('document.getElementById("publishConnectionGate").hidden'),false,
-    'Publications requires at least one connected OAuth account');
-  assert.equal(await evaluate('document.getElementById("publishConnectedContent").hidden'),true,
-    'Publishing editor must be hidden without OAuth');
-  assert.equal(await evaluate('document.querySelector("#panel-publications #socialCredentialsForm")'),null,
-    'Publications must not contain credential fields');
-  await evaluate('document.getElementById("publishGoSettings").click()');
-  assert.equal(await evaluate('document.getElementById("panel-settings").hidden'),false,
-    'Publication CTA goes to Settings');
-  assert.equal(await evaluate('!!document.querySelector("#panel-settings #socialCredentialsForm")'),true,
-    'Developer credentials are found only in Settings');
-  assert.equal(await evaluate('!!document.querySelector("#panel-settings #socialConnect-youtube")'),true,
-    'YouTube connects from Settings');
-  assert.equal(await evaluate('document.getElementById("settingsOAuthAdvanced").open'),false,
-    'Advanced OAuth setup remains collapsed by default');
-  await evaluate('document.getElementById("socialConnect-youtube").click()');
-  assert.equal(await evaluate('document.getElementById("settingsSetupGuide").hidden'),false,
-    'First connection opens the official setup guide');
-  assert.equal(await evaluate('document.getElementById("settingsOAuthAdvanced").open'),false,
-    'Developer credentials remain a last-resort, collapsed option');
-  assert.equal(await evaluate('document.getElementById("settingsGoogleImport").hidden'),false,
-    'Google supports direct import of a desktop OAuth client JSON');
-  assert.equal(await evaluate('document.getElementById("settingsSetupPortal").href.includes("console.cloud.google.com")'),true,
-    'Guide links to official Google Cloud');
-  assert.equal(await evaluate('document.getElementById("settingsSetupRedirect").textContent.includes("127.0.0.1")'),true,
-    'Guide displays local callback address');
-
-  await evaluate(`(() => {
-    const input=document.getElementById("settingsGoogleJSON");
-    const files=new DataTransfer();
-    files.items.add(new File(['{"type":"service_account","private_key":"not-an-oauth-client"}'],
-      "wrong-google.json",{type:"application/json"}));
-    input.files=files.files;
-    input.dispatchEvent(new Event("change",{bubbles:true}));
-  })()`);
-  await wait(()=>evaluate('document.getElementById("settingsSetupMessage").textContent.includes("App para computador")'),
-    'Google importer must reject service-account JSON without contacting provider');
-  await evaluate('document.getElementById("settingsSetupManual").click()');
-  assert.equal(await evaluate('document.getElementById("settingsOAuthAdvanced").open'),true,
-    'Advanced fields are opt-in only');
-  assert.equal(await evaluate('document.getElementById("socialProvider").value'),'youtube');
-  await evaluate('document.getElementById("socialConnect-tiktok").click()');
-  assert.equal(await evaluate('document.getElementById("settingsSetupTitle").textContent.includes("TikTok")'),true,
-    'TikTok shows its own developer setup steps');
-  assert.equal(await evaluate('document.getElementById("settingsGoogleImport").hidden'),true,
-    'Google client import is not offered to other providers');
-  assert.equal(await evaluate('document.getElementById("settingsSetupDocs").href.includes("tiktok.com")'),true,
-    'TikTok guide links to official developer documentation');
-  await evaluate('document.getElementById("settingsSetupClose").click()');
-  assert.equal(await evaluate('document.getElementById("settingsSetupGuide").hidden'),true,
-    'Guided setup can be dismissed');
-  const socialStatus = await evaluate('(async () => { const r=await fetch("/api/social/status"); return {ok:r.ok,body:await r.json()}; })()');
-  assert.equal(socialStatus.ok,true);
-  assert.equal(typeof socialStatus.body.providers.youtube.configured,'boolean');
-  assert.equal(JSON.stringify(socialStatus.body).includes('access_token'),false,
-    'OAuth status must never expose tokens');
-
-  await evaluate("(() => {\n window.__statusOriginalFetch=window.fetch;\n window.fetch=(url,opts)=>{\n   if(String(url)==='/api/social/status'){\n     const value={providers:{\n       youtube:{connected:true,configured:true,needsRenewal:false,accountName:'Canal Exemplo YouTube',accountUsername:'@Canal Exemplo',missingScopes:[]},\n       instagram:{connected:true,configured:true,needsRenewal:false,accountName:'Canal Exemplo',accountUsername:'Canal Exemplo',missingScopes:['instagram_business_manage_insights']},\n       tiktok:{connected:true,configured:true,needsRenewal:false}\n     }};\n     return Promise.resolve(new Response(JSON.stringify(value),{\n       status:200,headers:{'Content-Type':'application/json'}\n     }));\n   }\n   return window.__statusOriginalFetch(url,opts);\n };\n})()");
-  await evaluate('document.getElementById("tab-publications").click()');
-  await wait(()=>evaluate('document.getElementById("publishConnectionGate").hidden && !document.getElementById("publishConnectedContent").hidden'),
-    'Publishing workspace opens after OAuth connection');
-  await wait(()=>evaluate('!document.getElementById("publishPlatform-tiktok").disabled'),
-    'Connected TikTok becomes selectable');
-  await evaluate('document.getElementById("tab-settings").click()');
-  await wait(()=>evaluate('document.getElementById("socialIdentity-youtube").textContent.includes("Canal Exemplo YouTube")'),
-    'Connected provider displays real account identity in Settings');
-  assert.equal(await evaluate('document.getElementById("socialVerify-youtube").hidden'),false,
-    'Connected provider exposes Verify Connection action');
-  assert.equal(await evaluate('document.getElementById("socialPermissions-instagram").textContent.includes("instagram_business_manage_insights")'),true,
-    'Missing Instagram insights permission is explained');
-  await evaluate('document.getElementById("tab-publications").click()');
-
-  await evaluate(`(() => {
-    const input = document.getElementById("publishFiles");
-    const files = new DataTransfer();
-    files.items.add(new File(["demo"], "SH_0005-final.mp4", {type: "video/mp4"}));
-    input.files = files.files;
-    input.dispatchEvent(new Event("change", {bubbles: true}));
-    const title = document.getElementById("publishTitle");
-    title.value = "Batman #Shorts";
-    title.dispatchEvent(new Event("input", {bubbles: true}));
-    const description = document.getElementById("publishDescription");
-    description.value = "Análise DC #Shorts";
-    description.dispatchEvent(new Event("input", {bubbles: true}));
-  })()`);
-  assert.equal(await evaluate('document.getElementById("publishYoutubeTitle").textContent'),
-    'Batman #Shorts','YouTube keeps the original title');
-  assert.equal(await evaluate('document.getElementById("publishInstagramText").textContent'),
-    'Batman #Viral\n\nAnálise DC #Viral','Instagram combines title and description');
-  assert.equal(await evaluate('document.getElementById("publishTiktokText").textContent'),
-    'Batman #Viral\n\nAnálise DC #Viral','TikTok combines title and description');
-  assert.equal(await evaluate('document.getElementById("publishVideoList").children.length'),1,
-    'Selected video appears in the mock library');
-  await evaluate('document.getElementById("publishFormat").value="16:9";document.getElementById("publishFormat").dispatchEvent(new Event("change"))');
-  assert.equal(await evaluate('document.getElementById("publishPlatform-tiktok").disabled'),true,
-    'TikTok must be unavailable when horizontal 16:9 is selected');
-  assert.equal(await evaluate('document.getElementById("publishTiktokChoice").classList.contains("is-unavailable")'),true,
-    'TikTok must be visually muted for horizontal media');
-  await evaluate('document.getElementById("publishFormat").value="9:16";document.getElementById("publishFormat").dispatchEvent(new Event("change"))');
-  assert.equal(await evaluate('document.getElementById("publishPlatform-tiktok").disabled'),false,
-    'TikTok becomes available for vertical 9:16 media');
-
-
-  await evaluate('window.fetch=window.__statusOriginalFetch');
+  await wait(()=>evaluate('document.getElementById("panel-settings").hidden===false'),
+    'First entry forwards to social browser settings');
+  assert.equal(await evaluate('document.getElementById("socialBrowserSelect").value'),'system');
+  assert.equal(await evaluate('document.getElementById("socialGoPublications").disabled'),true,
+    'Publishing remains locked before logins');
+  assert.equal(await evaluate('document.getElementById("socialClientId")'),null,
+    'Obsolete Google/Instagram/TikTok OAuth credential form is removed');
+  await evaluate('document.getElementById("socialUrl-youtube").value="https://studio.youtube.com/channel/UCexample";document.getElementById("socialSaveSettings").click()');
+  await wait(()=>evaluate('document.getElementById("socialOpen-youtube").disabled===false'),
+    'Save local browser and URL configuration');
+  for(const p of ['tiktok','instagram','youtube']){
+    await evaluate('document.getElementById("socialOpen-"+'+JSON.stringify(p)+').click()');
+    await wait(()=>evaluate('document.getElementById("socialConfirm-"+'+JSON.stringify(p)+').disabled===false'),
+      'Open official site and require explicit user confirmation');
+    await evaluate('document.getElementById("socialConfirm-"+'+JSON.stringify(p)+').click()');
+    await wait(()=>evaluate('document.getElementById("socialState-"+'+JSON.stringify(p)+').textContent==="Login conferido"'),
+      'Store account confirmation after opening the site');
+  }
+  assert.equal(await evaluate('document.getElementById("socialGoPublications").disabled'),false,
+    'Three confirmed platforms unlock Publications');
+  await evaluate('document.getElementById("socialGoPublications").click()');
+  assert.equal(await evaluate('document.getElementById("publishReady").hidden'),false,
+    'Only the new ready screen is shown; no automatic upload controls');
+  assert.equal(await evaluate('document.getElementById("publishSubmit")'),null,
+    'Old automatic publisher has been removed');
+  await evaluate('document.getElementById("publishManageAccounts").click()');
+  await evaluate('document.getElementById("socialUrl-youtube").value="https://studio.youtube.com/channel/UCother";document.getElementById("socialSaveSettings").click()');
+  await wait(()=>evaluate('document.getElementById("socialGoPublications").disabled===true'),
+    'Switching Google/YouTube profiles invalidates previous confirmation');
+  await evaluate('window.fetch=window.__socialOriginalFetch');
   await evaluate('document.getElementById("tab-videos").click()');
   assert.equal(await evaluate('document.getElementById("workspace-group-social-items").hidden'),true,
-    'Direct workspaces close the nested menu');
-  await evaluate('location.hash="#metrics"');
-  await wait(()=>evaluate('document.getElementById("panel-metrics").hidden===false && document.getElementById("workspace-group-social-items").hidden===false'),
-    'Deep links reopen the correct nested menu');
-  await evaluate('document.getElementById("tab-metrics").click()');
-  await wait(()=>evaluate('!document.getElementById("metricsConnectionGate").hidden'),
-    'Metrics empty state before connecting');
-  assert.equal(await evaluate('document.getElementById("metricsDashboard").hidden'),true,
-    'No metric cards appear without OAuth');
-  await wait(()=>evaluate('!document.getElementById("metricsRefresh").disabled'),
-    'Initial disconnected metrics response must finish');
-  await evaluate('document.getElementById("metricsGoConnect").click()');
-  assert.equal(await evaluate('document.getElementById("panel-settings").hidden'),false,
-    'Metrics connection CTA returns to Settings');
-  await evaluate("(() => {\n window.__metricsOriginalFetch=window.fetch;\n window.fetch=(url,opts)=>{\n   if(!String(url).startsWith('/api/social/metrics'))return window.__metricsOriginalFetch(url,opts);\n   const input=new URL(String(url),location.origin);\n   const selected=input.searchParams.get('platform')||'general';\n   const connected={youtube:{connected:true,configured:true},instagram:{connected:false,configured:false},tiktok:{connected:true,configured:true}};\n   const youtube={status:'ok',data:{platform:'youtube',updatedAt:new Date().toISOString(),\n     recent:[{platform:'youtube',id:'a',title:'Batman vídeo',publishedAt:new Date().toISOString(),views:120,likes:10,comments:3}],\n     scheduled:[{platform:'youtube',id:'b',title:'Agendado',scheduledAt:new Date().toISOString()}],\n     top:[{platform:'youtube',id:'a',title:'Batman vídeo',views:120}],analytics:{available:true,\n       views:900,minutesWatched:500,subscribersGained:15,period:{start:'2026-09-15',end:'2026-10-14'},\n       daily:[{day:'2026-10-10',views:250},{day:'2026-10-11',views:650}]},note:'Últimos uploads públicos'}};\n   const tiktok={status:'ok',data:{platform:'tiktok',updatedAt:new Date().toISOString(),\n     recent:[{platform:'tiktok',id:'t',title:'Cultura pop',publishedAt:new Date().toISOString(),views:200,likes:30,comments:2,shares:1}],\n     scheduled:[],top:[{platform:'tiktok',id:'t',title:'Cultura pop',views:200}],note:'Últimos vídeos públicos'}};\n   const platforms=selected==='general'?{youtube,tiktok}:selected==='youtube'?{youtube}:selected==='tiktok'?{tiktok}:{};\n   return Promise.resolve(new Response(JSON.stringify({view:selected,connected,platforms}),\n     {status:200,headers:{'Content-Type':'application/json'}}));\n };\n})()");
-  await evaluate('document.getElementById("tab-metrics").click()');
-  await wait(()=>evaluate('document.getElementById("metricsStatGrid").children.length===6'),
-    'Metrics cards include authorized YouTube Analytics');
-  assert.equal(await evaluate('document.getElementById("metricsHistorySection").hidden'),false,
-    'The YouTube history is visible only with provider Analytics data');
-  assert.equal(await evaluate('document.querySelectorAll("#metricsHistoryBars .metrics-history-day").length'),2,
-    'History chart shows reported daily values');
-  assert.equal(await evaluate('document.getElementById("metricsConnectionGate").hidden'),true);
-  await evaluate('document.getElementById("metricsFilter-tiktok").click()');
-  await wait(()=>evaluate('document.getElementById("metricsViewTitle").textContent.includes("TikTok")'),
-    'TikTok filter');
-  assert.equal(await evaluate('document.getElementById("metricsFilter-tiktok").getAttribute("aria-pressed")'),'true');
-  await evaluate('document.getElementById("metricsFilter-tiktok").click()');
-  await wait(()=>evaluate('document.getElementById("metricsViewTitle").textContent==="Visão geral"'),
-    'Second click returns to general metrics');
-  assert.equal(await evaluate('document.getElementById("metricsFilter-tiktok").getAttribute("aria-pressed")'),'false');
-  await evaluate('window.fetch=window.__metricsOriginalFetch');
+    'Direct workspaces close the nested social menu');
 
   await evaluate('document.getElementById("tab-multieditor").click()');
   assert.equal(await evaluate('document.getElementById("panel-multieditor").hidden'),false);

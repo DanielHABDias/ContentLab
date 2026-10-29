@@ -14,13 +14,13 @@ let sourceRequestId = 0;
 const $ = (id) => document.getElementById(id);
 
 // Areas de trabalho isoladas: trocar de aba preserva o trabalho em andamento.
-const workspaces = ["videos", "transcription", "recording", "voiceai", "voice-settings", "editor", "multieditor", "publications", "metrics", "library", "thumbnails", "settings", "docs"];
+const workspaces = ["videos", "transcription", "recording", "voiceai", "voice-settings", "editor", "multieditor", "publications", "library", "thumbnails", "settings", "docs"];
 const workspaceGroupLabels={editor:"Editor",social:"Redes sociais",narration:"Narração",settings:"Configurações"};
 const workspaceGroups = {
   narration: ["recording", "voiceai", "transcription"],
   settings: ["settings", "voice-settings"],
   editor: ["editor", "multieditor"],
-  social: ["publications", "metrics"]
+  social: ["publications"]
 };
 const workspaceGroupFor = (name) =>
   Object.keys(workspaceGroups).find((group) => workspaceGroups[group].includes(name)) || null;

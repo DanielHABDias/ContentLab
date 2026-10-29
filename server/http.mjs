@@ -22,9 +22,7 @@ import {buildMarkdown,buildHtml} from './docs.mjs';
 import {sceneLibrary,libraryFile,installScenePreset} from './scene-library.mjs';
 import {diagramNames,diagramSvg} from './docs-diagrams.mjs';
 import {sceneCacheOverview,savedSceneFile} from './scene-browser.mjs';
-import {mountSocialRoutes} from './social-routes.mjs';
-import {mountSocialPublishRoutes} from './social-publish-routes.mjs';
-import {mountSocialMetricsRoutes} from './social-metrics-routes.mjs';
+import {mountSocialBrowserRoutes} from './social-browser-routes.mjs';
 import {mountMediaLibraryRoutes} from './media-routes.mjs';
 import {thumbnailBackground} from './thumbnail-background.mjs';
 import {mountWorkspaceRoutes,projectAssetDirectory} from './workspace-project.mjs';
@@ -509,9 +507,7 @@ app.get('/api/transcription/jobs/:id',api(async(req,res)=>{
 }));
 const voiceCreation=mountVoiceCreationRoutes(app,api,{isProjectBusy:root=>activeRender(root)||!!runningTranscription(root)});
 mountWorkspaceRoutes(app,api,{isBusy:root=>activeRender(root)||!!runningTranscription(root)||voiceCreation.isProjectBusy(root)});
-mountSocialRoutes(app,api);
-mountSocialPublishRoutes(app,api,upload);
-mountSocialMetricsRoutes(app,api);
+mountSocialBrowserRoutes(app,api);
 mountMediaLibraryRoutes(app,api);
 const runningIdentity=instanceIdentity();
 app.get('/health',api(async(req,res)=>res.json({
