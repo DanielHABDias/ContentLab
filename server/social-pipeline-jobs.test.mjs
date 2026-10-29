@@ -37,8 +37,8 @@ async function until(fn){
 test('legenda combina título, descrição e hashtags, respeitando limite da plataforma',()=>{
   const caption=socialCaption({titleA:'Filme A',description:'Uma análise',
     tags:['nerd','cultura pop']},'tiktok');
-  assert.equal(caption,'Filme A\n\nUma análise\n\n#nerd #culturapop');
-  assert.equal(socialCaption({titleA:'Olá',tags:[]},'instagram'),'Olá\nLink na bio');
+  assert.equal(caption,'Filme A\n\nLink do canal na bio\n\nUma análise');
+  assert.equal(socialCaption({titleA:'Olá',tags:[]},'instagram'),'Olá\n\nLink do canal na bio');
   assert.equal(socialCaption({titleA:'x'.repeat(2201)},'instagram').length,2200);
 });
 test('links TikTok e Instagram validados por host HTTPS e formato real de postagem',()=>{
@@ -160,7 +160,7 @@ test('Instagram avança e grava agendamento automaticamente somente quando receb
     resultsFile:f.resultsFile,root:f.root,adapters:{
       open:async()=>({tabs:[],close(){}}),youtube:async()=>{},tiktok:async()=>{},
       instagram:async()=>{attempts++;return {
-        status:'scheduled',verified:true,confirmationText:'Reels programado para sexta-feira',
+        status:'scheduled',verified:true,verification:'instagram_ui',confirmationText:'Reels programado para sexta-feira',
         warnings:[],videoUrl:null
       };}
     }});
@@ -186,6 +186,36 @@ test('sem confirmação do Instagram, não avançar automaticamente nem persisti
   await until(()=>getSocialPipeline(job.id).status==='awaiting_review');
   assert.deepEqual(readSocialPipelineResults(f.resultsFile),{});
   assert.equal(getSocialPipeline(job.id).completed.length,0);
+  assert.match(getSocialPipeline(job.id).message,/não retornou confirmação/);
+  cancelSocialPipeline(job.id);
+});
+
+test('TikTok só passa adiante automaticamente com confirmação específica do site',async t=>{
+  const f=fixture(t),draft=f.create('TikTok confirmado',['tiktok']);
+  const job=startSocialPipeline([draft.id],{config,drafts:listSocialDrafts(f.root),
+    resultsFile:f.resultsFile,root:f.root,adapters:{
+      open:async()=>({tabs:[],close(){}}),youtube:async()=>{},instagram:async()=>{},
+      tiktok:async()=>({status:'scheduled',verified:true,verification:'tiktok_ui',
+        confirmationText:'Vídeo agendado',videoUrl:null,warnings:[]})
+    }});
+  await until(()=>getSocialPipeline(job.id).status==='done');
+  const result=readSocialPipelineResults(f.resultsFile)[draft.id].tiktok;
+  assert.equal(result.status,'scheduled');
+  assert.equal(result.verification,'tiktok_ui');
+  assert.equal(result.scheduledAt,draft.scheduledAt);
+  assert.equal(buildSocialTasks([draft.id],{config,drafts:listSocialDrafts(f.root),
+    results:readSocialPipelineResults(f.resultsFile)}).length,0);
+});
+test('TikTok sem confirmação não persiste resultado nem segue ao próximo vídeo',async t=>{
+  const f=fixture(t),draft=f.create('TikTok pendente',['tiktok']);
+  const job=startSocialPipeline([draft.id],{config,drafts:listSocialDrafts(f.root),
+    resultsFile:f.resultsFile,root:f.root,adapters:{
+      open:async()=>({tabs:[],close(){}}),youtube:async()=>{},instagram:async()=>{},
+      tiktok:async()=>({status:'awaiting_review',verified:false,videoUrl:null,
+        warnings:['Sem confirmação do agendamento']})
+    }});
+  await until(()=>getSocialPipeline(job.id).status==='awaiting_review');
+  assert.deepEqual(readSocialPipelineResults(f.resultsFile),{});
   assert.match(getSocialPipeline(job.id).message,/não retornou confirmação/);
   cancelSocialPipeline(job.id);
 });

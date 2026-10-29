@@ -14,10 +14,9 @@ const safeElement=s=>JSON.stringify(s);
 
 export function instagramCaption(item){
   const title=String(item.titleA||'').trim(),description=String(item.description||'').trim();
-  const hashtags=(item.tags||[]).map(x=>'#'+String(x).replace(/^#/,'')
-    .replace(/[^\p{L}\p{N}_]/gu,'')).filter(x=>x.length>1).join(' ');
-  const parts=[title,'Link na bio',description,hashtags].filter(Boolean);
-  const text=parts.join('\n');
+  // Etiquetas são metadados do Content Lab, não texto da legenda.
+  // Uma linha em branco entre cada seção, conforme o padrão editorial.
+  const text=[title,'Link do canal na bio',description].filter(Boolean).join('\n\n');
   if(!title)throw Error('Preencha o título do vídeo para a legenda do Instagram.');
   // Não bloquear vídeo longo por legenda extensa: manter título e convite,
   // preservar o máximo possível de descrição e hashtags.

@@ -6,7 +6,7 @@ import {execFileSync} from 'node:child_process';
 
 export const SOCIAL_BROWSER_FILE=path.join(os.homedir(),'.contentlab','social-browser.json');
 export const SOCIAL_PLATFORMS=Object.freeze({
-  tiktok:{label:'TikTok Studio',url:'https://www.tiktok.com/tiktokstudio',hosts:['tiktok.com','www.tiktok.com']},
+  tiktok:{label:'TikTok Studio',url:'https://www.tiktok.com/tiktokstudio/upload?from=creator_center&tab=video',hosts:['tiktok.com','www.tiktok.com']},
   instagram:{label:'Instagram',url:'https://www.instagram.com/scheduled_content/',hosts:['instagram.com','www.instagram.com']},
   youtube:{label:'YouTube Studio',url:'https://studio.youtube.com/',hosts:['studio.youtube.com']}
 });
@@ -33,6 +33,10 @@ export function socialUrl(platform,value){
   if(platform==='instagram'){
     parsed.pathname='/scheduled_content/';
     parsed.search='';
+  }
+  if(platform==='tiktok'){
+    parsed.pathname='/tiktokstudio/upload';
+    parsed.search='?from=creator_center&tab=video';
   }
   return parsed.href;
 }

@@ -23,6 +23,11 @@ export function validateStudioUrl(platform,value){
     parsed.search='';
     parsed.hash='';
   }
+  if(platform==='tiktok'){
+    parsed.pathname='/tiktokstudio/upload';
+    parsed.search='?from=creator_center&tab=video';
+    parsed.hash='';
+  }
   return parsed.href;
 }
 export class StudioLoginRequired extends Error{

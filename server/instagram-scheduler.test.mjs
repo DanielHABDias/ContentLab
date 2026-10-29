@@ -41,14 +41,15 @@ function browser({confirmed=true,failAt='',login=false,url=INSTAGRAM_SCHEDULED_U
   const upload=async(_,file,options)=>{uploads.push({file,options});return true;};
   return {session,commands,uploads,progress,upload};
 }
-test('legenda segue título, Link na bio, descrição e hashtags, limitando sem travar',()=>{
+test('legenda tem linhas em branco, Link do canal na bio e não acrescenta tags',()=>{
   const caption=instagramCaption(item());
-  assert.equal(caption.text,'Meu Short\nLink na bio\nDescrição do vídeo\n#anime #diazverso');
+  assert.equal(caption.text,'Meu Short\n\nLink do canal na bio\n\nDescrição do vídeo');
+  assert.ok(!caption.text.includes('#anime'));
   assert.equal(caption.truncated,false);
   const long=instagramCaption(item({description:'x'.repeat(2900)}));
   assert.equal(long.text.length,2200);
   assert.equal(long.truncated,true);
-  assert.ok(long.text.startsWith('Meu Short\nLink na bio\n'));
+  assert.ok(long.text.startsWith('Meu Short\n\nLink do canal na bio\n\n'));
 });
 test('data validada e URL específica do Instagram',()=>{
   assert.equal(INSTAGRAM_SCHEDULED_URL,'https://www.instagram.com/scheduled_content/');

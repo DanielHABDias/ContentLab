@@ -6,7 +6,7 @@ import path from 'node:path';
 import {socialUrl,readSocialBrowser,saveSocialBrowser,openSocialBrowser,
   confirmSocialBrowser,socialBrowserReady,detectBrowsers} from './social-browser.mjs';
 
-const urls={tiktok:'https://www.tiktok.com/tiktokstudio',instagram:'https://www.instagram.com/scheduled_content/',youtube:'https://studio.youtube.com/'};
+const urls={tiktok:'https://www.tiktok.com/tiktokstudio/upload?from=creator_center&tab=video',instagram:'https://www.instagram.com/scheduled_content/',youtube:'https://studio.youtube.com/'};
 const browsers=[{id:'system',available:true,label:'Padrão do sistema'},{id:'chrome',available:true,label:'Google Chrome'},
   {id:'firefox',available:false,label:'Firefox (crawler indisponível)'}];
 test('URLs só aceitam hosts HTTPS oficiais',()=>{
@@ -95,4 +95,20 @@ test('Instagram migra a URL raiz anterior para /scheduled_content/ sem perder lo
     'https://instagram.com/scheduled_content/');
   const saved=saveSocialBrowser({browser:'chrome',urls},{file,browsers});
   assert.equal(saved.confirmed.instagram,true);
+});
+
+test('URL antiga do TikTok vira upload direto, mantendo a confirmação da conta',t=>{
+  const folder=fs.mkdtempSync(path.join(os.tmpdir(),'cl-tiktok-url-'));
+  t.after(()=>fs.rmSync(folder,{recursive:true,force:true}));
+  const file=path.join(folder,'social-browser.json');
+  fs.writeFileSync(file,JSON.stringify({version:2,browser:'chrome',
+    urls:{...urls,tiktok:'https://www.tiktok.com/tiktokstudio'},
+    confirmed:{tiktok:true,instagram:false,youtube:false}}));
+  const migrated=readSocialBrowser(file);
+  assert.equal(migrated.urls.tiktok,'https://www.tiktok.com/tiktokstudio/upload?from=creator_center&tab=video');
+  assert.equal(migrated.confirmed.tiktok,true);
+  assert.equal(socialUrl('tiktok','https://tiktok.com/login'),
+    'https://tiktok.com/tiktokstudio/upload?from=creator_center&tab=video');
+  assert.equal(saveSocialBrowser({browser:'chrome',urls},{file,browsers}).confirmed.tiktok,true);
+  assert.throws(()=>socialUrl('tiktok','https://www.tiktok.com.attacker.example/'),/HTTPS oficial/);
 });

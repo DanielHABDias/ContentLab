@@ -1,3 +1,4 @@
+import {prepareTikTokScheduledVideo} from './tiktok-scheduler.mjs';
 import {prepareInstagramScheduledReel,instagramCaption} from './instagram-scheduler.mjs';
 /* Upload TikTok assistido e fluxo de agendamento específico do Instagram. */
 import fs from 'node:fs';
@@ -6,13 +7,7 @@ import {validateStudioUrl,StudioLoginRequired,StudioChanged,DEEP_DOM,
 
 export function socialCaption(item,platform){
   if(!['instagram','tiktok'].includes(platform))throw Error('Destino inválido.');
-  if(platform==='instagram')return instagramCaption(item).text;
-  const title=String(item.titleA||'').trim(),description=String(item.description||'').trim();
-  const hashtags=(item.tags||[]).map(x=>'#'+String(x).replace(/^#/,'').replace(/[^\p{L}\p{N}_]/gu,'')).filter(x=>x.length>1);
-  const caption=[title,description,hashtags.join(' ')].filter(Boolean).join('\n\n');
-  if(!caption)throw Error('Informe o título ou a legenda do vídeo.');
-  if(caption.length>2200)throw Error('A legenda tem '+caption.length+' caracteres; reduza para no máximo 2.200 no rascunho.');
-  return caption;
+  return instagramCaption(item).text;
 }
 export function normalizeSocialPostUrl(platform,value){
   if(typeof value!=='string'||value.length>1200)return null;
@@ -62,48 +57,8 @@ const hasLogin=platform=>'(()=>{const url=location.href.toLowerCase();'+
 const imageNotice=platform=>platform==='tiktok'?
   'Capa: confirme manualmente o frame/capa escolhido no TikTok Studio.':
   'Capa: confirme a miniatura/capa no Instagram antes de compartilhar.';
-export async function prepareTikTokUpload(session,item,{videoPath,coverAPath,progress=()=>{}}={}){
-  const cdp=await session.navigate('tiktok');
-  const warnings=[];
-  progress('Abrindo o envio no TikTok Studio...');
-  if(await cdp.eval(hasLogin('tiktok')))throw new StudioLoginRequired('TikTok');
-  // A seleção começa no Studio oficial. Um upload já em andamento nunca é reiniciado automaticamente.
-  let input=await waitFor(cdp,'(()=>{'+DEEP_DOM+
-    "return nodes.some(n=>n.matches?.('input[type=\"file\"]')&&((n.accept||'').includes('video')||(n.accept||'').includes('.mp4')));})()",7000);
-  if(!input){
-    const clicked=await cdp.eval(clickText(['upload','carregar vídeo','enviar vídeo','fazer upload','upload video','upload videos'],
-      ['button','a','[role="button"]'])).catch(()=>false);
-    if(!clicked&&await cdp.eval(hasLogin('tiktok')))throw new StudioLoginRequired('TikTok');
-    input=await waitFor(cdp,'(()=>{'+DEEP_DOM+
-      "return nodes.some(n=>n.matches?.('input[type=\"file\"]')&&((n.accept||'').includes('video')||(n.accept||'').includes('.mp4')));})()",12000);
-  }
-  if(!input){
-    if(await cdp.eval(hasLogin('tiktok')))throw new StudioLoginRequired('TikTok');
-    throw new StudioChanged('TikTok Studio','a área de upload');
-  }
-  progress('Selecionando o arquivo do vídeo no TikTok...');
-  if(!await uploadFile(cdp,videoPath))throw new StudioChanged('TikTok Studio','o seletor de arquivo');
-  progress('Aguardando o editor de legenda...');
-  const textFields=['[data-e2e="caption-text"] [contenteditable="true"]',
-    '[data-testid="caption-input"] [contenteditable="true"]','[data-e2e="video-caption"] [contenteditable="true"]',
-    '[contenteditable="true"][role="textbox"]','div[contenteditable="true"]'];
-  const caption=socialCaption(item,'tiktok');
-  const filled=await waitFor(cdp,setText(textFields,caption),30000);
-  if(!filled)throw new StudioChanged('TikTok Studio','o campo de legenda (arquivo já selecionado)');
-  progress('Legenda preparada; verificando capa e agendamento...');
-  if(coverAPath&&fs.existsSync(coverAPath)){
-    // A capa nem sempre tem seletor de imagem; o TikTok pode oferecer apenas um frame.
-    try{
-      const done=await uploadFile(cdp,coverAPath,{image:true});
-      if(!done)warnings.push(imageNotice('tiktok'));
-    }catch{warnings.push(imageNotice('tiktok'));}
-  }
-  const schedule=validateScheduleWindow('tiktok',item.scheduledAt);
-  if(schedule)warnings.push(schedule);
-  else if(item.scheduledAt&&!await applySchedule(cdp,'tiktok',item.scheduledAt))
-    warnings.push('Agendamento: não encontrei os controles atuais do TikTok; aplique a data e o horário preparados no Content Lab.');
-  warnings.push('Confirme visibilidade, direitos autorais, rotulagem de IA, conteúdo comercial, capa e agendamento antes de clicar em Publicar/Agendar.');
-  return {status:'awaiting_review',warnings,videoUrl:null};
+export async function prepareTikTokUpload(session,item,options={}){
+  return prepareTikTokScheduledVideo(session,item,options);
 }
 // O fluxo nativo de Conteúdo programado foi isolado para testar cada etapa.
 export async function prepareInstagramUpload(session,item,options={}){

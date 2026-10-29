@@ -4,7 +4,7 @@ import {resetSocialStudioTabs,validateStudioUrl} from './social-studio-browser.m
 
 const urls={
   youtube:'https://studio.youtube.com/',
-  tiktok:'https://www.tiktok.com/tiktokstudio',
+  tiktok:'https://www.tiktok.com/tiktokstudio/upload?from=creator_center&tab=video',
   instagram:'https://www.instagram.com/scheduled_content/'
 };
 function fakeBrowser(initial=[]){
@@ -127,4 +127,12 @@ test('navegação do Instagram sempre resolve para Conteúdo programado',()=>{
   assert.equal(validateStudioUrl('instagram','https://www.instagram.com/p/ABC123/?foo=1'),
     'https://www.instagram.com/scheduled_content/');
   assert.throws(()=>validateStudioUrl('instagram','https://instagram.com.attacker.example/scheduled_content/'),/oficial/);
+});
+
+test('Chrome CDP vai diretamente ao upload do TikTok, sem abrir o Creator Center',()=>{
+  assert.equal(validateStudioUrl('tiktok','https://www.tiktok.com/tiktokstudio'),
+    'https://www.tiktok.com/tiktokstudio/upload?from=creator_center&tab=video');
+  assert.equal(validateStudioUrl('tiktok','https://www.tiktok.com/tiktokstudio/upload?from=creator_center&tab=video'),
+    'https://www.tiktok.com/tiktokstudio/upload?from=creator_center&tab=video');
+  assert.throws(()=>validateStudioUrl('tiktok','https://www.tiktok.com.evil.test/tiktokstudio/upload'),/oficial/);
 });
