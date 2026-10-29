@@ -69,7 +69,9 @@ export async function preparePublicationSession(draftIds,{
     item.platforms.some(p=>config.confirmed?.[p]!==true||
       (item.kind==='long'&&p==='tiktok'))))
     throw Error('Há vídeos com rede não confirmada ou incompatível. Revise os destinos em Editar.');
-  const enabled=ORDER.filter(p=>config.confirmed?.[p]===true);
+  // Abrir apenas as redes efetivamente usadas pelos vídeos selecionados.
+  const used=new Set(selected.flatMap(item=>item.platforms));
+  const enabled=ORDER.filter(p=>used.has(p)&&config.confirmed?.[p]===true);
   if(!enabled.length)throw Error('Confirme pelo menos uma rede em Configurações.');
   const opener=openSession||((opts)=>import('./social-studio-browser.mjs').then(m=>m.openSocialStudioWindow(opts)));
   // Exatamente o mesmo perfil e as mesmas abas do login nas Configurações.
@@ -86,7 +88,7 @@ export async function preparePublicationSession(draftIds,{
           platform:p,tab:tabs.find(tab=>tab.platform===p).index,
           targetId:tabs.find(tab=>tab.platform===p).targetId
         }))})),
-      note:'Abas reutilizadas do perfil de configuração; targetId do CDP identifica cada aba. Nenhum upload foi iniciado.'
+      note:'Abas anteriores do perfil dedicado substituídas pelas redes dos vídeos selecionados; cookies e logins preservados. Nenhum upload foi iniciado.'
     };
     persistSession(sessionFile,session);
     return session;

@@ -82,7 +82,78 @@ async function connectTab(n,targetId){
   await c.send('Runtime.enable');await c.send('Page.enable');await c.send('DOM.enable');
   return c;
 }
-export async function openSocialStudioWindow({config,platforms,profile=SOCIAL_STUDIO_PROFILE,
+// Serializa aberturas simultâneas (por exemplo, dois botões de configuração).
+// A fila de envio continua controlando os alvos após a abertura.
+let openingSequence=Promise.resolve();
+async function serializeOpening(fn){
+  const previous=openingSequence;
+  let release;
+  openingSequence=new Promise(resolve=>{release=resolve;});
+  await previous;
+  try{return await fn();}finally{release();}
+}
+/**
+ * Recria exatamente as abas pedidas no perfil dedicado, sem tocar em cookies.
+ * Mantém uma aba viva para não fechar a última janela de um Chrome já aberto;
+ * navega essa aba para a primeira rede e fecha TODAS as demais páginas,
+ * inclusive abas restauradas e páginas antigas de redes sociais.
+ */
+export async function resetSocialStudioTabs(control,{ordered,urls,connectTarget}){
+  if(!ordered?.length||new Set(ordered).size!==ordered.length||
+    ordered.some(p=>!SOCIAL_ORDER.includes(p)||!urls?.[p]))
+    throw Error('Redes inválidas para a janela.');
+  if(typeof connectTarget!=='function')throw Error('Conexão CDP inválida.');
+  const targets=new Map(),clients=new Map();
+  try{
+    const initial=await control.send('Target.getTargets');
+    const pages=(initial.targetInfos||[]).filter(t=>t.type==='page'&&t.targetId);
+    const first=ordered[0];
+    const firstPage=pages.find(t=>{
+      try{return HOSTS[first].includes(new URL(t.url).hostname.toLowerCase());}
+      catch{return false;}
+    })||pages[0];
+    const entry=firstPage||await control.send('Target.createTarget',{url:urls[first],newWindow:false});
+    if(!entry?.targetId)throw Error('Não foi possível preparar a aba '+first+'.');
+    targets.set(first,entry.targetId);
+    const firstClient=await connectTarget(entry.targetId);
+    clients.set(first,firstClient);
+    // Uma navegação para a URL configurada garante que a aba reutilizada
+    // corresponda à conta/rede pedida, inclusive após restaurar outra página.
+    await firstClient.send('Page.navigate',{url:urls[first]});
+    // Limpar TODAS as páginas restantes deste perfil, não apenas as redes.
+    // Nunca fechar a única aba preservada.
+    for(const page of pages){
+      if(page.targetId===entry.targetId)continue;
+      const result=await control.send('Target.closeTarget',{targetId:page.targetId});
+      if(result?.success===false)throw Error('Não foi possível fechar uma aba anterior do navegador.');
+    }
+    for(const platform of ordered.slice(1)){
+      const created=await control.send('Target.createTarget',{url:urls[platform],newWindow:false});
+      if(!created.targetId)throw Error('Não foi possível abrir a aba '+platform+'.');
+      targets.set(platform,created.targetId);
+      clients.set(platform,await connectTarget(created.targetId));
+    }
+    // Abas extras podem ser restauradas enquanto a primeira navega.
+    // Fechá-las também evita que o botão de configuração exiba três redes.
+    const allowed=new Set(targets.values());
+    const extras=await control.send('Target.getTargets');
+    for(const page of extras.targetInfos||[]){
+      if(page.type!=='page'||!page.targetId||allowed.has(page.targetId))continue;
+      const result=await control.send('Target.closeTarget',{targetId:page.targetId});
+      if(result?.success===false)throw Error('Não foi possível limpar uma aba restaurada.');
+    }
+    await control.send('Target.activateTarget',{targetId:targets.get(first)});
+    return {targets,clients};
+  }catch(error){
+    for(const client of clients.values())client.close?.();
+    throw error;
+  }
+}
+
+export async function openSocialStudioWindow(options={}){
+  return serializeOpening(()=>openSocialStudioWindowUnlocked(options));
+}
+async function openSocialStudioWindowUnlocked({config,platforms,profile=SOCIAL_STUDIO_PROFILE,
   launch=spawn,buildCommand=publicationLaunchCommand}={}){
   if(!Array.isArray(platforms)||!platforms.length||new Set(platforms).size!==platforms.length)
     throw Error('Selecione redes válidas para a sessão.');
@@ -110,10 +181,9 @@ export async function openSocialStudioWindow({config,platforms,profile=SOCIAL_ST
     if(fs.lstatSync(marker).isSymbolicLink()||fs.readFileSync(marker,'utf8').trim()!==cmd.browser)
       throw Error('Perfil do navegador pertence a outro navegador. Selecione o navegador correto em Configurações.');
   }else fs.writeFileSync(marker,cmd.browser+'\n',{flag:'wx',mode:0o600});
-  let n=previousPort(profile),control=null,fresh=false;
+  let n=previousPort(profile),control=null;
   if(n)try{control=await connectBrowser(n,4);}catch{control=null;}
   if(!control){
-    fresh=true;
     n=await port();
     // No macOS, "open -a" reutiliza o Chrome pessoal já aberto;
     // "-n" força uma instância separada com o perfil persistente do crawler.
@@ -126,37 +196,13 @@ export async function openSocialStudioWindow({config,platforms,profile=SOCIAL_ST
     child.unref?.();
     control=await connectBrowser(n);
   }
-  const targets=new Map(),clients=new Map();
+  let opened;
   try{
-    // Cada nova chamada, seja configuração, abertura manual ou pipeline,
-    // reaproveita a aba real deste perfil. Não criar outra janela/perfil.
-    const response=await control.send('Target.getTargets');
-    const pages=(response.targetInfos||[]).filter(t=>t.type==='page');
-    const used=new Set();
-    const forPlatform=platform=>pages.find(t=>{
-      if(used.has(t.targetId))return false;
-      try{return HOSTS[platform].includes(new URL(t.url).hostname.toLowerCase());}
-      catch{return false;}
+    opened=await resetSocialStudioTabs(control,{
+      ordered,urls,connectTarget:id=>connectTab(n,id)
     });
-    for(const platform of ordered){
-      let selected=forPlatform(platform);
-      let shouldNavigate=false;
-      if(!selected&&fresh&&targets.size===0){
-        // Reutilizar a aba criada pelo Chrome na primeira inicialização.
-        selected=pages.find(t=>!used.has(t.targetId)&&!t.url?.startsWith('devtools:'))||null;
-        shouldNavigate=Boolean(selected);
-      }
-      if(!selected){
-        selected=await control.send('Target.createTarget',{url:urls[platform],newWindow:false});
-      }
-      if(!selected.targetId)throw Error('Não foi possível localizar a aba '+platform);
-      used.add(selected.targetId);
-      targets.set(platform,selected.targetId);
-      clients.set(platform,await connectTab(n,selected.targetId));
-      if(shouldNavigate)await clients.get(platform).send('Page.navigate',{url:urls[platform]});
-    }
-    await control.send('Target.activateTarget',{targetId:targets.get(ordered[0])});
-  }catch(error){for(const c of clients.values())c.close();control.close();throw error;}
+  }catch(error){control.close();throw error;}
+  const {targets,clients}=opened;
   return {
     port:n,browser:cmd.browser,tabs:ordered.map((p,i)=>({platform:p,index:i+1,targetId:targets.get(p),url:urls[p]})),
     async activate(platform){

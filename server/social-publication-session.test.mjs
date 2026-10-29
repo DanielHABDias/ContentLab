@@ -50,6 +50,25 @@ test('Só abre contas confirmadas e bloqueia rascunhos com redes desligadas',asy
   assert.deepEqual(result.videos[0].destinations.map(d=>d.tab),[1,2]);
   await assert.rejects(()=>preparePublicationSession(['deleted'],options),/não foi encontrado/);
 });
+test('Apenas abrir redes ignora contas confirmadas que não são destino de nenhum vídeo selecionado',async t=>{
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'cl-selective-tabs-'));
+  t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
+  const called=[];
+  const onlyShort=[{id:'only-yt',kind:'short',titleA:'Só YouTube',
+    scheduledAt:'2026-11-12T12:00',platforms:['youtube']}];
+  const session=await preparePublicationSession(['only-yt'],{
+    config,drafts:onlyShort,sessionFile:path.join(dir,'session.json'),
+    openSession:async ({platforms})=>{
+      called.push(platforms);
+      return {browser:'chrome',tabs:platforms.map((platform,i)=>({
+        platform,index:i+1,url:urls[platform],targetId:'tab-'+platform
+      })),close(){}};
+    }
+  });
+  assert.deepEqual(called,[['youtube']]);
+  assert.deepEqual(session.tabs.map(tab=>tab.platform),['youtube']);
+  assert.deepEqual(session.videos[0].destinations.map(destination=>destination.platform),['youtube']);
+});
 test('O comando Chromium usa nova janela no perfil local e não abre Firefox via CDP',()=>{
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),'cl-command-'));
   try{

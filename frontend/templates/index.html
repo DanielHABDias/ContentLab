@@ -553,7 +553,7 @@
         <div id="publishDraftList" class="publish-draft-list" aria-live="polite"></div>
         <section id="publishSessionPanel" class="publish-session-panel" hidden aria-label="Abas preparadas no navegador">
           <div><span class="eyebrow">NAVEGADOR PREPARADO</span><h4>Abas abertas para a publicação</h4>
-          <p>Abas do mesmo perfil persistente usado nos logins das Configurações e no envio assistido. Esta ação não envia nem agenda vídeos.</p></div>
+          <p>As abas anteriores do perfil dedicado são fechadas e substituídas somente pelas redes dos vídeos selecionados. Os cookies e logins continuam salvos; esta ação não envia nem agenda vídeos.</p></div>
           <ol id="publishSessionTabs"></ol><p id="publishSessionVideos" class="publish-session-videos"></p>
           <small>Cada aba é identificada pelo targetId do navegador; a posição visual pode mudar sem perder a associação da rede.</small>
         </section>
@@ -866,7 +866,7 @@
             <button type="button" id="socialConfirm-youtube" class="btn btn-ghost" disabled>Conferi: estou logado</button>
           </article>
         </div>
-        <p class="helper-text">Ao clicar em “Abrir e verificar login”, a rede abre na mesma sessão persistente usada pela pipeline e por “Apenas abrir redes” — não no perfil pessoal. Entre na conta desejada e confirme. Os cookies permanecem no perfil do navegador, sem cópia para o JSON do Content Lab. Confirmações antigas feitas no navegador pessoal precisam ser refeitas uma única vez.</p>
+        <p class="helper-text">Ao clicar em “Abrir e verificar login”, o Content Lab fecha as abas anteriores do perfil dedicado e abre <strong>apenas a rede escolhida</strong>. O mesmo perfil será usado em “Apenas abrir redes” e na pipeline, sem tocar nas abas do navegador pessoal. Entre na conta desejada e confirme. Os cookies permanecem no perfil do navegador, sem cópia para o JSON do Content Lab. Confirmações antigas feitas no navegador pessoal precisam ser refeitas uma única vez.</p>
         <div class="social-setup-footer"><button type="button" class="btn btn-primary" id="socialSaveSettings">Salvar navegador e URLs</button>
           <p id="socialSetupStatus" role="status" aria-live="polite" class="helper-text"></p></div>
       </section>
