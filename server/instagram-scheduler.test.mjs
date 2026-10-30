@@ -7,6 +7,7 @@ import {
   INSTAGRAM_SCHEDULED_URL,instagramCaption,instagramScheduleParts,
   instagramButtonExpression,instagramNoticeExpression,instagramToggleExpression,
   instagramCalendarDayExpression,instagramConfirmationObserverExpression,
+  instagramSpinTimeExpression,instagramDateTriggerExpression,
   prepareInstagramScheduledReel
 } from './instagram-scheduler.mjs';
 
@@ -66,6 +67,8 @@ test('expressões identificam corte por title, botão exato e aviso específico 
   assert.match(instagramNoticeExpression(),/entendi/);
   assert.match(instagramToggleExpression(['ocultar número de curtidas e visualizações']),/aria-checked/);
   assert.match(instagramCalendarDayExpression('2031-11-06'),/2031-11-06/);
+  assert.match(instagramSpinTimeExpression('12:35'),/spinbutton/);
+  assert.match(instagramDateTriggerExpression(),/\\d\{4\}/);
   assert.match(instagramConfirmationObserverExpression(),/MutationObserver/);
 });
 test('Reels agendado só é confirmado depois do clique final e do aviso de sucesso',async t=>{

@@ -2,7 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {YOUTUBE_ACTION_DELAY_MS,findStudioTagsExpression,fillYouTubeTags,
   disclosureExpression,applyYouTubeDisclosures,selectScheduleCardExpression,
-  prepareYouTubeSchedule} from './youtube-studio-crawler.mjs';
+  prepareYouTubeSchedule,youtubeReadyToScheduleExpression,
+  youtubeFinalScheduleExpression,youtubeScheduleConfirmationExpression,
+  confirmYouTubeSchedule} from './youtube-studio-crawler.mjs';
 
 test('atraso entre ações do crawler é explícito e tags usam Enter individualmente',async()=>{
   assert.ok(YOUTUBE_ACTION_DELAY_MS>=900);
@@ -69,4 +71,16 @@ test('se o Studio usar calendário e menu de horário próprios, tentar ambos an
   assert.ok(visited.some(x=>x.includes('#time-of-day-trigger')));
   assert.ok(visited.some(x=>x.includes('ytcp-time-of-day-picker')));
   assert.equal(visited.filter(x=>x.startsWith('Input.dispatchKeyEvent')).length,2);
+});
+test('confirmação final espera processamento, clica Programar uma vez e exige confirmação textual',async()=>{
+  const calls=[];
+  const cdp={async eval(expression){calls.push(expression);
+    if(expression.includes('document.body')&&expression.includes('const ok='))return 'Vídeo programado';
+    return true;
+  }};
+  assert.match(youtubeReadyToScheduleExpression(),/processing/);
+  assert.match(youtubeFinalScheduleExpression(),/programar/);
+  assert.match(youtubeScheduleConfirmationExpression(),/agendad/);
+  assert.equal(await confirmYouTubeSchedule(cdp,{delayMs:0,timeout:50}),'Vídeo programado');
+  assert.equal(calls.filter(x=>x.includes('target.click')).length,1);
 });

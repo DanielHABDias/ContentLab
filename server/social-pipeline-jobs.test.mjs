@@ -219,3 +219,18 @@ test('TikTok sem confirmação não persiste resultado nem segue ao próximo ví
   assert.match(getSocialPipeline(job.id).message,/não retornou confirmação/);
   cancelSocialPipeline(job.id);
 });
+test('YouTube confirmado pelo Studio é persistido e avança sem revisão manual',async t=>{
+  const f=fixture(t),draft=f.create('YouTube confirmado',['youtube']);
+  const job=startSocialPipeline([draft.id],{config,drafts:listSocialDrafts(f.root),
+    resultsFile:f.resultsFile,root:f.root,adapters:{
+      open:async()=>({tabs:[],async navigate(){return {eval:async()=>true};},close(){}}),
+      youtube:async()=>({status:'scheduled',verified:true,verification:'youtube_ui',
+        confirmationText:'Vídeo programado',videoUrl:'https://youtu.be/ABCdef12345',warnings:[]}),
+      instagram:async()=>{},tiktok:async()=>{}
+    }});
+  await until(()=>getSocialPipeline(job.id).status==='done');
+  const result=readSocialPipelineResults(f.resultsFile)[draft.id].youtube;
+  assert.equal(result.status,'scheduled');
+  assert.equal(result.verification,'youtube_ui');
+  assert.match(result.confirmationText,/programado/);
+});

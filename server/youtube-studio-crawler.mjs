@@ -1,7 +1,7 @@
 /* Automação assistida do YouTube Studio.
  * Usa CDP nativo do Node 22, sem extensões nem leitura de cookies. O perfil de
  * automação é separado do perfil normal; a primeira execução exige login visível.
- * Nunca clica em Publicar/Programar: as declarações e a etapa final exigem revisão.
+ * Prepara e confirma o agendamento uma única vez, verificando o resultado no Studio.
  */
 import fs from 'node:fs';
 import os from 'node:os';
@@ -254,7 +254,42 @@ export async function prepareYouTubeSchedule(cdp,value,{delayMs=YOUTUBE_ACTION_D
   }
   if(!time)return false;
   await pauseForStudio(delayMs);
-  return true; // Não clica em "Programar", "Salvar" nem "Publicar".
+  return true;
+}
+export function youtubeReadyToScheduleExpression(){
+  return '(()=>{'+browserDOM+
+    "const body=(document.body?.innerText||'').toLowerCase();"+
+    "const busy=/(uploading|enviando|processando|processing)\\s*(\\d+%|\.\.\.)/.test(body);"+
+    "const buttons=nodes.filter(n=>n.getClientRects().length&&n.matches?.('button,ytcp-button,[role=\"button\"]'));"+
+    "const final=buttons.find(n=>/^(schedule|programar|agendar)$/.test((n.innerText||n.getAttribute('aria-label')||'').trim().toLowerCase()));"+
+    "return Boolean(final&&!final.disabled&&final.getAttribute('aria-disabled')!=='true'&&!busy);})()";
+}
+export function youtubeFinalScheduleExpression(){
+  return '(()=>{'+browserDOM+
+    "const buttons=nodes.filter(n=>n.getClientRects().length&&n.matches?.('button,ytcp-button,[role=\"button\"]'));"+
+    "const target=buttons.find(n=>/^(schedule|programar|agendar)$/.test((n.innerText||n.getAttribute('aria-label')||'').trim().toLowerCase())&&"+
+    "!n.disabled&&n.getAttribute('aria-disabled')!=='true');if(!target)return false;target.click();return true;})()";
+}
+export function youtubeScheduleConfirmationExpression(){
+  return '(()=>{const text=(document.body?.innerText||\'\');const ok=/(video|vídeo).{0,100}(scheduled|programad|agendad)|(scheduled|programad|agendad).{0,100}(video|vídeo)/i.exec(text);return ok?.[0]||null;})()';
+}
+export async function confirmYouTubeSchedule(cdp,{delayMs=YOUTUBE_ACTION_DELAY_MS,timeout=180000}={}){
+  if(!await waitUntil(cdp,youtubeReadyToScheduleExpression(),timeout))return null;
+  if(!await cdp.eval(youtubeFinalScheduleExpression()).catch(()=>false))return null;
+  await pauseForStudio(delayMs);
+  return await waitUntil(cdp,youtubeScheduleConfirmationExpression(),30000);
+}
+export async function discardCurrentYouTubeDraft(cdp,{delayMs=YOUTUBE_ACTION_DELAY_MS}={}){
+  // Limita a remoção ao modal de upload que está aberto nesta execução.
+  const closed=await cdp.eval(clickSelector([
+    'ytcp-uploads-dialog button[aria-label="Close"]','ytcp-uploads-dialog button[aria-label="Fechar"]',
+    'ytcp-uploads-dialog #close-button','ytcp-uploads-dialog ytcp-icon-button#close-button'
+  ])).catch(()=>false);
+  if(!closed)return false;
+  await pauseForStudio(delayMs);
+  return Boolean(await cdp.eval(clickText([
+    'descartar alterações','discard changes','excluir rascunho','delete draft','descartar'
+  ],['ytcp-button','button','tp-yt-paper-button','[role="button"]'])).catch(()=>false));
 }
 const readActivePort=profile=>{
   const file=path.join(profile,'DevToolsActivePort');
@@ -366,8 +401,15 @@ export async function prepareYouTubeUpload(browser,video,{videoPath,coverAPath,c
     progress('Avançando pelas etapas até Visibilidade e abrindo o cartão Agendar...');
     if(!await prepareYouTubeSchedule(cdp,video.scheduledAt,{delayMs}))
       warnings.push('Agendamento: não consegui selecionar o cartão e/ou preencher data/hora. Configure manualmente '+video.scheduledAt.replace('T',' às ')+'.');
+    else{
+      progress('Aguardando o processamento e confirmando o agendamento no YouTube...');
+      const confirmed=await confirmYouTubeSchedule(cdp,{delayMs});
+      if(!confirmed)warnings.push('O YouTube não confirmou o agendamento. O rascunho precisa ser revisado ou descartado antes de tentar novamente.');
+      else return {status:'scheduled',verified:true,verification:'youtube_ui',
+        confirmationText:String(confirmed),warnings,videoUrl:await detectYouTubeLink(cdp)};
+    }
   }
-  warnings.push('Confira fuso horário, público infantil, uso de IA, promoção paga, direitos autorais e horário. A confirmação final de Programar/Publicar permanece manual.');
+  warnings.push('Confira fuso horário, público infantil, uso de IA, promoção paga, direitos autorais e horário.');
   return {status:'awaiting_review',warnings,videoUrl:await detectYouTubeLink(cdp)};
 }
 export async function detectYouTubeLink(cdp){

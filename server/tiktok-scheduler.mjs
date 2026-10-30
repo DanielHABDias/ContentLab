@@ -41,6 +41,8 @@ export function tiktokScheduleToggleExpression(){
   const labels=['programar','schedule','agendar vídeo','schedule video'];
   return '(()=>{'+DEEP_DOM+'const names='+normalize(labels)+';'+
     "const text=n=>String(n.getAttribute?.('aria-label')||n.innerText||n.textContent||'').trim().toLocaleLowerCase('pt-BR');"+
+    "const direct=nodes.find(n=>n.getClientRects().length&&n.matches?.('input[type=\"radio\"][value=\"schedule\"]'));"+
+    "if(direct){if(!direct.checked)direct.click();return true;}"+
     "const labelsFound=nodes.filter(n=>n.getClientRects().length&&names.includes(text(n)));"+
     "const selector='input[type=\"radio\"],input[type=\"checkbox\"],[role=\"radio\"],[role=\"checkbox\"],[role=\"switch\"]';"+
     "for(const label of labelsFound){let parent=label;for(let depth=0;depth<5&&parent;depth++,parent=parent.parentElement||parent.getRootNode()?.host){"+
@@ -51,6 +53,7 @@ export function tiktokScheduleToggleExpression(){
     'return false;})()';
 }
 const CAPTION_FIELDS=[
+  '.public-DraftEditor-content[contenteditable="true"][role="combobox"]',
   '[data-e2e="caption-text"] [contenteditable="true"]',
   '[data-testid="caption-input"] [contenteditable="true"]',
   '[data-e2e="video-caption"] [contenteditable="true"]',
@@ -60,6 +63,15 @@ const CAPTION_FIELDS=[
   '[contenteditable="true"][aria-label*="caption"]',
   '[contenteditable="true"][role="textbox"]'
 ];
+export function tiktokTextScheduleInputExpression(kind,value){
+  const pattern=kind==='date'?'^\\d{4}-\\d{2}-\\d{2}$':'^\\d{2}:\\d{2}$';
+  return '(()=>{'+DEEP_DOM+'const value='+JSON.stringify(value)+',pattern=new RegExp('+JSON.stringify(pattern)+');'+
+    "const fields=nodes.filter(n=>n.getClientRects().length&&n.matches?.('input.TUXTextInputCore-input,input[type=\"text\"]'));"+
+    "const target=fields.find(n=>pattern.test(String(n.value||'')));if(!target)return false;target.focus();"+
+    "const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')?.set;setter?.call(target,value);"+
+    "target.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertText',data:value}));"+
+    "target.dispatchEvent(new Event('change',{bubbles:true}));target.blur();return target.value===value;})()";
+}
 export function tiktokUploadInputExpression(kind){
   return '(()=>{'+DEEP_DOM+
     "return nodes.some(n=>n.matches?.('input[type=\"file\"]')&&"+
@@ -108,6 +120,7 @@ const disconnect=()=>'(window.__contentlabTikTokScheduleObserver?.disconnect?.()
 async function dateAndTime(cdp,parts,delayMs){
   let date=await waitFor(cdp,dateInput(parts.date),9000).catch(()=>false);
   if(!date)date=await waitFor(cdp,textDateInput(parts.date),4000).catch(()=>false);
+  if(!date)date=await waitFor(cdp,tiktokTextScheduleInputExpression('date',parts.date),4000).catch(()=>false);
   if(!date){
     if(!await cdp.eval(datePickerTrigger()).catch(()=>false))return false;
     await sleep(delayMs);
@@ -115,7 +128,9 @@ async function dateAndTime(cdp,parts,delayMs){
     if(!date)return false;
   }
   await sleep(delayMs);
-  if(!await waitFor(cdp,timeInput(parts.time),9000).catch(()=>false))return false;
+  let time=await waitFor(cdp,timeInput(parts.time),5000).catch(()=>false);
+  if(!time)time=await waitFor(cdp,tiktokTextScheduleInputExpression('time',parts.time),5000).catch(()=>false);
+  if(!time)return false;
   await sleep(delayMs);
   return true;
 }

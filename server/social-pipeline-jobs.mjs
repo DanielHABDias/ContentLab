@@ -7,7 +7,8 @@ import {readSocialBrowser,socialUrl} from './social-browser.mjs';
 import {listSocialDrafts,socialDraftMedia} from './social-drafts.mjs';
 import {openSocialStudioWindow,SOCIAL_ORDER,StudioLoginRequired,StudioChanged} from './social-studio-browser.mjs';
 import {prepareTikTokUpload,prepareInstagramUpload,normalizeSocialPostUrl} from './social-platform-crawlers.mjs';
-import {prepareYouTubeUpload,normalizeYouTubeVideoUrl,YouTubeLoginRequired,YouTubeStudioChanged} from './youtube-studio-crawler.mjs';
+import {prepareYouTubeUpload,normalizeYouTubeVideoUrl,YouTubeLoginRequired,YouTubeStudioChanged,
+  discardCurrentYouTubeDraft} from './youtube-studio-crawler.mjs';
 
 export const SOCIAL_PIPELINE_RESULTS=path.join(os.homedir(),'.contentlab','social-pipeline-results.json');
 const jobs=new Map();
@@ -99,7 +100,7 @@ async function step(job){
     if(job.stopped)return;
     job.warnings=result?.warnings||[];
     job.videoUrl=platformUrl(platform,result?.videoUrl);
-    if(['instagram','tiktok'].includes(platform)&&result?.status==='scheduled'&&
+    if(['youtube','instagram','tiktok'].includes(platform)&&result?.status==='scheduled'&&
       result?.verified===true&&result?.verification===platform+'_ui'&&
       typeof result.confirmationText==='string'&&result.confirmationText.trim()){
       // TikTok/Instagram: somente após confirmação textual observada no site.
@@ -121,7 +122,15 @@ async function step(job){
       ' no '+platform+'. Depois confirme para prosseguir.';
   }catch(error){
     if(job.stopped)return;
-    job.warnings=[error.message||'Erro de interface'];
+    const failureWarnings=[error.message||'Erro de interface'];
+    if(platform==='youtube'&&job.session){
+      const cdp=await job.session.navigate('youtube').catch(()=>null);
+      if(cdp){
+        const discarded=await discardCurrentYouTubeDraft(cdp).catch(()=>false);
+        if(!discarded)failureWarnings.push('O rascunho falho do YouTube não pôde ser descartado automaticamente; revise o Studio antes de repetir.');
+      }
+    }
+    job.warnings=failureWarnings;
     if(error instanceof StudioLoginRequired||error instanceof YouTubeLoginRequired){
       // Login é uma etapa de Configurações. A fila não oferece login nem
       // prossegue após expiração de cookies: exige revalidação do perfil.

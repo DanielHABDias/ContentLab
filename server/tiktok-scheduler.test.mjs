@@ -7,7 +7,7 @@ import {
  TIKTOK_UPLOAD_URL,TIKTOK_ACTION_DELAY_MS,tiktokCaption,
  tiktokScheduleParts,tiktokButtonExpression,tiktokScheduleToggleExpression,
  tiktokUploadInputExpression,tiktokCalendarDayExpression,
- tiktokScheduleSuccessObserver,prepareTikTokScheduledVideo
+ tiktokScheduleSuccessObserver,tiktokTextScheduleInputExpression,prepareTikTokScheduledVideo
 } from './tiktok-scheduler.mjs';
 
 const video=(extra={})=>({titleA:'Título do vídeo',description:'Descrição original',
@@ -62,6 +62,9 @@ test('controles são específicos: selecionar vídeo, editar/carregar/salvar cap
   assert.match(tiktokButtonExpression(['selecionar vídeo']),/selecionar vídeo/);
   assert.match(tiktokButtonExpression(['salvar'],{dialog:true}),/aria-modal/);
   assert.match(tiktokScheduleToggleExpression(),/aria-checked/);
+  assert.match(tiktokScheduleToggleExpression(),/value="schedule"/);
+  assert.match(tiktokTextScheduleInputExpression('date','2031-11-06'),/TUXTextInputCore-input/);
+  assert.match(tiktokTextScheduleInputExpression('time','12:00'),/12:00/);
   assert.match(tiktokUploadInputExpression('video'),/mp4/);
   assert.match(tiktokUploadInputExpression('image'),/png/);
   assert.match(tiktokCalendarDayExpression('2031-11-06'),/2031-11-06/);

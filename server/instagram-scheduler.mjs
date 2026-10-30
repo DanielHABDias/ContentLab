@@ -97,6 +97,35 @@ const setInstagramTimeExpression=time=>setText([
   'input[aria-label*="Time"]','input[placeholder*="HH:MM"]',
   'input[placeholder*="hh:mm"]'
 ],time);
+export function instagramSpinTimeExpression(time){
+  const [hours,minutes]=time.split(':');
+  return '(()=>{'+DEEP_DOM+'const values='+JSON.stringify([hours,minutes])+';'+
+    "const selectors=['input[role=\"spinbutton\"][aria-label=\"Hours\"]','input[role=\"spinbutton\"][aria-label=\"Hora\"]',"+
+    "'input[role=\"spinbutton\"][aria-label=\"Minutes\"]','input[role=\"spinbutton\"][aria-label=\"Minutos\"]'];"+
+    "const hour=nodes.find(n=>n.getClientRects().length&&(n.matches?.(selectors[0])||n.matches?.(selectors[1])));"+
+    "const minute=nodes.find(n=>n.getClientRects().length&&(n.matches?.(selectors[2])||n.matches?.(selectors[3])));"+
+    "if(!hour||!minute)return false;const set=(n,v)=>{n.focus();const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')?.set;"+
+    "setter?.call(n,v);n.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertText',data:v}));n.dispatchEvent(new Event('change',{bubbles:true}));n.blur();};"+
+    "set(hour,values[0]);set(minute,values[1]);return true;})()";
+}
+async function typeInstagramSpinValue(cdp,label,value){
+  const focused=await cdp.eval('(()=>{'+DEEP_DOM+'const labels='+JSON.stringify(label)+';'+
+    "const field=nodes.find(n=>n.getClientRects().length&&n.matches?.('input[role=\"spinbutton\"]')&&labels.includes(n.getAttribute('aria-label')));"+
+    "if(!field)return false;field.focus();field.select?.();return true;})()").catch(()=>false);
+  if(!focused||typeof cdp.send!=='function')return false;
+  await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'a',code:'KeyA',modifiers:2,windowsVirtualKeyCode:65});
+  await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'a',code:'KeyA',modifiers:2,windowsVirtualKeyCode:65});
+  await cdp.send('Input.insertText',{text:value});
+  await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
+  await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
+  return true;
+}
+export function instagramDateTriggerExpression(){
+  return '(()=>{'+DEEP_DOM+
+    "const target=nodes.find(n=>n.getClientRects().length&&n.matches?.('button,[role=\"button\"]')&&"+
+    "/(\\b\\d{4}\\b|jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez|mon|tue|wed|thu|fri|sat|sun|seg|ter|qua|qui|sex|sáb|dom)/i.test((n.innerText||n.getAttribute('aria-label')||'').trim()));"+
+    "if(!target)return false;target.click();return true;})()";
+}
 // Fallback apenas quando o calendário mostra uma data explicitamente
 // identificável. Nunca clicar num dia solto do mês errado.
 export function instagramCalendarDayExpression(date){
@@ -131,6 +160,7 @@ async function calendarAndTime(cdp,parts,delayMs){
   if(!date)date=await cdp.eval(setInstagramTextDateExpression(parts.date)).catch(()=>false);
   if(!date){
     const trigger=await cdp.eval(instagramButtonExpression(['data','date','selecionar data','select date']))
+      .catch(()=>false)||await cdp.eval(instagramDateTriggerExpression())
       .catch(()=>false);
     if(!trigger)return false;
     await sleep(delayMs);
@@ -138,7 +168,13 @@ async function calendarAndTime(cdp,parts,delayMs){
     if(!date)return false;
   }
   await sleep(delayMs);
-  const time=await cdp.eval(setInstagramTimeExpression(parts.time)).catch(()=>false);
+  let time=await cdp.eval(setInstagramTimeExpression(parts.time)).catch(()=>false);
+  if(!time&&typeof cdp.send==='function'){
+    const [hour,minute]=parts.time.split(':');
+    time=await typeInstagramSpinValue(cdp,['Hours','Hora'],hour)&&
+      await typeInstagramSpinValue(cdp,['Minutes','Minutos'],minute);
+  }
+  if(!time)time=await cdp.eval(instagramSpinTimeExpression(parts.time)).catch(()=>false);
   if(!time)return false;
   await sleep(delayMs);
   return true;
@@ -164,7 +200,10 @@ export async function prepareInstagramScheduledReel(session,item,{
     if(!await awaitStep(cdp,expr,timeout))throw new StudioChanged('Instagram',text);
     await sleep(delayMs);
   };
-  await requireStep('o botão Programar conteúdo',instagramButtonExpression(['programar conteúdo','schedule content']));
+  let started=await awaitStep(cdp,instagramButtonExpression(['programar conteúdo','schedule content']),5000);
+  if(!started)started=await awaitStep(cdp,instagramButtonExpression(['novo post','new post','criar','create']),7000);
+  if(!started)throw new StudioChanged('Instagram','o botão Programar conteúdo ou Novo post');
+  await sleep(delayMs);
   await requireStep('o botão Selecionar do computador',instagramButtonExpression([
     'selecionar do computador','select from computer']));
   progress('Enviando o vídeo ao Instagram...');
