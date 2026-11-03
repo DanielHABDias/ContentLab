@@ -93,3 +93,7 @@ Downloads avulsos e transcrição local devem funcionar sem projeto ou com camin
 ## Padrões oficiais
 
 Consultar scene-library/manifest.json e o README do padrão escolhido antes de criar TSX do zero. A galeria oficial inclui contratos e exemplos. Textos Anton sem sombra; Bangers com tratamento HQ. SFX não são gerados pelos componentes. Flip/Curtain/Blur são transitionOut entre cenas, não presets de cena. Preserve cópias instaladas em projetos e valide sincronismo com transcript.words.
+
+## Conferência de estrutura
+
+Na revisão de projeto, diferencie entrega de estado interno: `output/final.mp4` e `output/TH_*.{jpg,jpeg,png,webp}` são finais; `thumbnails/project.json` é rascunho editável; `.contentlab/` contém estado técnico. Não reprovar projeto legado apenas por ainda possuir `narration.build.json`, `transcript.build.json` ou imagens antigas em `thumbnails/`; o fluxo atual deve preservar compatibilidade sem voltar a produzir nesses caminhos antigos.
