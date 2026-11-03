@@ -220,7 +220,7 @@ app.post('/api/editor/render',api(async(req,res)=>{
       job.status=controller.signal.aborted?'cancelled':'error';job.message=job.status==='cancelled'?'Render cancelado.':'Falha no render.';
       job.error=e.message;job.errorType=e.name||'Error';
       try{
-        const dir=path.join(root,'output','logs');fs.mkdirSync(dir,{recursive:true});
+        const dir=path.join(root,'.contentlab','render','logs');fs.mkdirSync(dir,{recursive:true});
         const file=path.join(dir,'render-'+id+'.log');fs.writeFileSync(file,e.stack||e.message);
         job.errorLog=file;job.hasErrorLog=true;
       }catch{}
@@ -238,7 +238,7 @@ app.post('/api/editor/jobs/:id/cancel',api(async(req,res)=>{
 app.get('/api/editor/media/:id',api(async(req,res)=>{
   const job=jobs.get(req.params.id);
   if(job?.status!=='done'||!job.filepath)return res.status(404).json({error:'MP4 ainda não disponível.'});
-  const expected=path.join(job.projectRoot,'output','final','final.mp4');
+  const expected=path.join(job.projectRoot,'output','final.mp4');
   if(path.resolve(job.filepath)!==expected||!fs.existsSync(expected))return res.status(404).json({error:'Arquivo não encontrado.'});
   res.type('video/mp4').sendFile(expected);
 }));
