@@ -62,10 +62,14 @@ export async function renderProject(directory,{
   const inputFiles=[validation.narration,...Object.values(validation.resolvedAssets),
     plan.sources?.transcript&&path.resolve(root,plan.sources.transcript)].filter(Boolean);
   if(cacheMode==='rebuild')cleanOutput(root,inputFiles);
-  const outputRoot=path.join(root,'output'),internalRoot=path.join(root,'.contentlab','render'),
-    finalFile=path.join(outputRoot,'final.mp4');
-  if(fs.existsSync(outputRoot)&&fs.lstatSync(outputRoot).isSymbolicLink())throw Error('Pasta output insegura.');
-  if(fs.existsSync(internalRoot)&&fs.lstatSync(internalRoot).isSymbolicLink())throw Error('Pasta interna de render insegura.');
+  const outputRoot=path.join(root,'output'),internalBase=path.join(root,'.contentlab'),
+    internalRoot=path.join(internalBase,'render'),finalFile=path.join(outputRoot,'final.mp4');
+  if(fs.existsSync(outputRoot)&&(fs.lstatSync(outputRoot).isSymbolicLink()||!fs.statSync(outputRoot).isDirectory()))
+    throw Error('Pasta output insegura.');
+  if(fs.existsSync(internalBase)&&(fs.lstatSync(internalBase).isSymbolicLink()||!fs.statSync(internalBase).isDirectory()))
+    throw Error('Pasta .contentlab insegura.');
+  if(fs.existsSync(internalRoot)&&(fs.lstatSync(internalRoot).isSymbolicLink()||!fs.statSync(internalRoot).isDirectory()))
+    throw Error('Pasta interna de render insegura.');
   fs.mkdirSync(outputRoot,{recursive:true});
   fs.mkdirSync(internalRoot,{recursive:true});
   if(cacheMode==='reuse')migrateLegacyRenderLayout(outputRoot,internalRoot,finalFile);
