@@ -18,3 +18,7 @@ Para escolher um preset, consulte a Galeria de cenas especiais e o manifesto ant
 Para thumbnails, a mesma entrada encaminha a `docs/THUMBNAIL_STUDIO.md`, incluída no ZIP. O projeto de imagem (`version: 1`, imagens incorporadas) é independente do edit_plan.json de vídeo; não exige áudio/transcrição. O guia documenta camadas, fundos HQ, inversão, contorno fino, versões e parâmetros. Preferências de canal permanecem externas.
 
 A direção atual inclui Full HD/4K, JPG/PNG/WebP, luzes laterais independentes (`background.sideLights`), entrelinha do título (`title.lineHeight`) e foto centralizada (`photoFit`). Fundos/texturas ficam atrás de todos os personagens; secundários são opacos por padrão. A skill orienta partir das referências e assets reais, sem transformar uma identidade pessoal em regra pública. O ZIP baixado na documentação utiliza essa mesma fonte, sem manual paralelo.
+
+## Layout canônico de projetos e exportações
+
+A organização oficial está em [docs/PROJECT_LAYOUT.md](../../docs/PROJECT_LAYOUT.md). Imagens finais do Thumbnail Studio ficam em `output/TH_A.jpg`, `TH_B.jpg` etc. (JPG/PNG/WebP). Na interface, **Nova thumbnail** nunca sobrescreve; **Substituir TH_X.ext** exige selecionar um arquivo existente do mesmo formato. O rascunho editável continua em `thumbnails/project.json`. Metadados internos `narration.build.json` e `transcript.build.json` ficam em `.contentlab/build/`; leituras legadas da raiz continuam compatíveis.
