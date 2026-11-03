@@ -84,15 +84,17 @@ export function inspectPublicationProject(projectRoot){
     }
   }
   if(!images.length)throw Error('Nenhuma thumbnail final TH_ encontrada em output/ (nem imagem legada em thumbnails/).');
-  // Na estrutura nova, A/B são os slots TH_A e TH_B; no legado preservamos a regra antiga por data.
-  const coverA=legacyThumbnails?(kind==='long'?(images[1]||images[0]):images[0]):images[0];
-  const coverB=kind==='long'?(legacyThumbnails?images[0]:(images[1]||null)):null;
+  // Na estrutura nova, A/B significam literalmente TH_A e TH_B; um TH_C não ocupa o lugar de B.
+  const slots=legacyThumbnails?null:new Map(images.map(file=>[path.basename(file).match(FINAL_THUMBNAIL)[1].toUpperCase(),file]));
+  const coverA=legacyThumbnails?(kind==='long'?(images[1]||images[0]):images[0]):(slots.get('A')||images[0]);
+  const coverB=kind==='long'?(legacyThumbnails?images[0]:(slots.get('B')||null)):null;
+  const needsReview=kind==='long'&&!coverB;
   return {projectRoot:root,name,kind,format:plan.project.format,
     videoPath:video,videoName:path.basename(video),videoBytes:fs.statSync(video).size,
     coverAPath:coverA,coverBPath:coverB,
     coverAName:path.basename(coverA),coverBName:coverB&&path.basename(coverB),
-    needsReview:kind==='long'&&images.length<2,
-    warning:kind==='long'&&images.length<2?
+    needsReview,
+    warning:needsReview?
       'Apenas uma thumbnail disponível. A opção B será uma cópia provisória; edite o título e a capa B antes de publicar.':
       legacyThumbnails?'Projeto legado: capas lidas de thumbnails/. Confira antes de publicar.':'Pré-seleção por TH_A/TH_B. Confira as informações antes de publicar.'};
 }
