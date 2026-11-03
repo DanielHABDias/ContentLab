@@ -7,7 +7,7 @@ const fixtures=({renderProject,transcription='ready',isSingleRenderBusy=()=>fals
   createRenderQueue({
     loadProject:dir=>({projectRoot:'/projects/'+dir,name:dir,
       validation:{valid:true},transcription:{status:transcription}}),
-    renderProject:renderProject|| (async root=>({output:root+'/output/final/final.mp4'})),
+    renderProject:renderProject|| (async root=>({output:root+'/output/final.mp4'})),
     isSingleRenderBusy
   });
 async function finished(queue,id){
@@ -22,7 +22,7 @@ async function finished(queue,id){
 test('renders projects strictly in the submitted order, never simultaneously',async()=>{
   const events=[],queue=fixtures({renderProject:async root=>{
     events.push('start '+root);await tick();events.push('end '+root);
-    return {output:root+'/output/final/final.mp4'};
+    return {output:root+'/output/final.mp4'};
   }});
   const job=queue.enqueue({projectRoots:['SH_0005','SH_0006','SH_0007']});
   assert.equal(queue.isQueued('/projects/SH_0007'),true);
