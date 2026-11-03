@@ -42,7 +42,9 @@ test('thumbnail drafts isolate projects, reject stale overwrites and export uniq
 });
 test('reload discovers persisted raw takes and removes externally missing entries without touching audio',async t=>{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'workspace-takes-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
-  await inspectWorkspace(root);const name='recording-'+crypto.randomUUID()+'.wav',file=path.join(root,'audio','takes',name);
+  await inspectWorkspace(root);
+  fs.mkdirSync(path.join(root,'audio','takes'),{recursive:true});
+  const name='recording-'+crypto.randomUUID()+'.wav',file=path.join(root,'audio','takes',name);
   await run('ffmpeg',['-loglevel','error','-f','lavfi','-i','sine=duration=0.2',file]);
   assert.equal(takeList(root).takes.length,0);
   const info=await inspectWorkspace(root,{reload:true});assert.equal(info.takeCount,1);assert.ok(fs.existsSync(file));
