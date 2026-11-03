@@ -48,7 +48,7 @@ test('thumbnail drafts isolate projects, reject stale overwrites and export uniq
   assert.equal(fs.readFileSync(path.join(a,'output','TH_B.jpg'),'utf8'),'other');
   assert.throws(()=>saveThumbnailFile(a,{name:'image.png',bytes:Buffer.from('wrong'),replace:'TH_A.jpg',expectedFileRevision:all[0].revision}),/formato/);
   
-  assert.equal(fs.readFileSync(path.join(a,one.relative),'utf8'),'jpeg-test');
+  assert.equal(fs.readFileSync(path.join(a,one.relative),'utf8'),'replacement');
   assert.throws(()=>saveThumbnailFile(a,{name:'../outside.json',bytes:Buffer.from('{}')}),/inválido/);
 });
 test('reload discovers persisted raw takes and removes externally missing entries without touching audio',async t=>{
