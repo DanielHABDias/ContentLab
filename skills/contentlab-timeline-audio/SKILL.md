@@ -80,3 +80,7 @@ A importação é local e não reescreve qualquer `edit_plan.json` antigo. Para 
 ## Padrões oficiais
 
 Consultar scene-library/manifest.json e o README do padrão escolhido antes de criar TSX do zero. A galeria oficial inclui contratos e exemplos. Textos Anton sem sombra; Bangers com tratamento HQ. SFX não são gerados pelos componentes. Flip/Curtain/Blur são transitionOut entre cenas, não presets de cena. Preserve cópias instaladas em projetos e valide sincronismo com transcript.words.
+
+## Metadados técnicos de narração e transcrição
+
+A transcrição editorial/canônica continua em `transcript.json` (com TXT/SRT quando gerados). Os manifests que descrevem origem, tratamento e sincronismo são internos: `.contentlab/build/narration.build.json` e `.contentlab/build/transcript.build.json`. Projetos legados podem ter esses manifests na raiz e devem continuar legíveis, mas qualquer nova gravação técnica deve usar `.contentlab/build/`.
