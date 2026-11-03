@@ -40,7 +40,7 @@ Em Narração → Gravar, Tratar a gravação ao finalizar vem ativado. As tomad
 
 Ajustar tratamento da gravação permite desligar tudo, desativar apenas a IA ou cada filtro, trocar intensidade/modo da IA, volume alvo, filtro de graves e optar por reduzir pausas longas. Estes controles pertencem à gravação e não herdam valores da aba Tratamento ou da geração de voz por IA. Não existe configuração universalmente melhor: ouça e diminua a intensidade se houver artefatos. DeepFilterNet local pode baixar cerca de 35 MB no primeiro uso com integridade verificada; não garante eliminar eco ou vozes concorrentes.
 
-A IA e os filtros trabalham em staging; transcrição ou tratamento com erro não substituem o bundle anterior. A versão anterior é preservada em backup antes de trocar áudio/transcrição. Na raiz de audio permanece somente narration.wav mais takes; arquivos intermediários são temporários. Metadados narration.build.json registram tratamento efetivo e cortes. Repetir finalização usa as tomadas originais, não acumula filtros sobre o resultado anterior.
+A IA e os filtros trabalham em staging; transcrição ou tratamento com erro não substituem o bundle anterior. A versão anterior é preservada em backup antes de trocar áudio/transcrição. Na raiz de audio permanece somente narration.wav mais takes; arquivos intermediários são temporários. Metadados técnicos em `.contentlab/build/narration.build.json` registram tratamento efetivo e cortes; `.contentlab/build/transcript.build.json` registra a origem temporal da transcrição. Projetos antigos com esses arquivos na raiz continuam legíveis e são normalizados no próximo salvamento técnico. Repetir finalização usa as tomadas originais, não acumula filtros sobre o resultado anterior.
 
 POST /api/voice/finalize com kind:recording aceita treatment:{enabled,enhancementEngine,enhancementMode,enhancementStrength,compression,deesser,normalize,targetLufs,highpassHz,trimEdges,removeMiddleSilence,minSilence,thresholdDb}. Ausente usa a receita padrão; enabled:false une sem tratamento. kind:qwen não aplica esse tratamento de gravação. Esses campos não pertencem ao edit_plan.json. Timings anteriores precisam ser revisados após novos cortes da voz.
 
@@ -94,9 +94,9 @@ Vídeos e cortes recebem projectRoot e sourceName opcionais na API; a interface 
 
 Narração usa audio/narration.wav e audio/takes. Reabrir reconhece o manifesto salvo. Recarregar também descobre WAVs recording-UUID.wav e narration.ai-UUID.wav copiados para audio/takes (ou na raiz de audio em projetos antigos), mede suas durações e remove da lista entradas cujo arquivo foi removido externamente, sem apagar gravações. Outros arquivos aparecem no inventário, mas não viram tomadas automaticamente. Pastas de recuperação são ignoradas.
 
-Thumbnails usam thumbnails/project.json para o rascunho automático e a mesma pasta para imagens/JSONs/ZIPs exportados. Selecionar outra pasta carrega sua própria coleção, sem reutilizar silenciosamente personagens ou imagens do projeto anterior. Alteração externa no JSON é protegida por revisão SHA-256; recarregue para incorporar mudanças. Rascunhos antigos globais do navegador não são migrados automaticamente para uma pasta nova: importe seu JSON. Exportações aceitam até 95 MB por arquivo.
+Thumbnails usam `thumbnails/project.json` somente para o rascunho automático. Imagens finais e exportações portáteis ficam em `output/`; as imagens finais usam slots `TH_A`, `TH_B`, `TH_C` etc. O salvamento comum sempre escolhe o próximo slot livre, enquanto a substituição exige selecionar explicitamente um `TH_` existente do mesmo formato. Selecionar outra pasta carrega sua própria coleção, sem reutilizar silenciosamente personagens ou imagens do projeto anterior. Alteração externa no JSON é protegida por revisão SHA-256; recarregue para incorporar mudanças. Rascunhos antigos globais do navegador não são migrados automaticamente para uma pasta nova: importe seu JSON. Exportações aceitam até 95 MB por arquivo.
 
-APIs locais: POST /api/workspace/project com projectRoot e reload:true relê a pasta; GET /api/workspace/thumbnails?projectRoot=... lê estado e revisão; POST /api/workspace/thumbnails recebe multipart projectRoot/file, ou kind:draft/revision para rascunho. POST /api/workspace/edit-plan cria um plano vazio na pasta ativa, sem sobrescrever um existente. Só o Editor exige o plano para edição/renderização. Subpastas por symlink e nomes que saem do projeto são recusados. O projeto dos downloads, da narração e das thumbnails não é determinado por estado global do servidor; cada requisição leva sua pasta explicitamente.
+APIs locais: POST /api/workspace/project com projectRoot e reload:true relê a pasta; GET /api/workspace/thumbnails?projectRoot=... lê estado e revisão; GET /api/workspace/thumbnails/finals?projectRoot=... lista os `TH_` finais e suas revisões; POST /api/workspace/thumbnails recebe multipart projectRoot/file, ou kind:draft/revision para rascunho. Para sobrescrever uma imagem final, também recebe `replace=TH_X.ext` e `expectedFileRevision`, recusando sobrescrita implícita ou arquivo alterado desde a seleção. POST /api/workspace/edit-plan cria um plano vazio na pasta ativa, sem sobrescrever um existente. Só o Editor exige o plano para edição/renderização. Subpastas por symlink e nomes que saem do projeto são recusados. O projeto dos downloads, da narração e das thumbnails não é determinado por estado global do servidor; cada requisição leva sua pasta explicitamente.
 
 ![Estrutura do edit_plan.json](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/docs/figures/structure.svg)
 
@@ -192,9 +192,17 @@ meu-video/
 ├── transcript.json                    gerado após preparar a narração
 ├── transcript.txt                     texto gerado
 ├── transcript.srt                     legendas geradas
-├── transcript.build.json              origem dos timestamps
-├── narration.build.json               opções e arquivo de origem
-└── output/                            produzido após render
+├── thumbnails/
+│   └── project.json                   rascunho editável, quando usado
+├── output/
+│   ├── final.mp4                      vídeo final
+│   ├── TH_A.jpg                       primeira thumbnail final (exemplo)
+│   └── TH_B.jpg                       segunda thumbnail final (exemplo)
+└── .contentlab/
+    ├── build/
+    │   ├── transcript.build.json      origem dos timestamps
+    │   └── narration.build.json       opções e arquivo de origem
+    └── render/                        cache/relatório/logs internos
 ```
 
 ![Comparação entre contain e cover](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/docs/figures/fitting.svg)
