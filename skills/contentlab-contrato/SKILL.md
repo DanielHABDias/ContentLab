@@ -57,3 +57,7 @@ Validar no guia/mapeamento de eventos que cada animação editorial (inclusive c
 ## Padrões oficiais
 
 Consultar scene-library/manifest.json e o README do padrão escolhido antes de criar TSX do zero. A galeria oficial inclui contratos e exemplos. Textos Anton sem sombra; Bangers com tratamento HQ. SFX não são gerados pelos componentes. Flip/Curtain/Blur são transitionOut entre cenas, não presets de cena. Preserve cópias instaladas em projetos e valide sincronismo com transcript.words.
+
+## Layout canônico do projeto
+
+Trate [docs/PROJECT_LAYOUT.md](../../docs/PROJECT_LAYOUT.md) como contrato de caminhos. Artefatos finais ficam em `output/`; thumbnails finais usam `TH_A`, `TH_B` etc. e o rascunho editável continua em `thumbnails/project.json`. Estado técnico reconstruível pertence a `.contentlab/`, incluindo `.contentlab/build/narration.build.json` e `.contentlab/build/transcript.build.json`. Para leitura, aceitar os dois arquivos `*.build.json` antigos na raiz; para escrita nova, nunca recriá-los na raiz.
