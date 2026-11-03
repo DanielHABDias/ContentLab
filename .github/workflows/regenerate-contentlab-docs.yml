@@ -16,6 +16,13 @@ jobs:
         with:
           fetch-depth: 1
           filter: blob:none
+          sparse-checkout: |
+            scripts
+            server
+            schemas
+            scene-library
+            docs
+          sparse-checkout-cone-mode: true
       - uses: actions/setup-node@v4
         with:
           node-version: 22
