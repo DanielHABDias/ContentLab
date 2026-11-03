@@ -8,7 +8,7 @@ Selecione **uma pasta no topo** para todas as abas. A pasta pode estar vazia: `e
 
 **Downloads e transcrições avulsas não exigem projeto.** Vídeos/cortes vão para Downloads ou para o destino escolhido. Marque **Guardar nos assets do projeto ativo** para usar `assets/<obra-ou-fonte>/clips/`, `audio/` ou `transcripts/`. Transcrições de fontes baixadas sempre ganham uma subpasta exclusiva. Em Tratamento, **Transcrição avulsa** é a finalidade padrão: selecione um áudio e receba JSON/TXT/SRT em `Downloads/transcricao-<identificador>/`, mantendo os tempos originais sem tratar ou cortar o áudio. Não altera o `transcript.json` nem a narração oficial, mesmo com projeto ativo. Para substituí-los, escolha explicitamente a finalidade de narração oficial e confirme.
 
-A narração oficial continua em `audio/`, com tomadas em `audio/takes/`. Thumbnails, imagens exportadas e ZIPs ficam em `thumbnails/`; o rascunho editável é `thumbnails/project.json`. Não movemos arquivos antigos de Downloads automaticamente. Exportações com nomes repetidos ganham um sufixo.
+A narração oficial continua em `audio/`; `audio/takes/` só é criado quando existem tomadas. A pasta `thumbnails/` também só nasce quando o Thumbnail Studio realmente salva algo; imagens exportadas/ZIPs ficam nela e o rascunho editável é `thumbnails/project.json`. Não movemos arquivos antigos de Downloads automaticamente. Exportações com nomes repetidos ganham um sufixo.
 
 ## Aprimoramento de voz por IA
 
