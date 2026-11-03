@@ -26,6 +26,25 @@ function normalizedScenes(plan){
   }
   return result;
 }
+function migrateLegacyRenderLayout(outputRoot,internalRoot,finalFile){
+  const legacyDir=path.join(outputRoot,'final');
+  if(!fs.existsSync(legacyDir))return;
+  if(fs.lstatSync(legacyDir).isSymbolicLink()||!fs.statSync(legacyDir).isDirectory())
+    throw Error('Pasta legada de render insegura.');
+  const legacyFinal=path.join(legacyDir,'final.mp4');
+  if(!fs.existsSync(finalFile)&&fs.existsSync(legacyFinal)){
+    if(fs.lstatSync(legacyFinal).isSymbolicLink()||!fs.statSync(legacyFinal).isFile())
+      throw Error('Vídeo final legado inválido.');
+    fs.renameSync(legacyFinal,finalFile);
+  }
+  for(const name of ['scenes','pieces']){
+    const source=path.join(legacyDir,name),destination=path.join(internalRoot,name);
+    if(!fs.existsSync(source)||fs.existsSync(destination))continue;
+    if(fs.lstatSync(source).isSymbolicLink()||!fs.statSync(source).isDirectory())
+      throw Error('Cache legado inseguro: '+name);
+    fs.renameSync(source,destination);
+  }
+}
 export async function renderProject(directory,{
   cacheMode='reuse',hardwareAccel=false,signal,progress,sceneConcurrency,
   ffmpeg=process.env.FFMPEG_PATH||'ffmpeg',ffprobe=process.env.FFPROBE_PATH||'ffprobe',
@@ -49,6 +68,7 @@ export async function renderProject(directory,{
   if(fs.existsSync(internalRoot)&&fs.lstatSync(internalRoot).isSymbolicLink())throw Error('Pasta interna de render insegura.');
   fs.mkdirSync(outputRoot,{recursive:true});
   fs.mkdirSync(internalRoot,{recursive:true});
+  if(cacheMode==='reuse')migrateLegacyRenderLayout(outputRoot,internalRoot,finalFile);
   const cache=new SegmentCache(path.join(internalRoot,'scenes'));
   const cfg=settings(plan),duration=Math.max(...plan.timeline.map(s=>s.end));
   const raws=normalizedScenes(plan),scenes=raws.map(raw=>compileScene(raw,plan,validation.resolvedAssets));
