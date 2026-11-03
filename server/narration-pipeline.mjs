@@ -1,3 +1,4 @@
+import {buildMetadataPath,cleanLegacyBuildMetadata} from './project-metadata.mjs';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -34,7 +35,7 @@ export function narrationStamp(root,plan){
 export function renderVoiceSettings(root,plan){
   const audio=plan.audio||{};
   try{
-    const meta=readJson(path.join(root,'narration.build.json'));
+    const meta=readJson(buildMetadataPath(root,'narration.build.json'));
     if(meta.mode!=='voice-studio'||audio.narration!==meta.output)return audio;
     const file=path.join(root,meta.output);
     if(!fs.existsSync(file))return audio;
@@ -49,7 +50,7 @@ export function renderVoiceSettings(root,plan){
 }
 export function transcriptStatus(root,plan){
   if(plan.sources?.transcript!==TRANSCRIPT_FILE)return {status:'external'};
-  const file=path.join(root,TRANSCRIPT_FILE),metadata=path.join(root,TRANSCRIPT_BUILD);
+  const file=path.join(root,TRANSCRIPT_FILE),metadata=buildMetadataPath(root,TRANSCRIPT_BUILD);
   if(!fs.existsSync(file))return {status:'missing'};
   if(!fs.existsSync(metadata))return {status:'external'};
   try{
@@ -107,7 +108,7 @@ export async function prepareAndTranscribeProject(directory,{
     if(fs.existsSync(current)){
       const previous=fs.readFileSync(current,'utf8'),incoming=fs.readFileSync(path.join(work,TRANSCRIPT_FILE),'utf8');
       if(previous!==incoming){
-        const priorMeta=path.join(root,TRANSCRIPT_BUILD);
+        const priorMeta=buildMetadataPath(root,TRANSCRIPT_BUILD);
         const hadManualEdits=!fs.existsSync(priorMeta)||
           (()=>{try{return readJson(priorMeta).contentHash!==crypto.createHash('sha256').update(previous).digest('hex');}
           catch{return true;}})();
@@ -131,7 +132,8 @@ export async function prepareAndTranscribeProject(directory,{
       wordCount:result.wordCount,source:plan.audio.narration};
     const tmp=path.join(work,TRANSCRIPT_BUILD);
     fs.writeFileSync(tmp,JSON.stringify(meta,null,2)+'\n');
-    moveAtomic(tmp,path.join(root,TRANSCRIPT_BUILD));
+    moveAtomic(tmp,buildMetadataPath(root,TRANSCRIPT_BUILD,{write:true}));
+    cleanLegacyBuildMetadata(root,TRANSCRIPT_BUILD);
     update('Narração preparada e transcript.json sincronizado.');
     return {...result,prepared:PREPARED_NARRATION,transcript:TRANSCRIPT_FILE,
       duration,edgeTrim:meta.edgeTrim};
