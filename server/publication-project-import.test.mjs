@@ -17,30 +17,24 @@ function fixture(t){
   function project(name,format='youtube_short',{twoCovers=false,validVideo=true}={}){
     const root=path.join(parent,name);
     fs.mkdirSync(path.join(root,'output'),{recursive:true});
-    fs.mkdirSync(path.join(root,'thumbnails'),{recursive:true});
     fs.writeFileSync(path.join(root,'edit_plan.json'),JSON.stringify({
       project:{name,format,profile:'generic'},audio:{narration:'audio/narration.wav'},timeline:[]
     }));
     fs.writeFileSync(path.join(root,'output','final.mp4'),validVideo?mp4:Buffer.from('not an mp4'));
-    const old=path.join(root,'thumbnails','older.png');
-    fs.writeFileSync(old,png);
-    fs.utimesSync(old,new Date('2020-01-01T00:00:00Z'),new Date('2020-01-01T00:00:00Z'));
-    const newest=path.join(root,'thumbnails','newest.jpeg');
-    fs.writeFileSync(newest,jpeg);
-    fs.utimesSync(newest,new Date('2030-01-01T00:00:00Z'),new Date('2030-01-01T00:00:00Z'));
-    if(!twoCovers)fs.rmSync(old);
+    fs.writeFileSync(path.join(root,'output','TH_A.png'),png);
+    if(twoCovers)fs.writeFileSync(path.join(root,'output','TH_B.jpeg'),jpeg);
     return root;
   }
   return {parent,drafts,project};
 }
-test('reconhece edit_plan.json e output/final.mp4; a thumbnail mais nova é escolhida',t=>{
+test('reconhece edit_plan.json, output/final.mp4 e TH_A como capa principal',t=>{
   const f=fixture(t);
   const folder=f.project('Short pronto','youtube_short',{twoCovers:true});
   const item=inspectPublicationProject(folder);
   assert.equal(item.kind,'short');
   assert.equal(item.format,'youtube_short');
   assert.equal(item.videoName,'final.mp4');
-  assert.equal(item.coverAName,'newest.jpeg');
+  assert.equal(item.coverAName,'TH_A.png');
   assert.equal(item.coverBName,null);
   assert.equal(item.name,'Short pronto');
 });
@@ -54,18 +48,31 @@ test('projeto legado com output/final/final.mp4 continua importável',t=>{
   assert.equal(item.videoPath,path.join(legacyDir,'final.mp4'));
 });
 
-test('vídeo longo usa capa A anterior e capa B mais recente, incluindo arquivos copiados',t=>{
+test('vídeo longo usa slots TH_A e TH_B, incluindo arquivos copiados',t=>{
   const f=fixture(t);
   const folder=f.project('Longo com A/B','youtube_long',{twoCovers:true});
   const preview=inspectPublicationProject(folder);
-  assert.equal(preview.coverAName,'older.png');
-  assert.equal(preview.coverBName,'newest.jpeg');
+  assert.equal(preview.coverAName,'TH_A.png');
+  assert.equal(preview.coverBName,'TH_B.jpeg');
   assert.equal(preview.needsReview,false);
   const [saved]=importPublicationProjects([
     {projectRoot:folder,scheduledAt:'2031-04-02T17:00'}
   ],{root:f.drafts,confirmed,now:new Date('2026-10-29T10:00:00')});
   assert.deepEqual(fs.readFileSync(socialDraftMedia(saved.id,'coverA',f.drafts)),png);
   assert.deepEqual(fs.readFileSync(socialDraftMedia(saved.id,'coverB',f.drafts)),jpeg);
+});
+test('projeto antigo sem TH_ ainda usa imagens de thumbnails por data',t=>{
+  const f=fixture(t),folder=f.project('Legado de capas','youtube_long',{twoCovers:true});
+  fs.rmSync(path.join(folder,'output','TH_A.png'));
+  fs.rmSync(path.join(folder,'output','TH_B.jpeg'));
+  const legacy=path.join(folder,'thumbnails');fs.mkdirSync(legacy);
+  const old=path.join(legacy,'older.png'),newest=path.join(legacy,'newest.jpeg');
+  fs.writeFileSync(old,png);fs.writeFileSync(newest,jpeg);
+  fs.utimesSync(old,new Date('2020-01-01T00:00:00Z'),new Date('2020-01-01T00:00:00Z'));
+  fs.utimesSync(newest,new Date('2030-01-01T00:00:00Z'),new Date('2030-01-01T00:00:00Z'));
+  const item=inspectPublicationProject(folder);
+  assert.equal(item.coverAName,'older.png');assert.equal(item.coverBName,'newest.jpeg');
+  assert.match(item.warning,/legado/i);
 });
 test('pasta pai encontra projetos imediatos, ignora subpastas internas e relata projetos incompletos',t=>{
   const f=fixture(t);
@@ -85,7 +92,7 @@ test('vídeo longo importa duas capas, ou usa uma provisória e solicita revisã
   const inspect=inspectPublicationProject(folder);
   assert.equal(inspect.kind,'long');
   assert.equal(inspect.needsReview,true);
-  assert.equal(inspect.coverBName,'newest.jpeg');
+  assert.equal(inspect.coverBName,null);
   const [item]=importPublicationProjects([
     {projectRoot:folder,scheduledAt:'2031-04-02T17:00'}
   ],{root:f.drafts,confirmed,now:new Date('2026-10-29T10:00:00')});
