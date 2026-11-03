@@ -16,3 +16,7 @@ Para gerar JSON, ler `docs/THUMBNAIL_STUDIO.md`: `version:1` é independente do 
 Revisar a imagem real em tamanho final e reduzida (aproximadamente 160 px de largura): leitura, rosto, contraste, número de focos e coerência com o gancho. Comparar variantes com o mesmo contexto; não atribuir nota fictícia de performance. Testes A/B da plataforma podem ser inconclusivos e não se resumem a CTR. Separar hipótese de resultado observado.
 
 Referências metodológicas: [yt-package](https://github.com/Jakeschincariol/youtube-agent-skill), [thumbnail workflow](https://github.com/hassancs91/claude-youtube-editor), [orientações oficiais](https://support.google.com/youtube/answer/12340300). Não alegar execução dos scripts dessas referências se não foram executados. Consulte as regras atuais ao publicar/testar.
+
+## Layout canônico de projetos e exportações
+
+A organização oficial está em [docs/PROJECT_LAYOUT.md](../../docs/PROJECT_LAYOUT.md). Imagens finais do Thumbnail Studio ficam em `output/TH_A.jpg`, `TH_B.jpg` etc. (JPG/PNG/WebP). Na interface, **Nova thumbnail** nunca sobrescreve; **Substituir TH_X.ext** exige selecionar um arquivo existente do mesmo formato. O rascunho editável continua em `thumbnails/project.json`. Metadados internos `narration.build.json` e `transcript.build.json` ficam em `.contentlab/build/`; leituras legadas da raiz continuam compatíveis.
