@@ -32,7 +32,7 @@ test('takes persist, reorder, exclude and finalize with a transcript on the fina
   const result=await finalizeTakes(root,{transcriber});
   assert.ok(Math.abs(result.duration-1)<.03);assert.equal(result.takeCount,2);
   assert.equal(voiceStudioState(root).ready,true);
-  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root,'narration.build.json'))).takes,[current.takes[1].name,current.takes[0].name]);
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root,'.contentlab','build','narration.build.json'))).takes,[current.takes[1].name,current.takes[0].name]);
   assert.equal(renderVoiceSettings(root,{audio:{narration:'audio/narration.wav'}}).voice.autoTrimSilence,false);
   const original=fs.readFileSync(path.join(root,'audio/narration.wav'));
   await assert.rejects(finalizeTakes(root,{transcriber:async()=>{throw Error('Whisper indisponível');}}),/Whisper/);
