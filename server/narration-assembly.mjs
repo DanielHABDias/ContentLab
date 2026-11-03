@@ -38,7 +38,13 @@ function writeManifest(folder,takes){
   return takeList(folder);
 }
 export function takeList(folder){
-  const directory=takesDirectory(folder),current=path.join(directory,manifest),file=fs.existsSync(current)?current:path.join(audioDirectory(folder),manifest);
+  const root=voiceStudioFolder(folder),audio=path.join(root,'audio'),directory=path.join(audio,'takes');
+  if(fs.existsSync(audio)&&(fs.lstatSync(audio).isSymbolicLink()||!fs.statSync(audio).isDirectory()))
+    throw Error('Pasta de áudio inválida.');
+  if(fs.existsSync(directory)&&(fs.lstatSync(directory).isSymbolicLink()||!fs.statSync(directory).isDirectory()))
+    throw Error('Pasta de tomadas inválida.');
+  const current=path.join(directory,manifest),legacy=path.join(audio,manifest);
+  const file=fs.existsSync(current)?current:legacy;
   if(fs.existsSync(file)&&fs.lstatSync(file).isSymbolicLink())throw Error('Manifesto não pode ser link simbólico.');
   const text=fs.existsSync(file)?fs.readFileSync(file,'utf8'):'';
   const takes=text?JSON.parse(text).takes:[];
@@ -54,8 +60,10 @@ export function addTake(folder,{relative,duration,kind},replaceKind=false){
   return writeManifest(folder,takes);
 }
 export async function rescanTakes(folder){
-  const current=takeList(folder),found=new Map();
-  for(const directory of [audioDirectory(folder),takesDirectory(folder)]){
+  const root=voiceStudioFolder(folder),current=takeList(root),found=new Map();
+  const directories=[path.join(root,'audio'),path.join(root,'audio','takes')].filter(directory=>fs.existsSync(directory));
+  for(const directory of directories){
+    if(fs.lstatSync(directory).isSymbolicLink()||!fs.statSync(directory).isDirectory())throw Error('Pasta de tomadas inválida.');
     for(const item of fs.readdirSync(directory,{withFileTypes:true}))if(item.isFile()&&pattern.test(item.name))found.set(item.name,path.join(directory,item.name));
   }
   const takes=current.takes.filter(t=>found.has(t.name));

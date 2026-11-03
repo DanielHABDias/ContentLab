@@ -38,7 +38,7 @@ await run('ffmpeg',['-hide_banner','-loglevel','error','-y','-f','lavfi',
 const resolved=assetReport(plan,root).resolvedAssets;
 const fingerprint=sceneFingerprint(plan.timeline[0],compileScene(plan.timeline[0],plan,resolved),
   settings(plan),resolved,[],rendererIdentity(APP_ROOT));
-new SegmentCache(path.join(root,'output','final','scenes')).save('batman',fingerprint,sceneTemp);
+new SegmentCache(path.join(root,'.contentlab','render','scenes')).save('batman',fingerprint,sceneTemp);
 const chromeBin=process.env.CHROME_BIN||'google-chrome';
 const service=spawn(process.execPath,['server/http.mjs'],{
   cwd:process.cwd(),env:{...process.env,PORT:String(appPort)},stdio:'ignore'

@@ -8,7 +8,7 @@ Selecione **uma pasta no topo** para todas as abas. A pasta pode estar vazia: `e
 
 **Downloads e transcrições avulsas não exigem projeto.** Vídeos/cortes vão para Downloads ou para o destino escolhido. Marque **Guardar nos assets do projeto ativo** para usar `assets/<obra-ou-fonte>/clips/`, `audio/` ou `transcripts/`. Transcrições de fontes baixadas sempre ganham uma subpasta exclusiva. Em Tratamento, **Transcrição avulsa** é a finalidade padrão: selecione um áudio e receba JSON/TXT/SRT em `Downloads/transcricao-<identificador>/`, mantendo os tempos originais sem tratar ou cortar o áudio. Não altera o `transcript.json` nem a narração oficial, mesmo com projeto ativo. Para substituí-los, escolha explicitamente a finalidade de narração oficial e confirme.
 
-A narração oficial continua em `audio/`, com tomadas em `audio/takes/`. Thumbnails, imagens exportadas e ZIPs ficam em `thumbnails/`; o rascunho editável é `thumbnails/project.json`. Não movemos arquivos antigos de Downloads automaticamente. Exportações com nomes repetidos ganham um sufixo.
+A narração oficial continua em `audio/`; `audio/takes/` só é criado quando existem tomadas. A pasta `thumbnails/` também só nasce quando o Thumbnail Studio realmente salva algo; imagens exportadas/ZIPs ficam nela e o rascunho editável é `thumbnails/project.json`. Não movemos arquivos antigos de Downloads automaticamente. Exportações com nomes repetidos ganham um sufixo.
 
 ## Aprimoramento de voz por IA
 
@@ -108,7 +108,7 @@ Cada entrada possui **Selecionar** e **Editar**. Em Editar é possível alterar 
 No painel **Publicações**, use **Importar pastas de projetos** para adicionar vários vídeos sem precisar localizar o MP4 em cada projeto. O botão **Escolher pasta** pode ser utilizado repetidamente; também é possível colar os caminhos de diversas pastas (uma por linha). Se escolher uma **pasta pai**, o Content Lab encontra projetos em suas subpastas imediatas. Os projetos precisam seguir o layout usado pelo Editor:
 
 - `edit_plan.json`: o campo `project.format` define **Short** (`youtube_short`) ou **vídeo longo** (`youtube_long`). Para `custom`, o aplicativo só infere o formato se a resolução indicar claramente paisagem ou retrato. Em casos ambíguos, o projeto é ignorado com uma explicação, para evitar publicar no formato errado.
-- `output/final/final.mp4`: vídeo final renderizado, sem abrir o seletor de arquivos da pasta Output Final.
+- `output/final.mp4`: vídeo final renderizado, sem abrir o seletor de arquivos da pasta Output Final.
 - `thumbnails/`: para **Shorts**, a imagem PNG/JPG/WebP mais recente é a thumbnail A. Para **vídeos longos** com duas ou mais imagens, a **thumbnail A é a segunda mais recente** e a **thumbnail B é a mais recente** (considerando as datas de criação/alteração); caso só haja uma imagem, a segunda capa é uma **cópia provisória** e o cartão avisa para revisar o teste A/B. O título B recebe uma indicação provisória até você editar.
 
 A importação tem **duas etapas**: analisar as pastas e **revisar antes de confirmar**. Na revisão, são mostrados formato, título (editável), capa e data sugerida. Você pode **arrastar os cartões** ou usar as setas de reordenação para definir a sequência. A primeira data segue as regras já utilizadas no botão Adicionar vídeo (Short às 12h, longo às 17h, com antecedência); os demais recebem dias sucessivos. Alterar a ordem recalcula as datas automáticas, enquanto as datas alteradas manualmente são mantidas e servem de referência para as próximas. Nada é copiado até clicar em **Confirmar e adicionar à lista**.
@@ -151,7 +151,7 @@ A aba **Multi-editor automático** permite programar uma lista de projetos para 
 
 1. Abra a aba **Multi-editor automático** e cole o caminho absoluto de cada pasta de projeto, uma por linha, na ordem desejada. Também é possível adicionar pelo seletor de pastas ou pela pasta já aberta no Editor automático.
 2. Selecione **Reaproveitar cache** para acelerar os renders ou **Refazer tudo** para reconstruir as saídas (o programa pede confirmação antes de apagar outputs existentes). Opcionalmente ative GPU e **Continuar os demais projetos se um falhar**.
-3. Clique **Iniciar fila de renders**. Cada pasta mantém seu edit_plan.json, áudio, assets, cache e MP4 final em `output/final/final.mp4`. O painel mostra status, progresso e erros por projeto; **Cancelar fila** interrompe a etapa atual e não inicia as seguintes.
+3. Clique **Iniciar fila de renders**. Cada pasta mantém seu edit_plan.json, áudio, assets, cache e MP4 final em `output/final.mp4`. O painel mostra status, progresso e erros por projeto; **Cancelar fila** interrompe a etapa atual e não inicia as seguintes.
 
 A fila valida previamente os projetos e narrações e executa um render por vez, sem concorrer com renders individuais. O máximo é de 40 pastas por fila; não são aceitas duplicatas. A fila é mantida em memória enquanto o servidor estiver aberto (se o servidor encerrar/reiniciar, será preciso iniciar outra fila). Os planos e arquivos dos projetos não são modificados por essa aba.
 
@@ -289,12 +289,12 @@ O render por CPU escolhe automaticamente **até três cenas simultâneas**, conf
 
 No Editor automático:
 
-- **Aproveitar cache**: mantém clipes por ID em `output/final/scenes/`; gera apenas cenas cuja assinatura mudou; reaproveita peças de composição válidas.
+- **Aproveitar cache**: mantém clipes por ID em `.contentlab/render/scenes/`; gera apenas cenas cuja assinatura mudou; reaproveita peças de composição válidas.
 - **Refazer tudo**: com confirmação, limpa `output/` do projeto e gera tudo novamente. O sistema impede a exclusão se um asset de entrada estiver nessa pasta.
 
 Os manifestos são persistidos antes da montagem final. Se houver falha na concatenação, a maior parte dos clipes continua disponível. Veja [SCENE_CACHE.md](SCENE_CACHE.md).
 
-O resultado é `output/final/final.mp4`, com relatório `render_report.json`, narração preparada e listagem de cenas reaproveitadas.
+O resultado visível é `output/final.mp4`. Cache de cenas/composição, relatório de render e logs ficam em `.contentlab/render/`; são estado técnico do Content Lab e não entregáveis do projeto.
 
 ## Transcrição
 

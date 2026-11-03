@@ -23,7 +23,7 @@ test('scene viewer checks current JSON against persistent MP4 cache and never se
     const resolved=assetReport(plan,root).resolvedAssets;
     const fingerprint=sceneFingerprint(plan.timeline[0],compileScene(plan.timeline[0],plan,resolved),
       settings(plan),resolved,[],rendererIdentity(APP_ROOT));
-    const cache=new SegmentCache(path.join(root,'output','final','scenes'));
+    const cache=new SegmentCache(path.join(root,'.contentlab','render','scenes'));
     const staged=path.join(root,'temporary.mp4');fs.writeFileSync(staged,'fake-video-segment');
     const stored=cache.save('batman',fingerprint,staged);
     assert.deepEqual(sceneCacheOverview(root).scenes.map(x=>x.status),['ready','missing']);

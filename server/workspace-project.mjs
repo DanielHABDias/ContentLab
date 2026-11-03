@@ -38,7 +38,11 @@ export async function inspectWorkspace(folder,{reload=false}={}){
 }
 const revision=bytes=>crypto.createHash('sha256').update(bytes).digest('hex');
 export function readThumbnailProject(folder){
-  const file=path.join(projectDirectory(folder,['thumbnails']),'project.json');
+  const root=voiceStudioFolder(folder),directory=path.join(root,'thumbnails');
+  if(!fs.existsSync(directory))return {state:null,revision:null};
+  if(fs.lstatSync(directory).isSymbolicLink()||!fs.statSync(directory).isDirectory())
+    throw Error('Pasta de thumbnail inválida.');
+  const file=path.join(directory,'project.json');
   if(!fs.existsSync(file))return {state:null,revision:null};
   if(!regular(file)||fs.statSync(file).size>95*1024*1024)throw Error('Projeto de thumbnail inválido.');
   const bytes=fs.readFileSync(file);return {state:JSON.parse(bytes.toString('utf8').replace(/^\uFEFF/,'')),revision:revision(bytes)};

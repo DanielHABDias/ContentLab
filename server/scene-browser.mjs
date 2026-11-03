@@ -4,8 +4,7 @@ import {APP_ROOT,readJson,assetReport,settings,compileScene,projectFile} from '.
 import {sceneFingerprint,rendererIdentity,idFilename,statIdentity} from './cache.mjs';
 import {transcriptWords,remapTranscriptWords,applyNarrationSilence} from './remotion.mjs';
 
-function inspectStored(root,id) {
-  const directory=path.join(root,'output','final','scenes');
+function inspectDirectory(directory,id) {
   const manifest=path.join(directory,'manifest.json');
   if(!fs.existsSync(manifest)||fs.lstatSync(manifest).isSymbolicLink())return null;
   let entry;
@@ -22,6 +21,16 @@ function inspectStored(root,id) {
     if(stat.size==='0'||stat.size!==entry.size||stat.mtimeNs!==entry.mtimeNs)return null;
     return {file,fingerprint:entry.fingerprint,size:Number(stat.size)};
   }catch{return null;}
+}
+function inspectStored(root,id) {
+  for(const directory of [
+    path.join(root,'.contentlab','render','scenes'),
+    path.join(root,'output','final','scenes')
+  ]){
+    const stored=inspectDirectory(directory,id);
+    if(stored)return stored;
+  }
+  return null;
 }
 export function sceneCacheOverview(directory){
   const {root,file}=projectFile(directory),plan=readJson(file);

@@ -24,7 +24,8 @@ test('voice preparation overlaps scenes and voice failure drains active renderer
     }),/voice failure/);
     assert.equal(drained,true);
     assert.equal(fs.readFileSync(path.join(root,'audio','voice.wav'),'utf8'),'original');
-    assert.equal(fs.readdirSync(path.join(root,'output','final')).some(n=>n.startsWith('contentlab-render-')),false);
+    const renderState=path.join(root,'.contentlab','render');
+    assert.equal(fs.readdirSync(renderState).some(n=>n.startsWith('work-')),false);
   }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
 
@@ -55,8 +56,8 @@ test('a failed scene preserves completed cache and the previous final without co
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'contentlab-render-partial-'));
   try{
     fs.mkdirSync(path.join(root,'audio'));fs.writeFileSync(path.join(root,'audio','voice.wav'),'voice');
-    fs.mkdirSync(path.join(root,'output','final'),{recursive:true});
-    fs.writeFileSync(path.join(root,'output','final','final.mp4'),'previous-final');
+    fs.mkdirSync(path.join(root,'output'),{recursive:true});
+    fs.writeFileSync(path.join(root,'output','final.mp4'),'previous-final');
     const plan={project:{name:'partial',format:'youtube_long',profile:'generic'},audio:{narration:'audio/voice.wav'},
       timeline:['a','b','c'].map((id,i)=>({id,start:i,end:i+1,background:{color:'#000'},elements:[]}))};
     fs.writeFileSync(path.join(root,'edit_plan.json'),JSON.stringify(plan));
@@ -66,11 +67,29 @@ test('a failed scene preserves completed cache and the previous final without co
       compose:async()=>assert.fail('Partial output must not be composed')
     }),/cena 2\/3 \[b\].*bad scene/);
     assert.deepEqual(calls,['a','b']);
-    const final=path.join(root,'output','final');
-    assert.equal(fs.readFileSync(path.join(final,'final.mp4'),'utf8'),'previous-final');
-    const manifest=JSON.parse(fs.readFileSync(path.join(final,'scenes','manifest.json')));
+    assert.equal(fs.readFileSync(path.join(root,'output','final.mp4'),'utf8'),'previous-final');
+    const renderState=path.join(root,'.contentlab','render');
+    const manifest=JSON.parse(fs.readFileSync(path.join(renderState,'scenes','manifest.json')));
     assert.deepEqual(Object.keys(manifest.entries),['a']);
-    assert.equal(fs.readdirSync(final).some(name=>name.startsWith('contentlab-render-')),false);
+    assert.equal(fs.readdirSync(renderState).some(name=>name.startsWith('work-')),false);
+  }finally{fs.rmSync(root,{recursive:true,force:true});}
+});
+
+test('reuse migrates the legacy final before rendering so a later failure does not lose it',async()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'contentlab-render-legacy-'));
+  try{
+    fs.mkdirSync(path.join(root,'audio'));fs.writeFileSync(path.join(root,'audio','voice.wav'),'voice');
+    fs.mkdirSync(path.join(root,'output','final'),{recursive:true});
+    fs.writeFileSync(path.join(root,'output','final','final.mp4'),'legacy-final');
+    const plan={project:{name:'legacy',format:'youtube_long',profile:'generic'},audio:{narration:'audio/voice.wav'},
+      timeline:[{id:'a',start:0,end:1,background:{color:'#000'},elements:[]}]};
+    fs.writeFileSync(path.join(root,'edit_plan.json'),JSON.stringify(plan));
+    await assert.rejects(renderProject(root,{
+      prepareVoice:async()=>{},
+      renderScene:async()=>{throw Error('new render failed');}
+    }),/new render failed/);
+    assert.equal(fs.readFileSync(path.join(root,'output','final.mp4'),'utf8'),'legacy-final');
+    assert.equal(fs.existsSync(path.join(root,'output','final','final.mp4')),false);
   }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
 
@@ -142,7 +161,7 @@ test('render reports the failing scene before invoking Remotion, even on scene o
       prepareVoice:async()=>{},
     }),error=>error.message.includes('cena 1/2 [abertura]')&&error.message.includes('write EPIPE'));
     assert.deepEqual(events[0],['scene_start',1,2,'abertura']);
-    assert.equal(JSON.parse(fs.readFileSync(path.join(root,'output','final','render_report.json'))).status,'failed');
+    assert.equal(JSON.parse(fs.readFileSync(path.join(root,'.contentlab','render','render_report.json'))).status,'failed');
   }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
 

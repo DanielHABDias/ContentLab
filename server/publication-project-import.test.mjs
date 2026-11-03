@@ -16,12 +16,12 @@ function fixture(t){
   const drafts=path.join(parent,'drafts');
   function project(name,format='youtube_short',{twoCovers=false,validVideo=true}={}){
     const root=path.join(parent,name);
-    fs.mkdirSync(path.join(root,'output','final'),{recursive:true});
+    fs.mkdirSync(path.join(root,'output'),{recursive:true});
     fs.mkdirSync(path.join(root,'thumbnails'),{recursive:true});
     fs.writeFileSync(path.join(root,'edit_plan.json'),JSON.stringify({
       project:{name,format,profile:'generic'},audio:{narration:'audio/narration.wav'},timeline:[]
     }));
-    fs.writeFileSync(path.join(root,'output','final','final.mp4'),validVideo?mp4:Buffer.from('not an mp4'));
+    fs.writeFileSync(path.join(root,'output','final.mp4'),validVideo?mp4:Buffer.from('not an mp4'));
     const old=path.join(root,'thumbnails','older.png');
     fs.writeFileSync(old,png);
     fs.utimesSync(old,new Date('2020-01-01T00:00:00Z'),new Date('2020-01-01T00:00:00Z'));
@@ -33,7 +33,7 @@ function fixture(t){
   }
   return {parent,drafts,project};
 }
-test('reconhece edit_plan.json e output/final/final.mp4; a thumbnail mais nova é escolhida',t=>{
+test('reconhece edit_plan.json e output/final.mp4; a thumbnail mais nova é escolhida',t=>{
   const f=fixture(t);
   const folder=f.project('Short pronto','youtube_short',{twoCovers:true});
   const item=inspectPublicationProject(folder);
@@ -44,6 +44,16 @@ test('reconhece edit_plan.json e output/final/final.mp4; a thumbnail mais nova �
   assert.equal(item.coverBName,null);
   assert.equal(item.name,'Short pronto');
 });
+test('projeto legado com output/final/final.mp4 continua importável',t=>{
+  const f=fixture(t),folder=f.project('Legado');
+  const canonical=path.join(folder,'output','final.mp4'),legacyDir=path.join(folder,'output','final');
+  fs.mkdirSync(legacyDir,{recursive:true});
+  fs.renameSync(canonical,path.join(legacyDir,'final.mp4'));
+  const item=inspectPublicationProject(folder);
+  assert.equal(item.videoName,'final.mp4');
+  assert.equal(item.videoPath,path.join(legacyDir,'final.mp4'));
+});
+
 test('vídeo longo usa capa A anterior e capa B mais recente, incluindo arquivos copiados',t=>{
   const f=fixture(t);
   const folder=f.project('Longo com A/B','youtube_long',{twoCovers:true});
@@ -62,7 +72,7 @@ test('pasta pai encontra projetos imediatos, ignora subpastas internas e relata 
   const short=f.project('Um short');
   const long=f.project('Um longo','youtube_long',{twoCovers:true});
   const broken=f.project('Faltou vídeo');
-  fs.rmSync(path.join(broken,'output','final','final.mp4'));
+  fs.rmSync(path.join(broken,'output','final.mp4'));
   const result=discoverPublicationProjects([f.parent,short]);
   assert.equal(result.items.length,2);
   assert.deepEqual(result.items.map(x=>x.projectRoot).sort(),[short,long].sort());

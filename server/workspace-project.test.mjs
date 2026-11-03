@@ -12,6 +12,7 @@ const draft=name=>Buffer.from(JSON.stringify({version:1,name,base:{center:{},tit
 test('universal project accepts empty folders and safely groups assets without an edit plan',async t=>{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'workspace-empty-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
   let info=await inspectWorkspace(root);assert.equal(info.hasEditPlan,false);assert.equal(info.takeCount,0);assert.equal(info.hasNarration,false);
+  assert.equal(fs.existsSync(path.join(root,'audio')),false,'Leitura de pasta vazia não deve criar audio/takes.');
   fs.mkdirSync(path.join(root,'audio'),{recursive:true});fs.writeFileSync(path.join(root,'audio','narration.wav'),'fixture');
   info=await inspectWorkspace(root);assert.equal(info.hasNarration,true);
   const folder=projectAssetDirectory(root,'Batman: A Piada Mórtal','video');
@@ -27,6 +28,8 @@ test('universal project accepts empty folders and safely groups assets without a
 test('thumbnail drafts isolate projects, reject stale overwrites and export unique names',t=>{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'workspace-thumbs-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
   const a=path.join(root,'a'),b=path.join(root,'b');fs.mkdirSync(a);fs.mkdirSync(b);
+  assert.equal(readThumbnailProject(b).state,null);
+  assert.equal(fs.existsSync(path.join(b,'thumbnails')),false,'Leitura não deve criar pasta vazia de thumbnails.');
   const first=saveThumbnailFile(a,{bytes:draft('Primeiro'),draft:true});
   assert.equal(readThumbnailProject(a).state.name,'Primeiro');assert.equal(readThumbnailProject(b).state,null);
   assert.throws(()=>saveThumbnailFile(a,{bytes:draft('Stale'),draft:true}),/alterada/);
@@ -39,7 +42,9 @@ test('thumbnail drafts isolate projects, reject stale overwrites and export uniq
 });
 test('reload discovers persisted raw takes and removes externally missing entries without touching audio',async t=>{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'workspace-takes-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
-  await inspectWorkspace(root);const name='recording-'+crypto.randomUUID()+'.wav',file=path.join(root,'audio','takes',name);
+  await inspectWorkspace(root);
+  fs.mkdirSync(path.join(root,'audio','takes'),{recursive:true});
+  const name='recording-'+crypto.randomUUID()+'.wav',file=path.join(root,'audio','takes',name);
   await run('ffmpeg',['-loglevel','error','-f','lavfi','-i','sine=duration=0.2',file]);
   assert.equal(takeList(root).takes.length,0);
   const info=await inspectWorkspace(root,{reload:true});assert.equal(info.takeCount,1);assert.ok(fs.existsSync(file));
