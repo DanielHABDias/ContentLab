@@ -112,12 +112,16 @@ export function sceneFingerprint(raw,compiled,settings,resolvedAssets,words,rend
   });
 }
 export function cleanOutput(root,dependencies=[]){
-  const out=path.join(path.resolve(root),'output');
+  const projectRoot=path.resolve(root),out=path.join(projectRoot,'output'),
+    renderState=path.join(projectRoot,'.contentlab','render');
   if(fs.existsSync(out)&&fs.lstatSync(out).isSymbolicLink())throw Error('output não pode ser link simbólico.');
+  if(fs.existsSync(renderState)&&fs.lstatSync(renderState).isSymbolicLink())throw Error('estado interno de render não pode ser link simbólico.');
   for(const src of dependencies){
     if(!src)continue;
     const f=path.resolve(src);
-    if(f===out||f.startsWith(out+path.sep))throw Error('Um asset de entrada está em output; recusei apagar os arquivos.');
+    if(f===out||f.startsWith(out+path.sep)||f===renderState||f.startsWith(renderState+path.sep))
+      throw Error('Um asset de entrada está em uma pasta gerada pelo render; recusei apagar os arquivos.');
   }
   if(fs.existsSync(out))fs.rmSync(out,{recursive:true,force:false});
+  if(fs.existsSync(renderState))fs.rmSync(renderState,{recursive:true,force:false});
 }
