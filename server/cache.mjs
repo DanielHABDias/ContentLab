@@ -113,9 +113,13 @@ export function sceneFingerprint(raw,compiled,settings,resolvedAssets,words,rend
 }
 export function cleanOutput(root,dependencies=[]){
   const projectRoot=path.resolve(root),out=path.join(projectRoot,'output'),
-    renderState=path.join(projectRoot,'.contentlab','render');
-  if(fs.existsSync(out)&&fs.lstatSync(out).isSymbolicLink())throw Error('output não pode ser link simbólico.');
-  if(fs.existsSync(renderState)&&fs.lstatSync(renderState).isSymbolicLink())throw Error('estado interno de render não pode ser link simbólico.');
+    internalBase=path.join(projectRoot,'.contentlab'),renderState=path.join(internalBase,'render');
+  if(fs.existsSync(out)&&(fs.lstatSync(out).isSymbolicLink()||!fs.statSync(out).isDirectory()))
+    throw Error('output não pode ser link simbólico.');
+  if(fs.existsSync(internalBase)&&(fs.lstatSync(internalBase).isSymbolicLink()||!fs.statSync(internalBase).isDirectory()))
+    throw Error('.contentlab não pode ser link simbólico.');
+  if(fs.existsSync(renderState)&&(fs.lstatSync(renderState).isSymbolicLink()||!fs.statSync(renderState).isDirectory()))
+    throw Error('estado interno de render não pode ser link simbólico.');
   for(const src of dependencies){
     if(!src)continue;
     const f=path.resolve(src);
