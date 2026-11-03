@@ -75,6 +75,24 @@ test('a failed scene preserves completed cache and the previous final without co
   }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
 
+test('reuse migrates the legacy final before rendering so a later failure does not lose it',async()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'contentlab-render-legacy-'));
+  try{
+    fs.mkdirSync(path.join(root,'audio'));fs.writeFileSync(path.join(root,'audio','voice.wav'),'voice');
+    fs.mkdirSync(path.join(root,'output','final'),{recursive:true});
+    fs.writeFileSync(path.join(root,'output','final','final.mp4'),'legacy-final');
+    const plan={project:{name:'legacy',format:'youtube_long',profile:'generic'},audio:{narration:'audio/voice.wav'},
+      timeline:[{id:'a',start:0,end:1,background:{color:'#000'},elements:[]}]};
+    fs.writeFileSync(path.join(root,'edit_plan.json'),JSON.stringify(plan));
+    await assert.rejects(renderProject(root,{
+      prepareVoice:async()=>{},
+      renderScene:async()=>{throw Error('new render failed');}
+    }),/new render failed/);
+    assert.equal(fs.readFileSync(path.join(root,'output','final.mp4'),'utf8'),'legacy-final');
+    assert.equal(fs.existsSync(path.join(root,'output','final','final.mp4')),false);
+  }finally{fs.rmSync(root,{recursive:true,force:true});}
+});
+
 test('Node pipeline persists scene clips, redraws only changed scene and rebuilds all',async()=>{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'contentlab-node-render-'));
   try{
