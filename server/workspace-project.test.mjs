@@ -27,6 +27,8 @@ test('universal project accepts empty folders and safely groups assets without a
 test('thumbnail drafts isolate projects, reject stale overwrites and export unique names',t=>{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'workspace-thumbs-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
   const a=path.join(root,'a'),b=path.join(root,'b');fs.mkdirSync(a);fs.mkdirSync(b);
+  assert.equal(readThumbnailProject(b).state,null);
+  assert.equal(fs.existsSync(path.join(b,'thumbnails')),false,'Leitura não deve criar pasta vazia de thumbnails.');
   const first=saveThumbnailFile(a,{bytes:draft('Primeiro'),draft:true});
   assert.equal(readThumbnailProject(a).state.name,'Primeiro');assert.equal(readThumbnailProject(b).state,null);
   assert.throws(()=>saveThumbnailFile(a,{bytes:draft('Stale'),draft:true}),/alterada/);
