@@ -178,23 +178,23 @@ Para gameplay, preserve a proporção. contain mostra todo o quadro e é o padr�
 
 ```text
 meu-video/
-├── edit_plan.json                     plano canônico de edição
-├── audio/                              narração e tomadas
-├── assets/                             mídia usada pelo projeto
-├── custom-scenes/                      TSX local, somente quando usado
-├── thumbnails/                         somente quando o Studio for usado
-├── transcript.json                    transcrição canônica para sincronização
-├── transcript.txt / transcript.srt    exportações legíveis quando geradas
-├── transcript.build.json              metadado técnico de transcrição
-├── narration.build.json               metadado técnico de narração
-├── output/
-│   └── final.mp4                       entrega renderizada
-└── .contentlab/                        estado interno do aplicativo
-    └── render/
-        ├── render_report.json
-        ├── scenes/                     cache de cenas
-        ├── pieces/                     cache de composição
-        └── logs/                       somente quando houver erro
+├── edit_plan.json                     criado DEPOIS da narração
+├── audio/
+│   ├── narration.original.wav         gravação original preservada
+│   ├── narration.prepared.wav         voz limpa (antes do efeito)
+│   └── narration.wav                  voz final, com efeito opcional
+├── assets/
+│   ├── abertura.mp4
+│   └── personagens/
+│       └── heroi.png                 subpastas permitidas
+├── custom-scenes/
+│   └── MinhaCena.tsx                  componente Remotion local (opcional)
+├── transcript.json                    gerado após preparar a narração
+├── transcript.txt                     texto gerado
+├── transcript.srt                     legendas geradas
+├── transcript.build.json              origem dos timestamps
+├── narration.build.json               opções e arquivo de origem
+└── output/                            produzido após render
 ```
 
 ![Comparação entre contain e cover](https://raw.githubusercontent.com/DanielHABDias/ContentLab/main/docs/figures/fitting.svg)
