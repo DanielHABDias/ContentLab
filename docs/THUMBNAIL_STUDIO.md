@@ -1,6 +1,6 @@
 # Studio de Thumbnails — Content Lab
 
-O editor visual de thumbnails fica na aba **Thumbnails** do Content Lab. Ele é independente do `edit_plan.json` de vídeo: não altera a timeline e não exige narração. Usa a pasta universal selecionada no topo e salva o rascunho editável em `thumbnails/project.json`, com imagens incorporadas. As imagens exportadas, JSONs portáteis e ZIPs também ficam em `thumbnails/`, sem sobrescrever exportações anteriores.
+O editor visual de thumbnails fica na aba **Thumbnails** do Content Lab. Ele é independente do `edit_plan.json` de vídeo: não altera a timeline e não exige narração. Usa a pasta universal selecionada no topo e salva o rascunho editável em `thumbnails/project.json`, com imagens incorporadas. As imagens finais, JSONs portáteis e ZIPs são salvos em `output/`. Imagens finais usam `TH_A`, `TH_B` etc.; a interface permite nova versão ou substituição explícita. Arquivos legados em `thumbnails/` são preservados.
 
 ## Fluxo de trabalho
 
@@ -183,7 +183,7 @@ esse desenho. Validar o JSON não substitui comparar a imagem exportada com a
 referência, inclusive em tamanho reduzido.
 
 - As imagens PNG/JPG/WebP são carregadas diretamente do computador e passam a compor o projeto como dados locais. Não há upload para serviço externo.
-- O rascunho é salvo automaticamente em `thumbnails/project.json` no projeto ativo. **Salvar JSON no projeto** cria uma cópia portátil com as imagens incorporadas; **Abrir projeto JSON** permite importar outro trabalho. **Recarregar projeto**, no topo, relê alterações externas com proteção contra sobrescrita de rascunhos divergentes. Projetos antigos do IndexedDB não são migrados automaticamente: importe seu JSON na pasta desejada.
+- O rascunho é salvo automaticamente em `thumbnails/project.json` no projeto ativo. **Salvar JSON no projeto** cria em `output/` uma cópia portátil com as imagens incorporadas; **Abrir projeto JSON** permite importar outro trabalho. **Recarregar projeto**, no topo, relê alterações externas com proteção contra sobrescrita de rascunhos divergentes. Projetos antigos do IndexedDB não são migrados automaticamente: importe seu JSON na pasta desejada.
 - A exportação ZIP é local, com JPG/PNG/WebP no formato escolhido, e também contém `projeto-thumbnail.json`.
 - O editor não modifica a thumbnail no Canva, nem publica automaticamente no YouTube. O usuário baixa e utiliza os arquivos.
 - Fontes **Anton** e **Bangers** são carregadas da instalação do Content Lab: `builtin-assets/fonts`. Se o arquivo de uma delas estiver ausente, a prévia indica o fallback.
@@ -219,3 +219,7 @@ Verifique margens do cabelo/rosto, leitura mobile, alinhamento do contorno, cont
 ### Página HQ transparente
 
 `background.style: "comic_page"` usa o mesmo PNG original do BackgroundHQ. Os espaços entre as divisórias continuam transparentes e mostram a cor/foto base. `textureOpacity` controla a intensidade, e `invertEffects` permite divisórias claras sobre fundos escuros. A imagem usa cover centralizado: sem distorção, com recorte lateral possível em 9:16. Não redesenha os quadros.
+
+## Layout canônico de projetos e exportações
+
+A organização oficial está em [docs/PROJECT_LAYOUT.md](PROJECT_LAYOUT.md). Imagens finais do Thumbnail Studio ficam em `output/TH_A.jpg`, `TH_B.jpg` etc. (JPG/PNG/WebP). Na interface, **Nova thumbnail** nunca sobrescreve; **Substituir TH_X.ext** exige selecionar um arquivo existente do mesmo formato. O rascunho editável continua em `thumbnails/project.json`. Metadados internos `narration.build.json` e `transcript.build.json` ficam em `.contentlab/build/`; leituras legadas da raiz continuam compatíveis.

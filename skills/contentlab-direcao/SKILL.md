@@ -67,3 +67,7 @@ Flip, Curtain e Blur são transitionOut entre cenas reais, não cenas intermedi�
 Validar JSON, caminhos, props e duração. Conferir frames de entrada/desenvolvimento/saída, ouvir voz/SFX e testar cache. Não declarar homologação estética com TypeScript/schema apenas. Antes de inspecionar o render, classificar como pré-render. Não publicar, alterar Drive nem fazer Git sem autorização.
 
 Antes de entregar `edit_plan.json` como pronto para render, executar primeiro o revisor técnico do JSON e depois os três passes perceptivos, consolidando tudo em `contentlab-revisao`. Vídeos longos exigem técnico, abertura, visual/movimento e áudio/sincronização; Shorts exigem técnico, visual/movimento e áudio/sincronização, com abertura `N/A`. Um estado `CORRIGIR` bloqueia a entrega; `NÃO VERIFICADO` permite apenas rascunho explicitamente pendente. Depois do MP4, repetir os passes aplicáveis sobre pixels e áudio reais.
+
+## Layout canônico de projetos e exportações
+
+A organização oficial está em [docs/PROJECT_LAYOUT.md](../../docs/PROJECT_LAYOUT.md). Imagens finais do Thumbnail Studio ficam em `output/TH_A.jpg`, `TH_B.jpg` etc. (JPG/PNG/WebP). Na interface, **Nova thumbnail** nunca sobrescreve; **Substituir TH_X.ext** exige selecionar um arquivo existente do mesmo formato. O rascunho editável continua em `thumbnails/project.json`. Metadados internos `narration.build.json` e `transcript.build.json` ficam em `.contentlab/build/`; leituras legadas da raiz continuam compatíveis.

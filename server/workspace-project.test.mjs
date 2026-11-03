@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import express from 'express';
-import {inspectWorkspace,projectAssetDirectory,readThumbnailProject,saveThumbnailFile,mountWorkspaceRoutes} from './workspace-project.mjs';
+import {inspectWorkspace,projectAssetDirectory,readThumbnailProject,saveThumbnailFile,listFinalThumbnails,mountWorkspaceRoutes} from './workspace-project.mjs';
 import {takeList} from './narration-assembly.mjs';
 import {run} from './exec.mjs';
 const draft=name=>Buffer.from(JSON.stringify({version:1,name,base:{center:{},title:{}},background:{},media:{},variants:[]}));
@@ -37,7 +37,18 @@ test('thumbnail drafts isolate projects, reject stale overwrites and export uniq
   assert.equal(readThumbnailProject(a).state.name,'Atualizado');
   const one=saveThumbnailFile(a,{name:'Capa.JPG',bytes:Buffer.from('jpeg-test')});
   const two=saveThumbnailFile(a,{name:'Capa.JPG',bytes:Buffer.from('other')});assert.notEqual(one.relative,two.relative);
-  assert.equal(fs.readFileSync(path.join(a,one.relative),'utf8'),'jpeg-test');
+  assert.equal(one.relative,'output/TH_A.jpg');
+  assert.equal(two.relative,'output/TH_B.jpg');
+  const all=listFinalThumbnails(a);
+  assert.deepEqual(all.map(item=>item.name),['TH_A.jpg','TH_B.jpg']);
+  assert.throws(()=>saveThumbnailFile(a,{name:'image.jpg',bytes:Buffer.from('unsafe'),replace:'TH_A.jpg'}),/alterada/);
+  const replaced=saveThumbnailFile(a,{name:'image.jpg',bytes:Buffer.from('replacement'),replace:'TH_A.jpg',expectedFileRevision:all[0].revision});
+  assert.equal(replaced.relative,'output/TH_A.jpg');
+  assert.equal(fs.readFileSync(path.join(a,'output','TH_A.jpg'),'utf8'),'replacement');
+  assert.equal(fs.readFileSync(path.join(a,'output','TH_B.jpg'),'utf8'),'other');
+  assert.throws(()=>saveThumbnailFile(a,{name:'image.png',bytes:Buffer.from('wrong'),replace:'TH_A.jpg',expectedFileRevision:all[0].revision}),/formato/);
+  
+  assert.equal(fs.readFileSync(path.join(a,one.relative),'utf8'),'replacement');
   assert.throws(()=>saveThumbnailFile(a,{name:'../outside.json',bytes:Buffer.from('{}')}),/inválido/);
 });
 test('reload discovers persisted raw takes and removes externally missing entries without touching audio',async t=>{

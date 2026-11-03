@@ -1,3 +1,4 @@
+import {buildMetadataPath,cleanLegacyBuildMetadata} from './project-metadata.mjs';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -39,7 +40,7 @@ export function officialNarrationSource(folder,{required=true}={}){
   }
   const stat=fs.lstatSync(file);
   if(stat.isSymbolicLink()||!stat.isFile())throw Error('A narração padrão audio/narration.wav é inválida.');
-  const marker=path.join(root,VOICE_STUDIO_BUILD);
+  const marker=buildMetadataPath(root,VOICE_STUDIO_BUILD);
   if(!fs.existsSync(marker))return file; // Projeto novo: a narração ainda é bruta.
   const markerStat=fs.lstatSync(marker);
   if(markerStat.isSymbolicLink()||!markerStat.isFile()||markerStat.size>1024*1024)
@@ -184,7 +185,7 @@ const atomicReplace=(source,destination)=>{
   try{fs.renameSync(staged,destination);}finally{fs.rmSync(staged,{force:true});}
 };
 export function voiceStudioState(folder){
-  const root=voiceStudioFolder(folder),file=path.join(root,VOICE_STUDIO_BUILD);
+  const root=voiceStudioFolder(folder),file=buildMetadataPath(root,VOICE_STUDIO_BUILD);
   if(!fs.existsSync(file))return {ready:false};
   try{
     const build=JSON.parse(fs.readFileSync(file,'utf8'));
@@ -266,11 +267,13 @@ export async function prepareStandaloneNarration(directory,{
       model,language,generatedAt:new Date().toISOString()};
     const written=path.join(staged,'narration.build.json');
     fs.writeFileSync(written,JSON.stringify(meta,null,2)+'\n');
-    atomicReplace(written,path.join(root,VOICE_STUDIO_BUILD));
+    atomicReplace(written,buildMetadataPath(root,VOICE_STUDIO_BUILD,{write:true}));
+    cleanLegacyBuildMetadata(root,VOICE_STUDIO_BUILD);
     // Do NOT stamp as an edit_plan transcript: inserted silences in the future
     // JSON must still be remapped from the source-cleaned word timeline.
     fs.writeFileSync(written,JSON.stringify({...meta,narrationStamp:null},null,2)+'\n');
-    atomicReplace(written,path.join(root,'transcript.build.json'));
+    atomicReplace(written,buildMetadataPath(root,'transcript.build.json',{write:true}));
+    cleanLegacyBuildMetadata(root,'transcript.build.json');
     update('Narração preparada e transcrição prontas para criar o edit_plan.json.');
     return {...transcript,source:original,narration:NARRATION_OUTPUT,
       neutral:NARRATION_NEUTRAL,transcript:'transcript.json',duration:meta.duration,

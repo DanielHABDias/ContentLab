@@ -869,9 +869,10 @@
     changed(true);status("Imagem carregada. Arraste na prévia e ajuste escala/opacidade no painel.");
   }
   fileReader.addEventListener("change",event=>imagePicked(event).catch(e=>status(e.message,true)));
-  async function download(blob,name){
+  async function download(blob,name,{replace=null,expectedFileRevision=null}={}){
     const root=binding?.root;if(!root||!projectLoaded||root!==window.ContentLabProject?.root)throw Error('Selecione o projeto no topo antes de salvar thumbnails.');
     const form=new FormData();form.append('projectRoot',root);form.append('file',blob,name);
+    if(replace){form.append('replace',replace);form.append('expectedFileRevision',expectedFileRevision||'');}
     const response=await fetch('/api/workspace/thumbnails',{method:'POST',body:form}),result=await response.json();
     if(!response.ok)throw Error(result.error||'Não foi possível salvar a thumbnail.');return result.relative;
   }
@@ -882,15 +883,40 @@
       offscreen.toBlob(b=>b && b.type === settings.mime ? resolve(b) : reject(Error("O navegador não conseguiu exportar o formato escolhido.")),settings.mime,settings.quality);
     });
   }
+  // A seleção é sempre explícita: um arquivo existente nunca é sobrescrito por uma exportação comum.
+  const finalChoice=document.createElement('select');
+  finalChoice.id='thumb-final-destination';
+  finalChoice.setAttribute('aria-label','Destino da thumbnail final');
+  finalChoice.title='Crie uma nova thumbnail ou escolha qual TH_ deseja substituir';
+  finalChoice.style.maxWidth='100%';
+  finalChoice.style.margin='0 8px';
+  $('thumb-export-current').insertAdjacentElement('beforebegin',finalChoice);
+  let finalFiles=[];
+  async function refreshFinals(){
+    const root=binding?.root;
+    finalChoice.replaceChildren(new Option('Nova thumbnail (próxima TH_)',''));
+    finalFiles=[];
+    if(!projectLoaded||!root||root!==window.ContentLabProject?.root)return;
+    const response=await fetch('/api/workspace/thumbnails/finals?projectRoot='+encodeURIComponent(root),{cache:'no-store'});
+    const data=await response.json();if(!response.ok)throw Error(data.error||'Não foi possível listar thumbnails.');
+    finalFiles=data.files||[];
+    const ext=exportSettings().extension;
+    for(const file of finalFiles.filter(file=>file.name.toLowerCase().endsWith('.'+ext)))
+      finalChoice.add(new Option('Substituir '+file.name,file.name));
+  }
   async function exportCurrent() {
     exporting=true;
     const settings=exportSettings();
-    status("Gerando imagem em resolução final...");
+    status('Gerando imagem em resolução final...');
     try {
-      const id=state.selected;const selected=currentVariant();
-      const size=dimensions(currentFormat());
-      const name=filenames(state.name)+"-"+filenames(selected?.name||"video-longo")+"."+settings.extension;
-      const relative=await download(await renderBlob(id,settings),name);status(`Salva no projeto: ${relative} · ${size.w} × ${size.h}.`);
+      const selectedName=finalChoice.value;
+      const replacement=finalFiles.find(item=>item.name===selectedName);
+      const selected=currentVariant(),size=dimensions(currentFormat());
+      const name=replacement?.name||'thumbnail.'+settings.extension;
+      const relative=await download(await renderBlob(state.selected,settings),name,replacement?
+        {replace:replacement.name,expectedFileRevision:replacement.revision}:{});
+      status(`Salva no projeto: ${relative} · ${size.w} × ${size.h}.`);
+      await refreshFinals();
     }catch(e){status(e.message,true);}finally{exporting=false;}
   }
   const CRC_TABLE=(()=>{const table=[];for(let n=0;n<256;n++){
@@ -940,7 +966,13 @@
       }
       collectUnusedMedia();
       entries.push({name:"projeto-thumbnail.json",bytes:new TextEncoder().encode(JSON.stringify(state,null,2))});
+      // Exportação em lote cria novos TH_ individuais, além do ZIP portátil.
+      for(const entry of all){
+        const image=await renderBlob(entry.id,settings);
+        await download(image,'thumbnail.'+settings.extension);
+      }
       await download(zipStore(entries),filenames(state.name)+"-thumbnails.zip");
+      await refreshFinals();
       status(`${all.length} imagem(ns) ${settings.extension.toUpperCase()} e projeto editável reunidos em um ZIP.`);
     }catch(e){status(e.message,true);}finally{button.disabled=false;exporting=false;}
   }
@@ -999,7 +1031,7 @@
         const response=await fetch('/api/workspace/thumbnails?projectRoot='+encodeURIComponent(root),{cache:'no-store'}),data=await response.json();
         if(!response.ok)throw Error(data.error||'Falha ao ler thumbnails.');
         state=data.state?validateProject(data.state):freshState();if(!data.state)state.name=root.split(/[\\/]/).pop();
-        binding.revision=data.revision;projectLoaded=true;selectedLayer='center';fullUi();status(data.state?'Thumbnails restauradas da pasta do projeto.':'Projeto pronto. As thumbnails serão salvas em thumbnails/.');
+        binding.revision=data.revision;projectLoaded=true;selectedLayer='center';fullUi();await refreshFinals();status(data.state?'Thumbnails restauradas. Arquivos finais ficam em output/.':'Projeto pronto. Imagens finais serão salvas em output/.');
       }catch(error){fullUi();status(error.message,true);throw error;}
     }
   };

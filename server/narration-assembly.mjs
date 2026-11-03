@@ -1,3 +1,4 @@
+import {buildMetadataPath,cleanLegacyBuildMetadata} from './project-metadata.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -115,7 +116,7 @@ export async function finalizeTakes(folder,{kind='recording',transcription={},si
   if(!takes.length||takes.length>100)throw Error('Selecione de 1 a 100 tomadas.');
   const options=transcriptionOptions(transcription),revision=takeList(root).revision;
   const staging=fs.mkdtempSync(path.join(root,'.narration-assembly-'));
-  const destinations=['audio/narration.wav','transcript.json','transcript.txt','transcript.srt','narration.build.json','transcript.build.json'];
+  const destinations=['audio/narration.wav','transcript.json','transcript.txt','transcript.srt','.contentlab/build/narration.build.json','.contentlab/build/transcript.build.json'];
   try{
     for(const name of destinations){const file=path.join(root,name);if(fs.existsSync(file)&&(!fs.lstatSync(file).isFile()||fs.lstatSync(file).isSymbolicLink()))throw Error('Saída inválida ou link simbólico: '+name);}
     update('Unindo '+takes.length+' tomada(s), preservando os arquivos originais...');
@@ -148,7 +149,9 @@ export async function finalizeTakes(folder,{kind='recording',transcription={},si
       const stat=fs.statSync(path.join(directory,'narration.wav'));
       const meta={version:1,mode:'voice-studio',kind,source,output:'audio/narration.wav',neutral:source,outputIdentity:{size:stat.size,mtimeMs:stat.mtimeMs},duration,
         options:{voicePreset:'original',pitchSemitones:0,removeMiddleSilence:false,enhancementEngine:'off'},enhancement:{applied:false},treatment:null,processing:[],takes:takes.map(t=>t.name),...options,generatedAt:new Date().toISOString()};
-      for(const name of ['narration.build.json','transcript.build.json']){const tmp=path.join(staging,name);fs.writeFileSync(tmp,JSON.stringify({...meta,narrationStamp:null},null,2));atomic(tmp,path.join(root,name));}
+      for(const name of ['narration.build.json','transcript.build.json']){const tmp=path.join(staging,name);fs.writeFileSync(tmp,JSON.stringify({...meta,narrationStamp:null},null,2));atomic(tmp,buildMetadataPath(root,name,{write:true}));}
+      cleanLegacyBuildMetadata(root,'narration.build.json');
+      cleanLegacyBuildMetadata(root,'transcript.build.json');
     }catch(error){
       for(const name of destinations){if(previous.includes(name))atomic(path.join(backup,name),path.join(root,name));else fs.rmSync(path.join(root,name),{force:true});}throw error;
     }

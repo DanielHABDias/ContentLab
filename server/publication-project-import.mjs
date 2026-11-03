@@ -1,5 +1,4 @@
-/* Importação local de projetos Content Lab: somente edit_plan.json,
-   output/final.mp4 (com fallback legado) e imagens exportadas em thumbnails/. */
+/* Importação local de projetos Content Lab: edit_plan.json, output/final.mp4 e thumbnails finais TH_ em output/. Projetos antigos ainda podem usar thumbnails/. */
 import fs from 'node:fs';
 import path from 'node:path';
 import {createSocialDraft,deleteSocialDraft,listSocialDrafts,SOCIAL_DRAFT_DIR} from './social-drafts.mjs';
@@ -7,6 +6,12 @@ import {createSocialDraft,deleteSocialDraft,listSocialDrafts,SOCIAL_DRAFT_DIR} f
 const MAX_PROJECTS=90;
 const MAX_PLAN_BYTES=5*1024*1024;
 const IMAGE_EXT=new Set(['.png','.jpg','.jpeg','.webp']);
+const FINAL_THUMBNAIL=/^TH_([A-Z]+)\.(png|jpg|jpeg|webp)$/i;
+const slotNumber=name=>{
+  const match=path.basename(name).match(FINAL_THUMBNAIL);if(!match)return Number.POSITIVE_INFINITY;
+  let value=0;for(const ch of match[1].toUpperCase())value=value*26+(ch.charCodeAt(0)-64);
+  return value;
+};
 const VIDEO_EXT=new Set(['.mp4']);
 const isRegular=file=>{
   try{const stat=fs.lstatSync(file);return stat.isFile()&&!stat.isSymbolicLink();}
@@ -62,26 +67,36 @@ export function inspectPublicationProject(projectRoot){
     safeDir(legacyDir)&&isRegular(legacy)?legacy:null;
   if(!video)throw Error('Vídeo final não encontrado em output/final.mp4.');
   if(!VIDEO_EXT.has(path.extname(video).toLowerCase()))throw Error('Formato de vídeo não suportado.');
-  const folder=path.join(root,'thumbnails');
-  let images=[];
-  if(safeDir(folder)){
-    images=fs.readdirSync(folder,{withFileTypes:true})
-      .filter(item=>item.isFile()&&!item.isSymbolicLink()&&IMAGE_EXT.has(path.extname(item.name).toLowerCase()))
-      .map(item=>path.join(folder,item.name)).filter(isRegular)
-      .sort((a,b)=>timestamp(b)-timestamp(a)||path.basename(b).localeCompare(path.basename(a)));
+  // Estrutura atual: somente arquivos finais TH_ dentro de output/. O rascunho thumbnails/project.json nunca é publicação.
+  let images=fs.readdirSync(output,{withFileTypes:true})
+    .filter(item=>item.isFile()&&!item.isSymbolicLink()&&FINAL_THUMBNAIL.test(item.name))
+    .map(item=>path.join(output,item.name)).filter(isRegular)
+    .sort((a,b)=>slotNumber(a)-slotNumber(b)||path.basename(a).localeCompare(path.basename(b)));
+  let legacyThumbnails=false;
+  if(!images.length){
+    const folder=path.join(root,'thumbnails');
+    if(safeDir(folder)){
+      images=fs.readdirSync(folder,{withFileTypes:true})
+        .filter(item=>item.isFile()&&!item.isSymbolicLink()&&IMAGE_EXT.has(path.extname(item.name).toLowerCase()))
+        .map(item=>path.join(folder,item.name)).filter(isRegular)
+        .sort((a,b)=>timestamp(b)-timestamp(a)||path.basename(b).localeCompare(path.basename(a)));
+      legacyThumbnails=images.length>0;
+    }
   }
-  if(!images.length)throw Error('Nenhuma thumbnail PNG, JPG ou WebP encontrada na pasta thumbnails.');
-  // Em vídeos longos, A é a anterior e B a mais recente. Em Shorts, só A.
-  const coverA=kind==='long'?(images[1]||images[0]):images[0];
-  const coverB=kind==='long'?images[0]:null;
+  if(!images.length)throw Error('Nenhuma thumbnail final TH_ encontrada em output/ (nem imagem legada em thumbnails/).');
+  // Na estrutura nova, A/B significam literalmente TH_A e TH_B; um TH_C não ocupa o lugar de B.
+  const slots=legacyThumbnails?null:new Map(images.map(file=>[path.basename(file).match(FINAL_THUMBNAIL)[1].toUpperCase(),file]));
+  const coverA=legacyThumbnails?(kind==='long'?(images[1]||images[0]):images[0]):(slots.get('A')||images[0]);
+  const coverB=kind==='long'?(legacyThumbnails?images[0]:(slots.get('B')||null)):null;
+  const needsReview=kind==='long'&&!coverB;
   return {projectRoot:root,name,kind,format:plan.project.format,
     videoPath:video,videoName:path.basename(video),videoBytes:fs.statSync(video).size,
     coverAPath:coverA,coverBPath:coverB,
     coverAName:path.basename(coverA),coverBName:coverB&&path.basename(coverB),
-    needsReview:kind==='long'&&images.length<2,
-    warning:kind==='long'&&images.length<2?
+    needsReview,
+    warning:needsReview?
       'Apenas uma thumbnail disponível. A opção B será uma cópia provisória; edite o título e a capa B antes de publicar.':
-      'Pré-seleção automática. Confira as informações antes de publicar.'};
+      legacyThumbnails?'Projeto legado: capas lidas de thumbnails/. Confira antes de publicar.':'Pré-seleção por TH_A/TH_B. Confira as informações antes de publicar.'};
 }
 export function discoverPublicationProjects(folders,{limit=MAX_PROJECTS}={}){
   if(!Array.isArray(folders)||!folders.length||folders.length>MAX_PROJECTS)
