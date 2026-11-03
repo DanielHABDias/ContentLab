@@ -31,7 +31,7 @@ try{
   assert.equal(render.sceneCache.renderedCount,2);
   assert.equal(render.transitions.length,1);
   assert.ok(render.outputBytes>2000);
-  const manifest=path.join(root,'output','final','scenes','manifest.json');
+  const manifest=path.join(root,'.contentlab','render','scenes','manifest.json');
   assert.ok(fs.existsSync(manifest));
   const cached=await renderProject(root,{cacheMode:'reuse'});
   assert.equal(cached.cacheHit,true);
