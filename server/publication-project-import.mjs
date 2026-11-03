@@ -1,5 +1,5 @@
 /* Importação local de projetos Content Lab: somente edit_plan.json,
-   output/final/final.mp4 e imagens exportadas em thumbnails/. */
+   output/final.mp4 (com fallback legado) e imagens exportadas em thumbnails/. */
 import fs from 'node:fs';
 import path from 'node:path';
 import {createSocialDraft,deleteSocialDraft,listSocialDrafts,SOCIAL_DRAFT_DIR} from './social-drafts.mjs';
@@ -55,10 +55,12 @@ export function inspectPublicationProject(projectRoot){
   if(!plan)throw Error('Esta pasta não contém edit_plan.json.');
   const kind=kindFromPlan(plan);
   const name=String(plan.project.name||path.basename(root)).trim().slice(0,150)||path.basename(root).slice(0,150);
-  const finalDir=path.join(root,'output','final');
-  const video=path.join(finalDir,'final.mp4');
-  if(!safeDir(path.join(root,'output'))||!safeDir(finalDir)||!isRegular(video))
-    throw Error('Vídeo final não encontrado em output/final/final.mp4.');
+  const output=path.join(root,'output'),canonical=path.join(output,'final.mp4'),
+    legacyDir=path.join(output,'final'),legacy=path.join(legacyDir,'final.mp4');
+  if(!safeDir(output))throw Error('Vídeo final não encontrado em output/final.mp4.');
+  const video=isRegular(canonical)?canonical:
+    safeDir(legacyDir)&&isRegular(legacy)?legacy:null;
+  if(!video)throw Error('Vídeo final não encontrado em output/final.mp4.');
   if(!VIDEO_EXT.has(path.extname(video).toLowerCase()))throw Error('Formato de vídeo não suportado.');
   const folder=path.join(root,'thumbnails');
   let images=[];
