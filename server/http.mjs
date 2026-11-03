@@ -220,7 +220,10 @@ app.post('/api/editor/render',api(async(req,res)=>{
       job.status=controller.signal.aborted?'cancelled':'error';job.message=job.status==='cancelled'?'Render cancelado.':'Falha no render.';
       job.error=e.message;job.errorType=e.name||'Error';
       try{
-        const dir=path.join(root,'.contentlab','render','logs');fs.mkdirSync(dir,{recursive:true});
+        const internal=path.join(root,'.contentlab');
+        if(fs.existsSync(internal)&&(fs.lstatSync(internal).isSymbolicLink()||!fs.statSync(internal).isDirectory()))
+          throw Error('Pasta .contentlab insegura.');
+        const dir=path.join(internal,'render','logs');fs.mkdirSync(dir,{recursive:true});
         const file=path.join(dir,'render-'+id+'.log');fs.writeFileSync(file,e.stack||e.message);
         job.errorLog=file;job.hasErrorLog=true;
       }catch{}
