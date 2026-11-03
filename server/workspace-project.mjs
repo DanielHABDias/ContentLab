@@ -63,9 +63,9 @@ export function listFinalThumbnails(folder){
   });
 }
 export function saveThumbnailFile(folder,{name,bytes,draft=false,expectedRevision=null,replace=null,expectedFileRevision=null}){
-  const directory=projectDirectory(folder,['thumbnails']);
   if(!Buffer.isBuffer(bytes)||bytes.length>95*1024*1024)throw Error('Thumbnail excede 95 MB.');
   if(draft){
+    const directory=projectDirectory(folder,['thumbnails']);
     const state=JSON.parse(bytes.toString('utf8'));if(state.version!==1||!state.base||!state.background||!state.media||!Array.isArray(state.variants))throw Error('Projeto de thumbnail inválido.');
     const file=path.join(directory,'project.json');
     const current=readThumbnailProject(folder);if(current.revision!==expectedRevision)throw Error('Thumbnail alterada fora desta sessão. Recarregue o projeto antes de salvar.');
