@@ -61,6 +61,14 @@ test('vídeo longo usa slots TH_A e TH_B, incluindo arquivos copiados',t=>{
   assert.deepEqual(fs.readFileSync(socialDraftMedia(saved.id,'coverA',f.drafts)),png);
   assert.deepEqual(fs.readFileSync(socialDraftMedia(saved.id,'coverB',f.drafts)),jpeg);
 });
+test('TH_C não substitui a ausência de TH_B no teste A/B',t=>{
+  const f=fixture(t),folder=f.project('Longo com lacuna','youtube_long');
+  fs.writeFileSync(path.join(folder,'output','TH_C.jpeg'),jpeg);
+  const item=inspectPublicationProject(folder);
+  assert.equal(item.coverAName,'TH_A.png');
+  assert.equal(item.coverBName,null);
+  assert.equal(item.needsReview,true);
+});
 test('projeto antigo sem TH_ ainda usa imagens de thumbnails por data',t=>{
   const f=fixture(t),folder=f.project('Legado de capas','youtube_long',{twoCovers:true});
   fs.rmSync(path.join(folder,'output','TH_A.png'));
