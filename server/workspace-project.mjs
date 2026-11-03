@@ -47,7 +47,22 @@ export function readThumbnailProject(folder){
   if(!regular(file)||fs.statSync(file).size>95*1024*1024)throw Error('Projeto de thumbnail inválido.');
   const bytes=fs.readFileSync(file);return {state:JSON.parse(bytes.toString('utf8').replace(/^\uFEFF/,'')),revision:revision(bytes)};
 }
-export function saveThumbnailFile(folder,{name,bytes,draft=false,expectedRevision=null}){
+const FINAL_THUMBNAIL=/^TH_([A-Z]+)\.(jpg|jpeg|png|webp)$/i;
+const THUMBNAIL_IMAGE_EXTENSIONS=new Set(['.png','.jpg','.jpeg','.webp']);
+function thumbnailSlot(index){
+  let name='';for(let n=index+1;n>0;n=Math.floor((n-1)/26))name=String.fromCharCode(65+(n-1)%26)+name;
+  return 'TH_'+name;
+}
+export function listFinalThumbnails(folder){
+  const root=voiceStudioFolder(folder),directory=path.join(root,'output');
+  if(!fs.existsSync(directory))return [];
+  if(fs.lstatSync(directory).isSymbolicLink()||!fs.statSync(directory).isDirectory())throw Error('Pasta output inválida.');
+  return fs.readdirSync(directory).filter(name=>FINAL_THUMBNAIL.test(name)&&regular(path.join(directory,name))).sort().map(name=>{
+    const bytes=fs.readFileSync(path.join(directory,name));
+    return {name,revision:revision(bytes),slot:name.match(FINAL_THUMBNAIL)[1].toUpperCase()};
+  });
+}
+export function saveThumbnailFile(folder,{name,bytes,draft=false,expectedRevision=null,replace=null,expectedFileRevision=null}){
   const directory=projectDirectory(folder,['thumbnails']);
   if(!Buffer.isBuffer(bytes)||bytes.length>95*1024*1024)throw Error('Thumbnail excede 95 MB.');
   if(draft){
@@ -59,13 +74,44 @@ export function saveThumbnailFile(folder,{name,bytes,draft=false,expectedRevisio
     return {relative:'thumbnails/project.json',revision:revision(bytes)};
   }
   if(typeof name!=='string'||name!==path.basename(name)||/[\\/\x00]/.test(name))throw Error('Nome de thumbnail inválido.');
-  const ext=path.extname(name).toLowerCase();if(!['.png','.jpg','.jpeg','.webp','.zip','.json'].includes(ext))throw Error('Formato de thumbnail inválido.');
-  const base=projectSlug(path.basename(name,ext));let file;
-  for(let i=0;i<10000;i++){
-    file=path.join(directory,base+(i?'_'+i:'')+ext);
-    try{fs.writeFileSync(file,bytes,{flag:'wx'});break;}catch(error){if(error.code!=='EEXIST')throw error;if(i===9999)throw Error('Muitos arquivos com este nome.');}
+  const ext=path.extname(name).toLowerCase();
+  // JSONs e ZIPs portáteis continuam disponíveis, mas o projeto editável não sai de thumbnails/project.json.
+  if(![...THUMBNAIL_IMAGE_EXTENSIONS,'.zip','.json'].includes(ext))throw Error('Formato de thumbnail inválido.');
+  const output=projectDirectory(folder,['output']);
+  if(THUMBNAIL_IMAGE_EXTENSIONS.has(ext)){
+    const existing=listFinalThumbnails(folder);
+    if(replace){
+      if(typeof replace!=='string'||!FINAL_THUMBNAIL.test(replace)||!existing.some(item=>item.name===replace))
+        throw Error('Thumbnail de destino inexistente. Atualize a lista.');
+      if(path.extname(replace).toLowerCase()!==ext)throw Error('Para substituir, selecione o mesmo formato de arquivo.');
+      const current=existing.find(item=>item.name===replace);
+      if(!expectedFileRevision||current.revision!==expectedFileRevision)throw Error('Thumbnail alterada desde a seleção. Atualize a lista antes de substituir.');
+      const file=path.join(output,replace),tmp=path.join(output,'.thumbnail-'+crypto.randomUUID());
+      try{
+        fs.writeFileSync(tmp,bytes,{flag:'wx'});
+        if(!regular(file)||revision(fs.readFileSync(file))!==expectedFileRevision)throw Error('Thumbnail alterada antes da substituição.');
+        fs.renameSync(tmp,file);
+      }finally{fs.rmSync(tmp,{force:true});}
+      return {relative:'output/'+replace,replaced:true};
+    }
+    const occupied=new Set(existing.map(item=>item.slot));
+    for(let i=0;i<10000;i++){
+      const slot=thumbnailSlot(i).slice(3);
+      if(occupied.has(slot))continue;
+      const filename='TH_'+slot+ext;
+      try{fs.writeFileSync(path.join(output,filename),bytes,{flag:'wx'});return {relative:'output/'+filename,replaced:false};}
+      catch(error){if(error.code!=='EEXIST')throw error;occupied.add(slot);}
+    }
+    throw Error('Limite de thumbnails do projeto atingido.');
   }
-  return {relative:'thumbnails/'+path.basename(file)};
+  if(replace)throw Error('Substituição somente para imagens TH_.');
+  const base=projectSlug(path.basename(name,ext));
+  for(let i=0;i<10000;i++){
+    const filename=base+(i?'_'+i:'')+ext;
+    try{fs.writeFileSync(path.join(output,filename),bytes,{flag:'wx'});return {relative:'output/'+filename};}
+    catch(error){if(error.code!=='EEXIST')throw error;}
+  }
+  throw Error('Muitos arquivos com este nome.');
 }
 export function mountWorkspaceRoutes(app,api,{isBusy=()=>false}={}){
   const upload=multer({storage:multer.memoryStorage(),limits:{fileSize:95*1024*1024,files:1}}).single('file');
@@ -77,6 +123,7 @@ export function mountWorkspaceRoutes(app,api,{isBusy=()=>false}={}){
     res.json(await inspectWorkspace(root,{reload:req.body.reload===true}));
   }));
   app.get('/api/workspace/thumbnails',api(async(req,res)=>res.json(readThumbnailProject(req.query.projectRoot))));
+  app.get('/api/workspace/thumbnails/finals',api(async(req,res)=>res.json({files:listFinalThumbnails(req.query.projectRoot)})));
   app.post('/api/workspace/edit-plan',api(async(req,res)=>{
     const root=voiceStudioFolder(req.body.projectRoot);if(isBusy(root))throw Error('Aguarde o processamento antes de criar o plano.');
     const initial={project:{name:String(req.body.name||path.basename(root)).slice(0,100),format:'youtube_long',profile:'generic'},sources:{assets:'assets',transcript:'transcript.json'},audio:{narration:'audio/narration.wav'},timeline:[]};
@@ -84,6 +131,6 @@ export function mountWorkspaceRoutes(app,api,{isBusy=()=>false}={}){
   }));
   app.post('/api/workspace/thumbnails',(req,res,next)=>upload(req,res,error=>error?res.status(400).json({error:error.message}):next()),api(async(req,res)=>{
     if(!req.file)throw Error('Arquivo de thumbnail não enviado.');
-    res.json(saveThumbnailFile(req.body.projectRoot,{name:req.file.originalname,bytes:req.file.buffer,draft:req.body.kind==='draft',expectedRevision:req.body.revision||null}));
+    res.json(saveThumbnailFile(req.body.projectRoot,{name:req.file.originalname,bytes:req.file.buffer,draft:req.body.kind==='draft',expectedRevision:req.body.revision||null,replace:req.body.replace||null,expectedFileRevision:req.body.expectedFileRevision||null}));
   }));
 }
