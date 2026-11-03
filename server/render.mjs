@@ -43,11 +43,13 @@ export async function renderProject(directory,{
   const inputFiles=[validation.narration,...Object.values(validation.resolvedAssets),
     plan.sources?.transcript&&path.resolve(root,plan.sources.transcript)].filter(Boolean);
   if(cacheMode==='rebuild')cleanOutput(root,inputFiles);
-  const outputRoot=path.join(root,'output'),finalDir=path.join(outputRoot,'final'),finalFile=path.join(finalDir,'final.mp4');
+  const outputRoot=path.join(root,'output'),internalRoot=path.join(root,'.contentlab','render'),
+    finalFile=path.join(outputRoot,'final.mp4');
   if(fs.existsSync(outputRoot)&&fs.lstatSync(outputRoot).isSymbolicLink())throw Error('Pasta output insegura.');
-  if(fs.existsSync(finalDir)&&fs.lstatSync(finalDir).isSymbolicLink())throw Error('Pasta final insegura.');
-  fs.mkdirSync(finalDir,{recursive:true});
-  const cache=new SegmentCache(path.join(finalDir,'scenes'));
+  if(fs.existsSync(internalRoot)&&fs.lstatSync(internalRoot).isSymbolicLink())throw Error('Pasta interna de render insegura.');
+  fs.mkdirSync(outputRoot,{recursive:true});
+  fs.mkdirSync(internalRoot,{recursive:true});
+  const cache=new SegmentCache(path.join(internalRoot,'scenes'));
   const cfg=settings(plan),duration=Math.max(...plan.timeline.map(s=>s.end));
   const raws=normalizedScenes(plan),scenes=raws.map(raw=>compileScene(raw,plan,validation.resolvedAssets));
   let transcript=null;
@@ -69,7 +71,7 @@ export async function renderProject(directory,{
     applyNarrationSilence(remapTranscriptWords(transcriptWords(transcript),narrationEdges.cuts),
       plan.audio.silenceInserts);
   const identity=rendererIdentity(APP_ROOT);
-  const signature=hashRender(plan,validation,identity),reportFile=path.join(finalDir,'render_report.json');
+  const signature=hashRender(plan,validation,identity),reportFile=path.join(internalRoot,'render_report.json');
   const fingerprints=raws.map((raw,i)=>sceneFingerprint(raw,scenes[i],cfg,validation.resolvedAssets,words,identity));
   if(cacheMode==='reuse'&&fs.existsSync(finalFile)&&fs.existsSync(reportFile)){
     try{
@@ -83,7 +85,7 @@ export async function renderProject(directory,{
     }catch{}
   }
   const concurrency=sceneWorkerLimit({...cfg,count:scenes.length,hardwareAccel,requested:sceneConcurrency});
-  const work=fs.mkdtempSync(path.join(finalDir,'contentlab-render-'));
+  const work=fs.mkdtempSync(path.join(internalRoot,'work-'));
   const reused=[],rendered=[],paths=new Array(scenes.length),started=Date.now();
   const sceneTimings=new Array(scenes.length);
   let completed=0;
@@ -138,7 +140,7 @@ export async function renderProject(directory,{
     reused.sort((a,b)=>order.get(a)-order.get(b));rendered.sort((a,b)=>order.get(a)-order.get(b));
     const composeStarted=Date.now();
     composed=await compose(scenes,paths,silent,cfg,work,{
-      ffmpeg,ffprobe,signal:pipelineSignal,cacheDirectory:path.join(finalDir,'pieces')
+      ffmpeg,ffprobe,signal:pipelineSignal,cacheDirectory:path.join(internalRoot,'pieces')
     });
     emit('compose',scenes.length,scenes.length,'Vídeo composto');
     compositionSeconds=(Date.now()-composeStarted)/1000;
@@ -154,8 +156,9 @@ export async function renderProject(directory,{
     if(Math.abs(verified.videoDuration-duration)>tolerance||
        Math.abs(verified.audioDuration-duration)>tolerance)throw Error('Vídeo ou áudio fora da duração esperada.');
     fs.renameSync(tempFinal,finalFile);
-    const cleaned=path.join(finalDir,'narration.cleaned.wav');
-    fs.copyFileSync(voice,cleaned);
+    const legacyFinalDir=path.join(outputRoot,'final');
+    if(fs.existsSync(legacyFinalDir)&&!fs.lstatSync(legacyFinalDir).isSymbolicLink())
+      fs.rmSync(legacyFinalDir,{recursive:true,force:true});
     const report={
       status:'completed',project:plan.project.name,mode:'final',cacheMode,
       output:finalFile,outputBytes:fs.statSync(finalFile).size,duration,scenes:plan.timeline.length,
