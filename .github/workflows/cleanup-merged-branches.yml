@@ -27,9 +27,6 @@ jobs:
                 candidates.add(pr.head.ref);
             }
             if (context.eventName === 'push') {
-              // Limpeza única solicitada: manter apenas main.
-              candidates.add('fix/sync-generated-contentlab-html');
-              candidates.add('refactor/project-folder-structure');
               // Também remove branches integradas antes da atualização desta regra.
               for (const number of [30, 31, 39]) {
                 const {data: pr} = await github.rest.pulls.get({...repo, pull_number: number});
@@ -38,7 +35,7 @@ jobs:
               }
             }
             for (const name of candidates) {
-              if (!/^(?:feat|fix|refactor)\/[a-z0-9][a-z0-9/_-]+$/i.test(name) || ['main','develop'].includes(name)) continue;
+              if (!/^(?:feat|fix)\/[a-z0-9][a-z0-9/_-]+$/i.test(name) || ['main','develop'].includes(name)) continue;
               try {
                 await github.rest.git.deleteRef({...repo, ref:'heads/'+name});
                 core.info('Branch removida: '+name);
