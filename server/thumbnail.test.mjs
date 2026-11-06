@@ -21,7 +21,7 @@ test('editor visual registrado como workspace real, com IDs e assets locais', ()
   assert.match(html, /\/static\/thumbnail-studio\.css/);
   assert.match(html, /\/static\/thumbnail-studio\.js/);
   assert.match(html, /id="tab-thumbnails"[^>]*data-workspace="thumbnails"/);
-  assert.match(app, /querySelectorAll\("\\.workspace-tab\[data-workspace\]"\)/);
+  assert.ok(app.includes('document.querySelectorAll(".workspace-tab[data-workspace]")'));
   assert.ok(css.includes('#thumb-canvas'));
   for(const id of [
     'thumb-project-name', 'thumb-json-file','thumb-image-file','thumb-variants','thumb-add-variant',
