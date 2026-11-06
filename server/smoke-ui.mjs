@@ -145,23 +145,56 @@ try{
     removed:true,wide:true,missingLegacy:true},
     'Music automation graph supports pointer dragging, keyboard changes and double-click add/delete');
   await evaluate('document.getElementById("tab-videos").click()');
-  const sound=await evaluate(`(async()=>{
-    const {createPreset,validateScore}=await import('/static/music/model.js');
+  const sound=await evaluate(\`(async()=>{
+    const {createStylePreset,validateScore}=await import('/static/music/model.js');
     const {renderAudio}=await import('/static/music/synth.js');
-    const score=validateScore(createPreset(8));
-    const intro=await renderAudio(score,2,0);
-    const middle=await renderAudio(score,2,4);
-    const amplitude=buffer=>{
-      const samples=buffer.getChannelData(0);let peak=0;
-      for(let i=0;i<samples.length;i+=11)peak=Math.max(peak,Math.abs(samples[i]));
-      return peak;
+    const realFetch=window.fetch;
+    let sampleRequests=0;
+    const makeWav=(url)=>{
+      const frameCount=48000,bytes=new ArrayBuffer(44+frameCount*2);
+      const view=new DataView(bytes),write=(pos,str)=>{
+        for(let i=0;i<str.length;i++)view.setUint8(pos+i,str.charCodeAt(i));
+      };
+      write(0,'RIFF');view.setUint32(4,36+frameCount*2,true);
+      write(8,'WAVE');write(12,'fmt ');view.setUint32(16,16,true);
+      view.setUint16(20,1,true);view.setUint16(22,1,true);
+      view.setUint32(24,48000,true);view.setUint32(28,96000,true);
+      view.setUint16(32,2,true);view.setUint16(34,16,true);
+      write(36,'data');view.setUint32(40,frameCount*2,true);
+      const hz=url.includes('_C4_')?330:495;
+      for(let i=0;i<frameCount;i++){
+        const envelope=Math.exp(-i/24000);
+        view.setInt16(44+i*2,Math.round(8000*Math.sin(2*Math.PI*hz*i/48000)*envelope),true);
+      }
+      return bytes;
     };
-    return {intro:amplitude(intro),middle:amplitude(middle),
-      duration:intro.duration};
-  })()`);
-  assert.ok(sound.intro>0.0002 && sound.middle>0.0002,
-    'Music synthesis must produce non-silent harmonies at the beginning and at an offset');
-  assert.equal(sound.duration,2,'Music preview must have the requested duration');
+    window.fetch=async(url,...args)=>{
+      if(String(url).startsWith('/api/music/sample/')){
+        sampleRequests++;
+        return new Response(makeWav(String(url)),{status:200});
+      }
+      return realFetch(url,...args);
+    };
+    try{
+      const score=createStylePreset('cinematic',8);
+      score.tracks=[{id:'piano',name:'Piano gravado',instrument:'piano',gain:.8,
+        muted:false,pan:0,notes:[{beat:0,durationBeats:1,pitch:60,velocity:.8}],clips:[]}];
+      const intro=await renderAudio(validateScore(score),2,0);
+      score.tracks[0].notes[0].pitch=64;
+      const changed=await renderAudio(validateScore(score),2,0);
+      const first=intro.getChannelData(0),second=changed.getChannelData(0);
+      let energy=0,difference=0;
+      for(let i=0;i<first.length;i+=9){
+        energy+=first[i]*first[i];
+        difference+=Math.abs(first[i]-second[i]);
+      }
+      return {duration:intro.duration,energy,difference,sampleRequests};
+    }finally{window.fetch=realFetch;}
+  })()\`);
+  assert.ok(sound.energy>0.0001 && sound.difference>1,
+    'A partitura deve renderizar áudio amostrado e produzir ondas diferentes para notas diferentes');
+  assert.ok(sound.sampleRequests>=2,'Piano deve solicitar gravações, não ondas artificiais');
+  assert.equal(sound.duration,2,'A prévia deve durar exatamente o solicitado');
   assert.equal(await evaluate('document.getElementById("workspace-group-editor-items").hidden'),true,
     'Editor submenu starts collapsed');
   assert.equal(await evaluate('document.getElementById("workspace-group-social-items").hidden'),true,
