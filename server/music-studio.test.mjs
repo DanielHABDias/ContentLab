@@ -185,3 +185,21 @@ test("custom oscillator voice lets the score define timbre, independent of genre
   const waveform=structuredClone(validated);waveform.tracks[0].sound.wave="wavetable";
   assert.throws(()=>validateScore(waveform),/Onda/);
 });
+
+test("long genre presets evolve across distinct musical sections",async()=>{
+  const {createStylePreset}=await import("../frontend/static/music/model.js");
+  for(const style of ["cinematic","lofi","rock","funk","pagode"]){
+    const score=createStylePreset(style,457);
+    const music=score.tracks.filter(t=>!["kick","snare","hat","clap","shaker","tom","surdo","pandeiro","tamborim","rim","cowbell"].includes(t.instrument));
+    assert.ok(music.some(t=>t.clips.length>=3),style+" needs section changes");
+    const patterned=music.find(t=>t.clips.length>=3);
+    assert.notDeepEqual(
+      patterned.clips[0].notes.map(n=>[n.pitch,n.velocity,n.beat]),
+      patterned.clips[1].notes.map(n=>[n.pitch,n.velocity,n.beat]),
+      style+" should not repeat the same notes and dynamics in every section"
+    );
+    assert.ok(arrange(score).every(e=>e.start+e.duration<=457.00001));
+    const short=createStylePreset(style,5);
+    assert.ok(validateScore(short),"short scores must not contain clips starting past the end");
+  }
+});
