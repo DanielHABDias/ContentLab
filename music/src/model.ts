@@ -1,5 +1,4 @@
-// Music score v2: notes, clips, tracks and instruments drive the music.
-// Version 1 scores are still accepted and rendered by the legacy arranger.
+// Content Lab music score: one canonical contract for tracks, notes, clips and instruments.
 export const INSTRUMENTS=[
   "custom-synth","sub-bass","808","bass","piano","electric-piano","pad","strings","organ",
   "synth-lead","pluck","guitar","distorted-guitar","cavaquinho","flute","brass",
@@ -15,20 +14,6 @@ const integer=(v,min,max,label)=>{
   limits(v,min,max,label);
   if(!Number.isInteger(v))throw Error(label+" deve ser inteiro.");
 };
-export function createPreset(durationSeconds=600){
-  return {
-    title:"VD 008 - Sombras do Carnificina",durationSeconds,bpm:72,seed:8008,
-    mode:"tense",melody:"sparse",masterVolume:.72,
-    automation:[
-      {time:0,volume:.30,intensity:.20},
-      {time:durationSeconds*.20,volume:.34,intensity:.32},
-      {time:durationSeconds*.45,volume:.42,intensity:.52},
-      {time:durationSeconds*.75,volume:.55,intensity:.82},
-      {time:durationSeconds*.90,volume:.50,intensity:.73},
-      {time:durationSeconds,volume:0,intensity:.12}
-    ],melodyNotes:[]
-  };
-}
 const note=(beat,durationBeats,pitch,velocity=.65)=>({beat,durationBeats,pitch,velocity});
 const clip=(startBeat,lengthBeats,repeats,notes)=>({startBeat,lengthBeats,repeats,notes});
 const track=(id,name,instrument,gain,clips,pan=0)=>({id,name,instrument,gain,pan,muted:false,clips,notes:[]});
@@ -137,7 +122,7 @@ export function createStylePreset(style="cinematic",durationSeconds=600){
   const bpms={cinematic:68,lofi:76,rock:124,funk:150,pagode:96},bpm=bpms[style],beats=durationSeconds*bpm/60;
   const repetitions=Math.ceil(beats/8);
   const names={cinematic:"Trilha cinematográfica sombria",lofi:"Lo-fi instrumental",rock:"Rock instrumental",funk:"Funk instrumental",pagode:"Pagode instrumental"};
-  const score={schemaVersion:2,title:names[style],durationSeconds,bpm,beatsPerBar:4,
+  const score={title:names[style],durationSeconds,bpm,beatsPerBar:4,
     seed:8008,masterVolume:.72,style,automation:[
       {time:0,volume:.65,intensity:.38},
       {time:durationSeconds*.35,volume:.7,intensity:.52},
@@ -168,7 +153,7 @@ const validNote=(n,maxBeat)=>{
   integer(n.pitch,24,108,"Altura MIDI");
   limits(n.velocity,.001,1,"Velocidade da nota");
 };
-function validateV2(score){
+function validateTracks(score){
   if(score.style!==undefined&&typeof score.style!=="string")throw Error("Nome do estilo inválido.");
   integer(score.beatsPerBar,1,12,"Batidas por compasso");
   if(!Array.isArray(score.tracks)||score.tracks.length<1||score.tracks.length>32)
@@ -220,30 +205,19 @@ function validateV2(score){
   if(events>30000)throw Error("Composição muito densa: máximo de 30.000 eventos audíveis.");
 }
 export function validateScore(value){
-  if(!value||typeof value!=="object"||Array.isArray(value))throw Error("JSON musical inválido.");
-  const score=structuredClone(value),v2=score.schemaVersion===2;
-  if(score.schemaVersion!==undefined&&!v2)throw Error("Versão de JSON musical não suportada.");
+  if(!value||typeof value!=="object"||Array.isArray(value))
+    throw Error("JSON musical inválido.");
+  const score=structuredClone(value);
+  if("schemaVersion" in score||"version" in score)
+    throw Error("Remova o campo de versão. O Content Lab utiliza um único formato musical.");
   if(typeof score.title!=="string"||!score.title.trim()||score.title.length>120)
     throw Error("Informe um título de até 120 caracteres.");
   limits(score.durationSeconds,5,900,"Duração");
-  limits(score.bpm,v2?40:45,v2?240:130,"BPM");
+  limits(score.bpm,40,240,"BPM");
   integer(score.seed,0,2147483647,"Seed");
   limits(score.masterVolume,0,1,"Volume geral");
   validateAutomation(score);
-  if(v2)validateV2(score);
-  else {
-    if(!["tense","warm","melancholic"].includes(score.mode))throw Error("Clima musical inválido.");
-    if(!["sparse","balanced","none"].includes(score.melody))throw Error("Modo de melodia inválido.");
-    if(!Array.isArray(score.melodyNotes)||score.melodyNotes.length>3000)throw Error("Melodia manual inválida.");
-    for(const n of score.melodyNotes){
-      if(!n||typeof n!=="object")throw Error("Nota manual inválida.");
-      limits(n.time,0,score.durationSeconds,"Tempo da nota");
-      limits(n.duration,.05,16,"Duração da nota");
-      integer(n.pitch,36,96,"Altura MIDI");
-      limits(n.velocity,.01,1,"Intensidade da nota");
-      if(n.time+n.duration>score.durationSeconds+1e-5)throw Error("A nota manual ultrapassa a duração.");
-    }
-  }
+  validateTracks(score);
   return score;
 }
 export function levelAt(score,time){

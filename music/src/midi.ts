@@ -31,7 +31,7 @@ const encodeTrack=events=>{
   return chunk("MTrk",encoded);
 };
 export function toMidi(score){
-  if(score.schemaVersion!==2)throw Error("Exportação MIDI requer composição em JSON v2.");
+
   const end=score.durationSeconds,beatToTick=t=>Math.round(t*score.bpm/60*PPQ);
   const tempo=Math.round(60000000/score.bpm);
   const timing=encodeTrack([

@@ -1,4 +1,4 @@
-import {createPreset,createStylePreset,validateScore,INSTRUMENTS} from "./music/model.js";
+import {createStylePreset,validateScore,INSTRUMENTS} from "./music/model.js";
 import {renderAudio} from "./music/synth.js";
 import {createMusicAutomationEditor} from "./music-automation.js";
 import {toWav} from "./music/wav.js";
@@ -74,15 +74,6 @@ function initializeMusicStudio(){
   }
   function renderTracks(){
     const host=$("musicTracks");host.replaceChildren();
-    const isV2=score.schemaVersion===2;
-    $("musicLegacyFields").hidden=isV2;
-    $("musicAddTrack").hidden=!isV2;
-    $("musicDownloadMidi").hidden=!isV2;
-    if(!isV2){
-      const p=document.createElement("p");p.className="music-tracks-legacy";
-      p.textContent="Este JSON é da versão antiga: melodia, ritmo e progressões são fixos. Escolha um estilo e clique em Carregar arranjo para criar um projeto novo em JSON v2 com faixas independentes.";
-      host.append(p);return;
-    }
     score.tracks.forEach((track,index)=>{
       const card=document.createElement("div");card.className="music-track";
       const bar=document.createElement("div");bar.className="music-track-bar";
@@ -172,13 +163,10 @@ function initializeMusicStudio(){
   function refresh(){
     for(const [id,key] of [["musicTitle","title"],["musicDuration","durationSeconds"],
       ["musicBpm","bpm"],["musicSeed","seed"]])$(id).value=score[key];
-    const v2=score.schemaVersion===2;
-    $("musicStyle").value=v2?(["cinematic","lofi","funk","rock","pagode"].includes(score.style)?score.style:"custom"):"legacy";
-    $("musicMode").value=v2?"tense":score.mode;
-    $("musicMelody").value=v2?"sparse":score.melody;
+    $("musicStyle").value=["cinematic","lofi","funk","rock","pagode"].includes(score.style)?score.style:"custom";
     $("musicMaster").value=String(Math.round(score.masterVolume*100));
     $("musicMasterValue").textContent=Math.round(score.masterVolume*100)+"%";
-    $("musicBpm").min=v2?"40":"45";$("musicBpm").max=v2?"240":"130";
+    $("musicBpm").min="40";$("musicBpm").max="240";
     const previewMax=Math.max(0,score.durationSeconds-1);
     $("musicPreviewAt").max=String(previewMax);
     if(Number($("musicPreviewAt").value)>=score.durationSeconds)$("musicPreviewAt").value="0";
@@ -191,46 +179,37 @@ function initializeMusicStudio(){
     draft.bpm=Number($("musicBpm").value);
     draft.seed=Number($("musicSeed").value);
     draft.masterVolume=Number($("musicMaster").value)/100;
-    if(draft.schemaVersion!==2){
-      draft.mode=$("musicMode").value;draft.melody=$("musicMelody").value;
-    }
     if(old!==duration&&duration>=5&&duration<=900){
       draft.automation=draft.automation.map((point,index)=>({
         ...point,time:index===draft.automation.length-1?duration:
           Number((point.time*duration/old).toFixed(6))
       }));
-      if(draft.schemaVersion===2){
-        // Only extend patterns that already covered the previous song end.
+      {
+        // Extend the final section when the duration grows.
         const beatsOld=old*score.bpm/60,beatsNew=duration*draft.bpm/60;
         for(const track of draft.tracks)for(const clip of track.clips){
           const oldEnd=clip.startBeat+clip.lengthBeats*clip.repeats;
           if(oldEnd>=beatsOld-clip.lengthBeats)
             clip.repeats=Math.max(1,Math.min(2000,Math.ceil((beatsNew-clip.startBeat)/clip.lengthBeats)));
         }
-      }else draft.melodyNotes=[];
+      }
     }
     try{commit(draft,"Parâmetros atualizados. As notas e os ritmos foram preservados.");}
     catch(error){status(error.message,true);}
   }
-  for(const id of ["musicTitle","musicDuration","musicBpm","musicSeed","musicMaster",
-    "musicMode","musicMelody"])$(id).addEventListener("change",updateFields);
+  for(const id of ["musicTitle","musicDuration","musicBpm","musicSeed","musicMaster"])$(id).addEventListener("change",updateFields);
   $("musicStyle").addEventListener("change",()=>{
-    if($("musicStyle").value==="legacy"){
-      if(score.schemaVersion===2){$("musicStyle").value=score.style||"cinematic";
-        status("O formato v1 existe apenas para compatibilidade. Escolha um estilo novo ou cole seu JSON antigo.",true);}
-      return;
-    }
     status("Clique em Carregar arranjo do estilo para iniciar uma nova composição; a atual não foi substituída.");
   });
   $("musicPreset").addEventListener("click",()=>safe(()=>{
     const style=$("musicStyle").value;
-    if(style==="legacy")throw Error("Selecione um dos cinco estilos para criar a partitura v2.");
+    if(style==="custom")throw Error("Selecione um estilo para gerar a base ou edite diretamente o JSON.");
     commit(createStylePreset(style,Number($("musicDuration").value)||600),
       "Novo arranjo "+style+" criado com instrumentos e padrões diferentes.");
   })());
   $("musicVariation").addEventListener("click",()=>safe(()=>{
     const draft=structuredClone(score);draft.seed=(score.seed+1)%2147483648;
-    if(draft.schemaVersion===2){
+    {
       const tonal=draft.tracks.find(t=>["piano","electric-piano","synth-lead",
         "pluck","guitar","flute","cavaquinho"].includes(t.instrument) &&t.clips.some(c=>c.notes.length));
       if(!tonal)throw Error("Nenhuma faixa melódica encontrada para variar. Edite notas manualmente.");
@@ -240,10 +219,10 @@ function initializeMusicStudio(){
         n.velocity=Math.max(.1,Math.min(1,Number((n.velocity*(i%2?.96:1.04)).toFixed(4))));
       });
       commit(draft,"Motivo variado: notas e dinâmica foram modificadas, não apenas volume.");
-    }else commit(draft,"Variação da versão 1 aplicada.");
+    }
   })());
   $("musicAddTrack").addEventListener("click",()=>safe(()=>{
-    if(score.schemaVersion!==2)throw Error("Faixas personalizadas exigem JSON v2.");
+
     const draft=structuredClone(score);
     if(draft.tracks.length>=32)throw Error("Limite de 32 faixas.");
     let n=1;while(draft.tracks.some(t=>t.id==="custom-"+n))n++;
@@ -291,5 +270,5 @@ function initializeMusicStudio(){
   }
   $("musicPreview").addEventListener("click",()=>safe(()=>generate(false))());
   $("musicRender").addEventListener("click",()=>safe(()=>generate(true))());
-  refresh();status("Compositor v2: escolha um gênero, edite notas por faixa e ouça uma prévia.");
+  refresh();status("Compositor musical: edite os instrumentos e as notas de cada faixa; ouça a prévia.");
 }

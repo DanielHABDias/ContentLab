@@ -68,8 +68,5 @@
 .music-note-row input{width:100%;min-width:0}
 .music-note-row button{align-self:end;min-height:32px}
 .music-pattern-intro{font-size:11px;line-height:1.5;color:var(--text-dim)}
-.music-legacy-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;grid-column:1/-1}
-.music-tracks-legacy{font-size:13px;line-height:1.6;color:var(--text-dim)}
 @media(max-width:750px){.music-track-bar{grid-template-columns:repeat(2,minmax(0,1fr))}.music-note-row{grid-template-columns:repeat(4,minmax(0,1fr)) 30px}.music-track{padding:10px}}
 @media(max-width:430px){.music-track-bar{grid-template-columns:1fr}.music-note-row{grid-template-columns:repeat(2,minmax(0,1fr)) 28px}.music-note-row>*:nth-child(3){grid-column:1}.music-note-row>*:nth-child(4){grid-column:2}}
-.music-legacy-fields[hidden]{display:none!important}
