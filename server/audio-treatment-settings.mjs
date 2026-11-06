@@ -7,6 +7,10 @@ import crypto from 'node:crypto';
 export const AUDIO_TREATMENT_SETTINGS_FILE=path.join(os.homedir(),'.contentlab','audio-treatment-settings.json');
 const checkboxes=new Set(['transcriptionTrimEdges','transcriptionRemoveMiddle','transcriptionNormalize','transcriptionCompression','transcriptionDeesser','transcriptionReduceBreaths']);
 const selections={
+  transcriptionScope:['standalone','narration'],
+  transcriptionModel:['tiny','base','small','medium'],
+  transcriptionDetail:['words','segments'],
+  transcriptionLanguage:['','pt','en','es'],
   voiceTreatmentRecipe:['custom','preserve','balanced','strong'],
   transcriptionMinSilence:['0.15','0.2','0.35','0.5','0.7','1','1.4'],
   transcriptionThreshold:['-48','-42','-36','-30','-24'],

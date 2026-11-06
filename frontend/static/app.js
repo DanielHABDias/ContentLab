@@ -1026,7 +1026,7 @@ window.addEventListener('projectchanged',event=>updateTranscriptionDefaultSource
 $('transcriptionScope').addEventListener('change',updateTranscriptionScope);updateTranscriptionScope();
 // Preferências locais: sem dados salvos, prevalecem os padrões do formulário.
 const audioTreatmentStorageKey='contentlab.audio-treatment.settings.v1';
-const audioTreatmentIds=['voiceTreatmentRecipe','transcriptionTrimEdges','transcriptionRemoveMiddle','transcriptionMinSilence','transcriptionThreshold','transcriptionNormalize','transcriptionTargetLufs','transcriptionHighpass','transcriptionCompression','transcriptionDeesser','transcriptionVoicePreset','transcriptionReduceBreaths','transcriptionBreathStrength','voiceEnhancementEngine','voiceEnhancementMode','voiceEnhancementStrength'];
+const audioTreatmentIds=['transcriptionScope','transcriptionModel','transcriptionDetail','transcriptionLanguage','voiceTreatmentRecipe','transcriptionTrimEdges','transcriptionRemoveMiddle','transcriptionMinSilence','transcriptionThreshold','transcriptionNormalize','transcriptionTargetLufs','transcriptionHighpass','transcriptionCompression','transcriptionDeesser','transcriptionVoicePreset','transcriptionReduceBreaths','transcriptionBreathStrength','voiceEnhancementEngine','voiceEnhancementMode','voiceEnhancementStrength'];
 function audioTreatmentSnapshot(){
   const controls={};
   for(const id of audioTreatmentIds){const node=$(id);controls[id]=node.type==='checkbox'?node.checked:String(node.value);}
@@ -1053,15 +1053,31 @@ async function restoreAudioTreatmentSettings(){
   // O arquivo JSON do aplicativo é a fonte principal, inclusive após reiniciar o navegador.
   try{
     const response=await fetch('/api/audio-treatment/preferences');
-    if(!response.ok)return;
-    const data=await response.json();
-    if(data?.controls)applyAudioTreatmentSettings({version:1,controls:data.controls});
+    if(response.ok){
+      const data=await response.json();
+      if(data?.controls)applyAudioTreatmentSettings({version:1,controls:data.controls});
+    }
   }catch(_){/* Sem arquivo, manter padrões ou preferências legadas válidas. */}
+  updateTranscriptionScope();
 }
+let audioTreatmentSaveTimer=null,audioTreatmentSaveQueue=Promise.resolve();
 function saveAudioTreatmentSettings(){
-  try{window.localStorage?.setItem(audioTreatmentStorageKey,JSON.stringify({version:1,controls:audioTreatmentSnapshot()}));}catch(_){}
+  const controls=audioTreatmentSnapshot();
+  try{window.localStorage?.setItem(audioTreatmentStorageKey,JSON.stringify({version:1,controls}));}catch(_){}
+  clearTimeout(audioTreatmentSaveTimer);
+  audioTreatmentSaveTimer=setTimeout(()=>{
+    const pending=audioTreatmentSnapshot();
+    audioTreatmentSaveQueue=audioTreatmentSaveQueue.catch(()=>{}).then(async()=>{
+      const response=await fetch('/api/audio-treatment/preferences',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({controls:pending})});
+      if(!response.ok)throw Error('Não foi possível salvar as preferências de tratamento.');
+    }).catch(error=>console.warn(error.message));
+  },200);
 }
 restoreAudioTreatmentSettings();
+for(const id of audioTreatmentIds){
+  const node=$(id),event=node.type==='range'||node.type==='number'?'input':'change';
+  node.addEventListener(event,saveAudioTreatmentSettings);
+}
 $("transcriptionStart").addEventListener("click", async () => {
   const root = $("transcriptionProjectRoot").value.trim();
   const file = $("transcriptionFile").files[0];

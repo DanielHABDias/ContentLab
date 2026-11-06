@@ -200,7 +200,7 @@ export function voiceStudioState(folder){
   }catch{return {ready:false};}
 }
 export async function prepareStandaloneNarration(directory,{
-  sourceFile,options={},model='small',language='pt',detail='words',
+  sourceFile,options={},model='medium',language='pt',detail='words',
   update=()=>{},signal,ffmpeg='ffmpeg',ffprobe='ffprobe',transcriber=transcribeAudio,enhancer=enhanceVoice
 }={}){
   const root=voiceStudioFolder(directory),config=voiceOptions(options);

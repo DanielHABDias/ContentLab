@@ -10,7 +10,8 @@ test('configuração do tratamento é local, recuperável e usa padrões quando 
   t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
   const file=path.join(root,'config','audio-treatment-settings.json');
   assert.equal(readAudioTreatmentSettings(file),null);
-  const settings={voiceTreatmentRecipe:'custom',transcriptionRemoveMiddle:true,
+  const settings={transcriptionScope:'narration',transcriptionModel:'medium',transcriptionDetail:'words',transcriptionLanguage:'pt',
+    voiceTreatmentRecipe:'custom',transcriptionRemoveMiddle:true,
     transcriptionMinSilence:'0.15',transcriptionThreshold:'-24',
     transcriptionReduceBreaths:true,transcriptionBreathStrength:'80',
     voiceEnhancementEngine:'deepfilter',voiceEnhancementMode:'strong',voiceEnhancementStrength:'100'};
@@ -20,6 +21,7 @@ test('configuração do tratamento é local, recuperável e usa padrões quando 
   assert.equal(JSON.parse(fs.readFileSync(file,'utf8')).version,1);
   assert.deepEqual(fs.readdirSync(path.dirname(file)),['audio-treatment-settings.json']);
   assert.throws(()=>writeAudioTreatmentSettings({transcriptionBreathStrength:'110'},file),/Intensidade/);
+  assert.throws(()=>writeAudioTreatmentSettings({transcriptionModel:'large'},file),/seleção/);
   assert.deepEqual(readAudioTreatmentSettings(file),settings,'configuração inválida não destrói a anterior');
   fs.writeFileSync(file,'{não é json}');
   assert.equal(readAudioTreatmentSettings(file),null,'configuração corrompida deve recair nos padrões');

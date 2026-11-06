@@ -12,7 +12,7 @@ import {run} from './exec.mjs';
 import {instanceIdentity} from './instance-identity.mjs';
 import {SOURCE_CACHE,listSources,cachedSource,importLocalSource,removeSource,getSourceInfo,resolveSource,exportCut} from './source.mjs';
 import {transcribeAudio} from './transcribe.mjs';
-import {voiceStudioFolder,voiceStudioState,prepareStandaloneNarration} from './voice-studio.mjs';
+import {officialNarrationSource,voiceStudioFolder,voiceStudioState,prepareStandaloneNarration} from './voice-studio.mjs';
 import {readAudioTreatmentSettings,writeAudioTreatmentSettings} from './audio-treatment-settings.mjs';
 import {mountVoiceCreationRoutes} from './voice-creation-routes.mjs';
 import {sendNarrationAudio} from './audio-waveform.mjs';
@@ -436,6 +436,9 @@ app.get('/api/progress/:id',api(async(req,res)=>{
 app.get('/api/audio-treatment/preferences',api(async(req,res)=>{
   res.json({controls:readAudioTreatmentSettings()});
 }));
+app.post('/api/audio-treatment/preferences',api(async(req,res)=>{
+  res.json({controls:writeAudioTreatmentSettings(req.body?.controls)});
+}));
 app.get('/api/transcription/state',api(async(req,res)=>{
   res.json(voiceStudioState(String(req.query.projectRoot||'')));
 }));
@@ -447,7 +450,7 @@ app.post('/api/transcription/jobs',upload.single('file'),api(async(req,res)=>{
     const root=fs.mkdtempSync(path.join(downloads,'transcricao-')),id=crypto.randomUUID();
     const job={id,scope:'standalone',status:'running',message:'Transcrevendo arquivo avulso...',projectRoot:root,result:null,error:null};transcriptions.set(id,job);
     res.status(202).json({jobId:id});
-    transcribeAudio(req.file.path,root,{model:req.body.model||'small',language:req.body.language||'pt',detail:req.body.detail||'words',update:message=>{job.message=message;}})
+    transcribeAudio(req.file.path,root,{model:req.body.model||'medium',language:req.body.language||'pt',detail:req.body.detail||'words',update:message=>{job.message=message;}})
       .then(result=>Object.assign(job,{status:'done',message:'Transcrição avulsa pronta. Projeto preservado.',result:{...result,removedCount:0}}))
       .catch(e=>Object.assign(job,{status:'error',error:e.message,message:'Falha na transcrição avulsa.'}))
       .finally(()=>fs.rmSync(req.file.path,{force:true}));return;
@@ -472,7 +475,7 @@ app.post('/api/transcription/jobs',upload.single('file'),api(async(req,res)=>{
   transcriptions.set(id,job);
   res.status(202).json({jobId:id});
   prepareStandaloneNarration(root,{
-    sourceFile,model:req.body.model||'small',language:req.body.language||'pt',detail:req.body.detail||'words',
+    sourceFile,model:req.body.model||'medium',language:req.body.language||'pt',detail:req.body.detail||'words',
     options:{
       removeMiddleSilence:req.body.removeMiddleSilence!=='false',
       minSilence:Number(req.body.minSilence||.7),
