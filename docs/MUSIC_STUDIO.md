@@ -134,6 +134,8 @@ Em clipes, a nota **precisa caber no tamanho do padrão**. No total, o motor lim
 
 **Graves e teclados:** \`sub-bass\`, \`808\`, \`bass\`, \`piano\`, \`electric-piano\`, \`organ\`, \`pad\`, \`strings\`, \`synth-lead\`, \`pluck\`.
 
+**Personalização:** escolha `instrument: "custom-synth"` e, opcionalmente, acrescente `sound: {"wave":"square","cutoff":600,"attack":0.02,"release":0.35,"layerWave":"sine","layerGain":0.2,"detune":-5,"amp":0.4}` na faixa. As ondas aceitas são `sine`, `triangle`, `square` e `sawtooth`; o filtro vai de 80 a 18.000 Hz, ataque de 0,001–3 s, cauda de 0,005–6 s, ganho da camada de 0–1, afinação de −1200 a +1200 cents e amplitude de 0–1. Assim, o mesmo padrão de notas pode produzir diferentes timbres por código.
+
 **Cordas e solistas sintetizados:** \`guitar\`, \`distorted-guitar\`, \`cavaquinho\`, \`flute\`, \`brass\`.
 
 **Percussão:** \`kick\`, \`snare\`, \`hat\`, \`clap\`, \`shaker\`, \`tom\`, \`surdo\`, \`pandeiro\`, \`tamborim\`, \`rim\`, \`cowbell\`.
