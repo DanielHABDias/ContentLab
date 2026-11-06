@@ -42,7 +42,11 @@ function tonal(ctx,destination,event,offset,duration){
   if(start>=duration)return;
   const sustain=Math.min(event.duration-elapsed,duration-start);
   if(sustain<=0)return;
-  const preset=tone[event.instrument||event.voice]||tone.pluck;
+  const standard=tone[event.instrument||event.voice]||tone.pluck;
+  const custom=event.sound||{};
+  const preset={...standard,...(custom.wave?{wave:custom.wave}:{}),...(custom.cutoff?{cutoff:custom.cutoff}:{}),
+    ...(custom.attack?{attack:custom.attack}:{}),...(custom.release?{release:custom.release}:{}),
+    ...(custom.amp!==undefined?{amp:custom.amp}:{})};
   const filter=ctx.createBiquadFilter();filter.type="lowpass";
   filter.frequency.value=preset.cutoff;filter.Q.value=.58;
   connectPan(ctx,filter,destination,event.pan);
@@ -50,11 +54,12 @@ function tonal(ctx,destination,event,offset,duration){
   const amp=event.velocity*preset.amp;
   envelope(gain,start,sustain,amp,preset.attack,preset.release);
   const osc=ctx.createOscillator();osc.type=preset.wave;osc.frequency.value=freq(event.pitch);
+  if(event.sound?.detune!==undefined)osc.detune.value=event.sound.detune;
   osc.connect(gain);osc.start(start);osc.stop(start+sustain);
-  if(["piano","electric-piano","guitar","distorted-guitar","cavaquinho","strings","organ"].includes(event.instrument)){
-    const o=ctx.createOscillator();o.type=event.instrument==="organ"?"sine":"triangle";
+  if(event.sound?.layerWave||["piano","electric-piano","guitar","distorted-guitar","cavaquinho","strings","organ"].includes(event.instrument)){
+    const o=ctx.createOscillator();o.type=event.sound?.layerWave|| (event.instrument==="organ"?"sine":"triangle");
     o.frequency.value=freq(event.pitch)*(event.instrument==="organ"?2:1.997);
-    const layer=ctx.createGain();layer.gain.value=.095;layer.connect(gain);
+    const layer=ctx.createGain();layer.gain.value=event.sound?.layerGain??.095;layer.connect(gain);
     o.connect(layer);o.start(start);o.stop(start+sustain);
   }
 }

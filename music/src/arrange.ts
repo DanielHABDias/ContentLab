@@ -23,7 +23,7 @@ function arrangeV2(score,endSeconds){
     const gain=track.gain*(.92+.16*levelAt(score,start).intensity);
     events.push({start,duration,pitch:n.pitch,velocity:Math.min(1,n.velocity*gain),
       voice:track.instrument,track:track.id,instrument:track.instrument,
-      pan:track.pan||0});
+      pan:track.pan||0,sound:track.sound});
   };
   for(const track of score.tracks){
     if(track.muted||track.gain<=0)continue;

@@ -1,7 +1,7 @@
 // Music score v2: notes, clips, tracks and instruments drive the music.
 // Version 1 scores are still accepted and rendered by the legacy arranger.
 export const INSTRUMENTS=[
-  "sub-bass","808","bass","piano","electric-piano","pad","strings","organ",
+  "custom-synth","sub-bass","808","bass","piano","electric-piano","pad","strings","organ",
   "synth-lead","pluck","guitar","distorted-guitar","cavaquinho","flute","brass",
   "kick","snare","hat","clap","shaker","tom","surdo","pandeiro","tamborim","rim","cowbell"
 ];
@@ -148,6 +148,21 @@ function validateV2(score){
     if(typeof t.name!=="string"||!t.name.trim()||t.name.length>80)
       throw Error("Nome de faixa inválido.");
     if(!INSTRUMENTS.includes(t.instrument))throw Error("Instrumento não reconhecido: "+t.instrument);
+    if(t.sound!==undefined){
+      if(!t.sound||typeof t.sound!=="object"||Array.isArray(t.sound))
+        throw Error("Configuração do sintetizador inválida.");
+      const waves=["sine","triangle","square","sawtooth"];
+      if(t.sound.wave!==undefined&&!waves.includes(t.sound.wave))
+        throw Error("Onda do sintetizador inválida.");
+      if(t.sound.layerWave!==undefined&&!waves.includes(t.sound.layerWave))
+        throw Error("Onda da camada adicional inválida.");
+      for(const [key,min,max] of [
+        ["cutoff",80,18000],["attack",.001,3],["release",.005,6],
+        ["layerGain",0,1],["detune",-1200,1200],["amp",0,1]
+      ]){
+        if(t.sound[key]!==undefined)limits(t.sound[key],min,max,"Parâmetro "+key);
+      }
+    }
     limits(t.gain,0,1,"Volume da faixa");
     if(t.pan!==undefined)limits(t.pan,-1,1,"Panorama");
     if(t.muted!==undefined&&typeof t.muted!=="boolean")throw Error("Mute deve ser booleano.");
