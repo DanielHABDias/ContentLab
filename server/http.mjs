@@ -28,7 +28,6 @@ import {mountMediaLibraryRoutes} from './media-routes.mjs';
 import {thumbnailBackground} from './thumbnail-background.mjs';
 import {mountWorkspaceRoutes,projectAssetDirectory} from './workspace-project.mjs';
 
-import {mountMusicSampleRoutes} from "./music-samples.mjs";
 
 const PORT=Number(process.env.PORT||5000);
 const HOST='127.0.0.1';
@@ -36,7 +35,6 @@ const app=express(),jobs=new Map(),transcriptions=new Map(),sourceJobs=new Map()
 app.disable('x-powered-by');
 app.use(express.json({limit:'5mb'}));
 app.use('/static',express.static(path.join(APP_ROOT,'frontend','static'),{index:false}));
-mountMusicSampleRoutes(app);
 app.get('/api/thumbnails/background', (req, res) => {
   try {
     const svg = thumbnailBackground({style: req.query.style, tone: req.query.tone || 'light',

@@ -106,95 +106,14 @@ try{
   assert.equal(await evaluate('getComputedStyle(document.getElementById("loadBtn")).transitionProperty.includes("transform")'),true,
     'Buttons must provide a transform-based tactile response');
   await evaluate('document.getElementById("tab-videos").click()');
-  assert.equal(await evaluate('document.querySelectorAll(".workspace-tab[data-workspace]").length'),13,
+  assert.equal(await evaluate('document.querySelectorAll(".workspace-tab[data-workspace]").length'),12,
     'Original workspaces, thumbnails, recording, AI narration and voice settings remain available');
-  assert.equal(await evaluate('document.querySelectorAll(".workspace-tabs > .workspace-tab, .workspace-tabs > .workspace-group").length'),9,
-    'Sidebar has nine top-level entries, including music composition');
-  assert.equal(await evaluate('document.getElementById("tab-music").textContent.includes("Trilhas sonoras")'),true,
-    'Music studio is accessible without an experimental label');
-  assert.equal(await evaluate('document.getElementById("musicJson").value.includes("durationSeconds")'),true,
-    'The music composer is initialized with editable JSON');
-  const musicAutomation=await evaluate(`(() => {
-    document.getElementById('tab-music').click();
-    const svg=document.getElementById('musicTimeline');
-    const read=()=>JSON.parse(document.getElementById('musicJson').value).automation;
-    const original=read(),size=original.length,box=svg.getBoundingClientRect();
-    const xy=(x,y)=>({clientX:box.left+x/960*box.width,clientY:box.top+y/344*box.height});
-    const handle=svg.querySelector('[data-music-point="2:volume"] .music-point-dot');
-    const x=handle.cx.baseVal.value,y=handle.cy.baseVal.value;
-    handle.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerId:7,button:0,...xy(x,y)}));
-    svg.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,pointerId:7,button:0,...xy(x,y-42)}));
-    svg.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerId:7,button:0,...xy(x,y-42)}));
-    const dragged=read(),volumeMoved=dragged[2].volume>original[2].volume&&
-      dragged[2].intensity===original[2].intensity;
-    const first=svg.querySelector('[data-music-point="0:intensity"]');
-    const startTime=read()[0].time;
-    first.dispatchEvent(new KeyboardEvent('keydown',{bubbles:true,key:'ArrowUp'}));
-    const keyboard=read()[0].intensity>dragged[0].intensity&&read()[0].time===startTime;
-    svg.dispatchEvent(new MouseEvent('dblclick',{bubbles:true,...xy(620,160)}));
-    const afterInsert=read(),inserted=afterInsert.length===size+1;
-    const newIndex=afterInsert.findIndex((p,i)=>i>0&&i<afterInsert.length-1&&
-      Math.abs(p.time-((620-62)/(960-62-26))*600)<.5);
-    if(newIndex>=0)svg.querySelector('[data-music-point="'+newIndex+':intensity"]')
-      .dispatchEvent(new KeyboardEvent('keydown',{bubbles:true,key:'Delete'}));
-    return {volumeMoved,keyboard,inserted,removed:read().length===size,
-      wide:box.width>500,missingLegacy:!document.getElementById('musicMarkers')&&
-        !document.getElementById('musicAddMarker')};
-  })()`);
-  assert.deepEqual(musicAutomation,{volumeMoved:true,keyboard:true,inserted:true,
-    removed:true,wide:true,missingLegacy:true},
-    'Music automation graph supports pointer dragging, keyboard changes and double-click add/delete');
-  await evaluate('document.getElementById("tab-videos").click()');
-  const sound=await evaluate(`(async()=>{
-    const {createStylePreset,validateScore}=await import('/static/music/model.js');
-    const {renderAudio}=await import('/static/music/synth.js');
-    const realFetch=window.fetch;
-    let sampleRequests=0;
-    const makeWav=(url)=>{
-      const frameCount=48000,bytes=new ArrayBuffer(44+frameCount*2);
-      const view=new DataView(bytes),write=(pos,str)=>{
-        for(let i=0;i<str.length;i++)view.setUint8(pos+i,str.charCodeAt(i));
-      };
-      write(0,'RIFF');view.setUint32(4,36+frameCount*2,true);
-      write(8,'WAVE');write(12,'fmt ');view.setUint32(16,16,true);
-      view.setUint16(20,1,true);view.setUint16(22,1,true);
-      view.setUint32(24,48000,true);view.setUint32(28,96000,true);
-      view.setUint16(32,2,true);view.setUint16(34,16,true);
-      write(36,'data');view.setUint32(40,frameCount*2,true);
-      const hz=url.includes('_C4_')?330:495;
-      for(let i=0;i<frameCount;i++){
-        const envelope=Math.exp(-i/24000);
-        view.setInt16(44+i*2,Math.round(8000*Math.sin(2*Math.PI*hz*i/48000)*envelope),true);
-      }
-      return bytes;
-    };
-    window.fetch=async(url,...args)=>{
-      if(String(url).startsWith('/api/music/sample/')){
-        sampleRequests++;
-        return new Response(makeWav(String(url)),{status:200});
-      }
-      return realFetch(url,...args);
-    };
-    try{
-      const score=createStylePreset('cinematic',8);
-      score.tracks=[{id:'piano',name:'Piano gravado',instrument:'piano',gain:.8,
-        muted:false,pan:0,notes:[{beat:0,durationBeats:1,pitch:60,velocity:.8}],clips:[]}];
-      const intro=await renderAudio(validateScore(score),2,0);
-      score.tracks[0].notes[0].pitch=64;
-      const changed=await renderAudio(validateScore(score),2,0);
-      const first=intro.getChannelData(0),second=changed.getChannelData(0);
-      let energy=0,difference=0;
-      for(let i=0;i<first.length;i+=9){
-        energy+=first[i]*first[i];
-        difference+=Math.abs(first[i]-second[i]);
-      }
-      return {duration:intro.duration,energy,difference,sampleRequests};
-    }finally{window.fetch=realFetch;}
-  })()`);
-  assert.ok(sound.energy>0.0001 && sound.difference>1,
-    'A partitura deve renderizar áudio amostrado e produzir ondas diferentes para notas diferentes');
-  assert.ok(sound.sampleRequests>=2,'Piano deve solicitar gravações, não ondas artificiais');
-  assert.equal(sound.duration,2,'A prévia deve durar exatamente o solicitado');
+  assert.equal(await evaluate('document.querySelectorAll(".workspace-tabs > .workspace-tab, .workspace-tabs > .workspace-group").length'),8,
+    'Sidebar has eight top-level entries with video editing and media tools');
+  assert.equal(await evaluate('document.getElementById("tab-music")'),null,
+    'O compositor experimental de músicas não deve aparecer na interface');
+  assert.equal(await evaluate('document.getElementById("tab-library")!==null'),true,
+    'O banco de mídia deve permanecer disponível');
   assert.equal(await evaluate('document.getElementById("workspace-group-editor-items").hidden'),true,
     'Editor submenu starts collapsed');
   assert.equal(await evaluate('document.getElementById("workspace-group-social-items").hidden'),true,

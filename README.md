@@ -2,18 +2,6 @@
 
 **Redução de respiração:** disponível somente em **Narração → Tratamento** (narração oficial). A intensidade inicial é 60% e mantém a atenuação original de até 12 dB; acima de 60%, a redução passa a ser progressivamente mais agressiva, alcançando até 40 dB em 100%. Não encurta o áudio; escute e ajuste para não comprometer consoantes. Os parâmetros ficam salvos em `~/.contentlab/audio-treatment-settings.json` (no perfil local do usuário) depois de um tratamento concluído com sucesso, com cópia opcional no armazenamento do navegador. Sem dados locais válidos, aplicam-se os padrões da tela.
 
-## Trilhas sonoras — um único JSON musical e instrumentos gravados
-
-A aba **Trilhas sonoras** compõe música com **faixas, instrumentos, notas MIDI, clipes rítmicos e seções próprias**, usando somente o contrato atual do JSON (sem chave de versão nem compatibilidade com o formato musical antigo). O gráfico azul/laranja regula **volume e intensidade**, não cria melodias. No painel, altere notas, tempo, acordes e instrumentação para produzir músicas realmente diferentes, ou escreva diretamente `tracks[].notes` e `tracks[].clips` no JSON.
-
-**Qualidade sonora:** piano e violões de aço/nylon usam **gravações reais CC0 da Meta Open Sound**. No primeiro render, o Content Lab busca os arquivos OGG oficiais e mantém cache em `.contentlab/music-instruments/` (conexão exigida na primeira utilização). Guitarra com distorção processa gravação de violão, **não** é gravação de guitarra elétrica. Baixo eletrônico, sintetizadores, cavaquinho e bateria continuam timbres sintetizados; não prometer realismo acústico sem biblioteca específica.
-
-Use **Ouvir 30 segundos** e **Gerar WAV completo / Baixar WAV** para produzir áudio em estéreo 48 kHz, ou **Exportar MIDI multifaixa** para trabalhar em DAW/SoundFont. Se faltar uma gravação, haverá erro: o programa não deve simular silenciosamente o instrumento com uma onda genérica.
-
-**Teste concreto:** [Carnificina — Peso e Sombra, 7:37](music/examples/carnificina-peso-e-sombra.json). Abra o arquivo, copie o JSON e clique em **Aplicar JSON**. Antes de exportar, ouça várias seções e confirme as gravações carregadas.
-
-A documentação técnica está em [docs/MUSIC_STUDIO.md](docs/MUSIC_STUDIO.md). O WAV ainda requer importação manual ao editor de vídeo. **Manutenção:** editar arquivos originais, sem `.old`, `.bak`, cópias de código ou campos de versionamento no JSON musical.
-
 ## Projeto universal
 
 Selecione **uma pasta no topo** para todas as abas. A pasta pode estar vazia: `edit_plan.json` só é necessário no Editor para editar/renderizar. O navegador restaura o último caminho usado; **Recarregar projeto** relê o plano, as tomadas, o inventário e as thumbnails. Confirme antes de descartar alterações do editor. Em gravação, finalize/salve a tomada antes de trocar a pasta.
