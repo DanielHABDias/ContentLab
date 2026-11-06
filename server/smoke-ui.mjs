@@ -114,6 +114,37 @@ try{
     'Music studio is accessible without an experimental label');
   assert.equal(await evaluate('document.getElementById("musicJson").value.includes("durationSeconds")'),true,
     'The music composer is initialized with editable JSON');
+  const musicAutomation=await evaluate(`(() => {
+    document.getElementById('tab-music').click();
+    const svg=document.getElementById('musicTimeline');
+    const read=()=>JSON.parse(document.getElementById('musicJson').value).automation;
+    const original=read(),size=original.length,box=svg.getBoundingClientRect();
+    const xy=(x,y)=>({clientX:box.left+x/960*box.width,clientY:box.top+y/344*box.height});
+    const handle=svg.querySelector('[data-music-point="2:volume"] .music-point-dot');
+    const x=handle.cx.baseVal.value,y=handle.cy.baseVal.value;
+    handle.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerId:7,button:0,...xy(x,y)}));
+    svg.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,pointerId:7,button:0,...xy(x,y-42)}));
+    svg.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerId:7,button:0,...xy(x,y-42)}));
+    const dragged=read(),volumeMoved=dragged[2].volume>original[2].volume&&
+      dragged[2].intensity===original[2].intensity;
+    const first=svg.querySelector('[data-music-point="0:intensity"]');
+    const startTime=read()[0].time;
+    first.dispatchEvent(new KeyboardEvent('keydown',{bubbles:true,key:'ArrowUp'}));
+    const keyboard=read()[0].intensity>dragged[0].intensity&&read()[0].time===startTime;
+    svg.dispatchEvent(new MouseEvent('dblclick',{bubbles:true,...xy(620,160)}));
+    const afterInsert=read(),inserted=afterInsert.length===size+1;
+    const newIndex=afterInsert.findIndex((p,i)=>i>0&&i<afterInsert.length-1&&
+      Math.abs(p.time-((620-62)/(960-62-26))*600)<.5);
+    if(newIndex>=0)svg.querySelector('[data-music-point="'+newIndex+':intensity"]')
+      .dispatchEvent(new KeyboardEvent('keydown',{bubbles:true,key:'Delete'}));
+    return {volumeMoved,keyboard,inserted,removed:read().length===size,
+      wide:box.width>500,missingLegacy:!document.getElementById('musicMarkers')&&
+        !document.getElementById('musicAddMarker')};
+  })()`);
+  assert.deepEqual(musicAutomation,{volumeMoved:true,keyboard:true,inserted:true,
+    removed:true,wide:true,missingLegacy:true},
+    'Music automation graph supports pointer dragging, keyboard changes and double-click add/delete');
+  await evaluate('document.getElementById("tab-videos").click()');
   const sound=await evaluate(`(async()=>{
     const {createPreset,validateScore}=await import('/static/music/model.js');
     const {renderAudio}=await import('/static/music/synth.js');
