@@ -145,7 +145,7 @@ try{
     removed:true,wide:true,missingLegacy:true},
     'Music automation graph supports pointer dragging, keyboard changes and double-click add/delete');
   await evaluate('document.getElementById("tab-videos").click()');
-  const sound=await evaluate(\`(async()=>{
+  const sound=await evaluate(`(async()=>{
     const {createStylePreset,validateScore}=await import('/static/music/model.js');
     const {renderAudio}=await import('/static/music/synth.js');
     const realFetch=window.fetch;
@@ -190,7 +190,7 @@ try{
       }
       return {duration:intro.duration,energy,difference,sampleRequests};
     }finally{window.fetch=realFetch;}
-  })()\`);
+  })()`);
   assert.ok(sound.energy>0.0001 && sound.difference>1,
     'A partitura deve renderizar áudio amostrado e produzir ondas diferentes para notas diferentes');
   assert.ok(sound.sampleRequests>=2,'Piano deve solicitar gravações, não ondas artificiais');
