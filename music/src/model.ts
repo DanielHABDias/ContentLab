@@ -97,6 +97,40 @@ function styleTracks(style,repeats){
     track("lowtom","Percussão distante","tom",.35,[clip(0,8,repeats,[hit(0,.53,.35),hit(6.5,.44,.3)])])
   ];
 }
+// Presets evolve over musical sections. A long score should not be one short
+// identical loop repeated for seven minutes. The score stays fully editable.
+function developArrangement(tracks,durationSeconds,bpm){
+  const totalBeats=durationSeconds*bpm/60;
+  const sections=Math.min(10,Math.max(1,Math.floor(totalBeats/32)));
+  const span=Math.max(16,Math.ceil(totalBeats/sections/16)*16);
+  const transpositions=[0,2,-3,0,5,-2,3,-5,0,2];
+  return tracks.map(track=>{
+    const clips=[];
+    for(const original of track.clips){
+      for(let section=0;section<sections;section++){
+        const localStart=section===0?original.startBeat:0;
+        const startBeat=section*span+localStart;
+        if(startBeat>=totalBeats)continue;
+        const endBeat=Math.min((section+1)*span,totalBeats);
+        const repeats=Math.min(2000,Math.max(1,Math.ceil((endBeat-startBeat)/original.lengthBeats)));
+        const isDrum=DRUM_INSTRUMENTS.includes(track.instrument);
+        const transpose=isDrum?0:transpositions[section%transpositions.length];
+        const notes=original.notes.map((n,index)=>{
+          const altered={...n,pitch:Math.max(24,Math.min(108,n.pitch+transpose))};
+          if(section&&index%3===section%3)
+            altered.velocity=Number(Math.max(.05,Math.min(1,n.velocity*(section%2?.9:1.08))).toFixed(4));
+          // The groove changes subtly between sections; chord onsets stay together.
+          if(isDrum&&section%2===1&&index%6===5)
+            altered.beat=Math.min(original.lengthBeats-n.durationBeats,
+              Number((n.beat+.25).toFixed(4)));
+          return altered;
+        });
+        clips.push({startBeat,lengthBeats:original.lengthBeats,repeats,notes});
+      }
+    }
+    return {...track,clips};
+  });
+}
 export const STYLES=["cinematic","lofi","rock","funk","pagode"];
 export function createStylePreset(style="cinematic",durationSeconds=600){
   if(!STYLES.includes(style))throw Error("Estilo não reconhecido.");
@@ -110,7 +144,7 @@ export function createStylePreset(style="cinematic",durationSeconds=600){
       {time:durationSeconds*.75,volume:.73,intensity:.66},
       {time:durationSeconds*.94,volume:.60,intensity:.45},
       {time:durationSeconds,volume:0,intensity:.20}
-    ],tracks:styleTracks(style,repetitions)};
+    ],tracks:developArrangement(styleTracks(style,repetitions),durationSeconds,bpm)};
   return validateScore(score);
 }
 function validateAutomation(score){
