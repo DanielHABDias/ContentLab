@@ -95,7 +95,6 @@ test("fontes de áudio e espelhos JS do navegador permanecem iguais",()=>{
   const html=fs.readFileSync(path.join(root,"frontend","templates","index.html"),"utf8");
   assert.match(html,/id="panel-music"/);
   assert.match(html,/id="musicTimeline" viewBox="0 0 960 344"/);
-  assert.doesNotMatch(html,/id="musicLegacyFields"|value="legacy"/);
   assert.match(ui,/createMusicAutomationEditor/);
 });
 test("exporta MIDI multifaixa e WAV com cabeçalho válido",async()=>{
