@@ -106,10 +106,31 @@ try{
   assert.equal(await evaluate('getComputedStyle(document.getElementById("loadBtn")).transitionProperty.includes("transform")'),true,
     'Buttons must provide a transform-based tactile response');
   await evaluate('document.getElementById("tab-videos").click()');
-  assert.equal(await evaluate('document.querySelectorAll(".workspace-tab[data-workspace]").length'),12,
+  assert.equal(await evaluate('document.querySelectorAll(".workspace-tab[data-workspace]").length'),13,
     'Original workspaces, thumbnails, recording, AI narration and voice settings remain available');
-  assert.equal(await evaluate('document.querySelectorAll(".workspace-tabs > .workspace-tab, .workspace-tabs > .workspace-group").length'),8,
-    'Sidebar has eight top-level entries, with narration and settings grouped');
+  assert.equal(await evaluate('document.querySelectorAll(".workspace-tabs > .workspace-tab, .workspace-tabs > .workspace-group").length'),9,
+    'Sidebar has nine top-level entries, including music composition');
+  assert.equal(await evaluate('document.getElementById("tab-music").textContent.includes("Trilhas sonoras")'),true,
+    'Music studio is accessible without an experimental label');
+  assert.equal(await evaluate('document.getElementById("musicJson").value.includes("durationSeconds")'),true,
+    'The music composer is initialized with editable JSON');
+  const sound=await evaluate(`(async()=>{
+    const {createPreset,validateScore}=await import('/static/music/model.js');
+    const {renderAudio}=await import('/static/music/synth.js');
+    const score=validateScore(createPreset(8));
+    const intro=await renderAudio(score,2,0);
+    const middle=await renderAudio(score,2,4);
+    const amplitude=buffer=>{
+      const samples=buffer.getChannelData(0);let peak=0;
+      for(let i=0;i<samples.length;i+=11)peak=Math.max(peak,Math.abs(samples[i]));
+      return peak;
+    };
+    return {intro:amplitude(intro),middle:amplitude(middle),
+      duration:intro.duration};
+  })()`);
+  assert.ok(sound.intro>0.0002 && sound.middle>0.0002,
+    'Music synthesis must produce non-silent harmonies at the beginning and at an offset');
+  assert.equal(sound.duration,2,'Music preview must have the requested duration');
   assert.equal(await evaluate('document.getElementById("workspace-group-editor-items").hidden'),true,
     'Editor submenu starts collapsed');
   assert.equal(await evaluate('document.getElementById("workspace-group-social-items").hidden'),true,

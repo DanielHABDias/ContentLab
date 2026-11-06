@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="/static/media-library.css">
 <link rel="stylesheet" href="/static/thumbnail-studio.css">
 <link rel="stylesheet" href="/static/voice-creation.css">
+<link rel="stylesheet" href="/static/music-studio.css">
 </head>
 <body>
 
@@ -46,10 +47,11 @@
         </div>
       </div>
 
-      <button class="workspace-tab" id="tab-library" role="tab" aria-selected="false" aria-controls="panel-library" type="button" data-workspace="library"><span>05</span> Banco de mídia</button>
-      <button class="workspace-tab" id="tab-thumbnails" role="tab" aria-selected="false" aria-controls="panel-thumbnails" type="button" data-workspace="thumbnails"><span>06</span> Thumbnails</button>
-      <div class="workspace-group" data-workspace-group="settings"><button class="workspace-tab workspace-group-trigger" id="workspace-group-settings-trigger" type="button" aria-expanded="false" aria-controls="workspace-group-settings-items" aria-label="Expandir opções de Configurações"><span>07</span><strong>Configurações</strong><svg class="workspace-group-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2"/></svg></button><div class="workspace-subtabs" id="workspace-group-settings-items" role="group" aria-label="Configurações" hidden><button class="workspace-tab workspace-subtab" id="tab-settings" role="tab" aria-selected="false" aria-controls="panel-settings" type="button" data-workspace="settings"><span aria-hidden="true">•</span> Redes sociais</button><button class="workspace-tab workspace-subtab" id="tab-voice-settings" role="tab" aria-selected="false" aria-controls="panel-voice-settings" type="button" data-workspace="voice-settings"><span aria-hidden="true">•</span> Voz e modelos de IA</button></div></div>
-      <button class="workspace-tab" id="tab-docs" role="tab" aria-selected="false" aria-controls="panel-docs" type="button" data-workspace="docs"><span>08</span> Documentação</button>
+      <button class="workspace-tab" id="tab-music" role="tab" aria-selected="false" aria-controls="panel-music" type="button" data-workspace="music"><span>05</span> Trilhas sonoras</button>
+      <button class="workspace-tab" id="tab-library" role="tab" aria-selected="false" aria-controls="panel-library" type="button" data-workspace="library"><span>06</span> Banco de mídia</button>
+      <button class="workspace-tab" id="tab-thumbnails" role="tab" aria-selected="false" aria-controls="panel-thumbnails" type="button" data-workspace="thumbnails"><span>07</span> Thumbnails</button>
+      <div class="workspace-group" data-workspace-group="settings"><button class="workspace-tab workspace-group-trigger" id="workspace-group-settings-trigger" type="button" aria-expanded="false" aria-controls="workspace-group-settings-items" aria-label="Expandir opções de Configurações"><span>08</span><strong>Configurações</strong><svg class="workspace-group-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2"/></svg></button><div class="workspace-subtabs" id="workspace-group-settings-items" role="group" aria-label="Configurações" hidden><button class="workspace-tab workspace-subtab" id="tab-settings" role="tab" aria-selected="false" aria-controls="panel-settings" type="button" data-workspace="settings"><span aria-hidden="true">•</span> Redes sociais</button><button class="workspace-tab workspace-subtab" id="tab-voice-settings" role="tab" aria-selected="false" aria-controls="panel-voice-settings" type="button" data-workspace="voice-settings"><span aria-hidden="true">•</span> Voz e modelos de IA</button></div></div>
+      <button class="workspace-tab" id="tab-docs" role="tab" aria-selected="false" aria-controls="panel-docs" type="button" data-workspace="docs"><span>09</span> Documentação</button>
   </nav><div class="sidebar-foot"><span class="sidebar-foot-icon">✦</span><strong>Faça a ideia ganhar movimento.</strong><small>Node.js · Remotion · Local</small></div></aside>
   <main class="panel">
     <section class="global-project-bar" aria-label="Projeto ativo"><div class="global-project-heading"><span class="eyebrow">PROJETO ATIVO</span><span>Uma pasta para todo o seu vídeo</span></div><div class="global-project-controls"><input id="globalProjectRoot" type="text" placeholder="Selecione a pasta do vídeo — não precisa de edit_plan.json" aria-label="Pasta universal do projeto"><button id="globalProjectChoose" class="btn btn-primary" type="button">Selecionar projeto</button><button id="globalProjectReload" class="btn btn-secondary" type="button" disabled>↻ Recarregar projeto</button></div><p id="globalProjectStatus" class="helper-text" role="status">Escolha um projeto para guardar downloads, narração e thumbnails na mesma pasta.</p></section>
@@ -877,6 +879,48 @@
       </section>
     </div>
 
+
+    <div id="panel-music" class="workspace-panel hidden" role="tabpanel" aria-labelledby="tab-music" hidden>
+      <div class="workspace-intro">
+        <span class="eyebrow">CRIAÇÃO DE ÁUDIO / INSTRUMENTAL</span>
+        <h2>Trilhas sonoras</h2>
+        <p>Componha música lo-fi por JSON: acordes, melodia, baixo, bateria e variações ao longo do vídeo. Ajuste o volume e a tensão por pontos no tempo, escute uma prévia e exporte a trilha inteira em WAV.</p>
+      </div>
+      <div class="music-layout">
+        <section class="music-card" aria-label="Composição e automação">
+          <h3>Composição</h3>
+          <div class="music-grid">
+            <div class="music-field"><label for="musicTitle">Nome da trilha</label><input id="musicTitle" type="text" maxlength="120"></div>
+            <div class="music-field"><label for="musicDuration">Duração em segundos (máx. 900)</label><input id="musicDuration" type="number" min="5" max="900" step="1"></div>
+            <div class="music-field"><label for="musicBpm">Andamento (BPM)</label><input id="musicBpm" type="number" min="45" max="130" step="1"></div>
+            <div class="music-field"><label for="musicSeed">Variação / seed</label><input id="musicSeed" type="number" min="0" max="2147483647" step="1"></div>
+            <div class="music-field"><label for="musicMode">Clima</label><select id="musicMode"><option value="tense">Tenso e sombrio</option><option value="warm">Lo-fi aconchegante</option><option value="melancholic">Melancólico</option></select></div>
+            <div class="music-field"><label for="musicMelody">Melodia</label><select id="musicMelody"><option value="sparse">Discreta</option><option value="balanced">Mais presente</option><option value="none">Sem melodia principal</option></select></div>
+            <div class="music-field"><label for="musicMaster">Volume geral <span id="musicMasterValue">72%</span></label><input id="musicMaster" type="range" min="0" max="100" value="72"></div>
+            <div class="music-field"><label for="musicPreviewAt">Prévia a partir de (segundos)</label><input id="musicPreviewAt" type="number" min="0" max="599" step="1" value="0"></div>
+          </div>
+          <div class="music-actions"><button id="musicPreset" class="btn btn-secondary" type="button">Preset VD 008 · tensão</button><button id="musicVariation" class="btn btn-ghost" type="button">Nova variação</button></div>
+          <h3 style="margin-top:24px">Volume e tensão no tempo</h3>
+          <p class="helper-text">Azul: volume. Laranja: intensidade musical. Cada ponto cria uma transição gradual até o próximo.</p>
+          <svg class="music-timeline" id="musicTimeline" viewBox="0 0 640 136" role="img" aria-label="Curvas de volume e tensão da música"></svg>
+          <div class="music-marker music-marker-head" aria-hidden="true"><span>Tempo (s)</span><span>Volume</span><span>Tensão</span><span></span></div>
+          <div id="musicMarkers"></div>
+          <div class="music-actions"><button id="musicAddMarker" class="btn btn-secondary btn-sm" type="button">+ Adicionar ponto</button></div>
+          <div class="music-actions"><button id="musicPreview" class="btn btn-secondary" type="button">Ouvir 30 segundos</button><button id="musicRender" class="btn btn-primary" type="button">Gerar WAV completo</button><a id="musicDownload" class="btn btn-secondary" download hidden>Baixar WAV</a></div>
+          <audio id="musicAudio" class="music-player" controls hidden preload="none"></audio>
+          <p id="musicStatus" class="music-status" role="status" aria-live="polite"></p>
+          <p class="music-note">Aviso: primeira versão com instrumentos sintetizados localmente. Não utiliza modelos generativos nem samples orquestrais. A composição é original e determinística; qualidade e desempenho dependem do navegador e do computador.</p>
+        </section>
+        <section class="music-card" aria-label="Editor JSON musical">
+          <h3>JSON musical</h3>
+          <p class="helper-text">Uma IA pode escrever este JSON para você. Também é possível configurar tudo pela interface. Para definir notas exatas, use <code>melodyNotes</code> com tempo em segundos, duração, pitch MIDI e velocity.</p>
+          <textarea id="musicJson" class="music-json" spellcheck="false" aria-label="JSON da composição musical"></textarea>
+          <div class="music-actions"><button id="musicApplyJson" class="btn btn-secondary" type="button">Aplicar JSON</button><button id="musicDownloadJson" class="btn btn-ghost" type="button">Baixar JSON</button></div>
+          <p class="music-note">A exportação WAV é local e não altera a narração ou a trilha de outro projeto. Para usar no editor, importe o arquivo gerado no fluxo de áudio existente.</p>
+        </section>
+      </div>
+    </div>
+
     <div id="panel-docs" class="workspace-panel hidden" role="tabpanel" aria-labelledby="tab-docs" hidden>
       <div class="workspace-intro">
         <span class="eyebrow">CONTENT LAB / REFERÊNCIA OFICIAL</span>
@@ -919,6 +963,7 @@
 </div>
 
 <script src="/static/app.js"></script>
+<script type="module" src="/static/music-studio.js"></script>
 <script src="/static/recording-timeline.js"></script>
 <script src="/static/voice-creation.js"></script>
 <script src="/static/narration-player.js"></script>
