@@ -2,20 +2,17 @@
 
 **Redução de respiração:** disponível somente em **Narração → Tratamento** (narração oficial). A intensidade inicial é 60% e mantém a atenuação original de até 12 dB; acima de 60%, a redução passa a ser progressivamente mais agressiva, alcançando até 40 dB em 100%. Não encurta o áudio; escute e ajuste para não comprometer consoantes. Os parâmetros ficam salvos em `~/.contentlab/audio-treatment-settings.json` (no perfil local do usuário) depois de um tratamento concluído com sucesso, com cópia opcional no armazenamento do navegador. Sem dados locais válidos, aplicam-se os padrões da tela.
 
-## Trilhas sonoras — compositor por código (JSON v2)
+## Trilhas sonoras — um único JSON musical e instrumentos gravados
 
-O **Content Lab agora compõe partituras independentes por faixa**. Em **Trilhas sonoras**, escolha um arranjo inicial **cinematográfico sombrio, lo-fi, funk brasileiro, rock ou pagode instrumental** — ou escreva seu próprio padrão musical em JSON v2. Cada `track` possui instrumento, notas MIDI (`pitch`), duração e posição em beats, velocidade, volume, mute e clipes (`clips`) repetíveis. **Modificar notas, acordes, instrumentos ou bateria muda a música de fato**, não somente o volume de um loop fixo.
+A aba **Trilhas sonoras** compõe música com **faixas, instrumentos, notas MIDI, clipes rítmicos e seções próprias**, usando somente o contrato atual do JSON (sem chave de versão nem compatibilidade com o formato musical antigo). O gráfico azul/laranja regula **volume e intensidade**, não cria melodias. No painel, altere notas, tempo, acordes e instrumentação para produzir músicas realmente diferentes, ou escreva diretamente `tracks[].notes` e `tracks[].clips` no JSON.
 
-A interface oferece lista de faixas, edição do primeiro padrão e **+ Nota / + Nova faixa**. Para harmonia e seções mais elaboradas, edite `tracks[].notes` e `tracks[].clips[].notes` diretamente no **JSON musical**, depois use **Aplicar JSON**. O gráfico ampliado permanece para automação: arraste círculos azuis (volume) e laranjas (intensidade), dê duplo clique para criar pontos e pressione Delete para remover um ponto interno.
+**Qualidade sonora:** piano e violões de aço/nylon usam **gravações reais CC0 da Meta Open Sound**. No primeiro render, o Content Lab busca os arquivos OGG oficiais e mantém cache em `.contentlab/music-instruments/` (conexão exigida na primeira utilização). Guitarra com distorção processa gravação de violão, **não** é gravação de guitarra elétrica. Baixo eletrônico, sintetizadores, cavaquinho e bateria continuam timbres sintetizados; não prometer realismo acústico sem biblioteca específica.
 
-Use **Ouvir 30 segundos** antes de exportar. Você pode gerar **WAV estéreo** via síntese Web Audio local ou **MIDI multifaixa**, que abre em DAWs para utilizar instrumentos e SoundFonts próprios. O aplicativo mantém leitura dos antigos JSONs v1, mas o arranjo fixo desses arquivos não é o compositor novo.
+Use **Ouvir 30 segundos** e **Gerar WAV completo / Baixar WAV** para produzir áudio em estéreo 48 kHz, ou **Exportar MIDI multifaixa** para trabalhar em DAW/SoundFont. Se faltar uma gravação, haverá erro: o programa não deve simular silenciosamente o instrumento com uma onda genérica.
 
-**Atenção aos timbres:** a liberdade de composição v2 não torna os sons sintetizados equivalentes a guitarras, cavaquinhos e percussões acústicas reais. Para realismo profissional, exporte MIDI e utilize instrumentos virtuais ou gravações licenciadas. O WAV ainda precisa de **importação manual** no editor de vídeo.
+**Teste concreto:** [Carnificina — Peso e Sombra, 7:37](music/examples/carnificina-peso-e-sombra.json). Abra o arquivo, copie o JSON e clique em **Aplicar JSON**. Antes de exportar, ouça várias seções e confirme as gravações carregadas.
 
-Leia o **[manual completo da nova composição musical](docs/MUSIC_STUDIO.md)** para o JSON v2, notas e ritmos, estilos, limites, exemplos, uso por agentes e compatibilidade v1.
-
-
-**Exemplo v2 para testar:** [Carnificina — Peso e Sombra, 7:37](music/examples/carnificina-peso-e-sombra-v2.json). Esse arquivo programa subgrave, piano, sintetizador, cordas e bateria discreta em seções independentes. Copie para **Trilhas sonoras → JSON musical → Aplicar JSON**; os JSONs v1 antigos continuam no motor legado e não exercitam a nova composição multifaixa.
+A documentação técnica está em [docs/MUSIC_STUDIO.md](docs/MUSIC_STUDIO.md). O WAV ainda requer importação manual ao editor de vídeo. **Manutenção:** editar arquivos originais, sem `.old`, `.bak`, cópias de código ou campos de versionamento no JSON musical.
 
 ## Projeto universal
 
