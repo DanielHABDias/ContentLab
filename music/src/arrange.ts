@@ -16,7 +16,7 @@ function arrangeScore(score,endSeconds){
     const duration=Math.min(n.durationBeats*beatTime,end-start);
     if(duration<=0)return;
     const gain=track.gain*(.92+.16*levelAt(score,start).intensity);
-    events.push({start,duration,pitch:n.pitch,velocity:Math.min(1,n.velocity*gain),
+    events.push({start,duration,pitch:n.pitch,velocity:Math.min(1,n.velocity*gain),rawVelocity:n.velocity,
       voice:track.instrument,track:track.id,instrument:track.instrument,
       pan:track.pan||0,sound:track.sound});
   };

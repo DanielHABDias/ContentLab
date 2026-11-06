@@ -1,7 +1,7 @@
 // Content Lab music score: one canonical contract for tracks, notes, clips and instruments.
 export const INSTRUMENTS=[
   "custom-synth","sub-bass","808","bass","piano","electric-piano","pad","strings","organ",
-  "synth-lead","pluck","guitar","distorted-guitar","cavaquinho","flute","brass",
+  "synth-lead","pluck","guitar","distorted-guitar","steel-guitar","nylon-guitar","cavaquinho","flute","brass",
   "kick","snare","hat","clap","shaker","tom","surdo","pandeiro","tamborim","rim","cowbell"
 ];
 export const DRUM_INSTRUMENTS=["kick","snare","hat","clap","shaker","tom","surdo","pandeiro","tamborim","rim","cowbell"];
@@ -208,8 +208,6 @@ export function validateScore(value){
   if(!value||typeof value!=="object"||Array.isArray(value))
     throw Error("JSON musical inválido.");
   const score=structuredClone(value);
-  if("schemaVersion" in score||"version" in score)
-    throw Error("Remova o campo de versão. O Content Lab utiliza um único formato musical.");
   if(typeof score.title!=="string"||!score.title.trim()||score.title.length>120)
     throw Error("Informe um título de até 120 caracteres.");
   limits(score.durationSeconds,5,900,"Duração");
