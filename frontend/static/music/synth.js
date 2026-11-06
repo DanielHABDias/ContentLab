@@ -1,6 +1,7 @@
 import {arrange,seeded} from "./arrange.js";
 import {levelAt,DRUM_INSTRUMENTS} from "./model.js";
-const RATE=32000;
+import {loadSamples,sampleForEvent} from "./samples.js";
+const RATE=48000;
 const freq=midi=>440*2**((midi-69)/12);
 const tone={
   "sub-bass":{wave:"sine",cutoff:230,amp:.54,attack:.025,release:.20},
@@ -37,7 +38,48 @@ function connectPan(ctx,source,dest,pan){
     source.connect(p);p.connect(dest);
   }else source.connect(dest);
 }
-function tonal(ctx,destination,event,offset,duration){
+function sampledInstrument(ctx,destination,event,offset,duration,samples){
+  const sourceInfo=sampleForEvent(event);
+  if(!sourceInfo)return false;
+  const buffer=samples.get(sourceInfo.key);
+  if(!buffer)throw Error("Gravação CC0 não carregada: "+sourceInfo.file);
+  const start=Math.max(0,event.start-offset);
+  const elapsed=Math.max(0,offset-event.start);
+  const wanted=Math.min(event.duration-elapsed,duration-start);
+  const sourceOffset=elapsed*sourceInfo.playbackRate;
+  const available=(buffer.duration-sourceOffset)/sourceInfo.playbackRate;
+  const length=Math.min(wanted,available);
+  if(length<=.002||start>=duration)return true;
+  const src=ctx.createBufferSource();src.buffer=buffer;
+  src.playbackRate.value=sourceInfo.playbackRate;
+  const gain=ctx.createGain();
+  const peak=Math.min(.9,event.velocity*.86);
+  const rise=Math.min(.008,length*.20),tail=Math.min(.09,length*.25);
+  gain.gain.setValueAtTime(0,start);
+  gain.gain.linearRampToValueAtTime(peak,start+rise);
+  gain.gain.setValueAtTime(peak,Math.max(start+rise,start+length-tail));
+  gain.gain.linearRampToValueAtTime(0,start+length);
+  let end=gain;
+  if(event.instrument==="distorted-guitar"){
+    const distortion=ctx.createWaveShaper();
+    const amount=3.2,curve=new Float32Array(4096);
+    for(let i=0;i<curve.length;i++){
+      const x=i*2/(curve.length-1)-1;
+      curve[i]=Math.tanh(amount*x)/Math.tanh(amount);
+    }
+    distortion.curve=curve;distortion.oversample="4x";
+    gain.connect(distortion);
+    const lowpass=ctx.createBiquadFilter();lowpass.type="lowpass";
+    lowpass.frequency.value=3800;distortion.connect(lowpass);end=lowpass;
+  }
+  connectPan(ctx,end,destination,event.pan);
+  src.connect(gain);
+  src.start(start,sourceOffset,length);
+  return true;
+}
+
+function tonal(ctx,destination,event,offset,duration,samples){
+  if(sampledInstrument(ctx,destination,event,offset,duration,samples))return;
   const start=Math.max(0,event.start-offset),elapsed=Math.max(0,offset-event.start);
   if(start>=duration)return;
   const sustain=Math.min(event.duration-elapsed,duration-start);
@@ -127,10 +169,13 @@ export async function renderAudio(score,seconds=score.durationSeconds,startSecon
   const duration=Math.min(score.durationSeconds-offset,seconds);
   const ctx=new OfflineAudioContext(2,Math.ceil(duration*RATE),RATE);
   const master=routeMaster(ctx,score,duration,offset),noise=noiseBuffer(ctx,score.seed);
-  for(const event of arrange(score,offset+duration)){
-    if(event.start+event.duration<=offset)continue;
-    if(DRUM_INSTRUMENTS.includes(event.instrument||event.voice))percussion(ctx,master,event,offset,duration,noise);
-    else tonal(ctx,master,event,offset,duration);
+  const events=arrange(score,offset+duration)
+    .filter(event=>event.start+event.duration>offset);
+  const samples=await loadSamples(ctx,events);
+  for(const event of events){
+    if(DRUM_INSTRUMENTS.includes(event.instrument||event.voice))
+      percussion(ctx,master,event,offset,duration,noise);
+    else tonal(ctx,master,event,offset,duration,samples);
   }
   return ctx.startRendering();
 }
