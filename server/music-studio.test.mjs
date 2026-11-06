@@ -56,3 +56,40 @@ test("WAV export writes a valid stereo PCM header and samples",async()=>{
   // First stereo frame contains zero samples; inspect the next frame.
   assert.notEqual(bytes.getInt16(48,true),0);
 });
+
+test("graph automation edits preserve endpoints, time order and independent curves",async()=>{
+  const {graphPoint,graphValue,moveAutomationPoint,insertAutomationPoint,deleteAutomationPoint}
+    =await import("../frontend/static/music-automation.js");
+  const preset=validateScore(createPreset(120));
+  const coords=graphPoint(preset,30,.65);
+  const back=graphValue(preset,coords.x,coords.y);
+  assert.ok(Math.abs(back.time-30)<1e-8);
+  assert.ok(Math.abs(back.value-.65)<1e-8);
+  const moved=moveAutomationPoint(preset,2,"volume",66,.9);
+  assert.equal(moved.automation[2].volume,.9);
+  assert.equal(moved.automation[2].intensity,preset.automation[2].intensity);
+  assert.ok(moved.automation[2].time<moved.automation[3].time);
+  const locked=moveAutomationPoint(moved,0,"intensity",25,.76);
+  assert.equal(locked.automation[0].time,0);
+  assert.equal(locked.automation[0].intensity,.76);
+  const end=moveAutomationPoint(moved,moved.automation.length-1,"volume",85,.2);
+  assert.equal(end.automation.at(-1).time,120);
+  const inserted=insertAutomationPoint(moved,55,"intensity",.66);
+  assert.equal(inserted.automation.length,moved.automation.length+1);
+  assert.ok(inserted.automation.some(p=>p.time===55&&p.intensity===.66));
+  const restored=deleteAutomationPoint(inserted,3);
+  assert.equal(restored.automation.length,moved.automation.length);
+  assert.throws(()=>deleteAutomationPoint(preset,0),/primeiro/);
+  assert.throws(()=>insertAutomationPoint(preset,0,"volume",.4),/dentro/);
+  assert.throws(()=>insertAutomationPoint(preset,preset.automation[2].time,"volume",.4),/Muito perto/);
+});
+test("music UI uses a large draggable SVG instead of marker sliders and buttons",()=>{
+  const html=fs.readFileSync(path.join(root,"frontend/templates/index.html"),"utf8");
+  const script=fs.readFileSync(path.join(root,"frontend/static/music-studio.js"),"utf8");
+  const css=fs.readFileSync(path.join(root,"frontend/static/music-studio.css"),"utf8");
+  assert.match(html,/id="musicTimeline" viewBox="0 0 960 344"/);
+  assert.match(html,/id="musicChartHint"/);
+  assert.doesNotMatch(html,/id="musicMarkers"|id="musicAddMarker"/);
+  assert.match(script,/createMusicAutomationEditor/);
+  assert.match(css,/touch-action:none/);
+});
