@@ -1,202 +1,108 @@
-# Trilhas sonoras — Content Lab | Composição multifaixa (JSON v2)
+# Trilhas sonoras — compositor musical do Content Lab
 
-O Content Lab **não deve tocar sempre a mesma música**. O primeiro compositor aceitava somente três modos harmônicos, progressões de acordes e padrões rítmicos fixos; suas curvas de volume e intensidade não eram um sistema de composição. Isso foi corrigido com o **JSON musical v2**, que descreve a partitura.
+O Content Lab usa **um único formato de JSON musical**. A partitura define a música que deve ser tocada: faixas, instrumentos, notas MIDI, ritmo, acordes programados como notas, clipes, seções e automação. Não há campo de versão nem suporte ao formato musical anterior. **Não criar arquivos de backup** (por exemplo, extensões .old ou .bak); alterações devem acontecer nos arquivos canônicos.
 
-O motor agora lê **faixas independentes**, **instrumentos escolhidos**, **notas com alturas/durações/forças próprias**, **padrões em clipes**, **repetições** e **silêncios**. É possível escrever arranjos originais em estilos diferentes — cinematic, lo-fi, funk, rock, pagode ou outros — sem precisar se limitar a um único preset. Os presets são apenas exemplos editáveis, **não limitam o tipo de música possível**.
+## Por que um instrumento pode soar artificial?
 
-A síntese continua **local via Web Audio**, sem API paga. A exportação **MIDI multifaixa** permite carregar partituras em uma DAW e renderizar com instrumentos virtuais/SoundFonts de sua escolha. Os timbres internos são sintetizadores: um cavaquinho, uma guitarra distorcida ou um pandeiro sintetizado não soam necessariamente iguais a músicos reais gravados. Um arranjo correto não substitui timbres/sample libraries profissionais.
+Uma guitarra não pode ser simulada convincentemente apenas trocando a forma de onda de um oscilador. O compositor usa duas rotas sonoras distintas:
 
-## Comece por aqui
+1. **Instrumentos realmente sampleados (CC0):** piano de verdade (coleção Meta Piano), violão de aço (Meta Steel Guitar), violão de nylon (Meta Nylon Guitar). São gravações originais da Meta Open Sound, licenciadas CC0, sem crédito obrigatório. O motor escolhe a gravação pela **nota e camada de intensidade**, decodifica OGG, agenda o som com ganho/decay e exporta o resultado em WAV. A opção "Guitarra com distorção" aplica distorção a um **violão de aço gravado**, não equivale a uma guitarra elétrica captada de amplificador.
+2. **Instrumentos ainda sintetizados:** subgrave, 808, baixo eletrônico, pad, cordas sintéticas, sintetizador, cavaquinho e percussões. São sons eletrônicos úteis para arranjos experimentais, **não** substitutos fiéis de instrumentos acústicos ou percussão de estúdio.
 
-1. Abra **Trilhas sonoras** na navegação do Content Lab.
-2. Selecione um estilo inicial: **Cinematográfico sombrio**, **Lo-fi**, **Funk brasileiro instrumental**, **Rock instrumental** ou **Pagode instrumental**. Clique em **Carregar arranjo do estilo**. Isso inicia um projeto novo, substituindo o que estiver na tela; **Baixar JSON** antes se desejar preservar o trabalho anterior.
-3. Informe título, duração (5–900 segundos), BPM (40–240 para v2), seed e volume geral. **Mudar BPM altera o tempo das notas em segundos**, mas não o número de beats de um padrão.
-4. Em **Instrumentos e padrões musicais**, cada faixa possui seu próprio instrumento, volume e estado de silêncio (mute). Abra **Editar padrão** para ver as notas do primeiro clipe. Ajuste:
-   - **Tempo (beat)** — quando a nota entra **dentro do clipe**;
-   - **Duração** — por quantos beats a nota toca;
-   - **Nota MIDI** — altura da nota (por exemplo, 60 = dó central);
-   - **Força (%)** — velocidade/dinâmica em porcentagem.
-5. Use **+ Nota** para acrescentar ao primeiro padrão. **+ Nova faixa** cria instrumento independente; use a seleção de instrumento e o JSON para alterar seu comportamento. Os clipes adicionais, notas avulsas, seções e repetições são totalmente editáveis no JSON (para o controle mais fino).
-6. Edite o gráfico ampliado: **azul contínuo = volume**, **laranja tracejada = intensidade**. Arraste círculos, dê **duplo clique para adicionar ponto**, e **Delete/Backspace para remover** (exceto extremidades). No teclado, ↑/↓ ajustam 1%, ←/→ movem 0,1 segundo; Shift amplia.
-7. O editor mantém JSON e controles visuais sincronizados. Se editar o texto do JSON diretamente, clique em **Aplicar JSON**; ele valida o contrato e só atualiza a composição quando estiver correto.
-8. Escolha **Prévia a partir de** e clique em **Ouvir 30 segundos**, conferindo partes da música. Quando aprovado, clique **Gerar WAV completo** e **Baixar WAV**.
-9. Para editar timbres em uma DAW, clique em **Exportar MIDI multifaixa**. O arquivo MIDI carrega notas, canais de instrumentos e eventos de bateria, mas **não** o som do sintetizador, os efeitos Web Audio nem o resultado da mixagem. O WAV é o áudio renderizado.
+**Fonte e licença:** https://github.com/facebookincubator/Meta-open-sound — consulte o README, o catálogo de licenças e os manifests oficiais. O Content Lab **não utiliza o Oculus Audio Pack**, pois exige atribuição. Somente as coleções instrumentais explicitamente CC0 estão permitidas neste fluxo.
 
-**Importante:** alterar notas ou automações invalida a prévia e o WAV antigo; renderize novamente. Baixar WAV não importa a trilha automaticamente no Editor de vídeo — a importação continua manual. A composição musical é independente de \`edit_plan.json\`.
+**Como carregar as gravações:** ao clicar em **Ouvir 30 segundos** ou **Gerar WAV completo**, o aplicativo identifica quais gravações são exigidas pelas notas do trecho, busca os arquivos OGG oficiais uma vez, armazena-os no cache local de áudio sob `.contentlab/music-instruments/` e os reutiliza nas próximas renderizações. No **primeiro uso é necessário acesso à internet**. O Content Lab indica um erro caso não seja possível baixar ou decodificar a gravação: ele **não substitui silenciosamente um instrumento real por um som artificial**. A conexão local da aplicação deve estar acessível para a rota `/api/music/sample`.
 
-## JSON v2 — contrato geral
+O áudio final é renderizado a **48 kHz, estéreo, WAV PCM de 16 bits**. Para áudio mais sofisticado, grave outras fontes licenciadas externamente, use instrumentos virtuais em DAW e importe o WAV de volta ao fluxo de edição. O MIDI multifaixa permite essa etapa sem alterar as notas.
 
-\`\`\`json
+## Como compor uma música nova na interface
+
+1. Abra **Trilhas sonoras**. Selecione um ponto de partida (cinematográfico, lo-fi, funk brasileiro instrumental, rock ou pagode) e clique em **Carregar arranjo do estilo**. Antes de substituí-lo, use **Baixar JSON** caso precise guardar uma composição aprovada — **um arquivo de composição exportado pelo usuário não é backup automático de código**.
+2. Ajuste título, duração (5–900 segundos), BPM (40–240), seed e volume. A seed organiza a síntese e variações deliberadas; o arranjo depende das **notas reais**, não de uma palavra indicando gênero.
+3. Em **Instrumentos e padrões musicais**, escolha **piano gravado CC0** ou **violão de aço/nylon gravado CC0** quando desejar esses timbres. Edite nome/volume/mute de cada faixa; **+ Nova faixa** adiciona uma faixa com suas próprias notas.
+4. Abra **Editar padrão**. Edite os parâmetros de cada nota: `beat` (posição relativa ao clipe), `durationBeats`, `pitch` (altura MIDI) e `velocity` (intensidade do toque). **+ Nota** adiciona notas. Use o JSON para compor clipes diferentes por introdução, estrofe, refrão, respiro e final.
+5. No gráfico grande, a linha **azul controla volume** e a **laranja tracejada controla a intensidade geral**. Arraste círculos, dê duplo clique para criar um nó, pressione Delete/Backspace para removê-lo. Isso **não** escreve melodia: composição está nas faixas e clipes.
+6. Clique **Ouvir 30 segundos** para renderizar e testar um trecho. Primeiro teste timbres em notas isoladas e acompanhe o carregamento da biblioteca. Ouça começo, desenvolvimento e final **antes** de gerar 7 minutos.
+7. Clique **Gerar WAV completo** e **Baixar WAV** para exportar a música realmente renderizada. O arquivo precisa ser importado manualmente na edição do vídeo. Use **Exportar MIDI multifaixa** para trabalhar em instrumentos virtuais ou DAW sem perder notas e ritmo.
+
+## Contrato único do JSON musical
+
+Um JSON musical é um objeto com:
+
+- `title`: nome não vazio de até 120 caracteres.
+- `durationSeconds`: duração em segundos, 5–900.
+- `bpm`: andamento, 40–240; `beatsPerBar`: batidas por compasso, inteiro 1–12.
+- `seed`: inteiro 0–2147483647; `masterVolume`: 0–1.
+- `style`: rótulo opcional para ajudar a identificar o arranjo, **não gera música**.
+- `automation`: entre 2 e 64 nós ordenados por segundo, começando em 0 e terminando em `durationSeconds`; cada nó tem `{time,volume,intensity}` com níveis 0–1.
+- `tracks`: entre 1 e 32 faixas. Cada faixa tem `id`, `name`, `instrument`, `gain` (0–1), `pan` (−1 a 1, opcional), `muted` (booleano, opcional), arrays `notes` e `clips`.
+- `notes`: eventos `{beat,durationBeats,pitch,velocity}`. `beat` é posição musical absoluta quando está diretamente na faixa; `durationBeats` entre 0,015 e 64; `pitch` inteiro MIDI 24–108; `velocity` 0,001–1.
+- `clips`: blocos `{startBeat,lengthBeats,repeats,notes}`; dentro do clipe, `beat` da nota é relativo ao início do bloco. `lengthBeats` entre 0,125 e 256; `repeats` inteiro 1–2000. Até 128 clipes por faixa, 512 notas por clipe, 3000 notas diretas por faixa e 30.000 eventos sonoros ativos.
+
+Exemplo **atual** (sem nenhum campo de versão):
+
+```json
 {
-  "schemaVersion": 2,
-  "title": "Meu tema original",
-  "durationSeconds": 30,
-  "bpm": 112,
+  "title": "Motivo instrumental original",
+  "durationSeconds": 24,
+  "bpm": 80,
   "beatsPerBar": 4,
-  "seed": 441,
-  "style": "custom",
-  "masterVolume": 0.7,
+  "seed": 251,
+  "style": "cinematic",
+  "masterVolume": 0.75,
   "automation": [
-    {"time": 0, "volume": 0.65, "intensity": 0.35},
-    {"time": 27, "volume": 0.72, "intensity": 0.60},
-    {"time": 30, "volume": 0, "intensity": 0.20}
+    {"time": 0, "volume": 0.6, "intensity": 0.3},
+    {"time": 18, "volume": 0.7, "intensity": 0.5},
+    {"time": 24, "volume": 0, "intensity": 0.2}
   ],
   "tracks": [
     {
-      "id": "theme",
-      "name": "Motivo principal",
+      "id": "piano",
+      "name": "Piano gravado",
       "instrument": "piano",
-      "gain": 0.7,
-      "pan": 0,
-      "muted": false,
-      "notes": [
-        {"beat": 0, "durationBeats": 1, "pitch": 60, "velocity": 0.75}
-      ],
-      "clips": [
-        {
-          "startBeat": 4,
-          "lengthBeats": 4,
-          "repeats": 10,
-          "notes": [
-            {"beat": 0, "durationBeats": 0.75, "pitch": 64, "velocity": 0.65},
-            {"beat": 1.5, "durationBeats": 1, "pitch": 67, "velocity": 0.60},
-            {"beat": 3, "durationBeats": 0.75, "pitch": 62, "velocity": 0.55}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "drums",
-      "name": "Bumbo sincopado",
-      "instrument": "kick",
-      "gain": 0.55,
+      "gain": 0.78,
       "pan": 0,
       "muted": false,
       "notes": [],
       "clips": [
         {
           "startBeat": 0,
-          "lengthBeats": 4,
-          "repeats": 14,
+          "lengthBeats": 8,
+          "repeats": 4,
           "notes": [
-            {"beat": 0, "durationBeats": 0.2, "pitch": 36, "velocity": 0.85},
-            {"beat": 2.5, "durationBeats": 0.2, "pitch": 36, "velocity": 0.60}
+            {"beat": 0, "durationBeats": 1.6, "pitch": 60, "velocity": 0.66},
+            {"beat": 3, "durationBeats": 1.2, "pitch": 63, "velocity": 0.48},
+            {"beat": 6, "durationBeats": 1.5, "pitch": 55, "velocity": 0.55}
           ]
         }
       ]
     }
   ]
 }
-\`\`\`
+```
 
-Neste exemplo, a segunda faixa já tem um **ritmo diferente** da primeira. Em \`tracks\`, novas notas, instrumentos ou clipes alteram **a composição que será tocada**, não somente seu volume. A duração é o limite real: clipes que se estendem para além dos 30 segundos são interrompidos no fim.
+**Instrumentos admitidos:** `piano`, `guitar` (violão de aço), `steel-guitar` (violão de aço), `nylon-guitar`, `distorted-guitar` (violão gravado com distorção digital), além de `custom-synth`, `sub-bass`, `808`, `bass`, `electric-piano`, `pad`, `strings`, `organ`, `synth-lead`, `pluck`, `cavaquinho`, `flute`, `brass` e os instrumentos de percussão `kick`, `snare`, `hat`, `clap`, `shaker`, `tom`, `surdo`, `pandeiro`, `tamborim`, `rim`, `cowbell`. As opções não marcadas como gravadas são sintetizadas.
 
-### Campos globais
+Um instrumento tonal sintetizado pode usar `sound:{wave,cutoff,attack,release,amp,layerWave,layerGain,detune}` para alterar sua síntese. Isso não altera os dados do arquivo original dos instrumentos gravados.
 
-| Campo | Valores | Significado |
-| --- | --- | --- |
-| \`schemaVersion\` | **2** | Ativa compositor multifaixa |
-| \`title\` | texto não vazio de até 120 caracteres | Nome da composição |
-| \`durationSeconds\` | 5–900 | Duração exata em segundos |
-| \`bpm\` | 40–240 | Andamento musical |
-| \`beatsPerBar\` | inteiro de 1–12 | Batidas por compasso (grade e metadados MIDI) |
-| \`seed\` | inteiro 0–2147483647 | Semente para síntese procedural/revisões; **não define a melodia de v2** |
-| \`style\` | texto opcional | Rótulo de organização, **não programa o arranjo** |
-| \`masterVolume\` | 0–1 | Volume geral |
-| \`automation\` | de 2 a 64 nós | Volume e intensidade no tempo |
-| \`tracks\` | 1–32 faixas | A partitura completa |
+## Testar o Carnificina sem gerar o mesmo loop
 
-A **musicalidade vem das notas**, dos instrumentos e da distribuição das faixas. O campo \`style\` é só metadado: digitar "funk" sem montar as notas de funk **não** converte magicamente um rock em funk.
+Use o exemplo [Carnificina — Peso e Sombra](../music/examples/carnificina-peso-e-sombra.json). Ele foi concebido para 457 segundos e possui cinco faixas, várias frases de piano, subgrave e camadas diferentes. Copie todo o arquivo em **JSON musical** e clique em **Aplicar JSON**. **Não use JSONs sem faixas e notas**: não são reconhecidos pelo contrato atual.
 
-### Faixas
+Teste janelas de prévia a partir de 0, 120, 260 e 390 segundos. Confira (1) que o piano toca com gravação real, (2) que mudanças em `pitch` alteram a altura, (3) que adicionar/excluir notas altera o áudio e (4) que ritmos diferentes produzem arranjos diferentes. Somente depois gere WAV integral. O exemplo é um estudo instrumental, não uma trilha avaliada ou aprovada por escuta.
 
-Uma faixa contém:
+## Testes e limites técnicos
 
-- \`id\`: identificador único de 1–40 caracteres (letras, números, hífen ou sublinhado).
-- \`name\`: texto não vazio de até 80 caracteres.
-- \`instrument\`: nome de instrumento existente na paleta abaixo.
-- \`gain\`: volume relativo de 0 a 1; \`pan\`: posição estéreo de −1 a 1 (opcional); \`muted\`: booleano (opcional).
-- \`notes\`: notas avulsas, com \`beat\` absoluto desde o começo da música.
-- \`clips\`: até 128 padrões por faixa. Cada clipe tem \`startBeat\` (instante absoluto em beats), \`lengthBeats\` (tamanho do padrão), \`repeats\` (repetições) e seu próprio array \`notes\`. Nessa lista, \`beat\` é **relativo ao início do clipe**, portanto a mesma sequência pode ser repetida em diferentes trechos.
+- `music/src/model.ts`: validação apenas do JSON atual e exemplos musicais.
+- `music/src/arrange.ts`: conversão de faixas e clipes em eventos de áudio.
+- `music/src/samples.ts`: seleção de notas gravadas, camadas de dinâmica e carregamento/decodificação.
+- `server/music-samples.mjs`: download controlado e cache de gravações CC0, sem baixar repositórios completos, sem arquivos .old e sem dependência de CDN no segundo uso.
+- `music/src/synth.ts`: sintetização de pads/percussões e reprodução de amostras reais.
+- `music/src/midi.ts` e `music/src/wav.ts`: exportação dos formatos MIDI e WAV.
+- `frontend/static/music-studio.js`: UI de faixas, JSON, prévia e render.
 
-**Exemplo de estrutura A/B:** introdução em \`startBeat:0\` com \`repeats:4\`, verso em \`startBeat:16\` com outra lista de notas, refrão em \`startBeat:48\` com ritmo, acordes e instrumentos próprios. Para silêncio, deixe uma faixa sem eventos naquele trecho, use \`muted\` para silenciar uma faixa inteira ou diminua \`gain\`.
+A licença CC0 do material fonte não significa que todas as bibliotecas da internet sejam CC0. Não adicionar amostras de origem incerta. Atrasos na primeira renderização são esperados por download e decodificação de gravações; sem internet, o cache precisa já conter os samples necessários.
 
-Cada nota tem:
+**Portas abertas para evolução:** bateria gravada CC0, guitarra elétrica realmente sampleada, cavaquinho real, importação de bibliotecas SF2/SFZ licenciadas, mixer/efeitos por faixa e edição piano roll mais completa. Não afirmar que esses recursos já existem no Content Lab.
 
-- \`beat\`: posição, número a partir de 0;
-- \`durationBeats\`: duração musical entre 0,015 e 64 beats;
-- \`pitch\`: altura MIDI inteira entre 24 e 108;
-- \`velocity\`: força 0,001–1.
-
-Em clipes, a nota **precisa caber no tamanho do padrão**. No total, o motor limita a 30.000 eventos ativos por composição para proteger a memória do navegador. Notas avulsas e clipes não têm obrigação de seguir qualquer progressão fixa.
-
-### Instrumentos suportados no sintetizador
-
-**Graves e teclados:** \`sub-bass\`, \`808\`, \`bass\`, \`piano\`, \`electric-piano\`, \`organ\`, \`pad\`, \`strings\`, \`synth-lead\`, \`pluck\`.
-
-**Personalização:** escolha `instrument: "custom-synth"` e, opcionalmente, acrescente `sound: {"wave":"square","cutoff":600,"attack":0.02,"release":0.35,"layerWave":"sine","layerGain":0.2,"detune":-5,"amp":0.4}` na faixa. As ondas aceitas são `sine`, `triangle`, `square` e `sawtooth`; o filtro vai de 80 a 18.000 Hz, ataque de 0,001–3 s, cauda de 0,005–6 s, ganho da camada de 0–1, afinação de −1200 a +1200 cents e amplitude de 0–1. Assim, o mesmo padrão de notas pode produzir diferentes timbres por código.
-
-**Cordas e solistas sintetizados:** \`guitar\`, \`distorted-guitar\`, \`cavaquinho\`, \`flute\`, \`brass\`.
-
-**Percussão:** \`kick\`, \`snare\`, \`hat\`, \`clap\`, \`shaker\`, \`tom\`, \`surdo\`, \`pandeiro\`, \`tamborim\`, \`rim\`, \`cowbell\`.
-
-O gerador v2 usa uma síntese própria para cada tipo e exporta MIDI com programas General MIDI aproximados, e canal de bateria. Isso **não é amostragem de instrumentos acústicos**, nem há biblioteca de kits externos embutida.
-
-## O que torna os estilos realmente diferentes?
-
-| Partida | BPM inicial | Diferenças reais nas notas e instrumentos |
-| --- | ---: | --- |
-| Cinematográfico sombrio | 68 | Drone subgrave, pulso 808 lento, piano espaçado, cordas sustentadas e percussão distante |
-| Lo-fi | 76 | Acordes de piano elétrico, baixo redondo, bateria leve e frases melódicas espaçadas |
-| Rock | 124 | Guitarra com simulação de distorção, acordes de quinta, baixo ritmado, bumbo/caixa no backbeat e solo de guitarra |
-| Funk brasileiro | 150 | Padrão sincopado de bumbo estilo tamborzão, palmas, chimbal rápido, baixo 808 e hook sintetizado |
-| Pagode | 96 | Cavaquinho sincopado, surdo, pandeiro, tamborim, baixo e linha melódica |
-
-Em vídeos mais longos, os presets agora se **desenvolvem por seções**: padrões geram clipes separados com transposições musicais e pequenas mudanças de dinâmica e groove. Isso evita repetir literalmente a mesma sequência durante toda a duração. Essas variações são apenas uma primeira forma; para progressões complexas e mudanças de forma A/B/refrão, edite os clipes e a melodia por JSON.
-
-Essas são **demonstrações iniciais**, não produções prontas nem substitutos completos de músicos ou DAWs. Para criar outro ritmo, faça seu próprio \`tracks[].clips[].notes\`. Para música sem bateria, remova/mute as faixas de percussão. Para rock com duas guitarras, adicione outra faixa. Para funk com percussão diferente, mova cada hit em beats.
-
-## Como um agente deve compor pelo código
-
-1. **Briefing:** objetivo, gênero, ritmo, compasso, tonalidade desejada, paleta, duration e referências estéticas (sem copiar melodia protegida).
-2. **Motivo e harmonia:** construir 2–6 notas com desenho reconhecível; definir progressão (por exemplo, acordes diferentes em cada seção) e ritmo de cada parte **antes** de escrever o JSON.
-3. **Forma:** desenhar uma estrutura com intro, seção A, B, virada, respiro e final, conforme a duração e a narração. Cada trecho pode ter seus próprios \`clips\`, instrumentação e notas.
-4. **Programação:** criar faixas por função (baixo, harmonia, lead, percussão, textura). Definir \`pitch\`, \`beat\`, \`durationBeats\` e \`velocity\` explicitamente. Usar repetições quando musicalmente adequadas, não como único conteúdo de dez minutos.
-5. **Arranjo e dinâmica:** \`automation[].volume\` e \`intensity\` continuam úteis para a curva geral, mas **não são instrumentos de composição**. Não tentar fabricar rock, pagode ou piano usando apenas volume.
-6. **Validação:** verificar \`validateScore\`, limite de duração, número de notas, faixas e clipes. Testar o resultado por **prévia realmente renderizada** em abertura, seção intermediária e conclusão.
-7. **Qualidade:** ouvir em solo e com voz, conferir repetições, métrica, harmonia e ganho; comparar versões e mudar somente o que não funcionou. Exportar MIDI se precisar de instrumentos reais via DAW/SoundFont licenciado.
-8. **Entrega:** gerar o WAV completo; importar no projeto de vídeo manualmente; preservar o JSON editável. Declarar claramente \`JSON PREPARADO\`, \`ÁUDIO RENDERIZADO\`, \`ESCUTA VALIDADA\` somente se cada etapa ocorreu de fato.
-
-### Sugestão para o Carnificina
-
-Uma composição tensa e pesada exige **notas baixas e instrumentação adequada**, não um preset idêntico com o ganho aumentado. Comece com \`cinematic\`, altere os motivos de piano em \`tracks[].clips[].notes\`, escolha notas graves de \`sub-bass\`, espaçamentos longos e pulsos de \`808\`; ajuste as seções conforme acontecimentos do roteiro, sem importar melodias de filmes.
-
-
-## Exemplo para teste — Carnificina (7:37)
-
-O arquivo [`Carnificina — Peso e Sombra v2`](../music/examples/carnificina-peso-e-sombra-v2.json) contém uma **composição original instrumental de 457 segundos**, em 68 BPM, com cinco faixas programadas: subgrave, sintetizador grave customizável, piano sombrio, cordas e percussão esparsa. O piano apresenta **oito frases/seções diferentes** ao longo do vídeo, em vez de depender de uma progressão única repetida do começo ao fim. O exemplo é um primeiro estudo em sintetizador local e ainda precisa de avaliação auditiva/ajuste criativo.
-
-Para testar, abra o JSON, copie todo o conteúdo para **Trilhas sonoras → JSON musical**, clique em **Aplicar JSON** e escute as prévias em 0, 120, 260 e 390 segundos antes de renderizar o WAV integral. **Não** use os JSONs anteriores com `mode`/`melody` para validar o novo motor: eles continuam na rota v1 por compatibilidade.
-
-## Compatibilidade com o JSON v1
-
-O app ainda **lê e renderiza** os JSONs antigos com \`mode\`, \`melody\` e \`melodyNotes\`, mesmo sem \`schemaVersion\`. Esses arquivos preservam o arranjador **legado**, com padrões fixos. Não são automaticamente convertidos em v2, porque isso alteraria a música previamente aprovada.
-
-Para criar uma música realmente nova, selecione um estilo da lista e clique em **Carregar arranjo do estilo** (composições não salvas na interface são substituídas). Guarde a configuração anterior com **Baixar JSON** se quiser compará-la.
-
-## Implementação e limitações
-
-- \`music/src/model.ts\`: validação v1/v2 e exemplos de cinco estilos.
-- \`music/src/arrange.ts\`: transforma notas e clipes em eventos musicais reais, preservando o arranjador legado apenas para v1.
-- \`music/src/synth.ts\`: síntese por tipo de instrumento, mix, efeitos simples e renderização em OfflineAudioContext.
-- \`music/src/midi.ts\`: exportação de MIDI Standard MIDI File, formato 1, com metrônomo/tempo, trilhas e notas/percussão.
-- \`music/src/wav.ts\`: export WAV estéreo PCM 16-bit, 32 kHz.
-- \`frontend/static/music/*.js\`: espelho dos fontes TypeScript para execução no navegador.
-- \`frontend/static/music-studio.js\`: escolha de gêneros, edição das faixas e padrões, JSON, prévia, WAV e MIDI.
-- \`frontend/static/music-automation.js\`: gráfico grande com drag, duplo clique e teclado.
-- \`server/music-studio.test.mjs\`: validação das duas versões, diferenciação musical, notas próprias e MIDI.
-- \`server/smoke-ui.mjs\`: smoke browser do compositor e a síntese.
-
-**Limitações assumidas:** o motor ainda não oferece sampler de áudio próprio, samples de bateria de estúdio, gravação de instrumentos, SoundFonts dentro do Web Audio, efeitos avançados por faixa, piano roll completo para edição livre de todos os clipes, importação automática no projeto de vídeo ou DAW integrada. A paleta de instrumentos é sintetizada. Qualidade de pagode/rock/funk acústico realista requer timbres ou gravações adicionais; use MIDI e fontes autorizadas. O objetivo do v2 é **composição livre e editável**, não alegar que a síntese atual é universal ou profissional.
-
-O v2 não usa serviços generativos pagos. Trilha e samples externos devem ter direitos verificados, e o áudio resultante precisa ser realmente ouvido e aprovado antes de uso.
+**Qualidade só pode ser aprovada após escuta real** do WAV (inclusive junto à narração). Passar no schema ou gerar arquivo MIDI não prova bom som. Não há conversão automática de JSON antigo nem testes de compatibilidade com ele.
