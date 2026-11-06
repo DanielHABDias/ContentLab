@@ -53,5 +53,6 @@ test("WAV export writes a valid stereo PCM header and samples",async()=>{
   assert.equal(bytes.getUint32(24,true),32000);
   assert.equal(bytes.getUint16(22,true),2);
   assert.equal(bytes.getUint16(34,true),16);
-  assert.notEqual(bytes.getInt16(46,true),0);
+  // First stereo frame contains zero samples; inspect the next frame.
+  assert.notEqual(bytes.getInt16(48,true),0);
 });

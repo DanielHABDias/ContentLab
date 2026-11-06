@@ -9,7 +9,7 @@ Nova aba **Trilhas sonoras**: compositor procedural instrumental, com JSON edit�
 - A **seed** altera deterministamente as variações de fraseado e ritmo.
 - **Volume** e **tensão** são pontos distintos em \`automation\`, ambos entre 0 e 1. Valores são interpolados linearmente; a tensão modifica a densidade e dinâmica do arranjo. O volume é aplicado ao mixer principal.
 - \`melodyNotes\` opcional substitui a melodia automática por notas MIDI explícitas: \`time\` e \`duration\` em segundos, \`pitch\` inteiro (36–96) e \`velocity\` 0–1.
-- **Ouvir 30 segundos** renderiza apenas a introdução com a automação correspondente. **Gerar WAV completo** renderiza a duração integral.
+- **Ouvir 30 segundos** renderiza a partir do segundo definido em "Prévia a partir de", com a automação e o trecho harmônico correspondentes. **Gerar WAV completo** renderiza a duração integral.
 - A exportação é WAV estéreo PCM 16-bit, 32 kHz, local ao navegador. Baixe e importe no fluxo de áudio existente do Content Lab.
 - A versão inicial não salva automaticamente na pasta do projeto, não possui análise semântica do roteiro, não usa uma API de IA e não produz samples orquestrais realistas. A duração máxima e o tempo de renderização dependem da memória e do processador do navegador.
 

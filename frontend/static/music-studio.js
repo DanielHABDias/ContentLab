@@ -72,6 +72,8 @@ function initializeMusicStudio(){
     $("musicMaster").value=String(Math.round(score.masterVolume*100));
     $("musicMasterValue").textContent=Math.round(score.masterVolume*100)+"%";
     renderMarkers();syncJson();
+    $("musicPreviewAt").max=String(Math.max(0,score.durationSeconds-1));
+    if(Number($("musicPreviewAt").value)>=score.durationSeconds)$("musicPreviewAt").value="0";
   }
   function updateFields(){
     const duration=Number($("musicDuration").value),previous=score.durationSeconds,draft=structuredClone(score);
@@ -118,11 +120,12 @@ function initializeMusicStudio(){
     setBusy(true);
     try{
       score=validateScore(score);
-      const seconds=full?score.durationSeconds:Math.min(30,score.durationSeconds);
-      status(full?"Renderizando composição completa em WAV...":"Preparando prévia de 30 segundos...");
+      const from=full?0:Math.max(0,Math.min(Math.floor(Number($("musicPreviewAt").value)||0),score.durationSeconds-1));
+      const seconds=full?score.durationSeconds:Math.min(30,score.durationSeconds-from);
+      status(full?"Renderizando composição completa em WAV...":"Preparando prévia a partir de "+from+"s...");
       // Let the UI paint before OfflineAudioContext schedules the graph.
       await new Promise(resolve=>requestAnimationFrame(resolve));
-      const buffer=await renderAudio(score,seconds),blob=toWav(buffer);
+      const buffer=await renderAudio(score,seconds,from),blob=toWav(buffer);
       if(previousUrl)URL.revokeObjectURL(previousUrl);
       previousUrl=URL.createObjectURL(blob);
       $("musicAudio").src=previousUrl;$("musicAudio").hidden=false;
