@@ -14,6 +14,9 @@ Use **Ouvir 30 segundos** antes de exportar. Você pode gerar **WAV estéreo** v
 
 Leia o **[manual completo da nova composição musical](docs/MUSIC_STUDIO.md)** para o JSON v2, notas e ritmos, estilos, limites, exemplos, uso por agentes e compatibilidade v1.
 
+
+**Exemplo v2 para testar:** [Carnificina — Peso e Sombra, 7:37](music/examples/carnificina-peso-e-sombra-v2.json). Esse arquivo programa subgrave, piano, sintetizador, cordas e bateria discreta em seções independentes. Copie para **Trilhas sonoras → JSON musical → Aplicar JSON**; os JSONs v1 antigos continuam no motor legado e não exercitam a nova composição multifaixa.
+
 ## Projeto universal
 
 Selecione **uma pasta no topo** para todas as abas. A pasta pode estar vazia: `edit_plan.json` só é necessário no Editor para editar/renderizar. O navegador restaura o último caminho usado; **Recarregar projeto** relê o plano, as tomadas, o inventário e as thumbnails. Confirme antes de descartar alterações do editor. Em gravação, finalize/salve a tomada antes de trocar a pasta.
