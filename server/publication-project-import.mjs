@@ -166,7 +166,7 @@ export function importPublicationProjects(entries,{
       const saved=createSocialDraft({body,confirmed,root,sourceProject:item.projectRoot,
         needsReview:item.needsReview,files:{
           video:asUpload(item.videoPath),coverA:asUpload(item.coverAPath),
-          ...(item.coverBPath?{coverB:asUpload(item.coverBPath)}:{})
+          ...(item.kind==='long'?{coverB:asUpload(item.coverBPath||item.coverAPath)}:{})
         }});
       created.unshift(saved);
     }

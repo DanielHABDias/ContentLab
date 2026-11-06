@@ -32,7 +32,7 @@ test('recording finalization is always raw, even if legacy clients request treat
   };
   const result=await finalizeTakes(root,{treatment:{enabled:true,removeMiddleSilence:true,enhancementEngine:'deepfilter'},enhancement:{enhancementEngine:'deepfilter'},enhancer:()=>{throw Error('Should not run enhancement');},transcriber});
   assert.equal(result.treatment,null);
-  const meta=JSON.parse(fs.readFileSync(path.join(root,'narration.build.json')));
+  const meta=JSON.parse(fs.readFileSync(path.join(root,'.contentlab','build','narration.build.json')));
   assert.deepEqual(meta.processing,[]);assert.equal(meta.treatment,null);
   assert.deepEqual(fs.readFileSync(saved.file),raw);
   assert.ok(Math.abs(await probeAudioDuration(path.join(root,'audio/narration.wav'))-2)<.02);
