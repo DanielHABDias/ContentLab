@@ -152,6 +152,8 @@ O gerador v2 usa uma síntese própria para cada tipo e exporta MIDI com program
 | Funk brasileiro | 150 | Padrão sincopado de bumbo estilo tamborzão, palmas, chimbal rápido, baixo 808 e hook sintetizado |
 | Pagode | 96 | Cavaquinho sincopado, surdo, pandeiro, tamborim, baixo e linha melódica |
 
+Em vídeos mais longos, os presets agora se **desenvolvem por seções**: padrões geram clipes separados com transposições musicais e pequenas mudanças de dinâmica e groove. Isso evita repetir literalmente a mesma sequência durante toda a duração. Essas variações são apenas uma primeira forma; para progressões complexas e mudanças de forma A/B/refrão, edite os clipes e a melodia por JSON.
+
 Essas são **demonstrações iniciais**, não produções prontas nem substitutos completos de músicos ou DAWs. Para criar outro ritmo, faça seu próprio \`tracks[].clips[].notes\`. Para música sem bateria, remova/mute as faixas de percussão. Para rock com duas guitarras, adicione outra faixa. Para funk com percussão diferente, mova cada hit em beats.
 
 ## Como um agente deve compor pelo código
