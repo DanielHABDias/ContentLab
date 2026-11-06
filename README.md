@@ -2,13 +2,17 @@
 
 **Redução de respiração:** disponível somente em **Narração → Tratamento** (narração oficial). A intensidade inicial é 60% e mantém a atenuação original de até 12 dB; acima de 60%, a redução passa a ser progressivamente mais agressiva, alcançando até 40 dB em 100%. Não encurta o áudio; escute e ajuste para não comprometer consoantes. Os parâmetros ficam salvos em `~/.contentlab/audio-treatment-settings.json` (no perfil local do usuário) depois de um tratamento concluído com sucesso, com cópia opcional no armazenamento do navegador. Sem dados locais válidos, aplicam-se os padrões da tela.
 
-## Trilhas sonoras — compositor visual e JSON musical
+## Trilhas sonoras — compositor por código (JSON v2)
 
-Em **Trilhas sonoras**, o Content Lab cria música instrumental original por síntese local (acordes, melodia, baixo e percussão). O gráfico ampliado permite **arrastar diretamente** os círculos azuis de volume e laranjas de tensão; dê **dois cliques** no gráfico para acrescentar um ponto e pressione **Delete** sobre um ponto selecionado para removê-lo. O primeiro e o último ponto ficam fixos no tempo, e as duas curvas compartilham o mesmo eixo de segundos. Também é possível usar as setas para ajuste fino.
+O **Content Lab agora compõe partituras independentes por faixa**. Em **Trilhas sonoras**, escolha um arranjo inicial **cinematográfico sombrio, lo-fi, funk brasileiro, rock ou pagode instrumental** — ou escreva seu próprio padrão musical em JSON v2. Cada `track` possui instrumento, notas MIDI (`pitch`), duração e posição em beats, velocidade, volume, mute e clipes (`clips`) repetíveis. **Modificar notas, acordes, instrumentos ou bateria muda a música de fato**, não somente o volume de um loop fixo.
 
-Os ajustes visuais atualizam o **JSON musical**. Se colar seu próprio JSON, clique em **Aplicar JSON**. Gere uma prévia de até 30 segundos, depois **Gerar WAV completo** e **Baixar WAV**. A exportação não é importada automaticamente na edição: adicione manualmente o WAV ao fluxo de áudio do projeto.
+A interface oferece lista de faixas, edição do primeiro padrão e **+ Nota / + Nova faixa**. Para harmonia e seções mais elaboradas, edite `tracks[].notes` e `tracks[].clips[].notes` diretamente no **JSON musical**, depois use **Aplicar JSON**. O gráfico ampliado permanece para automação: arraste círculos azuis (volume) e laranjas (intensidade), dê duplo clique para criar pontos e pressione Delete para remover um ponto interno.
 
-Leia o **[manual de trilhas sonoras e JSON musical](docs/MUSIC_STUDIO.md)** para o contrato completo (limites, propriedades, exemplo, automações, `melodyNotes`, sincronização com narração e orientações para agentes).
+Use **Ouvir 30 segundos** antes de exportar. Você pode gerar **WAV estéreo** via síntese Web Audio local ou **MIDI multifaixa**, que abre em DAWs para utilizar instrumentos e SoundFonts próprios. O aplicativo mantém leitura dos antigos JSONs v1, mas o arranjo fixo desses arquivos não é o compositor novo.
+
+**Atenção aos timbres:** a liberdade de composição v2 não torna os sons sintetizados equivalentes a guitarras, cavaquinhos e percussões acústicas reais. Para realismo profissional, exporte MIDI e utilize instrumentos virtuais ou gravações licenciadas. O WAV ainda precisa de **importação manual** no editor de vídeo.
+
+Leia o **[manual completo da nova composição musical](docs/MUSIC_STUDIO.md)** para o JSON v2, notas e ritmos, estilos, limites, exemplos, uso por agentes e compatibilidade v1.
 
 ## Projeto universal
 
