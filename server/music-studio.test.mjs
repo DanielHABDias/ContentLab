@@ -203,3 +203,20 @@ test("long genre presets evolve across distinct musical sections",async()=>{
     assert.ok(validateScore(short),"short scores must not contain clips starting past the end");
   }
 });
+
+test("Carnificina v2 example is a valid long-form composition with independent sections",()=>{
+  const example=JSON.parse(fs.readFileSync(path.join(root,"music","examples",
+    "carnificina-peso-e-sombra-v2.json"),"utf8"));
+  const validated=validateScore(example);
+  assert.equal(validated.durationSeconds,457);
+  assert.equal(validated.schemaVersion,2);
+  assert.ok(validated.tracks.some(t=>t.instrument==="sub-bass"));
+  assert.ok(validated.tracks.some(t=>t.instrument==="piano"));
+  assert.ok(validated.tracks.some(t=>t.instrument==="custom-synth"));
+  const piano=validated.tracks.find(t=>t.id==="piano");
+  assert.ok(piano.clips.length>=8,"long form has separate musical sections");
+  assert.notDeepEqual(piano.clips[0].notes,piano.clips[4].notes);
+  const events=arrange(validated);
+  assert.ok(events.length>200);
+  assert.ok(events.every(e=>e.start>=0&&e.start+e.duration<=457.000001));
+});
