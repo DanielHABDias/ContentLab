@@ -45,3 +45,31 @@
 @media(max-width:550px){.music-grid{grid-template-columns:1fr}.music-marker{grid-template-columns:70px minmax(0,1fr) minmax(0,1fr) 28px}.music-card{padding:16px}}
 
 .music-actions [hidden],.music-player[hidden]{display:none!important}
+
+/* Composer v2: instrument lanes and editable musical notation. */
+.music-track-section{margin-top:30px;border-top:1px solid var(--border);padding-top:23px}
+.music-track-heading{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
+.music-track-heading h3{margin:0 0 5px}
+.music-tracks{display:grid;gap:12px;margin:16px 0 4px}
+.music-track{border:1px solid var(--border);border-radius:13px;background:#fafbfd;padding:15px;min-width:0}
+.music-track-bar{display:grid;grid-template-columns:minmax(130px,1.2fr) minmax(150px,1fr) minmax(100px,.8fr) auto;gap:12px;align-items:end}
+.music-track-bar .music-field{min-width:0}
+.music-track-bar label{font-size:11px;font-weight:700;color:var(--text-dim);display:block;margin-bottom:6px}
+.music-track-bar input[type=text],.music-track-bar select{width:100%;min-width:0}
+.music-track-bar input[type=range]{width:100%;accent-color:var(--accent)}
+.music-track-controls{display:flex;align-items:center;gap:12px}
+.music-track-controls label{display:flex;align-items:center;gap:4px;margin:0}
+.music-track details{margin-top:12px}
+.music-track summary{font-size:12px;cursor:pointer;font-weight:650;color:var(--accent)}
+.music-pattern-actions{display:flex;align-items:center;gap:8px;margin:10px 0}
+.music-pattern-notes{display:grid;gap:6px;max-height:340px;overflow:auto}
+.music-note-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) 28px;align-items:end;gap:6px}
+.music-note-row label{font-size:10px;font-weight:650;color:var(--text-dim)}
+.music-note-row input{width:100%;min-width:0}
+.music-note-row button{align-self:end;min-height:32px}
+.music-pattern-intro{font-size:11px;line-height:1.5;color:var(--text-dim)}
+.music-legacy-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;grid-column:1/-1}
+.music-tracks-legacy{font-size:13px;line-height:1.6;color:var(--text-dim)}
+@media(max-width:750px){.music-track-bar{grid-template-columns:repeat(2,minmax(0,1fr))}.music-note-row{grid-template-columns:repeat(4,minmax(0,1fr)) 30px}.music-track{padding:10px}}
+@media(max-width:430px){.music-track-bar{grid-template-columns:1fr}.music-note-row{grid-template-columns:repeat(2,minmax(0,1fr)) 28px}.music-note-row>*:nth-child(3){grid-column:1}.music-note-row>*:nth-child(4){grid-column:2}}
+.music-legacy-fields[hidden]{display:none!important}
