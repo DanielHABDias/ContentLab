@@ -23,6 +23,7 @@ jobs:
           for file in server/*.mjs; do node --check "$file"; done
           node --check frontend/static/app.js
           node --check frontend/static/music-studio.js
+          node --check frontend/static/music-automation.js
           for file in frontend/static/music/*.js; do node --check "$file"; done
           node --check frontend/static/visual_editor.js
           node --check frontend/static/publication-planning.js
