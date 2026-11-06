@@ -106,10 +106,14 @@ try{
   assert.equal(await evaluate('getComputedStyle(document.getElementById("loadBtn")).transitionProperty.includes("transform")'),true,
     'Buttons must provide a transform-based tactile response');
   await evaluate('document.getElementById("tab-videos").click()');
-  assert.equal(await evaluate('document.querySelectorAll(".workspace-tab[data-workspace]").length'),12,
+  assert.equal(await evaluate('document.querySelectorAll(".workspace-tab[data-workspace]").length'),13,
     'Original workspaces, thumbnails, recording, AI narration and voice settings remain available');
-  assert.equal(await evaluate('document.querySelectorAll(".workspace-tabs > .workspace-tab, .workspace-tabs > .workspace-group").length'),8,
-    'Sidebar has eight top-level entries, with narration and settings grouped');
+  assert.equal(await evaluate('document.querySelectorAll(".workspace-tabs > .workspace-tab, .workspace-tabs > .workspace-group").length'),9,
+    'Sidebar has nine top-level entries, including music composition');
+  assert.equal(await evaluate('document.getElementById("tab-music").textContent.includes("Trilhas sonoras")'),true,
+    'Music studio is accessible without an experimental label');
+  assert.equal(await evaluate('document.getElementById("musicJson").value.includes("durationSeconds")'),true,
+    'The music composer is initialized with editable JSON');
   assert.equal(await evaluate('document.getElementById("workspace-group-editor-items").hidden'),true,
     'Editor submenu starts collapsed');
   assert.equal(await evaluate('document.getElementById("workspace-group-social-items").hidden'),true,
