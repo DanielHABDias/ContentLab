@@ -164,14 +164,14 @@ function routeMaster(ctx,score,duration,offset){
   }
   return master;
 }
-export async function renderAudio(score,seconds=score.durationSeconds,startSeconds=0){
+export async function renderAudio(score,seconds=score.durationSeconds,startSeconds=0,onProgress=(loaded,total)=>{}){
   const offset=Math.max(0,Math.min(startSeconds,score.durationSeconds-1));
   const duration=Math.min(score.durationSeconds-offset,seconds);
   const ctx=new OfflineAudioContext(2,Math.ceil(duration*RATE),RATE);
   const master=routeMaster(ctx,score,duration,offset),noise=noiseBuffer(ctx,score.seed);
   const events=arrange(score,offset+duration)
     .filter(event=>event.start+event.duration>offset);
-  const samples=await loadSamples(ctx,events);
+  const samples=await loadSamples(ctx,events,onProgress);
   for(const event of events){
     if(DRUM_INSTRUMENTS.includes(event.instrument||event.voice))
       percussion(ctx,master,event,offset,duration,noise);

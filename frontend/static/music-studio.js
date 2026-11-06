@@ -3,6 +3,7 @@ import {renderAudio} from "./music/synth.js";
 import {createMusicAutomationEditor} from "./music-automation.js";
 import {toWav} from "./music/wav.js";
 import {toMidi} from "./music/midi.js";
+const INSTRUMENT_LABELS={piano:"Piano real (CC0)",guitar:"Violão aço real (CC0)","steel-guitar":"Violão aço real (CC0)","nylon-guitar":"Violão nylon real (CC0)","distorted-guitar":"Violão real com distorção digital","custom-synth":"Sintetizador configurável",cavaquinho:"Cavaquinho sintetizado (não sampleado)"};
 
 const $=id=>document.getElementById(id);
 if($("panel-music"))initializeMusicStudio();
@@ -49,7 +50,7 @@ function initializeMusicStudio(){
     if(type==="select"){
       input=document.createElement("select");
       for(const option of options){
-        const node=document.createElement("option");node.value=option;node.textContent=option;
+        const node=document.createElement("option");node.value=option;node.textContent=INSTRUMENT_LABELS[option]||option;
         input.append(node);
       }
     }else{
@@ -256,7 +257,9 @@ function initializeMusicStudio(){
       const seconds=full?score.durationSeconds:Math.min(30,score.durationSeconds-from);
       status(full?"Renderizando música completa em WAV...":"Preparando prévia de "+from+" s...");
       await new Promise(resolve=>requestAnimationFrame(resolve));
-      const buffer=await renderAudio(score,seconds,from),blob=toWav(buffer);
+      const buffer=await renderAudio(score,seconds,from,(loaded,total)=>{
+        status("Carregando instrumentos reais CC0: "+loaded+"/"+total+" amostras...");
+      }),blob=toWav(buffer);
       if(previousUrl)URL.revokeObjectURL(previousUrl);
       previousUrl=URL.createObjectURL(blob);hasFullRender=full;
       $("musicAudio").src=previousUrl;$("musicAudio").hidden=false;
