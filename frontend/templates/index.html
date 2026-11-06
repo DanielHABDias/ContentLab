@@ -901,11 +901,10 @@
           </div>
           <div class="music-actions"><button id="musicPreset" class="btn btn-secondary" type="button">Preset VD 008 · tensão</button><button id="musicVariation" class="btn btn-ghost" type="button">Nova variação</button></div>
           <h3 style="margin-top:24px">Volume e tensão no tempo</h3>
-          <p class="helper-text">Azul: volume. Laranja: intensidade musical. Cada ponto cria uma transição gradual até o próximo.</p>
-          <svg class="music-timeline" id="musicTimeline" viewBox="0 0 640 136" role="img" aria-label="Curvas de volume e tensão da música"></svg>
-          <div class="music-marker music-marker-head" aria-hidden="true"><span>Tempo (s)</span><span>Volume</span><span>Tensão</span><span></span></div>
-          <div id="musicMarkers"></div>
-          <div class="music-actions"><button id="musicAddMarker" class="btn btn-secondary btn-sm" type="button">+ Adicionar ponto</button></div>
+          <div class="music-chart-key" aria-hidden="true"><span><i></i> Volume</span><span class="music-orange"><i></i> Tensão musical</span></div>
+          <p class="music-chart-guide">Arraste os círculos para cima ou para baixo e, nos pontos intermediários, também para os lados. <strong>Dê dois cliques no gráfico</strong> para criar um ponto; selecione e pressione <kbd>Delete</kbd> para excluir. Use as setas para ajustes finos (Shift para passos maiores).</p>
+          <svg class="music-timeline" id="musicTimeline" viewBox="0 0 960 344" role="group" aria-label="Editor interativo de volume azul e tensão laranja: arraste os pontos, dê dois cliques para adicionar e use Delete para remover" tabindex="0"></svg>
+          <p class="music-chart-hint" id="musicChartHint" role="status" aria-live="polite"></p>
           <div class="music-actions"><button id="musicPreview" class="btn btn-secondary" type="button">Ouvir 30 segundos</button><button id="musicRender" class="btn btn-primary" type="button">Gerar WAV completo</button><a id="musicDownload" class="btn btn-secondary" download hidden>Baixar WAV</a></div>
           <audio id="musicAudio" class="music-player" controls hidden preload="none"></audio>
           <p id="musicStatus" class="music-status" role="status" aria-live="polite"></p>

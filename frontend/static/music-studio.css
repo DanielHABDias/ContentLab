@@ -1,5 +1,5 @@
 /* Music Studio — isolated UI styles, follows Content Lab Studio tokens. */
-.music-layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(270px,.85fr);gap:18px;align-items:start}
+.music-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;align-items:start}
 .music-card{background:#fff;border:1px solid var(--border);border-radius:20px;padding:24px;min-width:0}
 .music-card h3{font-size:17px;margin:0 0 12px;letter-spacing:-.03em}
 .music-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
@@ -7,7 +7,28 @@
 .music-field label,.music-marker-head{font-size:12px;font-weight:700;color:var(--text-dim)}
 .music-field input,.music-field select{width:100%;min-width:0}
 .music-field input[type=range]{accent-color:var(--accent)}
-.music-timeline{width:100%;height:auto;border-radius:12px;border:1px solid var(--border);background:#F7F9FD}
+.music-timeline{width:100%;height:auto;aspect-ratio:960/344;display:block;border-radius:14px;border:1px solid var(--border);background:#f7f9fd;touch-action:none;user-select:none;overscroll-behavior:contain}
+.music-grid-line{stroke:#dfe6f3;stroke-width:1}
+.music-tick{font:12px system-ui,sans-serif;fill:#5d677a;pointer-events:none}
+.music-axis-title{font:700 12px system-ui,sans-serif;letter-spacing:.09em;fill:#687385;pointer-events:none}
+.music-line{stroke-linecap:round;stroke-linejoin:round;pointer-events:stroke}
+.music-line-volume{stroke:#2365d5;stroke-width:3.5}
+.music-line-intensity{stroke:#db6b38;stroke-width:3.5;stroke-dasharray:9 5}
+.music-point{cursor:grab;outline:none}
+.music-point:active{cursor:grabbing}
+.music-point-hit{fill:transparent}
+.music-point-dot{stroke:#fff;stroke-width:2.5;transition:r .1s ease}
+.music-point-volume{fill:#2365d5}
+.music-point-intensity{fill:#db6b38}
+.music-point:hover .music-point-dot,.music-point:focus .music-point-dot,.music-point.is-selected .music-point-dot{stroke:#fff;stroke-width:3.5;r:10}
+.music-point:focus-visible .music-point-hit{fill:none;stroke:#152e65;stroke-width:2;stroke-dasharray:3 3}
+.music-chart-guide{font-size:12px;color:var(--text-dim);line-height:1.6;margin:10px 0}
+.music-chart-key{display:flex;gap:20px;align-items:center;flex-wrap:wrap;font-size:13px;font-weight:600}
+.music-chart-key span{display:inline-flex;gap:7px;align-items:center}
+.music-chart-key i{width:24px;border-top:3px solid #2365d5;display:inline-block}
+.music-chart-key .music-orange i{border-color:#db6b38;border-top-style:dashed}
+.music-chart-hint{min-height:20px;margin:8px 0 0;font-size:12px;color:#525e72}
+
 .music-marker{display:grid;grid-template-columns:90px minmax(0,1fr) minmax(0,1fr) 34px;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
 .music-marker input[type=number]{width:100%;min-width:0}
 .music-marker input[type=range]{width:100%;accent-color:var(--accent)}
