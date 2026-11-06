@@ -884,7 +884,7 @@
       <div class="workspace-intro">
         <span class="eyebrow">CRIAÇÃO DE ÁUDIO / INSTRUMENTAL</span>
         <h2>Trilhas sonoras</h2>
-        <p>Componha música lo-fi por JSON: acordes, melodia, baixo, bateria e variações ao longo do vídeo. Ajuste o volume e a tensão por pontos no tempo, escute uma prévia e exporte a trilha inteira em WAV.</p>
+        <p>Componha música instrumental com faixas, notas e ritmos próprios — cinematic, lo-fi, funk, rock, pagode ou seu estilo. Escolha um ponto de partida e personalize instrumentos, padrões e JSON; arraste as automações e exporte WAV ou MIDI.</p>
       </div>
       <div class="music-layout">
         <section class="music-card" aria-label="Composição e automação">
@@ -892,30 +892,32 @@
           <div class="music-grid">
             <div class="music-field"><label for="musicTitle">Nome da trilha</label><input id="musicTitle" type="text" maxlength="120"></div>
             <div class="music-field"><label for="musicDuration">Duração em segundos (máx. 900)</label><input id="musicDuration" type="number" min="5" max="900" step="1"></div>
-            <div class="music-field"><label for="musicBpm">Andamento (BPM)</label><input id="musicBpm" type="number" min="45" max="130" step="1"></div>
-            <div class="music-field"><label for="musicSeed">Variação / seed</label><input id="musicSeed" type="number" min="0" max="2147483647" step="1"></div>
-            <div class="music-field"><label for="musicMode">Clima</label><select id="musicMode"><option value="tense">Tenso e sombrio</option><option value="warm">Lo-fi aconchegante</option><option value="melancholic">Melancólico</option></select></div>
-            <div class="music-field"><label for="musicMelody">Melodia</label><select id="musicMelody"><option value="sparse">Discreta</option><option value="balanced">Mais presente</option><option value="none">Sem melodia principal</option></select></div>
+            <div class="music-field"><label for="musicBpm">Andamento (BPM)</label><input id="musicBpm" type="number" min="40" max="240" step="1"></div>
+            
+            <div class="music-field"><label for="musicStyle">Estilo inicial</label><select id="musicStyle"><option value="cinematic">Cinematográfico sombrio</option><option value="lofi">Lo-fi instrumental</option><option value="funk">Funk brasileiro instrumental</option><option value="rock">Rock instrumental</option><option value="pagode">Pagode instrumental</option><option value="legacy">Legado — JSON v1</option></select></div>
+            <div class="music-field"><label for="musicSeed">Variação criativa (seed)</label><input id="musicSeed" type="number" min="0" max="2147483647" step="1"></div>
+            <div id="musicLegacyFields" class="music-legacy-fields" hidden><div class="music-field"><label for="musicMode">Clima antigo (v1)</label><select id="musicMode"><option value="tense">Tenso</option><option value="warm">Aconchegante</option><option value="melancholic">Melancólico</option></select></div><div class="music-field"><label for="musicMelody">Melodia antiga (v1)</label><select id="musicMelody"><option value="sparse">Discreta</option><option value="balanced">Presente</option><option value="none">Nenhuma</option></select></div></div>
             <div class="music-field"><label for="musicMaster">Volume geral <span id="musicMasterValue">72%</span></label><input id="musicMaster" type="range" min="0" max="100" value="72"></div>
             <div class="music-field"><label for="musicPreviewAt">Prévia a partir de (segundos)</label><input id="musicPreviewAt" type="number" min="0" max="599" step="1" value="0"></div>
           </div>
-          <div class="music-actions"><button id="musicPreset" class="btn btn-secondary" type="button">Preset VD 008 · tensão</button><button id="musicVariation" class="btn btn-ghost" type="button">Nova variação</button></div>
+          <div class="music-actions"><button id="musicPreset" class="btn btn-secondary" type="button">Carregar arranjo do estilo</button><button id="musicVariation" class="btn btn-ghost" type="button">Variar notas do motivo</button></div>
+          <div class="music-track-section"><div class="music-track-heading"><div><h3>Instrumentos e padrões musicais</h3><p class="helper-text">Cada faixa tem instrumento próprio, volume, mudo e notas editáveis. Abra “Editar padrão” para trocar ritmo, altura e duração de cada nota.</p></div><button id="musicAddTrack" type="button" class="btn btn-secondary btn-sm">+ Nova faixa</button></div><div id="musicTracks" class="music-tracks"></div></div>
           <h3 style="margin-top:24px">Volume e tensão no tempo</h3>
           <div class="music-chart-key" aria-hidden="true"><span><i></i> Volume</span><span class="music-orange"><i></i> Tensão musical</span></div>
           <p class="music-chart-guide">Arraste os círculos para cima ou para baixo e, nos pontos intermediários, também para os lados. <strong>Dê dois cliques no gráfico</strong> para criar um ponto; selecione e pressione <kbd>Delete</kbd> para excluir. Use as setas para ajustes finos (Shift para passos maiores).</p>
           <svg class="music-timeline" id="musicTimeline" viewBox="0 0 960 344" role="group" aria-label="Editor interativo de volume azul e tensão laranja: arraste os pontos, dê dois cliques para adicionar e use Delete para remover" tabindex="0"></svg>
           <p class="music-chart-hint" id="musicChartHint" role="status" aria-live="polite"></p>
-          <div class="music-actions"><button id="musicPreview" class="btn btn-secondary" type="button">Ouvir 30 segundos</button><button id="musicRender" class="btn btn-primary" type="button">Gerar WAV completo</button><a id="musicDownload" class="btn btn-secondary" download hidden>Baixar WAV</a></div>
+          <div class="music-actions"><button id="musicPreview" class="btn btn-secondary" type="button">Ouvir 30 segundos</button><button id="musicRender" class="btn btn-primary" type="button">Gerar WAV completo</button><a id="musicDownload" class="btn btn-secondary" download hidden>Baixar WAV</a><button id="musicDownloadMidi" class="btn btn-ghost" type="button">Exportar MIDI multifaixa</button></div>
           <audio id="musicAudio" class="music-player" controls hidden preload="none"></audio>
           <p id="musicStatus" class="music-status" role="status" aria-live="polite"></p>
-          <p class="music-note">Aviso: primeira versão com instrumentos sintetizados localmente. Não utiliza modelos generativos nem samples orquestrais. A composição é original e determinística; qualidade e desempenho dependem do navegador e do computador.</p>
+          <p class="music-note">Os ritmos, acordes e notas agora vêm das faixas do seu JSON. A síntese Web Audio ainda é eletrônica: instrumentos acústicos como cavaquinho ou guitarra são aproximações; para realismo use o MIDI em instrumentos virtuais externos. Não há serviço de IA ou samples pagos embutidos.</p>
         </section>
         <section class="music-card" aria-label="Editor JSON musical">
           <h3>JSON musical</h3>
-          <p class="helper-text">Uma IA pode escrever este JSON para você. Também é possível configurar tudo pela interface. Para definir notas exatas, use <code>melodyNotes</code> com tempo em segundos, duração, pitch MIDI e velocity.</p>
+          <p class="helper-text">JSON v2: <code>tracks</code> contém instrumentos e notas, <code>clips</code> define padrões repetidos, e <code>automation</code> controla volume/tensão. Escreva qualquer sequência de notas ou ritmos diretamente; os arquivos v1 antigos continuam aceitos.</p>
           <textarea id="musicJson" class="music-json" spellcheck="false" aria-label="JSON da composição musical"></textarea>
           <div class="music-actions"><button id="musicApplyJson" class="btn btn-secondary" type="button">Aplicar JSON</button><button id="musicDownloadJson" class="btn btn-ghost" type="button">Baixar JSON</button></div>
-          <p class="music-note">A exportação WAV é local e não altera a narração ou a trilha de outro projeto. Para usar no editor, importe o arquivo gerado no fluxo de áudio existente.</p>
+          <p class="music-note">Salvar o JSON preserva a partitura editável. Exportar MIDI permite usar SoundFonts, samplers e DAWs externos. O WAV sintético continua exigindo importação manual no editor de vídeo.</p>
         </section>
       </div>
     </div>
