@@ -171,6 +171,13 @@ Essas são **demonstrações iniciais**, não produções prontas nem substituto
 
 Uma composição tensa e pesada exige **notas baixas e instrumentação adequada**, não um preset idêntico com o ganho aumentado. Comece com \`cinematic\`, altere os motivos de piano em \`tracks[].clips[].notes\`, escolha notas graves de \`sub-bass\`, espaçamentos longos e pulsos de \`808\`; ajuste as seções conforme acontecimentos do roteiro, sem importar melodias de filmes.
 
+
+## Exemplo para teste — Carnificina (7:37)
+
+O arquivo [`Carnificina — Peso e Sombra v2`](../music/examples/carnificina-peso-e-sombra-v2.json) contém uma **composição original instrumental de 457 segundos**, em 68 BPM, com cinco faixas programadas: subgrave, sintetizador grave customizável, piano sombrio, cordas e percussão esparsa. O piano apresenta **oito frases/seções diferentes** ao longo do vídeo, em vez de depender de uma progressão única repetida do começo ao fim. O exemplo é um primeiro estudo em sintetizador local e ainda precisa de avaliação auditiva/ajuste criativo.
+
+Para testar, abra o JSON, copie todo o conteúdo para **Trilhas sonoras → JSON musical**, clique em **Aplicar JSON** e escute as prévias em 0, 120, 260 e 390 segundos antes de renderizar o WAV integral. **Não** use os JSONs anteriores com `mode`/`melody` para validar o novo motor: eles continuam na rota v1 por compatibilidade.
+
 ## Compatibilidade com o JSON v1
 
 O app ainda **lê e renderiza** os JSONs antigos com \`mode\`, \`melody\` e \`melodyNotes\`, mesmo sem \`schemaVersion\`. Esses arquivos preservam o arranjador **legado**, com padrões fixos. Não são automaticamente convertidos em v2, porque isso alteraria a música previamente aprovada.
