@@ -38,7 +38,7 @@ export function sampleForEvent(event){
     playbackRate:2**((event.pitch-pitch)/12),
     license:"CC0-1.0"};
 }
-export async function loadSamples(ctx,events,onProgress=()=>{}){
+export async function loadSamples(ctx,events,onProgress=(loaded,total)=>{}){
   const needed=new Map();
   for(const event of events){
     const sample=sampleForEvent(event);
