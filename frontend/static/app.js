@@ -14,7 +14,10 @@ let sourceRequestId = 0;
 const $ = (id) => document.getElementById(id);
 
 // Areas de trabalho isoladas: trocar de aba preserva o trabalho em andamento.
-const workspaces = ["videos", "music", "transcription", "recording", "voiceai", "voice-settings", "editor", "multieditor", "publications", "library", "thumbnails", "settings", "docs"];
+// Keep the workspace registry in sync with the actual navigation markup.
+// Removed workspaces must never leave stale IDs that crash every tab switch.
+const workspaces = [...document.querySelectorAll(".workspace-tab[data-workspace]")]
+  .map(tab => tab.dataset.workspace);
 const workspaceGroupLabels={editor:"Editor",social:"Redes sociais",narration:"Narração",settings:"Configurações"};
 const workspaceGroups = {
   narration: ["recording", "voiceai", "transcription"],

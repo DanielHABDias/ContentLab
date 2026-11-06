@@ -81,6 +81,27 @@ try{
   await send('Page.enable');await send('Runtime.enable');
   await send('Page.navigate',{url:'http://127.0.0.1:'+appPort+'/'});
   await wait(()=>evaluate('document.readyState === "complete" && !!document.getElementById("editorLoad")'),'Document load');
+  // Regression: removing a workspace must not break Editor or any other tab.
+  const navigation=await evaluate(`(() => {
+    const tabs=[...document.querySelectorAll('.workspace-tab[data-workspace]')];
+    const mapped=tabs.every(tab=>document.getElementById('panel-'+tab.dataset.workspace));
+    const test=name=>{
+      document.getElementById('tab-'+name).click();
+      return document.getElementById('panel-'+name).hidden===false &&
+        [...document.querySelectorAll('.workspace-panel')].every(panel=>
+          panel.id==='panel-'+name || panel.hidden);
+    };
+    const editor=test('editor');
+    const multieditor=test('multieditor');
+    const library=test('library');
+    const videos=test('videos');
+    return {mapped,editor,multieditor,library,videos,
+      removedComposer:!document.getElementById('tab-music') &&
+        !document.getElementById('panel-music')};
+  })()`);
+  assert.deepEqual(navigation,{
+    mapped:true,editor:true,multieditor:true,library:true,videos:true,removedComposer:true
+  },'All workspaces still open after removing only the music composer');
   assert.equal(await evaluate('getComputedStyle(document.body).backgroundColor'),'rgb(245, 246, 248)');
   assert.equal(await evaluate('getComputedStyle(document.getElementById("panel-videos")).animationName'),
     'studio-panel-appear','Workspace opens with a subtle entrance transition');
