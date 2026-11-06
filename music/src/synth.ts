@@ -1,79 +1,114 @@
 import {arrange,seeded} from "./arrange.js";
-import {levelAt} from "./model.js";
-const RATE = 32000;
-const freq = midi => 440 * 2 ** ((midi - 69) / 12);
-function envelope(gain, start, duration, peak, release = .15) {
-  const g = gain.gain, end = Math.max(start + .005, start + duration);
-  const attack = Math.min(.035, duration * .20), tail = Math.min(release, duration * .55);
+import {levelAt,DRUM_INSTRUMENTS} from "./model.js";
+const RATE=32000;
+const freq=midi=>440*2**((midi-69)/12);
+const tone={
+  "sub-bass":{wave:"sine",cutoff:230,amp:.54,attack:.025,release:.20},
+  "808":{wave:"sine",cutoff:330,amp:.63,attack:.01,release:.40},
+  bass:{wave:"triangle",cutoff:650,amp:.42,attack:.014,release:.17},
+  piano:{wave:"triangle",cutoff:2500,amp:.40,attack:.006,release:.23},
+  "electric-piano":{wave:"sine",cutoff:2200,amp:.42,attack:.006,release:.23},
+  pad:{wave:"sawtooth",cutoff:850,amp:.18,attack:.18,release:.55},
+  strings:{wave:"sawtooth",cutoff:1450,amp:.17,attack:.22,release:.46},
+  organ:{wave:"sine",cutoff:2200,amp:.32,attack:.012,release:.13},
+  "synth-lead":{wave:"sawtooth",cutoff:3500,amp:.27,attack:.01,release:.15},
+  pluck:{wave:"triangle",cutoff:2400,amp:.32,attack:.004,release:.15},
+  guitar:{wave:"sawtooth",cutoff:2100,amp:.23,attack:.005,release:.16},
+  "distorted-guitar":{wave:"sawtooth",cutoff:1700,amp:.23,attack:.006,release:.19},
+  cavaquinho:{wave:"triangle",cutoff:4100,amp:.35,attack:.003,release:.08},
+  flute:{wave:"sine",cutoff:4000,amp:.36,attack:.06,release:.18},
+  brass:{wave:"sawtooth",cutoff:2100,amp:.22,attack:.05,release:.2},
+  keys:{wave:"triangle",cutoff:2000,amp:.32,attack:.012,release:.16},
+  lead:{wave:"sine",cutoff:1450,amp:.24,attack:.02,release:.16}
+};
+function envelope(gain,start,duration,peak,attack=.02,release=.15){
+  const g=gain.gain,end=Math.max(start+.005,start+duration);
+  const rise=Math.max(.002,Math.min(attack,duration*.3));
+  const tail=Math.max(.002,Math.min(release,duration*.55));
   g.setValueAtTime(0,start);
-  g.linearRampToValueAtTime(peak,start+attack);
-  g.exponentialRampToValueAtTime(Math.max(.0001,peak*.55),Math.max(start+attack+.001,end-tail));
+  g.linearRampToValueAtTime(Math.max(.00001,peak),start+rise);
+  g.exponentialRampToValueAtTime(Math.max(.0001,peak*.55),
+    Math.max(start+rise+.001,end-tail));
   g.linearRampToValueAtTime(0,end);
 }
-function tonal(ctx, destination, event, offset, duration) {
-  const start = Math.max(0,event.start-offset);
-  if(start >= duration)return;
-  const elapsed = Math.max(0,offset-event.start);
-  const sustain = Math.min(event.duration-elapsed,duration-start);
-  if(sustain <= 0)return;
-  const gain = ctx.createGain();
-  const filter = ctx.createBiquadFilter();
-  filter.type = "lowpass";
-  filter.frequency.value = event.voice === "pad" ? 950 : event.voice === "keys" ? 2000 : event.voice === "bass" ? 380 : 1450;
-  filter.Q.value = .38;
-  gain.connect(filter).connect(destination);
-  const voice = event.voice;
-  const amp = event.velocity * (voice === "bass" ? .38 : voice === "pad" ? .22 : voice === "keys" ? .32 : .24);
-  envelope(gain,start,sustain,amp,voice==="pad"?.56:.16);
-  const osc = ctx.createOscillator();
-  osc.type = voice==="keys" ? "triangle" : voice==="pad" ? "sawtooth" : "sine";
-  osc.frequency.value = freq(event.pitch);
-  if(voice==="keys")osc.detune.value = -5;
-  osc.connect(gain);osc.start(start);osc.stop(start+sustain);
+function connectPan(ctx,source,dest,pan){
+  if(pan&&ctx.createStereoPanner){
+    const p=ctx.createStereoPanner();p.pan.value=pan;
+    source.connect(p);p.connect(dest);
+  }else source.connect(dest);
 }
-function noiseBuffer(ctx,seed) {
-  const buffer=ctx.createBuffer(1,Math.floor(RATE*.6),RATE),data=buffer.getChannelData(0),random=seeded(seed+191);
-  for(let i=0;i<data.length;i++)data[i]=(random()*2-1)*.75;
+function tonal(ctx,destination,event,offset,duration){
+  const start=Math.max(0,event.start-offset),elapsed=Math.max(0,offset-event.start);
+  if(start>=duration)return;
+  const sustain=Math.min(event.duration-elapsed,duration-start);
+  if(sustain<=0)return;
+  const preset=tone[event.instrument||event.voice]||tone.pluck;
+  const filter=ctx.createBiquadFilter();filter.type="lowpass";
+  filter.frequency.value=preset.cutoff;filter.Q.value=.58;
+  connectPan(ctx,filter,destination,event.pan);
+  const gain=ctx.createGain();gain.connect(filter);
+  const amp=event.velocity*preset.amp;
+  envelope(gain,start,sustain,amp,preset.attack,preset.release);
+  const osc=ctx.createOscillator();osc.type=preset.wave;osc.frequency.value=freq(event.pitch);
+  osc.connect(gain);osc.start(start);osc.stop(start+sustain);
+  if(["piano","electric-piano","guitar","distorted-guitar","cavaquinho","strings","organ"].includes(event.instrument)){
+    const o=ctx.createOscillator();o.type=event.instrument==="organ"?"sine":"triangle";
+    o.frequency.value=freq(event.pitch)*(event.instrument==="organ"?2:1.997);
+    const layer=ctx.createGain();layer.gain.value=.095;layer.connect(gain);
+    o.connect(layer);o.start(start);o.stop(start+sustain);
+  }
+}
+function noiseBuffer(ctx,seed){
+  const buffer=ctx.createBuffer(1,Math.floor(RATE*.75),RATE),data=buffer.getChannelData(0),rand=seeded(seed+191);
+  for(let i=0;i<data.length;i++)data[i]=(rand()*2-1)*.72;
   return buffer;
 }
-function percussion(ctx,destination,event,offset,duration,noise) {
-  // Do not retrigger a percussive transient that happened before the preview.
-  if(event.start<offset)return;
-  const start = Math.max(0,event.start-offset);
-  if(start >= duration)return;
-  const end = Math.min(event.duration,duration-start);
-  const gain=ctx.createGain();
-  gain.connect(destination);
-  if(event.voice==="kick"){
-    envelope(gain,start,end,event.velocity*.48,.09);
+function percussion(ctx,destination,event,offset,duration,noise){
+  if(event.start<offset)return; // Do not retrigger a transient before a preview.
+  const start=Math.max(0,event.start-offset);
+  if(start>=duration)return;
+  const kind=event.instrument||event.voice;
+  const length=Math.min(event.duration,duration-start);
+  if(length<=0)return;
+  const gain=ctx.createGain();connectPan(ctx,gain,destination,event.pan);
+  const low=["kick","surdo","tom"].includes(kind);
+  if(low){
+    envelope(gain,start,length,event.velocity*(kind==="kick"?.55:.43),.003,.10);
     const osc=ctx.createOscillator();osc.type="sine";
-    osc.frequency.setValueAtTime(115,start);
-    osc.frequency.exponentialRampToValueAtTime(47,start+Math.min(.16,end));
-    osc.connect(gain);osc.start(start);osc.stop(start+end);
+    const a=kind==="kick"?115:kind==="surdo"?95:180,b=kind==="kick"?48:kind==="surdo"?55:85;
+    osc.frequency.setValueAtTime(a,start);
+    osc.frequency.exponentialRampToValueAtTime(b,start+Math.min(.14,length));
+    osc.connect(gain);osc.start(start);osc.stop(start+length);
     return;
   }
-  const src=ctx.createBufferSource();src.buffer=noise;
-  const filter=ctx.createBiquadFilter();filter.type=event.voice==="snare"?"bandpass":"highpass";
-  filter.frequency.value=event.voice==="snare"?1600:6300;
-  src.connect(filter).connect(gain);
-  envelope(gain,start,end,event.velocity*(event.voice==="hat"?.16:.38),Math.min(.08,end*.45));
-  src.start(start,0,Math.min(end,noise.duration));
+  const filter=ctx.createBiquadFilter();
+  filter.type=["snare","clap","pandeiro"].includes(kind)?"bandpass":"highpass";
+  const hz={snare:1600,clap:1950,hat:6300,shaker:5600,pandeiro:4200,tamborim:3400,rim:5000,cowbell:2700};
+  filter.frequency.value=hz[kind]||5200;filter.Q.value=kind==="cowbell"?4:.65;
+  const source=ctx.createBufferSource();source.buffer=noise;source.connect(filter).connect(gain);
+  envelope(gain,start,length,event.velocity*(kind==="hat"?.22:kind==="shaker"?.19:.36),.002,.06);
+  source.start(start,0,Math.min(length,noise.duration));
+  if(["tamborim","cowbell","rim"].includes(kind)){
+    const osc=ctx.createOscillator();osc.type=kind==="cowbell"?"square":"triangle";
+    osc.frequency.value=kind==="cowbell"?580:kind==="rim"?950:720;
+    const p=ctx.createGain();p.gain.value=.12;p.connect(gain);osc.connect(p);
+    osc.start(start);osc.stop(start+length);
+  }
 }
-function routeMaster(ctx, score, duration, offset){
+function routeMaster(ctx,score,duration,offset){
   const master=ctx.createGain(),comp=ctx.createDynamicsCompressor();
   comp.threshold.value=-20;comp.knee.value=17;comp.ratio.value=2.6;
   comp.attack.value=.013;comp.release.value=.25;
   master.connect(comp).connect(ctx.destination);
-  // Single subtle feedback delay; reverb-like atmosphere, no external samples.
   const delay=ctx.createDelay(.8),feedback=ctx.createGain(),wet=ctx.createGain();
-  delay.delayTime.value=.29;feedback.gain.value=.19;wet.gain.value=.13;
+  delay.delayTime.value=.29;feedback.gain.value=.17;wet.gain.value=.11;
   master.connect(delay);delay.connect(feedback).connect(delay);delay.connect(wet).connect(comp);
   const automation=score.automation;
   master.gain.setValueAtTime(score.masterVolume*levelAt(score,offset).volume,0);
   for(let i=1;i<automation.length;i++){
     const point=automation[i];
     if(point.time<=offset)continue;
-    if(point.time>offset+duration) {
+    if(point.time>offset+duration){
       master.gain.linearRampToValueAtTime(
         score.masterVolume*levelAt(score,offset+duration).volume,duration);
       break;
@@ -82,14 +117,14 @@ function routeMaster(ctx, score, duration, offset){
   }
   return master;
 }
-export async function renderAudio(score, seconds = score.durationSeconds, startSeconds = 0) {
+export async function renderAudio(score,seconds=score.durationSeconds,startSeconds=0){
   const offset=Math.max(0,Math.min(startSeconds,score.durationSeconds-1));
   const duration=Math.min(score.durationSeconds-offset,seconds);
   const ctx=new OfflineAudioContext(2,Math.ceil(duration*RATE),RATE);
   const master=routeMaster(ctx,score,duration,offset),noise=noiseBuffer(ctx,score.seed);
   for(const event of arrange(score,offset+duration)){
     if(event.start+event.duration<=offset)continue;
-    if(["kick","snare","hat"].includes(event.voice))percussion(ctx,master,event,offset,duration,noise);
+    if(DRUM_INSTRUMENTS.includes(event.instrument||event.voice))percussion(ctx,master,event,offset,duration,noise);
     else tonal(ctx,master,event,offset,duration);
   }
   return ctx.startRendering();
