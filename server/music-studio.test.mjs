@@ -169,3 +169,19 @@ test("v2 synthesized audio plays different notes and genres, not only a volume c
   assert.notDeepEqual(a.map(e=>[e.voice,e.pitch,e.start]),b.map(e=>[e.voice,e.pitch,e.start]));
   assert.equal(typeof renderAudio,"function");
 });
+
+test("custom oscillator voice lets the score define timbre, independent of genre",async()=>{
+  const {createStylePreset}=await import("../frontend/static/music/model.js");
+  const original=createStylePreset("lofi",14),next=structuredClone(original);
+  const track=next.tracks[0];
+  track.instrument="custom-synth";
+  track.sound={wave:"square",cutoff:520,attack:.04,release:.8,amp:.38,
+    layerWave:"sine",layerGain:.17,detune:-12};
+  const validated=validateScore(next),events=arrange(validated);
+  assert.equal(events.find(e=>e.track===track.id).sound.wave,"square");
+  assert.equal(events.find(e=>e.track===track.id).sound.cutoff,520);
+  const illegal=structuredClone(validated);illegal.tracks[0].sound.cutoff=5;
+  assert.throws(()=>validateScore(illegal),/cutoff/);
+  const waveform=structuredClone(validated);waveform.tracks[0].sound.wave="wavetable";
+  assert.throws(()=>validateScore(waveform),/Onda/);
+});
