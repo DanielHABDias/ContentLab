@@ -173,7 +173,7 @@ function initializeMusicStudio(){
     for(const [id,key] of [["musicTitle","title"],["musicDuration","durationSeconds"],
       ["musicBpm","bpm"],["musicSeed","seed"]])$(id).value=score[key];
     const v2=score.schemaVersion===2;
-    $("musicStyle").value=v2?score.style||"cinematic":"legacy";
+    $("musicStyle").value=v2?(["cinematic","lofi","funk","rock","pagode"].includes(score.style)?score.style:"custom"):"legacy";
     $("musicMode").value=v2?"tense":score.mode;
     $("musicMelody").value=v2?"sparse":score.melody;
     $("musicMaster").value=String(Math.round(score.masterVolume*100));
