@@ -8,7 +8,8 @@ import {DEEP_DOM,StudioChanged,StudioLoginRequired,
 import {instagramCaption} from './instagram-scheduler.mjs';
 
 export const TIKTOK_UPLOAD_URL='https://www.tiktok.com/tiktokstudio/upload?from=creator_center&tab=video';
-export const TIKTOK_ACTION_DELAY_MS=1100;
+export const TIKTOK_ACTION_DELAY_MS=1800;
+export const TIKTOK_UPLOAD_SETTLE_MS=4500;
 const sleep=ms=>new Promise(r=>setTimeout(r,Math.max(0,ms)));
 const normalize=values=>JSON.stringify(values.map(v=>v.toLocaleLowerCase('pt-BR')));
 export const tiktokCaption=item=>instagramCaption(item);
@@ -136,7 +137,8 @@ async function dateAndTime(cdp,parts,delayMs){
 }
 export async function prepareTikTokScheduledVideo(session,item,{
   videoPath,coverAPath,progress=()=>{},upload=uploadFile,awaitStep=waitFor,
-  delayMs=TIKTOK_ACTION_DELAY_MS,now=new Date(),confirmTimeout=25000
+  delayMs=TIKTOK_ACTION_DELAY_MS,uploadSettleMs=TIKTOK_UPLOAD_SETTLE_MS,
+  now=new Date(),confirmTimeout=25000
 }={}){
   const parts=tiktokScheduleParts(item.scheduledAt,now);
   if(!videoPath||!fs.existsSync(videoPath))throw Error('Vídeo do TikTok não encontrado.');
@@ -157,10 +159,10 @@ export async function prepareTikTokScheduledVideo(session,item,{
   progress('Carregando o vídeo no TikTok Studio...');
   if(!await awaitStep(cdp,tiktokUploadInputExpression('video'),12000)||!await upload(cdp,videoPath))
     throw new StudioChanged('TikTok Studio','o campo de vídeo após Selecionar vídeo');
-  await sleep(delayMs);
+  await sleep(Math.max(delayMs,uploadSettleMs));
   const caption=tiktokCaption(item);
   progress('Preenchendo a descrição, sem tags automáticas...');
-  if(!await awaitStep(cdp,setText(CAPTION_FIELDS,caption.text),40000))
+  if(!await awaitStep(cdp,setText(CAPTION_FIELDS,caption.text),60000))
     throw new StudioChanged('TikTok Studio','a caixa Descrição (vídeo já enviado)');
   await sleep(delayMs);
   await required('Editar capa',tiktokButtonExpression(['editar capa','edit cover']),18000);

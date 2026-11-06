@@ -7,7 +7,8 @@ import {DEEP_DOM,StudioLoginRequired,StudioChanged,
   setText,waitFor,uploadFile} from './social-studio-browser.mjs';
 
 export const INSTAGRAM_SCHEDULED_URL='https://www.instagram.com/scheduled_content/';
-export const INSTAGRAM_STEP_DELAY_MS=1050;
+export const INSTAGRAM_STEP_DELAY_MS=1800;
+export const INSTAGRAM_UPLOAD_SETTLE_MS=4500;
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,Math.max(0,ms)));
 const normLabels=labels=>JSON.stringify(labels.map(x=>x.toLocaleLowerCase('pt-BR')));
 const safeElement=s=>JSON.stringify(s);
@@ -62,6 +63,16 @@ export function instagramNoticeExpression(){
     "if(!notice)return false;const buttons=[...notice.querySelectorAll('button,[role=\"button\"]')];"+
     "const ok=buttons.find(n=>/^(ok|entendi|got it|understood)$/i.test((n.innerText||n.getAttribute('aria-label')||'').trim()));"+
     'if(!ok)return false;ok.click();return true;})()';
+}
+export function instagramCropButtonExpression(){
+  return '(()=>{'+DEEP_DOM+
+    "const names=['selecionar corte','select crop','cortar','crop','ajustar','reenquadrar','resize'];"+
+    "const controls=nodes.filter(n=>n.getClientRects().length&&n.matches?.('button,[role=\"button\"],div[tabindex]'));"+
+    "const text=n=>String(n.getAttribute('title')||n.getAttribute('aria-label')||n.innerText||n.textContent||'').trim().toLocaleLowerCase('pt-BR');"+
+    "const target=controls.find(n=>names.some(x=>text(n)===x||text(n).includes(x)));if(!target)return false;target.click();return true;})()";
+}
+export function instagramOriginalCropExpression(){
+  return instagramButtonExpression(['original','proporção original','original aspect ratio']);
 }
 const CAPTION_FIELDS=[
   'textarea[placeholder*="legenda"]','textarea[aria-label*="legenda"]',
@@ -181,7 +192,8 @@ async function calendarAndTime(cdp,parts,delayMs){
 }
 export async function prepareInstagramScheduledReel(session,item,{
   videoPath,coverAPath,progress=()=>{},upload=uploadFile,
-  delayMs=INSTAGRAM_STEP_DELAY_MS,now=new Date(),confirmTimeout=20000,
+  delayMs=INSTAGRAM_STEP_DELAY_MS,uploadSettleMs=INSTAGRAM_UPLOAD_SETTLE_MS,
+  now=new Date(),confirmTimeout=20000,
   awaitStep=waitFor
 }={}){
   const parts=instagramScheduleParts(item.scheduledAt,now);
@@ -209,13 +221,12 @@ export async function prepareInstagramScheduledReel(session,item,{
   progress('Enviando o vídeo ao Instagram...');
   if(!await awaitStep(cdp,inputPresent('video'),15000)||!await upload(cdp,videoPath))
     throw new StudioChanged('Instagram','o seletor de vídeo (o upload pode ter começado)');
-  await sleep(delayMs);
+  await sleep(Math.max(delayMs,uploadSettleMs));
   // Aviso opcional: vídeos agora são compartilhados como Reels.
   await cdp.eval(instagramNoticeExpression()).catch(()=>false);
   await sleep(delayMs);
-  await requireStep('Selecionar corte',instagramButtonExpression([
-    'selecionar corte','select crop'],{title:true}),15000);
-  await requireStep('corte Original',instagramButtonExpression(['original']));
+  await requireStep('Selecionar corte / reenquadrar',instagramCropButtonExpression(),25000);
+  await requireStep('corte Original',instagramOriginalCropExpression(),18000);
   await requireStep('o botão Avançar após o corte',instagramButtonExpression(['avançar','next']));
   progress('Carregando a foto da capa...');
   const coverPicker=await awaitStep(cdp,instagramButtonExpression([

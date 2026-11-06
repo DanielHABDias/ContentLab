@@ -73,7 +73,7 @@ test('controles são específicos: selecionar vídeo, editar/carregar/salvar cap
 test('agendamento confirmado percorre ordem exigida e inclui upload de thumbnail A',async t=>{
   const paths=fixture(t),mock=browser();
   const result=await prepareTikTokScheduledVideo(mock.session,video(),{
-    ...paths,upload:mock.upload,awaitStep:mock.awaitStep,delayMs:0,
+    ...paths,upload:mock.upload,awaitStep:mock.awaitStep,delayMs:0,uploadSettleMs:0,
     now:new Date('2031-11-05T11:00:00'),confirmTimeout:100,
     progress:step=>mock.progress.push(step)
   });
@@ -97,7 +97,7 @@ test('agendamento confirmado percorre ordem exigida e inclui upload de thumbnail
 test('sem toast de agendamento o clique final não é repetido e a fila pede revisão',async t=>{
   const paths=fixture(t),mock=browser({success:false});
   const result=await prepareTikTokScheduledVideo(mock.session,video(),{
-    ...paths,upload:mock.upload,awaitStep:mock.awaitStep,delayMs:0,
+    ...paths,upload:mock.upload,awaitStep:mock.awaitStep,delayMs:0,uploadSettleMs:0,
     now:new Date('2031-11-05T11:00:00'),confirmTimeout:100
   });
   assert.equal(result.status,'awaiting_review');
@@ -109,7 +109,7 @@ test('sem toast de agendamento o clique final não é repetido e a fila pede rev
 test('falta de capa ou falha no modal interrompe ANTES de Agendar',async t=>{
   const paths=fixture(t),mock=browser({failAt:'["carregar capa"'}); // aparece no seletor exato
   await assert.rejects(()=>prepareTikTokScheduledVideo(mock.session,video(),{
-    ...paths,upload:mock.upload,awaitStep:mock.awaitStep,delayMs:0,
+    ...paths,upload:mock.upload,awaitStep:mock.awaitStep,delayMs:0,uploadSettleMs:0,
     now:new Date('2031-11-05T11:00:00')
   }),/Carregar capa/);
   assert.equal(mock.steps.filter(expr=>expr.includes('["agendar","schedule"]')).length,0);
@@ -117,13 +117,13 @@ test('falta de capa ou falha no modal interrompe ANTES de Agendar',async t=>{
 test('URL inesperada e login expirado bloqueiam o upload antes de anexar mídia',async t=>{
   const paths=fixture(t),loggedOut=browser({login:true});
   await assert.rejects(()=>prepareTikTokScheduledVideo(loggedOut.session,video(),{
-    ...paths,upload:loggedOut.upload,awaitStep:loggedOut.awaitStep,delayMs:0,
+    ...paths,upload:loggedOut.upload,awaitStep:loggedOut.awaitStep,delayMs:0,uploadSettleMs:0,
     now:new Date('2031-11-05T11:00:00')
   }),/TikTok/);
   assert.equal(loggedOut.uploads.length,0);
   const invalid=browser({url:'https://www.tiktok.com/tiktokstudio'});
   await assert.rejects(()=>prepareTikTokScheduledVideo(invalid.session,video(),{
-    ...paths,upload:invalid.upload,awaitStep:invalid.awaitStep,delayMs:0,
+    ...paths,upload:invalid.upload,awaitStep:invalid.awaitStep,delayMs:0,uploadSettleMs:0,
     now:new Date('2031-11-05T11:00:00')
   }),/upload agendado/);
   assert.equal(invalid.uploads.length,0);

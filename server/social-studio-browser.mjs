@@ -224,7 +224,9 @@ async function openSocialStudioWindowUnlocked({config,platforms,profile=SOCIAL_S
     async navigate(platform){
       const client=await this.activate(platform);
       await client.send('Page.navigate',{url:urls[platform]});
-      await delay(800);return client;
+      // As três plataformas montam controles React depois do evento de carga.
+      // Uma pausa maior evita procurar botões na árvore antiga da página.
+      await delay(1800);return client;
     },
     close(){for(const c of clients.values())c.close();control.close();}
   };

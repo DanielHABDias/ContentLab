@@ -74,7 +74,7 @@ test('expressões identificam corte por title, botão exato e aviso específico 
 test('Reels agendado só é confirmado depois do clique final e do aviso de sucesso',async t=>{
   const files=fixture(t),b=browser();
   const result=await prepareInstagramScheduledReel(b.session,item(),{
-    ...files,upload:b.upload,delayMs:0,now:new Date('2030-01-01'),
+    ...files,upload:b.upload,delayMs:0,uploadSettleMs:0,now:new Date('2030-01-01'),
     awaitStep:async(cdp,expr)=>cdp.eval(expr),
     progress:text=>b.progress.push(text),confirmTimeout:20
   });
@@ -97,7 +97,7 @@ test('Reels agendado só é confirmado depois do clique final e do aviso de suce
 test('sem confirmação, parar sem afirmar que agendou nem clicar duas vezes',async t=>{
   const files=fixture(t),b=browser({confirmed:false});
   const result=await prepareInstagramScheduledReel(b.session,item(),{
-    ...files,upload:b.upload,delayMs:0,now:new Date('2030-01-01'),
+    ...files,upload:b.upload,delayMs:0,uploadSettleMs:0,now:new Date('2030-01-01'),
     awaitStep:async(cdp,expr)=>cdp.eval(expr),confirmTimeout:10
   });
   assert.equal(result.status,'awaiting_review');
@@ -107,19 +107,19 @@ test('sem confirmação, parar sem afirmar que agendou nem clicar duas vezes',as
 test('falha na capa impede clique final para evitar programação incorreta',async t=>{
   const files=fixture(t),b=browser({failAt:'cover'});
   await assert.rejects(()=>prepareInstagramScheduledReel(b.session,item(),{
-    ...files,upload:b.upload,delayMs:0,now:new Date('2030-01-01')
+    ...files,upload:b.upload,delayMs:0,uploadSettleMs:0,now:new Date('2030-01-01')
   }),/Foto da capa/);
   assert.equal(b.commands.filter(x=>x.includes('["programar","schedule"]')).length,0);
 });
 test('login expirado e URL fora de Conteúdo programado não enviam arquivos',async t=>{
   const files=fixture(t),b=browser({login:true});
   await assert.rejects(()=>prepareInstagramScheduledReel(b.session,item(),{
-    ...files,upload:b.upload,delayMs:0,now:new Date('2030-01-01')
+    ...files,upload:b.upload,delayMs:0,uploadSettleMs:0,now:new Date('2030-01-01')
   }),/Instagram|Login/);
   assert.equal(b.uploads.length,0);
   const other=browser({url:'https://www.instagram.com/'});
   await assert.rejects(()=>prepareInstagramScheduledReel(other.session,item(),{
-    ...files,upload:other.upload,delayMs:0,now:new Date('2030-01-01'),
+    ...files,upload:other.upload,delayMs:0,uploadSettleMs:0,now:new Date('2030-01-01'),
     awaitStep:async(cdp,expr)=>cdp.eval(expr)
   }),/Conteúdo programado/);
   assert.equal(other.uploads.length,0);

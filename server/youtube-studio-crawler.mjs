@@ -97,7 +97,18 @@ function setField(selectors,value){
     node.dispatchEvent(new Event('change',{bubbles:true,composed:true}));
     return true;})()`;
 }
-export const YOUTUBE_ACTION_DELAY_MS=1100;
+function setYouTubeScheduleTimeExpression(value){
+  return `(()=>{${browserDOM}
+    const raw=${JSON.stringify(value)},[hourText,minute]=raw.split(':'),hour=Number(hourText);
+    const inputs=nodes.filter(n=>n.matches?.('input')&&n.getClientRects().length&&/^\d{1,2}:\d{2}/.test(String(n.value||'')));
+    const node=inputs.find(n=>/\b(am|pm)\b/i.test(n.value||''))||inputs[0];if(!node)return false;
+    const formatted=/\b(am|pm)\b/i.test(node.value||'')?(((hour+11)%12)+1)+':'+minute+' '+(hour>=12?'PM':'AM'):raw;
+    node.focus();const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')?.set;setter?.call(node,formatted);
+    node.dispatchEvent(new InputEvent('input',{bubbles:true,composed:true,inputType:'insertText',data:formatted}));
+    node.dispatchEvent(new Event('change',{bubbles:true,composed:true}));node.blur();return true;})()`;
+}
+export const YOUTUBE_ACTION_DELAY_MS=1800;
+export const YOUTUBE_MAJOR_ACTION_DELAY_MS=3500;
 const pauseForStudio=ms=>sleep(Math.max(0,ms));
 const TAG_SELECTORS=[
   'ytcp-free-text-chip-bar input','ytcp-form-input-container#tags-container input',
@@ -107,9 +118,29 @@ export function findStudioTagsExpression(){
   return '(()=>{'+browserDOM+'return nodes.some(n=>'+JSON.stringify(TAG_SELECTORS)+
     '.some(sel=>n.matches?.(sel))&&n.getClientRects().length>0);})()';
 }
+export function removeOneYouTubeTagExpression(){
+  return '(()=>{'+browserDOM+
+    "const input=nodes.find(n=>"+JSON.stringify(TAG_SELECTORS)+".some(sel=>n.matches?.(sel))&&n.getClientRects().length);"+
+    "if(!input)return false;let root=input;for(let i=0;i<6&&root;i++,root=root.parentElement||root.getRootNode()?.host){"+
+    "if(root.matches?.('ytcp-free-text-chip-bar,#tags-container,ytcp-form-input-container#tags-container'))break;}"+
+    "if(!root||!root.matches?.('ytcp-free-text-chip-bar,#tags-container,ytcp-form-input-container#tags-container'))return false;"+
+    "const buttons=nodes.filter(n=>n.getClientRects().length&&n.matches?.('button,ytcp-icon-button,tp-yt-paper-icon-button,[role=\"button\"]')&&"+
+    "(root===n||root.contains?.(n))&&/(remove|delete|remover|excluir|apagar)/i.test((n.getAttribute('aria-label')||n.title||n.id||'')+' '+(n.innerText||'')));"+
+    "if(buttons.length){buttons[0].click();return true;}return false;})()";
+}
+export async function clearYouTubeTags(cdp,{delayMs=YOUTUBE_ACTION_DELAY_MS,max=80}={}){
+  if(!await waitUntil(cdp,findStudioTagsExpression(),10000))return false;
+  for(let n=0;n<max;n++){
+    const removed=await cdp.eval(removeOneYouTubeTagExpression()).catch(()=>false);
+    if(!removed)return true;
+    await pauseForStudio(Math.max(350,delayMs/3));
+  }
+  return false;
+}
 export async function fillYouTubeTags(cdp,tags,{delayMs=YOUTUBE_ACTION_DELAY_MS}={}){
   if(!Array.isArray(tags)||!tags.length)return true;
   if(!await waitUntil(cdp,findStudioTagsExpression(),8000))return false;
+  if(!await clearYouTubeTags(cdp,{delayMs}))return false;
   for(const raw of tags){
     const tag=String(raw||'').trim().replace(/^#/,'');
     if(!tag)continue;
@@ -131,12 +162,17 @@ export async function fillYouTubeTags(cdp,tags,{delayMs=YOUTUBE_ACTION_DELAY_MS}
 }
 export function disclosureExpression(type){
   const headings=type==='altered'?
-    ['altered content','conteúdo alterado','contenido alterado','synthetic content','conteúdo sintético']:
+    ['ai use','uso de ia','altered content','conteúdo alterado','contenido alterado','synthetic content','conteúdo sintético']:
     ['paid promotion','promoção paga','paid promotions','promoção remunerada','branded content'];
   return '(()=>{'+browserDOM+
     'const headings='+JSON.stringify(headings)+',type='+JSON.stringify(type)+';'+
     "const text=n=>(n.getAttribute('aria-label')||n.textContent||'').trim().toLowerCase();"+
-    "const headingsFound=nodes.filter(n=>n.getClientRects().length&&headings.some(h=>text(n)===h));"+
+    "const radios=nodes.filter(n=>n.getClientRects().length&&n.matches?.('tp-yt-paper-radio-button,ytcp-radio-button,[role=\"radio\"],input[type=\"radio\"]'));"+
+    "const label=n=>(n.getAttribute('aria-label')||n.innerText||n.closest('label')?.innerText||'').trim();"+
+    "const direct=type==='altered'?radios.find(n=>/^(no,? *)?(ai wasn.t used|no,? *ai|não.*ia|nao.*ia)/i.test(label(n))):radios.find(n=>/^(no|não|nao).*(paid promotion|promoção paga|promocao paga)/i.test(label(n)));"+
+    "const checked=n=>n.checked===true||n.getAttribute('aria-checked')==='true'||n.hasAttribute('checked');"+
+    "if(direct){if(!checked(direct))direct.click();return true;}"+
+    "const headingsFound=nodes.filter(n=>n.getClientRects().length&&headings.some(h=>text(n)===h||text(n).startsWith(h+' ')||text(n).includes(h)));"+
     "const selector='ytcp-radio-button,tp-yt-paper-radio-button,[role=\"radio\"],input[type=\"radio\"],ytcp-checkbox-lit,tp-yt-paper-checkbox,[role=\"checkbox\"],input[type=\"checkbox\"]';"+
     "const isChecked=n=>n.checked===true||n.getAttribute('aria-checked')==='true'||n.hasAttribute('checked');"+
     "const within=(node,ancestor)=>{let n=node;while(n){if(n===ancestor)return true;n=n.parentElement||n.getRootNode()?.host;}return false;};"+
@@ -149,6 +185,30 @@ export function disclosureExpression(type){
     'if(boxes.length===1){if(isChecked(boxes[0]))boxes[0].click();return true;}}'+
     '}}return false;})()';
 }
+export function disclosureStateExpression(type){
+  const headings=type==='altered'?
+    ['ai use','uso de ia','altered content','conteúdo alterado','contenido alterado','synthetic content','conteúdo sintético']:
+    ['paid promotion','promoção paga','paid promotions','promoção remunerada','branded content'];
+  return '(()=>{'+browserDOM+'const headings='+JSON.stringify(headings)+',type='+JSON.stringify(type)+';'+
+    "const text=n=>(n.getAttribute?.('aria-label')||n.innerText||n.textContent||'').trim().toLowerCase();"+
+    "const checked=n=>n.checked===true||n.getAttribute('aria-checked')==='true'||n.hasAttribute('checked');"+
+    "const radios=nodes.filter(n=>n.getClientRects().length&&n.matches?.('tp-yt-paper-radio-button,ytcp-radio-button,[role=\"radio\"],input[type=\"radio\"]'));"+
+    "const label=n=>(n.getAttribute('aria-label')||n.innerText||n.closest?.('label')?.innerText||'').trim();"+
+    "const direct=type==='altered'?radios.find(n=>/^(no,? *)?(ai wasn.t used|no,? *ai|não.*ia|nao.*ia)/i.test(label(n))):radios.find(n=>/^(no|não|nao).*(paid promotion|promoção paga|promocao paga)/i.test(label(n)));"+
+    "if(direct)return checked(direct);"+
+    "const head=nodes.find(n=>n.getClientRects().length&&headings.some(h=>text(n).includes(h)));if(!head)return false;"+
+    "for(let section=head,depth=0;section&&depth<9;section=section.parentElement||section.getRootNode()?.host,depth++){"+
+    "const controls=nodes.filter(n=>n.getClientRects().length&&section.contains?.(n)&&n.matches?.('[role=\"radio\"],input[type=\"radio\"],[role=\"checkbox\"],input[type=\"checkbox\"],ytcp-radio-button,ytcp-checkbox-lit,tp-yt-paper-checkbox'));"+
+    "if(type==='promotion'){const noPromo=controls.find(n=>/^(no|não|nao).*(paid promotion|promoção paga|promocao paga)/i.test((n.getAttribute('aria-label')||n.innerText||n.closest?.('label')?.innerText||'').trim()));if(noPromo)return checked(noPromo);}"+
+    "const no=controls.find(n=>/^(no|não|nao)(\\b|,)/i.test((n.getAttribute('aria-label')||n.innerText||n.closest?.('label')?.innerText||'').trim()));if(no)return checked(no);"+
+    '}return false;})()';
+}
+export function youtubeDisclosureDiagnosticsExpression(){
+  return `(()=>{${browserDOM}
+    const relevant=nodes.filter(n=>n.getClientRects().length&&/(altered content|synthetic content|conteúdo alterado|conteúdo sintético|paid promotion|promoção paga|branded content)/i.test((n.getAttribute?.('aria-label')||n.innerText||n.textContent||'').trim()));
+    const controls=nodes.filter(n=>n.getClientRects().length&&n.matches?.('ytcp-radio-button,tp-yt-paper-radio-button,[role="radio"],input[type="radio"],ytcp-checkbox-lit,tp-yt-paper-checkbox,[role="checkbox"],input[type="checkbox"]'));
+    return {relevant:relevant.slice(0,30).map(n=>({tag:n.tagName,id:n.id,aria:n.getAttribute?.('aria-label'),text:(n.innerText||n.textContent||'').trim().slice(0,500)})),controls:controls.slice(0,80).map(n=>({tag:n.tagName,id:n.id,role:n.getAttribute?.('role'),aria:n.getAttribute?.('aria-label'),value:n.value,text:(n.innerText||n.closest?.('label')?.innerText||'').trim().slice(0,240),checked:n.checked===true||n.getAttribute?.('aria-checked')==='true'||n.hasAttribute?.('checked')}))};})()`;
+}
 export async function applyYouTubeDisclosures(cdp,_video,{delayMs=YOUTUBE_ACTION_DELAY_MS}={}){
   // Padrão do Content Lab definido pelo criador: não há conteúdo sintético
   // realista nem promoção paga. Se um vídeo for uma exceção, ele altera a
@@ -159,16 +219,28 @@ export async function applyYouTubeDisclosures(cdp,_video,{delayMs=YOUTUBE_ACTION
     ['Promoção paga','promotion']
   ]){
     const applied=await cdp.eval(disclosureExpression(type)).catch(()=>false);
-    if(!applied)warnings.push(label+': não consegui aplicar a resposta padrão "Não"; confira no YouTube Studio.');
-    else await pauseForStudio(delayMs);
+    if(applied)await pauseForStudio(delayMs);
+    const verified=applied&&await waitUntil(cdp,disclosureStateExpression(type),6000);
+    if(!verified){
+      const details=await cdp.eval(youtubeDisclosureDiagnosticsExpression()).catch(()=>null);
+      console.warn('[YouTube disclosure]',label,JSON.stringify(details));
+      warnings.push(label+': não consegui aplicar e confirmar a resposta padrão "Não"; confira no YouTube Studio.');
+    }
   }
   return warnings;
 }
 export function selectScheduleCardExpression(){
   return '(()=>{'+browserDOM+
+    "const scheduleText=nodes.find(n=>n.getClientRects().length&&/^(schedule|programar|agendar)$/i.test((n.innerText||n.textContent||'').trim()));"+
+    "if(scheduleText){for(let root=scheduleText,depth=0;root&&depth<7;root=root.parentElement||root.getRootNode()?.host,depth++){const expand=nodes.find(n=>n.getClientRects().length&&(root===n||root.contains?.(n))&&n.matches?.('button,ytcp-icon-button,[role=\"button\"]')&&(/expand|expandir|abrir/i.test(n.getAttribute('aria-label')||'')||n.id==='second-container-expand-button'));if(expand){expand.click();return true;}}}"+
     "const options=nodes.filter(n=>n.matches?.('ytcp-radio-button,tp-yt-paper-radio-button,[role=\"radio\"],input[type=\"radio\"],ytcp-visibility-option,ytcp-video-visibility-option')&&n.getClientRects().length);"+
     "const target=options.find(n=>/(schedule|programar|agendar)/i.test((n.getAttribute('aria-label')||'')+' '+(n.innerText||n.closest('label')?.innerText||'')));"+
     "if(!target)return false;if(!(target.checked||target.getAttribute('aria-checked')==='true'))target.click();return true;})()";
+}
+export function youtubeScheduleDiagnosticsExpression(){
+  return `(()=>{${browserDOM}
+    const visible=n=>n.getClientRects().length;
+    return {text:(document.querySelector('ytcp-uploads-dialog')?.innerText||document.body?.innerText||'').slice(-12000),controls:nodes.filter(n=>visible(n)&&n.matches?.('button,ytcp-button,[role="button"],[role="radio"],input')).map(n=>({tag:n.tagName,id:n.id,role:n.getAttribute?.('role'),type:n.getAttribute?.('type'),aria:n.getAttribute?.('aria-label'),value:n.value,text:(n.innerText||n.closest?.('label')?.innerText||'').trim().slice(0,240),checked:n.checked===true||n.getAttribute?.('aria-checked')==='true',disabled:n.disabled===true||n.getAttribute?.('aria-disabled')==='true'})).slice(-180)};})()`;
 }
 
 async function waitUntil(cdp,expression,ms=12000){
@@ -206,17 +278,19 @@ const scheduleParts=value=>{
   const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(String(value||''));
   return m?{date:m[1]+'-'+m[2]+'-'+m[3],time:m[4]+':'+m[5]}:null;
 };
-export async function prepareYouTubeSchedule(cdp,value,{delayMs=YOUTUBE_ACTION_DELAY_MS}={}){
+export async function prepareYouTubeSchedule(cdp,value,{
+  delayMs=YOUTUBE_ACTION_DELAY_MS,majorDelayMs=YOUTUBE_MAJOR_ACTION_DELAY_MS
+}={}){
   const parts=scheduleParts(value);if(!parts)return false;
   for(let step=0;step<3;step++){
     if(!await waitUntil(cdp,clickText(['próximo','next']),12000))return false;
-    await pauseForStudio(delayMs);
+    await pauseForStudio(majorDelayMs);
   }
   // A última etapa é Visibilidade: clicar no CARTÃO, não no botão final.
   const card=await waitUntil(cdp,clickSelector(['#schedule-radio-button',
     'ytcp-visibility-scheduler #schedule-radio-button']),2500);
   if(!card&&!await waitUntil(cdp,selectScheduleCardExpression(),9000))return false;
-  await pauseForStudio(delayMs);
+  await pauseForStudio(majorDelayMs);
   const dates=['ytcp-datetime-picker input[type="date"]',
     'ytcp-date-time-picker input[type="date"]','input[type="date"]',
     'ytcp-date-time-picker input[aria-label*="Date"]',
@@ -244,6 +318,7 @@ export async function prepareYouTubeSchedule(cdp,value,{delayMs=YOUTUBE_ACTION_D
   }
   await pauseForStudio(delayMs);
   let time=await cdp.eval(setField(times,parts.time)).catch(()=>false);
+  if(!time)time=await cdp.eval(setYouTubeScheduleTimeExpression(parts.time)).catch(()=>false);
   if(!time){
     const opened=await cdp.eval(clickSelector(['#time-of-day-trigger',
       'ytcp-datetime-picker #time-of-day-trigger'])).catch(()=>false);
@@ -339,10 +414,10 @@ export async function prepareYouTubeUpload(browser,video,{videoPath,coverAPath,c
   progress('Abrindo a tela de envio...');
   clicked=await waitUntil(cdp,clickText(['enviar vídeos','upload videos','fazer upload de vídeos','upload video']),10000);
   if(!clicked)throw new YouTubeStudioChanged('a opção Enviar vídeos');
-  await pauseForStudio(delayMs);
+  await pauseForStudio(YOUTUBE_MAJOR_ACTION_DELAY_MS);
   progress('Selecionando o arquivo no computador...');
   await setFile(cdp,videoPath);
-  await pauseForStudio(delayMs);
+  await pauseForStudio(YOUTUBE_MAJOR_ACTION_DELAY_MS);
   progress('Aguardando campos de título e descrição...');
   const titleSelectors=['ytcp-social-suggestions-textbox#title-textarea #textbox',
     '#title-textarea #textbox','ytcp-social-suggestions-textbox#title-textarea [contenteditable="true"]',
@@ -399,9 +474,11 @@ export async function prepareYouTubeUpload(browser,video,{videoPath,coverAPath,c
     warnings.push('Shorts: confira a thumbnail no YouTube Studio; teste A/B indisponível.');
   if(video.scheduledAt){
     progress('Avançando pelas etapas até Visibilidade e abrindo o cartão Agendar...');
-    if(!await prepareYouTubeSchedule(cdp,video.scheduledAt,{delayMs}))
+    if(!await prepareYouTubeSchedule(cdp,video.scheduledAt,{delayMs})){
+      const details=await cdp.eval(youtubeScheduleDiagnosticsExpression()).catch(()=>null);
+      console.warn('[YouTube schedule]',JSON.stringify(details));
       warnings.push('Agendamento: não consegui selecionar o cartão e/ou preencher data/hora. Configure manualmente '+video.scheduledAt.replace('T',' às ')+'.');
-    else{
+    }else{
       progress('Aguardando o processamento e confirmando o agendamento no YouTube...');
       const confirmed=await confirmYouTubeSchedule(cdp,{delayMs});
       if(!confirmed)warnings.push('O YouTube não confirmou o agendamento. O rascunho precisa ser revisado ou descartado antes de tentar novamente.');
