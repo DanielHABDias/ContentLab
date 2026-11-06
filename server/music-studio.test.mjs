@@ -18,7 +18,7 @@ test("o JSON musical atual exige faixas e valida a partitura",()=>{
     {time:0,volume:0,intensity:0},{time:0,volume:1,intensity:1}
   ]}),/crescente/);
   assert.throws(()=>validateScore({title:"Sem faixas",durationSeconds:10,bpm:80,
-    seed:1,masterVolume:.8,automation:[
+    seed:1,beatsPerBar:4,masterVolume:.8,automation:[
       {time:0,volume:.5,intensity:.5},{time:10,volume:0,intensity:0}]}),/faixas/);
   assert.equal(levelAt(score,120).volume,0);
   assert.equal(score.automation[0].time,0);
@@ -54,7 +54,7 @@ test("partitura livre permite controlar notas, clipes, instrumento e mute",()=>{
   assert.equal(events.filter(e=>e.track==="lead").length,7);
   assert.ok(events.some(e=>e.instrument==="nylon-guitar"));
   const changed=structuredClone(valid);changed.tracks[0].notes[0].pitch=55;
-  assert.equal(arrange(changed)[0].pitch,55);
+  assert.equal(arrange(changed).find(e=>e.track==="lead"&&e.start===0).pitch,55);
   changed.tracks[1].muted=true;
   assert.ok(arrange(changed).length<events.length);
   const invalid=structuredClone(valid);invalid.tracks[0].clips[0].notes[0].beat=4.2;
