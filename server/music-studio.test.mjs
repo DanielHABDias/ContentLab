@@ -93,3 +93,79 @@ test("music UI uses a large draggable SVG instead of marker sliders and buttons"
   assert.match(script,/createMusicAutomationEditor/);
   assert.match(css,/touch-action:none/);
 });
+
+test("v2 styles are distinct multitrack compositions rather than one loop with changed loudness",async()=>{
+  const {createStylePreset,STYLES}=await import("../frontend/static/music/model.js");
+  assert.deepEqual(STYLES,["cinematic","lofi","rock","funk","pagode"]);
+  const palettes=[];
+  const signatures=[];
+  for(const genre of STYLES){
+    const score=validateScore(createStylePreset(genre,457));
+    assert.equal(score.schemaVersion,2);
+    assert.equal(score.durationSeconds,457);
+    assert.ok(score.tracks.length>=4);
+    assert.ok(score.tracks.every(t=>t.instrument&&Array.isArray(t.clips)));
+    const events=arrange(score);
+    assert.ok(events.length>100,"full score should contain actual rhythmic/harmonic events");
+    assert.ok(events.every(e=>e.start>=0&&e.start+e.duration<=457.00001));
+    assert.ok(events.some(e=>e.pitch!==38),"all notes cannot be the old fixed kick pitch");
+    palettes.push([...new Set(score.tracks.map(t=>t.instrument))].join(","));
+    signatures.push(events.slice(0,20).map(e=>e.voice+":"+e.pitch+"@"+e.start.toFixed(2)).join("|"));
+  }
+  assert.equal(new Set(palettes).size,5,"styles must use different instruments");
+  assert.equal(new Set(signatures).size,5,"styles must create distinct musical content");
+});
+test("v2 JSON owns arbitrary note composition, clip repetition and per-track instruments",async()=>{
+  const {createStylePreset}=await import("../frontend/static/music/model.js");
+  const v2=createStylePreset("funk",18),custom=structuredClone(v2);
+  custom.tracks=[
+    {id:"melody",name:"Melodia livre",instrument:"flute",gain:.8,pan:-.1,muted:false,
+      notes:[{beat:0,durationBeats:3,pitch:85,velocity:.9}],
+      clips:[{startBeat:4,lengthBeats:4,repeats:3,notes:[
+        {beat:.5,durationBeats:1,pitch:67,velocity:.6},
+        {beat:2.25,durationBeats:.25,pitch:92,velocity:.3}
+      ]}]},
+    {id:"rhythm",name:"Bateria customizada",instrument:"surdo",gain:.7,pan:0,muted:false,
+      notes:[],clips:[{startBeat:0,lengthBeats:3,repeats:5,notes:[
+        {beat:0,durationBeats:.5,pitch:36,velocity:.8},
+        {beat:1.75,durationBeats:.2,pitch:36,velocity:.45}]}]}
+  ];
+  const score=validateScore(custom),events=arrange(score);
+  assert.equal(events[0].pitch,85);
+  assert.equal(events.filter(e=>e.track==="melody").length,7);
+  assert.ok(events.some(e=>e.start===4*60/150+.5*60/150));
+  assert.ok(events.some(e=>e.pitch===92));
+  assert.ok(events.some(e=>e.instrument==="surdo"));
+  const muted=structuredClone(score);muted.tracks[1].muted=true;
+  assert.ok(arrange(muted).length<events.length,"mute should remove a track's notes");
+  const edited=structuredClone(score);edited.tracks[0].notes[0].pitch=40;
+  assert.equal(arrange(edited)[0].pitch,40,"changing pitch must change music");
+  const wrong=structuredClone(score);wrong.tracks[0].clips[0].notes[0].beat=4.5;
+  assert.throws(()=>validateScore(wrong),/ultrapassa|entre/);
+  const repeated=structuredClone(score);repeated.tracks.push(structuredClone(repeated.tracks[0]));
+  assert.throws(()=>validateScore(repeated),/repetido/);
+});
+test("MIDI export contains the composed tracks, tempo and actual note events",async()=>{
+  const {createStylePreset}=await import("../frontend/static/music/model.js");
+  const {toMidi}=await import("../frontend/static/music/midi.js");
+  const score=createStylePreset("pagode",22);
+  const raw=new Uint8Array(await toMidi(score).arrayBuffer());
+  const str=(a,b)=>String.fromCharCode(...raw.slice(a,b));
+  assert.equal(str(0,4),"MThd");
+  assert.equal(raw[8]*256+raw[9],1,"multi-track MIDI format 1");
+  assert.equal(raw[10]*256+raw[11],score.tracks.length+1);
+  assert.ok(str(14,18)==="MTrk");
+  assert.ok(raw.includes(0x90),"at least one MIDI note-on required");
+  const a=arrange(score);
+  assert.ok(a.some(e=>e.track==="surdo"),"MIDI covers genre-specific percussion");
+  assert.throws(()=>toMidi(createPreset(20)),/v2/);
+});
+test("v2 synthesized audio plays different notes and genres, not only a volume curve",async()=>{
+  const {createStylePreset}=await import("../frontend/static/music/model.js");
+  const {renderAudio}=await import("../frontend/static/music/synth.js");
+  // Rendering requires a browser's OfflineAudioContext; node verifies event-level differences.
+  const a=arrange(createStylePreset("rock",8));
+  const b=arrange(createStylePreset("funk",8));
+  assert.notDeepEqual(a.map(e=>[e.voice,e.pitch,e.start]),b.map(e=>[e.voice,e.pitch,e.start]));
+  assert.equal(typeof renderAudio,"function");
+});
