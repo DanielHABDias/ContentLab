@@ -43,7 +43,7 @@ export function toMidi(score){
   let melodicIndex=0;
   for(const track of score.tracks){
     const isDrum=DRUM_INSTRUMENTS.includes(track.instrument);
-    const channel=isDrum?9:melodicIndex++%15+(melodicIndex%15>=9?1:0);
+    const channel=isDrum?9:[0,1,2,3,4,5,6,7,8,10,11,12,13,14,15][melodicIndex++%15];
     const events=[
       {at:0,order:0,data:meta(3,textBytes(track.name))},
       {at:0,order:1,data:[192|channel,GM[track.instrument]||0]}
