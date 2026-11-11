@@ -172,10 +172,12 @@ Esta etapa é **obrigatória antes de projetar e implementar a nova arquitetura*
 **Checkpoint T04 (2026-11-11):** arquitetura local, módulos, limites de confiança, persistência e estratégia de testes documentados; benchmark compara Remotion, Hyperframes, FableCut, OpenChatCut, Timeline Studio e legado, incluindo licenças e motion design. Contratos Zod versionados para projeto, workflow, mídia, timeline e lotes atômicos. Verificações: 9 testes e build. Próxima: T05, persistência real e núcleo de workflow.
 
 ### T05 — Núcleo local, persistência e orquestração do workflow
-- [ ] Implementar projeto local multi-vídeo, armazenamento de arquivos e metadados, autosave, checkpoints/versões, histórico e retomada após reinício.
-- [ ] Implementar estados e dependências das etapas, aprovação humana, modo autônomo, reabertura de etapas e invalidação rastreável de resultados posteriores.
-- [ ] Conectar o frontend ao núcleo com operações testáveis e independentes da interface.
+- [x] Implementar projeto local multi-vídeo, armazenamento de arquivos e metadados, autosave, checkpoints/versões, histórico e retomada após reinício.
+- [x] Implementar estados e dependências das etapas, aprovação humana, modo autônomo, reabertura de etapas e invalidação rastreável de resultados posteriores.
+- [x] Conectar o frontend ao núcleo com operações testáveis e independentes da interface.
 - **Entrega/aceite:** projeto real persistente sobrevive ao reinício; fluxo manual e revisões funcionam sem dados de demonstração.
+
+**Checkpoint T05 (2026-11-11):** `ProjectStore` grava manifesto por rename atômico, snapshots imutáveis e journal; leitura por nova instância comprova retomada. Núcleo puro controla aprovação, pedido de mudanças, reabertura e invalidação transitiva com revisão otimista. Adaptador da UI persiste a lista local e mantém o núcleo independente. Verificações: 12 testes, incluindo reinício/conflito/histórico, e build. Próxima: T06, CLI e MCP sobre o mesmo núcleo.
 
 ### T06 — Controle local por agentes: CLI e MCP
 - [ ] Implementar operações semânticas de alto nível para criar/inspecionar projeto, escrever/revisar roteiro, preencher metadados, manipular mídias/timeline, aprovar status quando autorizado e solicitar renders.

@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, ChevronRight, Clock3, FileText, FolderOpen, History, ImagePlus, LayoutTemplate, MessageSquareText, Plus, RotateCcw, Save, Settings2, Sparkles, Tag, X } from 'lucide-react';
 import { Logo } from './Logo.jsx';
+import { loadProjectCards, saveProjectCards } from './project-repository.js';
 
 const projects = [
   { id: 1, title: 'Por que heróis falham?', type: 'Vídeo longo', ratio: '16:9', progress: 62, step: 'Narração', updated: 'Hoje, 14:32', accent: 'blue' },
@@ -105,10 +106,11 @@ function NewProjectDialog({ onClose, onCreate }) {
 
 export function App() {
   const [selected, setSelected] = useState(null);
-  const [items, setItems] = useState(projects);
+  const [items, setItems] = useState(() => loadProjectCards(projects));
   const [creating, setCreating] = useState(false);
   const [homeNotice, setHomeNotice] = useState('');
   const createProject = (project) => { setItems(previous => [project, ...previous]); setCreating(false); setSelected(project); };
+  useEffect(() => saveProjectCards(items), [items]);
   return (
     <div className="app-shell">
       <aside className="sidebar">
