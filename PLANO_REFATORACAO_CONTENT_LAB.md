@@ -62,7 +62,7 @@ Prioridades: operação sem hospedagem obrigatória, ausência de serviços pago
 
 ### Workflow de produção orientado a projetos (novo requisito)
 - [ ] Tratar **cada vídeo como um projeto persistente independente**. Permitir vários projetos simultâneos, com tipo (longo, curto/Shorts e formatos adicionais), formato de tela, progresso, arquivos e histórico.
-- [ ] Dashboard de projetos com cartões/lista, pesquisa/filtros, estágio atual, próximas ações, progresso e alertas visíveis.
+- [ ] **Sem dashboard:** abrir, criar, importar e retomar vários projetos de vídeo por uma área simples de projetos locais; dentro de cada projeto, mostrar somente as etapas, progresso e aprovações úteis, sem métricas de redes sociais.
 - [ ] Fluxo-base: **brief/ideia → roteiro → título A/B + thumbnails + descrição + tags → seleção/importação de mídia → narração → edição/motion design → revisão e render → pacote final**. Permitir etapas opcionais, retomada e reordenação quando houver justificativa.
 - [ ] Editor de roteiro dentro do Content Lab com **salvamento automático**, histórico e uma estrutura alinhada às regras de roteiro do plugin Diazverso 1.0. Consultar o plugin como fonte de referência **somente de leitura**, sem duplicar cegamente instruções nem alterar aquele repositório.
 - [ ] Dois títulos A/B, descrição, tags, notas de SEO e thumbnails criadas no aplicativo **ou importadas** devem pertencer ao mesmo projeto; campos relevantes serão exportados no pacote final.
@@ -78,7 +78,7 @@ Prioridades: operação sem hospedagem obrigatória, ausência de serviços pago
 - [ ] Corrigir adaptação entre **16:9 e 9:16**, com coordenadas consistentes, ancoragem, safe areas, estratégias explícitas de crop/fit e possibilidade de layout específico por proporção, sem deslocamento inesperado de elementos.
 - [ ] Permitir edição manual e comandos estruturados de agente no **mesmo documento de projeto**, com pré-visualização, desfazer/refazer, controle de alterações, validação e recuperação.
 - [ ] Tornar simples criar, registrar e reutilizar **componentes TSX de motion design** por agente, aproveitando Remotion/Hyperframes conforme avaliação técnica; manter a edição declarativa comum simples.
-- [ ] Investigar referências modernas de timeline, edição não linear, efeitos, transições, prévia, performance e render incremental. O conteúdo de `old/` é apenas referência: nenhuma arquitetura legada será preservada por obrigação.
+- [ ] Investigar referências modernas de timeline, edição não linear, efeitos, transições, prévia, performance e render incremental. **Estudar vídeos de motion design bem executados** (tipografia cinética, ritmo, movimento, composição, keyframes e transições), adaptar princípios ao Diazverso e criar componentes originais. O conteúdo de `old/` é apenas referência: nenhuma arquitetura legada será preservada por obrigação.
 
 ### Funcionalidades que serão removidas
 - [ ] Remover completamente publicação automática em plataformas.
@@ -86,7 +86,7 @@ Prioridades: operação sem hospedagem obrigatória, ausência de serviços pago
 
 ### Visual, documentação e créditos
 - [ ] Redesenhar a interface conforme as funcionalidades, não necessariamente as abas atuais, mantendo qualidade visual.
-- [ ] Documentar instalação, configuração, funcionamento manual, operações automatizadas, solução de problemas e arquitetura.
+- [ ] Documentar instalação, configuração, funcionamento manual, operações automatizadas, solução de problemas e arquitetura, **incluindo o formato `.contentlab`**, seu conteúdo, compactação, extração, restauração e exportação ZIP.
 - [ ] Incluir atribuição: **Content Lab — criado por Daniel Dias**, associado ao canal **Diazverso** (https://www.youtube.com/@DiazVerso).
 
 ### Skills de agentes — ÚLTIMA ETAPA
@@ -99,7 +99,7 @@ Esta etapa é **obrigatória antes de projetar e implementar a nova arquitetura*
 
 ### UX/UI, acessibilidade e identidade visual (novos requisitos)
 - [ ] Encontrar e avaliar skills de **UX/UI, frontend design e acessibilidade (a11y)**, além de referências de interfaces profissionais de criação audiovisual.
-- [ ] Pesquisar padrões de **dashboard de múltiplos projetos, workflow visual, estados de aprovação e timeline de editor**, priorizando clareza em vez de enfeites ou muitas abas.
+- [ ] Pesquisar padrões de **seleção simples de projetos locais (sem dashboard), workflow visual, estados de aprovação e timeline de editor**, priorizando clareza em vez de enfeites ou muitas abas.
 - [ ] Criar uma **logo original para o Content Lab**, vinculável visualmente ao universo Diazverso por paleta, quadrinhos/halftone e glitch azul/vermelho controlado; **não usar Nox** como mascote/logo do Content Lab.
 - [ ] Desenvolver um design system próprio, com responsividade, contraste, hierarquia, feedback de progresso/erros, acessibilidade e visual moderno sem poluição.
 - [ ] Adotar o frontend como **primeiro foco de execução**, prototipando fluxos e comportamento antes de conectar todos os serviços reais.
@@ -111,6 +111,11 @@ Esta etapa é **obrigatória antes de projetar e implementar a nova arquitetura*
 - [ ] **Hyperframes:** skills, documentação e projetos de referência; entender as funcionalidades e arquitetura reais antes de decidir se será reutilizado, substituído ou combinado com Remotion/FFmpeg.
 - [ ] **Edição e produção audiovisual moderna:** boas práticas e exemplos para montar vídeos com precisão (cortes, trilhas/faixas, legendas, sincronização, narração, efeitos, composição, prévia e exportação).
 - [ ] **Plugin Diazverso 1.0:** consultar como **referência somente de leitura**, aproveitando padrões de fluxos, qualidade, identidade, uso de agentes e economia de tokens quando pertinentes. **Não alterar o repositório do plugin nesta refatoração.**
+
+### Análise de vídeos e práticas modernas de motion design
+- [ ] Analisar vídeos, breakdowns, reels, showreels, tutoriais e projetos de motion design de alta qualidade, identificando **movimento, easing, keyframes, tipografia cinética, transições, composição, sincronização com áudio e ritmo narrativo**.
+- [ ] Registrar somente técnicas úteis e exemplos reproduzíveis no Content Lab, preferencialmente como componentes TSX/Remotion e presets parametrizáveis, sem copiar sequências, mídias ou código sem licença.
+- [ ] Adaptar a qualidade das referências à identidade visual do Diazverso (quadrinhos, halftone, painéis, paleta e glitch controlado). **Edição a serviço da narrativa; não adicionar efeitos sem função.**
 
 ### Repositórios open source de edição automatizada com IA
 - [ ] Pesquisar aplicações e projetos em que um agente ou LLM (ChatGPT, Claude ou outros) produz roteiro, organiza mídias, cria um plano de edição/timeline e renderiza o vídeo automaticamente, mesmo que o exemplo original use API de IA.
@@ -140,12 +145,12 @@ Esta etapa é **obrigatória antes de projetar e implementar a nova arquitetura*
 ### T01 — UX/UI, logo e conceito visual do novo Content Lab
 - [ ] Pesquisar skills de UX/UI, acessibilidade e design de frontend; analisar referências atuais de ferramentas criativas.
 - [ ] Criar identidade visual e proposta de logo **original** Content Lab (HQ/halftone/glitch sutil da marca Diazverso, sem Nox), componentes de interface e protótipos navegáveis.
-- **Entrega/aceite:** design system e fluxo visual aprováveis; dashboard/editor identificáveis e fáceis de compreender. **Primeiro foco.**
+- **Entrega/aceite:** design system e fluxo visual aprováveis; acesso a projetos/workflow/editor identificáveis e fáceis de compreender. **Primeiro foco.**
 
-### T02 — Frontend: dashboard de projetos e workflow visual
-- [ ] Construir a interface inicial para múltiplos vídeos (longos e curtos), lista/cartões, estados, progresso, histórico e ações contextuais.
+### T02 — Frontend: projetos locais e workflow visual (sem dashboard)
+- [ ] Construir entrada simples para **criar, abrir, importar e retomar projetos locais** de múltiplos vídeos (longos ou curtos), sem dashboard; visualizar estados, progresso, histórico e ações dentro de cada projeto, quando relevantes.
 - [ ] Expor etapas, pendências, modos **revisão por fase** e **autônomo até a revisão final**, aprovação, solicitação de mudanças e retorno de etapa.
-- **Entrega/aceite:** usuário navega um projeto de ponta a ponta com dados de demonstração, visualiza o estado e consegue simular aprovar, rejeitar e voltar de etapa.
+- **Entrega/aceite:** usuário abre um projeto e navega seu workflow de ponta a ponta com dados de demonstração, visualiza o estado e consegue simular aprovar, rejeitar e voltar de etapa.
 
 ### T03 — Frontend: roteiro e metadados criativos do vídeo
 - [ ] Criar editor de roteiro com formato guiado alinhado ao plugin Diazverso 1.0 (**consulta read-only**), autosave previsto, títulos A/B, descrição, tags e painel de thumbnails.
@@ -153,7 +158,7 @@ Esta etapa é **obrigatória antes de projetar e implementar a nova arquitetura*
 - **Entrega/aceite:** fluxo visual completo para preparar e revisar um vídeo, sem campos desnecessários, com versão/estado de cada entrega.
 
 ### T04 — Benchmark técnico, arquitetura nova e contratos
-- [ ] Pesquisar e testar skills de arquitetura, testes, MCP, Remotion, Hyperframes e UX; revisar repositórios de editores com agentes. Comparar o legado em `old/` sem tomar suas decisões como obrigatórias.
+- [ ] Pesquisar e testar skills de arquitetura, testes, MCP, Remotion, Hyperframes e UX; revisar repositórios de editores com agentes **e estudar vídeos/showreels/tutoriais de motion design de alta qualidade**, registrando técnica, timing e adaptação original para a identidade Diazverso. Comparar o legado em `old/` sem tomar suas decisões como obrigatórias.
 - [ ] Escolher stack e módulos por evidência, compatibilidade local e licença; definir modelo versionado para projetos, workflow, roteiro, mídias e timeline, com plano de migração/validação.
 - [ ] Planejar operações atômicas, efeitos, trilhas, posicionamento responsivo, versionamento, logs, permissões e testes desde o começo.
 - **Entrega/aceite:** documento curto de arquitetura + contratos validados em protótipo; referências e decisões registradas, sem depender de API paga.
@@ -192,15 +197,18 @@ Esta etapa é **obrigatória antes de projetar e implementar a nova arquitetura*
 - [ ] Render por projeto/versão, cache incremental quando útil, acompanhamento de jobs, cancelamento, recuperação e validação do arquivo final.
 - **Entrega/aceite:** vídeos longos e verticais renderizam com áudio, posicionamento, efeitos e cortes corretos, comparados com a prévia.
 
-### T11 — Pacote final e entrega opcional por agentes
-- [ ] Gerar pasta ou ZIP portátil por vídeo, incluindo vídeo final, roteiro, títulos A/B, descrição, tags, thumbnails, legendas e manifesto legível por máquina; manter arquivos editáveis conforme escopo.
-- [ ] Expor ação de exportação por interface/CLI/MCP; possibilitar que **um agente externo autorizado** envie o pacote ao Google Drive/atualize planilhas depois, sem implementação de publicação automática e sem exigir conexão à nuvem.
-- **Entrega/aceite:** pacote exportado é completo e utilizável manualmente; nenhuma dependência paga de upload/publicação.
+### T11 — Pacotes .contentlab, ZIP e entrega opcional por agentes
+- [ ] Definir o formato de projeto portátil versionado **`.contentlab`** (extensão proposta), com manifesto/estrutura documentados e capacidade de **importar, abrir e descomprimir dentro do Content Lab**; incluir roteiro, títulos A/B, descrição, tags, thumbnails, legendas, timeline, ajustes e recursos necessários. Vídeo final e intermediários opcionais conforme tipo de exportação.
+- [ ] Aplicar **compressão sem perdas tão eficiente quanto viável**, com algoritmos adequados por tipo de arquivo, nível de compressão configurável, deduplicação quando possível, verificação de integridade e proteção contra extração insegura. Testar redução de tamanho x tempo/uso de CPU; mídia já comprimida pode oferecer pouco ganho e não deve sofrer recompressão com perdas disfarçada.
+- [ ] Oferecer **ZIP padrão como alternativa**, além do formato `.contentlab`, e permitir exportação enxuta para entrega/publicação manual (vídeo e metadados sem caches desnecessários).
+- [ ] Definir gerenciamento simples de pacotes locais: escolher caminho, localizar, reabrir e excluir. **Guardar cópias extras automaticamente é uma opção a avaliar**, não um requisito que cause duplicação de arquivos grandes.
+- [ ] Disponibilizar importação/exportação pela interface e CLI/MCP. Um **agente externo autorizado** poderá enviar o pacote ao Google Drive/atualizar planilhas depois, sem publicação automática nem hospedagem obrigatória.
+- **Entrega/aceite:** pacote `.contentlab` e ZIP exportados, testados, restaurados e abertos localmente com arquivos íntegros; formato descrito em documentação permanente e futura skill.
 
 ### T12 — Instalador, testes finais, documentação, skills e limpeza
 - [ ] Validar/verificar dependências na inicialização, instalar ausentes quando seguro, tentar novamente falhas transitórias, diagnosticar erros persistentes.
 - [ ] Cobrir testes unitários, integração, E2E, fluxos manuais e com agentes, regressões 16:9/9:16, retomada, erros e desempenho; melhorar UX e documentar instalação, uso e arquitetura.
-- [ ] **Só após estabilidade:** criar e testar as **skills próprias do Content Lab**, ensinar o uso via agentes e planejar integração posterior ao plugin Diazverso **sem modificá-lo agora**.
+- [ ] **Só após estabilidade:** criar e testar as **skills próprias do Content Lab**, ensinando agentes a controlar o produto e **a reconhecer, importar, compactar, extrair e exportar `.contentlab` e ZIP**; planejar integração posterior ao plugin Diazverso **sem modificá-lo agora**.
 - [ ] **Somente após todos os critérios aprovados:** remover `old/` e este plano temporário, preservando documentação permanente no novo projeto.
 - **Entrega/aceite:** instalação e uso local reproduzíveis; todos os fluxos validados e nova aplicação autônoma, sem depender de código legado.
 
@@ -209,11 +217,17 @@ Esta etapa é **obrigatória antes de projetar e implementar a nova arquitetura*
 - **Humano e agente usam o mesmo núcleo e os mesmos dados**; evitar implementações duplas que causem divergência.
 - Modo de aprovação por etapa pausa trabalho dependente até o usuário aprovar; modo autônomo permite progresso sem validações intermediárias, mas preserva revisão final. Ações externas sensíveis (como upload) continuam dependendo das autorizações aplicáveis.
 - Voltar etapas não elimina histórico e marca conteúdos dependentes como necessitando atualização/validação.
-- A UI é implementada primeiro (T01–T03), com dados de demonstração explícitos, antes da conexão definitiva ao núcleo (T05).
+- A UI é implementada primeiro (T01–T03), com dados de demonstração explícitos, antes da conexão definitiva ao núcleo (T05). **Sem dashboard: entrada simples para projetos e foco no workflow de cada vídeo.**
 - A seleção do **melhor modelo** requer benchmark local, suporte a português, licença e capacidade de hardware; somente a opção escolhida será instalada, sem catálogo de modelos inferiores.
-- Uso local e gratuito sem hospedagem obrigatória é requisito. Verificar licenças (especialmente componentes de renderização) antes de adotar qualquer base externa.
+- Uso local e gratuito sem hospedagem obrigatória é requisito. Verificar licenças (especialmente componentes de renderização) antes de adotar qualquer base externa. **Pacotes `.contentlab` serão portáteis, íntegros, documentados e extraídos com segurança.**
 
 ## 6. Regras de trabalho
+
+### Diretriz de interface, mensagens e código (obrigatória)
+- **Sem explicações artificiais de IA no produto ou nas atualizações.** Instruções pontuais do usuário devem virar **comportamento/correção do sistema**, não slogans, textos, avisos ou comentários literais no frontend/código. Exemplo: uma regra sobre quantidade de takes da narração não precisa aparecer escrita na tela.
+- Interface com linguagem objetiva, controles claros e mensagens apenas quando necessárias para estados, instruções práticas e erros acionáveis. Evitar texto de preenchimento, justificativas redundantes e comentários autorreferenciais.
+- Código claro, modular, testável, com comentários **apenas onde agregam explicação técnica real**; não colocar narrativa de conversa em comentários, changelogs ou telas.
+- Consultar skills de UX writing, frontend, revisão de código e arquitetura para orientar essa disciplina. Decisões técnicas temporárias ficam neste plano ou em registros apropriados, não poluem a experiência do usuário.
 
 - Registrar decisões e pendências no plano enquanto a refatoração estiver em andamento.
 - Diferenciar requisitos aprovados de sugestões técnicas sujeitas à avaliação.
