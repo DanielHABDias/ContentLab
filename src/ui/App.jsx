@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, ChevronRight, Clock3, FileText, FolderOpen, History, ImagePlus, LayoutTemplate, MessageSquareText, Plus, RotateCcw, Save, Settings2, Sparkles, Tag, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowLeft, ArrowRight, Check, ChevronRight, Clock3, FileText, FolderOpen, History, LayoutTemplate, MessageSquareText, Plus, RotateCcw, Save, Settings2, Sparkles, Tag, X } from 'lucide-react';
 import { Logo } from './Logo.jsx';
 import { localApi } from './local-api.js';
 
@@ -7,172 +7,55 @@ const stageLabels = { brief: 'Ideia e brief', script: 'Roteiro', packaging: 'Emb
 const typeLabels = { long: 'Vídeo longo', short: 'Short', custom: 'Personalizado' };
 
 function ProjectCard({ project, onOpen }) {
-  return (
-    <button className="project-card" onClick={() => onOpen(project)} aria-label={`Abrir ${project.title}`}>
-      <span className="poster poster-blue" aria-hidden="true"><span>{project.progress}</span></span>
-      <span className="project-copy">
-        <span className="eyebrow">{typeLabels[project.type]} · {project.aspectRatio}</span>
-        <strong>{project.title}</strong>
-        <span className="step"><Clock3 size={14} /> {stageLabels[project.stage]}</span>
-        <span className="progress"><i style={{ width: `${project.progress}%` }} /></span>
-        <small>{project.progress}% · revisão {project.revision}</small>
-      </span>
-      <ChevronRight className="project-arrow" aria-hidden="true" />
-    </button>
-  );
+  return <button className="project-card" onClick={() => onOpen(project)} aria-label={`Abrir ${project.title}`}><span className="poster poster-blue" aria-hidden="true"><span>{project.progress}</span></span><span className="project-copy"><span className="eyebrow">{typeLabels[project.type]} · {project.aspectRatio}</span><strong>{project.title}</strong><span className="step"><Clock3 size={14}/> {stageLabels[project.stage]}</span><span className="progress"><i style={{ width: `${project.progress}%` }}/></span><small>{project.progress}% · revisão {project.revision}</small></span><ChevronRight className="project-arrow" aria-hidden="true"/></button>;
 }
 
-function ProjectView({ project, onBack }) {
-  const steps = ['Ideia e brief', 'Roteiro', 'Embalagem', 'Mídia', 'Narração', 'Edição', 'Revisão e render'];
-  const initial = Math.max(0, project.stages?.findIndex(stage => ['active', 'changes_requested'].includes(stage.state)) ?? 0);
-  const [active, setActive] = useState(initial);
-  const [mode, setMode] = useState('review');
-  const [notice, setNotice] = useState('');
-  const [events, setEvents] = useState([{ id: 1, text: `${steps[Math.max(0, initial - 1)]} aprovado`, time: 'Hoje, 14:18' }]);
-  const [editorOpen, setEditorOpen] = useState(false);
-  const record = (text) => setEvents(previous => [{ id: Date.now(), text, time: 'Agora' }, ...previous]);
-  const approve = () => {
-    if (active >= steps.length - 1) return;
-    record(`${steps[active]} aprovado`);
-    setNotice(`${steps[active]} aprovado. Próxima etapa liberada.`);
-    setActive(value => value + 1);
-  };
-  const requestChanges = () => {
-    record(`Ajustes solicitados em ${steps[active]}`);
-    setNotice('Pedido de mudanças registrado na etapa atual.');
-  };
-  const reopen = (index) => {
-    record(`${steps[index]} reaberto; etapas posteriores precisam de revisão`);
-    setActive(index);
-    setNotice(`${steps[index]} reaberto sem apagar o histórico.`);
-  };
-  if (editorOpen) return <CreativeEditor project={project} onBack={() => setEditorOpen(false)} />;
-  return (
-    <main id="main" className="workspace">
-      <button className="text-button" aria-label="Voltar aos projetos" onClick={onBack}><ArrowLeft size={16}/> Projetos</button>
-      <header className="project-header">
-        <div><span className="eyebrow">{typeLabels[project.type]} · {project.aspectRatio}</span><h1>{project.title}</h1></div>
-        <div className="header-actions"><button className="button quiet"><Settings2 size={18}/> Configurar</button><button className="button primary">Continuar <ArrowRight size={18}/></button></div>
-      </header>
-      <section className="workflow-card" aria-labelledby="workflow-title">
-        <div className="section-title"><div><span className="eyebrow">Fluxo do projeto</span><h2 id="workflow-title">Da ideia ao pacote final</h2></div><label className="mode-select"><Sparkles size={15}/><span className="sr-only">Modo do projeto</span><select value={mode} onChange={event => { setMode(event.target.value); record(event.target.value === 'review' ? 'Modo de revisão por etapa ativado' : 'Modo autônomo ativado'); }}><option value="review">Revisão por etapa</option><option value="autonomous">Autônomo até o final</option></select></label></div>
-        {notice && <div className="notice" role="status"><Check size={16}/>{notice}<button aria-label="Fechar aviso" onClick={() => setNotice('')}><X size={15}/></button></div>}
-        <ol className="workflow-list">
-          {steps.map((step, index) => (
-            <li className={index < active ? 'done' : index === active ? 'active' : ''} key={step}>
-              <span className="step-index">{index < active ? <Check size={16}/> : String(index + 1).padStart(2, '0')}</span>
-              <span><strong>{step}</strong><small>{index < active ? 'Aprovado' : index === active ? 'Em andamento' : 'Aguardando'}</small></span>
-              {index === active && <button className="mini-button" onClick={() => setEditorOpen(true)}>Abrir etapa</button>}
-              {index < active && <button className="reopen-button" onClick={() => reopen(index)}><RotateCcw size={14}/> Reabrir</button>}
-            </li>
-          ))}
-        </ol>
-        <div className="approval-bar">
-          <div><span className="eyebrow">Etapa atual</span><strong>{steps[active]}</strong></div>
-          <button className="button quiet" onClick={requestChanges}><MessageSquareText size={17}/> Pedir mudanças</button>
-          <button className="button primary" onClick={approve} disabled={active === steps.length - 1}><Check size={17}/> Aprovar etapa</button>
-        </div>
-      </section>
-      <section className="history-card" aria-labelledby="history-title"><div className="section-title"><h2 id="history-title"><History size={20}/> Histórico</h2><span>{events.length} eventos</span></div><ul>{events.map(event => <li key={event.id}><span>{event.text}</span><small>{event.time}</small></li>)}</ul></section>
-    </main>
-  );
+function ProjectWorkspace({ details, onBack, onUpdated }) {
+  const { project, history, path } = details;
+  const activeStage = project.stages.find(stage => ['active', 'changes_requested'].includes(stage.state)) || project.stages.at(-1);
+  const [screen, setScreen] = useState('workflow'); const [configuring, setConfiguring] = useState(false); const [notice, setNotice] = useState(''); const [busy, setBusy] = useState(false);
+  const run = async action => { setBusy(true); setNotice(''); try { const updated = await localApi.runProjectAction({ path, baseRevision: project.revision, action }); onUpdated(updated); return updated; } catch (error) { setNotice(error.message); throw error; } finally { setBusy(false); } };
+  const requestChanges = async () => { const reason = window.prompt('O que precisa mudar nesta etapa?'); if (reason?.trim()) await run({ type: 'stage.request_changes', stageId: activeStage.id, reason }); };
+  const reopen = async stageId => { const reason = window.prompt('Por que esta etapa será reaberta?'); if (reason?.trim()) await run({ type: 'stage.reopen', stageId, reason }); };
+  if (screen === 'editor') return <CreativeEditor details={details} stageId={activeStage.id} onBack={() => setScreen('workflow')} onUpdated={onUpdated}/>;
+  return <main id="main" className="workspace"><button className="text-button" aria-label="Voltar aos projetos" onClick={onBack}><ArrowLeft size={16}/> Projetos</button><header className="project-header"><div><span className="eyebrow">{typeLabels[project.type]} · {project.aspectRatio}</span><h1>{project.title}</h1></div><div className="header-actions"><button className="button quiet" onClick={() => setConfiguring(true)}><Settings2 size={18}/> Configurar</button><button className="button primary" onClick={() => setScreen('editor')}>Continuar <ArrowRight size={18}/></button></div></header>{notice && <div className="notice error" role="alert"><X size={16}/>{notice}</div>}<section className="workflow-card" aria-labelledby="workflow-title"><div className="section-title"><div><span className="eyebrow">Fluxo do projeto</span><h2 id="workflow-title">Da ideia ao pacote final</h2></div><label className="mode-select"><Sparkles size={15}/><span className="sr-only">Modo do projeto</span><select value={project.mode} disabled={busy} onChange={event => run({ type: 'project.update', mode: event.target.value })}><option value="review">Revisão por etapa</option><option value="autonomous">Autônomo até o final</option></select></label></div><ol className="workflow-list">{project.stages.map((stage, index) => <li className={stage.state === 'approved' ? 'done' : stage.id === activeStage.id ? 'active' : ''} key={stage.id}><span className="step-index">{stage.state === 'approved' ? <Check size={16}/> : String(index + 1).padStart(2, '0')}</span><span><strong>{stageLabels[stage.id]}</strong><small>{stateLabel(stage.state)}</small></span>{stage.id === activeStage.id && <button className="mini-button" onClick={() => setScreen('editor')}>Abrir etapa</button>}{stage.state === 'approved' && <button className="reopen-button" disabled={busy} onClick={() => reopen(stage.id)}><RotateCcw size={14}/> Reabrir</button>}</li>)}</ol><div className="approval-bar"><div><span className="eyebrow">Etapa atual</span><strong>{stageLabels[activeStage.id]}</strong></div><button className="button quiet" onClick={requestChanges} disabled={busy}><MessageSquareText size={17}/> Pedir mudanças</button><button className="button primary" disabled={busy || !['active', 'changes_requested'].includes(activeStage.state)} onClick={() => run({ type: 'stage.approve', stageId: activeStage.id, expectedRevision: activeStage.revision })}><Check size={17}/> Aprovar etapa</button></div></section><section className="history-card" aria-labelledby="history-title"><div className="section-title"><h2 id="history-title"><History size={20}/> Histórico</h2><span>{history.length} eventos</span></div>{history.length ? <ul>{history.map(event => <li key={event.id}><span>{eventLabel(event)}</span><small>revisão {event.revision}</small></li>)}</ul> : <div className="empty-state">Nenhum evento registrado.</div>}</section>{configuring && <ConfigDialog project={project} busy={busy} onClose={() => setConfiguring(false)} onSave={async values => { await run({ type: 'project.update', ...values }); setConfiguring(false); }}/>}</main>;
 }
 
-function CreativeEditor({ project, onBack }) {
-  const [tab, setTab] = useState('script');
-  const [saved, setSaved] = useState('Salvo agora');
-  const [script, setScript] = useState({ hook: 'Todo herói falha. Mas algumas quedas revelam mais sobre coragem do que qualquer vitória.', development: 'A falha não encerra a jornada: ela expõe o conflito, cobra uma escolha e dá peso à transformação.', payoff: 'No fim, o que define o herói não é evitar a queda — é o que ele faz depois dela.', visual: 'Abrir com silhueta em queda; cortar para três escolhas decisivas; tipografia acompanha apenas as palavras-chave.' });
-  const [meta, setMeta] = useState({ titleA: 'Por que todo herói precisa falhar', titleB: 'A queda que transforma um herói', description: 'Uma análise sobre falha, escolha e transformação nas grandes histórias.', tags: 'heróis, narrativa, quadrinhos, cinema', seo: 'Tese e promessa alinhadas. Confirmar nomes e fontes antes da aprovação.' });
-  const change = (setter, key, value) => { setter(previous => ({ ...previous, [key]: value })); setSaved('Salvando…'); window.setTimeout(() => setSaved('Salvo agora'), 250); };
-  return <main id="main" className="creative-editor"><header className="editor-top"><button className="text-button" onClick={onBack}><ArrowLeft size={16}/> Workflow</button><div><span className="eyebrow">{project.title}</span><h1>Roteiro e embalagem</h1></div><span className="save-state" role="status"><Save size={15}/>{saved}</span></header><div className="editor-tabs" role="tablist"><button role="tab" aria-selected={tab === 'script'} onClick={() => setTab('script')}><FileText size={17}/> Roteiro</button><button role="tab" aria-selected={tab === 'package'} onClick={() => setTab('package')}><Tag size={17}/> Títulos e thumbnails</button></div>{tab === 'script' ? <section className="editor-layout"><div className="script-page"><div className="page-meta"><span>Versão 3</span><span>Roteiro {project.type === 'Short' ? 'Short' : 'longo'}</span></div><h2>{project.title}</h2><ScriptField label={project.type === 'Short' ? 'Abertura · hook imediato' : 'Abertura · gancho e entrega'} value={script.hook} onChange={value => change(setScript, 'hook', value)}/><ScriptField label="Desenvolvimento · argumento e contraste" value={script.development} onChange={value => change(setScript, 'development', value)}/><ScriptField label="Payoff · síntese e CTA contextual" value={script.payoff} onChange={value => change(setScript, 'payoff', value)}/><ScriptField label="Direção visual · não narrar" visual value={script.visual} onChange={value => change(setScript, 'visual', value)}/></div><aside className="editor-aside"><span className="eyebrow">Estrutura</span><ol><li className="ready"><Check/>Brief e tese</li><li className="active">Roteiro narrado</li><li>Fontes e direitos</li><li>Revisão factual</li></ol><div className="version-box"><History/><span><strong>Histórico local</strong><small>3 versões · última agora</small></span></div></aside></section> : <PackagingPanel meta={meta} onChange={(key, value) => change(setMeta, key, value)}/>}</main>;
+function ConfigDialog({ project, busy, onClose, onSave }) {
+  const [title, setTitle] = useState(project.title); const [projectType, setProjectType] = useState(project.type); const [aspectRatio, setAspectRatio] = useState(project.aspectRatio); const [mode, setMode] = useState(project.mode);
+  return <div className="dialog-backdrop" role="presentation"><form className="dialog" aria-label="Configurar projeto" onSubmit={event => { event.preventDefault(); onSave({ title, projectType, aspectRatio, mode }); }}><div className="section-title"><h2>Configurar projeto</h2><button type="button" className="icon-button" aria-label="Fechar" onClick={onClose}><X/></button></div><label>Título<input required value={title} onChange={event => setTitle(event.target.value)}/></label><label>Formato<select value={projectType} onChange={event => setProjectType(event.target.value)}><option value="long">Vídeo longo</option><option value="short">Short</option><option value="custom">Personalizado</option></select></label><label>Proporção<select value={aspectRatio} onChange={event => setAspectRatio(event.target.value)}><option>16:9</option><option>9:16</option><option>1:1</option><option>4:5</option></select></label><label>Modo<select value={mode} onChange={event => setMode(event.target.value)}><option value="review">Revisão por etapa</option><option value="autonomous">Autônomo até o final</option></select></label><div className="dialog-actions"><button type="button" className="button quiet" onClick={onClose}>Cancelar</button><button className="button primary" disabled={busy}>Salvar</button></div></form></div>;
 }
 
-function ScriptField({ label, value, onChange, visual = false }) {
-  return <label className={visual ? 'script-block visual-note' : 'script-block'}><span>{label}</span><textarea value={value} onChange={event => onChange(event.target.value)} rows={visual ? 3 : 4}/><small>{value.trim().split(/\s+/).filter(Boolean).length} palavras</small></label>;
+function CreativeEditor({ details, stageId, onBack, onUpdated }) {
+  const { project, path } = details; const initialTab = stageId === 'packaging' ? 'package' : stageId === 'brief' ? 'brief' : 'script'; const [tab, setTab] = useState(initialTab); const [creative, setCreative] = useState(() => structuredClone(project.creative)); const [saveState, setSaveState] = useState('Salvo em disco'); const [dirty, setDirty] = useState(false); const timer = useRef(null); const currentRevision = useRef(project.revision);
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+  const change = (section, key, value) => { const next = { ...creative, [section]: { ...creative[section], [key]: value } }; setCreative(next); setDirty(true); setSaveState('Salvando…'); window.clearTimeout(timer.current); timer.current = window.setTimeout(async () => { try { const updated = await localApi.runProjectAction({ path, baseRevision: currentRevision.current, action: { type: 'creative.update', creative: next } }); currentRevision.current = updated.project.revision; setDirty(false); setSaveState('Salvo em disco'); onUpdated(updated); } catch (error) { setSaveState(`Erro: ${error.message}`); } }, 500); };
+  if (!['brief', 'script', 'packaging'].includes(stageId)) return <main id="main" className="creative-editor"><header className="editor-top"><button className="text-button" onClick={onBack}><ArrowLeft size={16}/> Workflow</button><div><span className="eyebrow">{project.title}</span><h1>{stageLabels[stageId]}</h1></div></header><section className="workflow-card"><div className="empty-state"><strong>Esta etapa ainda não tem uma superfície operacional.</strong><span>Nenhuma ação é simulada. Use aprovação apenas depois de concluir o trabalho pelas ferramentas locais disponíveis.</span></div></section></main>;
+  return <main id="main" className="creative-editor"><header className="editor-top"><button className="text-button" onClick={onBack}><ArrowLeft size={16}/> Workflow</button><div><span className="eyebrow">{project.title}</span><h1>Conteúdo do projeto</h1></div><span className={`save-state ${dirty ? 'saving' : ''}`} role="status"><Save size={15}/>{saveState}</span></header><div className="editor-tabs" role="tablist"><button role="tab" aria-selected={tab === 'brief'} onClick={() => setTab('brief')}><Sparkles size={17}/> Brief</button><button role="tab" aria-selected={tab === 'script'} onClick={() => setTab('script')}><FileText size={17}/> Roteiro</button><button role="tab" aria-selected={tab === 'package'} onClick={() => setTab('package')}><Tag size={17}/> Embalagem</button></div>{tab === 'brief' ? <BriefPanel value={creative.brief} onChange={(key, value) => change('brief', key, value)}/> : tab === 'script' ? <ScriptPanel project={project} value={creative.script} onChange={(key, value) => change('script', key, value)}/> : <PackagingPanel value={creative.packaging} onChange={(key, value) => change('packaging', key, value)}/>}</main>;
 }
 
-function PackagingPanel({ meta, onChange }) {
-  return <section className="packaging"><div className="metadata-form"><span className="eyebrow">Duas promessas distintas</span><h2>Títulos A/B</h2><label>Título A <small>Clareza e tese</small><input value={meta.titleA} onChange={event => onChange('titleA', event.target.value)}/></label><label>Título B <small>Curiosidade ou contraste</small><input value={meta.titleB} onChange={event => onChange('titleB', event.target.value)}/></label><label>Descrição<textarea rows="5" value={meta.description} onChange={event => onChange('description', event.target.value)}/></label><label>Tags<input value={meta.tags} onChange={event => onChange('tags', event.target.value)}/></label><label>Notas de SEO<textarea rows="3" value={meta.seo} onChange={event => onChange('seo', event.target.value)}/></label></div><div className="thumb-panel"><div className="section-title"><div><span className="eyebrow">Conceitos e arquivos</span><h2>Thumbnails</h2></div><button className="button quiet"><ImagePlus size={17}/> Importar</button></div><div className="thumb-grid"><button className="thumb-concept thumb-a"><span>A</span><strong>Contradição</strong><small>Assunto dominante + queda visual</small></button><button className="thumb-concept thumb-b"><span>B</span><strong>Consequência</strong><small>Antes/depois com foco único</small></button><button className="thumb-drop"><ImagePlus/><strong>Criar ou importar</strong><small>PNG ou JPEG · 16:9</small></button></div><div className="rights-note"><strong>Estado: preliminar</strong><span>Fontes e direitos dos assets ainda precisam de revisão.</span></div></div></section>;
-}
+function BriefPanel({ value, onChange }) { return <section className="packaging"><div className="metadata-form"><h2>Ideia e brief</h2><label>Tese<textarea rows="4" value={value.thesis} onChange={event => onChange('thesis', event.target.value)}/></label><label>Público<input value={value.audience} onChange={event => onChange('audience', event.target.value)}/></label><label>Promessa<input value={value.promise} onChange={event => onChange('promise', event.target.value)}/></label><label>Notas<textarea rows="5" value={value.notes} onChange={event => onChange('notes', event.target.value)}/></label></div></section>; }
+function ScriptPanel({ project, value, onChange }) { return <section className="editor-layout"><div className="script-page"><div className="page-meta"><span>Revisão {project.revision}</span><span>{typeLabels[project.type]}</span></div><h2>{project.title}</h2><ScriptField label="Abertura" value={value.hook} onChange={v => onChange('hook', v)}/><ScriptField label="Desenvolvimento" value={value.development} onChange={v => onChange('development', v)}/><ScriptField label="Payoff" value={value.payoff} onChange={v => onChange('payoff', v)}/><ScriptField label="Direção visual · não narrar" value={value.visual} onChange={v => onChange('visual', v)}/><ScriptField label="Fontes" value={value.sources} onChange={v => onChange('sources', v)}/></div></section>; }
+function ScriptField({ label, value, onChange }) { return <label className="script-block"><span>{label}</span><textarea value={value} onChange={event => onChange(event.target.value)} rows="4"/><small>{value.trim() ? value.trim().split(/\s+/).length : 0} palavras</small></label>; }
+function PackagingPanel({ value, onChange }) { return <section className="packaging"><div className="metadata-form"><h2>Títulos e metadados</h2><label>Título A<input value={value.titleA} onChange={event => onChange('titleA', event.target.value)}/></label><label>Título B<input value={value.titleB} onChange={event => onChange('titleB', event.target.value)}/></label><label>Descrição<textarea rows="5" value={value.description} onChange={event => onChange('description', event.target.value)}/></label><label>Tags<input value={value.tags} onChange={event => onChange('tags', event.target.value)}/></label><label>Notas de SEO<textarea rows="3" value={value.seo} onChange={event => onChange('seo', event.target.value)}/></label></div><div className="thumb-panel"><h2>Thumbnail</h2><div className="empty-state"><strong>Nenhuma thumbnail vinculada.</strong><span>A importação será feita pelo catálogo de mídias locais, sem conceitos fictícios.</span></div></div></section>; }
 
 function NewProjectDialog({ onClose, onCreate }) {
-  const [title, setTitle] = useState('');
-  const [type, setType] = useState('long');
-  const [parentDirectory, setParentDirectory] = useState('');
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-  const chooseLocation = async () => {
-    setError('');
-    try { const result = await localApi.chooseDirectory('Onde criar o projeto?'); if (result.path) setParentDirectory(result.path); }
-    catch (issue) { setError(issue.message); }
-  };
-  const submit = async event => {
-    event.preventDefault(); setBusy(true); setError('');
-    try { await onCreate({ title, type, aspectRatio: type === 'short' ? '9:16' : '16:9', ...(parentDirectory ? { parentDirectory } : {}) }); }
-    catch (issue) { setError(issue.message); setBusy(false); }
-  };
+  const [title, setTitle] = useState(''); const [type, setType] = useState('long'); const [parentDirectory, setParentDirectory] = useState(''); const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
+  const chooseLocation = async () => { setError(''); try { const result = await localApi.chooseDirectory('Onde criar o projeto?'); if (result.path) setParentDirectory(result.path); } catch (issue) { setError(issue.message); } };
+  const submit = async event => { event.preventDefault(); setBusy(true); setError(''); try { await onCreate({ title, type, aspectRatio: type === 'short' ? '9:16' : '16:9', ...(parentDirectory ? { parentDirectory } : {}) }); } catch (issue) { setError(issue.message); setBusy(false); } };
   return <div className="dialog-backdrop" role="presentation"><form className="dialog" aria-label="Novo projeto" onSubmit={submit}><div className="section-title"><div><span className="eyebrow">Projeto local</span><h2>Novo vídeo</h2></div><button type="button" className="icon-button" aria-label="Fechar" onClick={onClose}><X/></button></div>{error && <div className="notice error" role="alert">{error}</div>}<label>Título<input autoFocus required value={title} onChange={event => setTitle(event.target.value)} placeholder="Nome do projeto"/></label><fieldset><legend>Formato</legend><label><input type="radio" name="type" checked={type === 'long'} onChange={() => setType('long')}/> Vídeo longo · 16:9</label><label><input type="radio" name="type" checked={type === 'short'} onChange={() => setType('short')}/> Short · 9:16</label></fieldset><div className="location-picker"><span><strong>Local</strong><small>{parentDirectory || 'Pasta padrão do Content Lab'}</small></span><button type="button" className="button quiet" onClick={chooseLocation}>Escolher pasta</button></div><div className="dialog-actions"><button type="button" className="button quiet" onClick={onClose}>Cancelar</button><button className="button primary" disabled={busy}>{busy ? 'Criando…' : 'Criar projeto'}</button></div></form></div>;
 }
 
+function stateLabel(state) { return ({ pending: 'Aguardando', active: 'Em andamento', changes_requested: 'Mudanças solicitadas', approved: 'Aprovado', invalidated: 'Precisa de nova revisão' })[state] || state; }
+function eventLabel(event) { if (event.type === 'project.created') return 'Projeto criado'; if (event.type === 'operation.applied') return `Alteração salva: ${(event.actions || []).join(', ')}`; return event.type || 'Alteração registrada'; }
+
 export function App() {
-  const [selected, setSelected] = useState(null);
-  const [items, setItems] = useState([]);
-  const [creating, setCreating] = useState(false);
-  const [homeNotice, setHomeNotice] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [serverError, setServerError] = useState('');
+  const [selected, setSelected] = useState(null); const [items, setItems] = useState([]); const [creating, setCreating] = useState(false); const [homeNotice, setHomeNotice] = useState(''); const [loading, setLoading] = useState(true); const [serverError, setServerError] = useState('');
   useEffect(() => { localApi.listProjects().then(({ projects }) => setItems(projects)).catch(error => setServerError(error.message)).finally(() => setLoading(false)); }, []);
-  const openRecent = async card => {
-    setHomeNotice('');
-    try { const details = await localApi.openProject(card.path); setSelected(details.project); }
-    catch (error) { setHomeNotice(error.message); }
-  };
-  const createProject = async input => {
-    const details = await localApi.createProject(input);
-    setItems(previous => [details.card, ...previous.filter(item => item.path !== details.card.path)]);
-    setCreating(false);
-    setSelected(details.project);
-  };
-  const chooseAndOpen = async () => {
-    setHomeNotice('');
-    try {
-      const selectedDirectory = await localApi.chooseDirectory('Abrir projeto do Content Lab');
-      if (!selectedDirectory.path) return;
-      const details = await localApi.openProject(selectedDirectory.path);
-      setItems(previous => [details.card, ...previous.filter(item => item.path !== details.card.path)]);
-      setSelected(details.project);
-    } catch (error) { setHomeNotice(error.message); }
-  };
-  const chooseAndImport = async () => {
-    setHomeNotice('');
-    try {
-      const selectedPackage = await localApi.choosePackage('Importar projeto do Content Lab');
-      if (!selectedPackage.path) return;
-      const details = await localApi.importPackage({ packagePath: selectedPackage.path });
-      setItems(previous => [details.card, ...previous.filter(item => item.path !== details.card.path)]);
-      setSelected(details.project);
-    } catch (error) { setHomeNotice(error.message); }
-  };
-  return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <Logo />
-        <nav aria-label="Principal">
-          <button className="nav-item active"><LayoutTemplate size={19}/> Projetos</button>
-          <button className="nav-item" disabled title="Abra um projeto para acessar suas mídias"><FolderOpen size={19}/> Mídias locais</button>
-        </nav>
-        <div className="credit">Criado por <strong>Daniel Dias</strong><span>Diazverso</span></div>
-      </aside>
-      {selected ? <ProjectView project={selected} onBack={() => setSelected(null)} /> : (
-        <main id="main" className="project-home">
-          <header className="home-header"><div><span className="eyebrow">Seu espaço de criação</span><h1>Projetos locais</h1><p>Retome um vídeo ou comece uma nova produção.</p></div><button className="button primary" onClick={() => setCreating(true)} disabled={Boolean(serverError)}><Plus size={19}/> Novo projeto</button></header>
-          {serverError && <div className="notice error" role="alert"><X size={16}/><span><strong>Servidor local indisponível.</strong> Inicie o Content Lab com <code>npm run dev</code>. {serverError}</span></div>}
-          {homeNotice && <div className="notice" role="status"><X size={16}/>{homeNotice}</div>}
-          <div className="quick-actions"><button onClick={chooseAndOpen} disabled={Boolean(serverError)}><FolderOpen/><span><strong>Abrir projeto</strong><small>Escolher uma pasta local</small></span></button><button onClick={chooseAndImport} disabled={Boolean(serverError)}><ArrowRight/><span><strong>Importar pacote</strong><small>.contentlab ou ZIP</small></span></button></div>
-          <section aria-labelledby="recent-title"><div className="section-title"><h2 id="recent-title">Recentes</h2><span>{items.length} {items.length === 1 ? 'projeto' : 'projetos'}</span></div>{loading ? <p className="empty-state">Carregando projetos locais…</p> : items.length ? <div className="project-grid">{items.map(project => <ProjectCard key={project.path} project={project} onOpen={openRecent}/>)}</div> : <div className="empty-state"><strong>Nenhum projeto recente.</strong><span>Crie um projeto ou abra uma pasta que contenha um project.json válido.</span></div>}</section>
-          {creating && <NewProjectDialog onClose={() => setCreating(false)} onCreate={createProject}/>} 
-        </main>
-      )}
-    </div>
-  );
+  const acceptDetails = details => { setSelected(details); if (details.card) setItems(previous => [details.card, ...previous.filter(item => item.path !== details.card.path)]); };
+  const openRecent = async card => { setHomeNotice(''); try { acceptDetails(await localApi.openProject(card.path)); } catch (error) { setHomeNotice(error.message); } };
+  const createProject = async input => { acceptDetails(await localApi.createProject(input)); setCreating(false); };
+  const chooseAndOpen = async () => { setHomeNotice(''); try { const choice = await localApi.chooseDirectory('Abrir projeto do Content Lab'); if (choice.path) acceptDetails(await localApi.openProject(choice.path)); } catch (error) { setHomeNotice(error.message); } };
+  const chooseAndImport = async () => { setHomeNotice(''); try { const choice = await localApi.choosePackage('Importar projeto do Content Lab'); if (choice.path) acceptDetails(await localApi.importPackage({ packagePath: choice.path })); } catch (error) { setHomeNotice(error.message); } };
+  return <div className="app-shell"><aside className="sidebar"><Logo/><nav aria-label="Principal"><button className="nav-item active" onClick={() => setSelected(null)}><LayoutTemplate size={19}/> Projetos</button><button className="nav-item" disabled title="Abra um projeto e acesse a etapa Mídia"><FolderOpen size={19}/> Mídias locais</button></nav><div className="credit">Criado por <strong>Daniel Dias</strong><span>Diazverso</span></div></aside>{selected ? <ProjectWorkspace details={selected} onBack={() => setSelected(null)} onUpdated={acceptDetails}/> : <main id="main" className="project-home"><header className="home-header"><div><span className="eyebrow">Seu espaço de criação</span><h1>Projetos locais</h1><p>Retome um vídeo ou comece uma nova produção.</p></div><button className="button primary" onClick={() => setCreating(true)} disabled={Boolean(serverError)}><Plus size={19}/> Novo projeto</button></header>{serverError && <div className="notice error" role="alert"><X size={16}/><span><strong>Servidor local indisponível.</strong> Inicie o Content Lab com <code>npm run dev</code>. {serverError}</span></div>}{homeNotice && <div className="notice error" role="alert"><X size={16}/>{homeNotice}</div>}<div className="quick-actions"><button onClick={chooseAndOpen} disabled={Boolean(serverError)}><FolderOpen/><span><strong>Abrir projeto</strong><small>Escolher uma pasta local</small></span></button><button onClick={chooseAndImport} disabled={Boolean(serverError)}><ArrowRight/><span><strong>Importar pacote</strong><small>.contentlab ou ZIP</small></span></button></div><section aria-labelledby="recent-title"><div className="section-title"><h2 id="recent-title">Recentes</h2><span>{items.length} {items.length === 1 ? 'projeto' : 'projetos'}</span></div>{loading ? <p className="empty-state">Carregando projetos locais…</p> : items.length ? <div className="project-grid">{items.map(project => <ProjectCard key={project.path} project={project} onOpen={openRecent}/>)}</div> : <div className="empty-state"><strong>Nenhum projeto recente.</strong><span>Crie um projeto ou abra uma pasta que contenha um project.json válido.</span></div>}</section>{creating && <NewProjectDialog onClose={() => setCreating(false)} onCreate={createProject}/>}</main>}</div>;
 }

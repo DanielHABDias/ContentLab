@@ -13,6 +13,7 @@ export const localApi = {
   listProjects: () => request('/projects'),
   openProject: path => request('/projects/open', { method: 'POST', body: JSON.stringify({ path }) }),
   createProject: input => request('/projects/create', { method: 'POST', body: JSON.stringify(input) }),
+  runProjectAction: input => request('/projects/action', { method: 'POST', body: JSON.stringify(input) }),
   chooseDirectory: title => request('/dialog/directory', { method: 'POST', body: JSON.stringify({ title }) }),
   choosePackage: title => request('/dialog/package', { method: 'POST', body: JSON.stringify({ title }) }),
   importPackage: input => request('/packages/import', { method: 'POST', body: JSON.stringify(input) }),

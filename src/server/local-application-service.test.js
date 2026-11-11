@@ -35,3 +35,16 @@ test('importa pacote contentlab para um projeto real', async () => {
   expect(imported.project).toMatchObject({ id: 'projeto_empacotado', title: 'Projeto empacotado' });
   expect(await targetService.listProjects()).toHaveLength(1);
 });
+
+test('persiste configuração, conteúdo criativo e workflow no mesmo núcleo', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'contentlab-actions-')); roots.push(root);
+  const service = new LocalApplicationService({ dataDirectory: path.join(root, 'data') });
+  let details = await service.createProject({ title: 'Operações', type: 'long', aspectRatio: '16:9' });
+  details = await service.runProjectAction({ path: details.path, baseRevision: 1, action: { type: 'project.update', title: 'Operações persistidas', mode: 'autonomous' } });
+  const creative = structuredClone(details.project.creative); creative.script.hook = 'Texto salvo em disco';
+  details = await service.runProjectAction({ path: details.path, baseRevision: 2, action: { type: 'creative.update', creative } });
+  details = await service.runProjectAction({ path: details.path, baseRevision: 3, action: { type: 'stage.request_changes', stageId: 'brief', reason: 'Aprimorar tese' } });
+  expect(details.project).toMatchObject({ title: 'Operações persistidas', mode: 'autonomous', revision: 4, creative: { script: { hook: 'Texto salvo em disco' } } });
+  expect(details.project.stages[0]).toMatchObject({ id: 'brief', state: 'changes_requested', revision: 1 });
+  expect(details.history).toHaveLength(4);
+});

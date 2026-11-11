@@ -5,6 +5,8 @@ import { ProjectStore } from '../core/project-store.js';
 import { createWorkflow } from '../core/workflow.js';
 import { PackageService } from '../package/package-service.js';
 import { NativeDialog } from './native-dialog.js';
+import { AgentService } from '../core/agent-service.js';
+import { randomUUID } from 'node:crypto';
 
 export class LocalApplicationService {
   constructor({ dataDirectory, dialog = new NativeDialog(), packages = new PackageService() }) {
@@ -76,6 +78,16 @@ export class LocalApplicationService {
     if (extension === '.contentlab') await this.packages.restore(packagePath, destination);
     else await this.packages.restoreZip(packagePath, destination);
     return await this.registerProject(destination);
+  }
+
+  async runProjectAction({ path: directory, baseRevision, action }) {
+    const absolute = path.resolve(directory);
+    const project = await readProjectDirectory(absolute);
+    if (project.revision !== baseRevision) throw new Error(`Conflito de revisão: esperado ${baseRevision}, atual ${project.revision}`);
+    const store = new ProjectStore(path.dirname(absolute));
+    const agent = new AgentService(store);
+    await agent.run({ schema: 'contentlab-operation-v1', operationId: `op_${randomUUID().replaceAll('-', '')}`, projectId: project.id, baseRevision, dryRun: false, actions: [action] });
+    return await this.registerProject(absolute);
   }
 
   async #availableId(root, preferred) {

@@ -69,6 +69,15 @@ export const projectSchema = z.object({
   stages: z.array(workflowStageSchema),
   media: z.array(mediaRefSchema),
   timeline: timelineSchema,
+  creative: z.object({
+    brief: z.object({ thesis: z.string(), audience: z.string(), promise: z.string(), notes: z.string() }),
+    script: z.object({ hook: z.string(), development: z.string(), payoff: z.string(), visual: z.string(), sources: z.string() }),
+    packaging: z.object({ titleA: z.string(), titleB: z.string(), description: z.string(), tags: z.string(), seo: z.string(), thumbnailMediaId: idSchema.nullable() }),
+  }).default({
+    brief: { thesis: '', audience: '', promise: '', notes: '' },
+    script: { hook: '', development: '', payoff: '', visual: '', sources: '' },
+    packaging: { titleA: '', titleB: '', description: '', tags: '', seo: '', thumbnailMediaId: null },
+  }),
 });
 
 export const operationSchema = z.object({
@@ -83,6 +92,10 @@ export const operationSchema = z.object({
     z.object({ type: z.literal('clip.move'), trackId: idSchema, clipId: idSchema, startFrame: z.number().int().nonnegative() }),
     z.object({ type: z.literal('stage.approve'), stageId: idSchema, expectedRevision: z.number().int().nonnegative() }),
     z.object({ type: z.literal('stage.reopen'), stageId: idSchema, reason: z.string().min(1) }),
+    z.object({ type: z.literal('stage.request_changes'), stageId: idSchema, reason: z.string().min(1) }),
+    z.object({ type: z.literal('project.update'), title: z.string().min(1).optional(), projectType: z.enum(['long', 'short', 'custom']).optional(), aspectRatio: aspectRatioSchema.optional(), mode: z.enum(['review', 'autonomous']).optional() }),
+    z.object({ type: z.literal('creative.update'), creative: projectSchema.shape.creative }),
+    z.object({ type: z.literal('media.add'), media: mediaRefSchema }),
   ])).min(1).max(100),
 });
 

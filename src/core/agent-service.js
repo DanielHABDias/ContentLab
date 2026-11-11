@@ -1,5 +1,5 @@
 import { parseOperation, parseProject } from './contracts.js';
-import { approveStage, reopenStage } from './workflow.js';
+import { approveStage, reopenStage, requestChanges } from './workflow.js';
 
 export class AgentService {
   constructor(store) { this.store = store; }
@@ -31,6 +31,19 @@ function applyActions(project, actions) {
   for (const action of actions) {
     if (action.type === 'stage.approve') draft = approveStage(draft, action.stageId, action.expectedRevision);
     else if (action.type === 'stage.reopen') draft = reopenStage(draft, action.stageId, action.reason);
+    else if (action.type === 'stage.request_changes') draft = requestChanges(draft, action.stageId, action.reason);
+    else if (action.type === 'project.update') {
+      if (action.title !== undefined) draft.title = action.title;
+      if (action.projectType !== undefined) draft.type = action.projectType;
+      if (action.aspectRatio !== undefined) { draft.aspectRatio = action.aspectRatio; draft.timeline.aspectRatio = action.aspectRatio; }
+      if (action.mode !== undefined) draft.mode = action.mode;
+    }
+    else if (action.type === 'creative.update') draft.creative = structuredClone(action.creative);
+    else if (action.type === 'media.add') {
+      const existing = draft.media.findIndex(item => item.id === action.media.id);
+      if (existing >= 0) draft.media[existing] = action.media;
+      else draft.media.push(action.media);
+    }
     else {
       const track = draft.timeline.tracks.find(candidate => candidate.id === action.trackId);
       if (!track) throw new Error(`Track desconhecida: ${action.trackId}`);

@@ -39,24 +39,24 @@ Este plano substitui a aceitação visual usada no ciclo T01–T12 por aceitaç�
 
 ## F03 — configuração e navegação do projeto
 
-- [ ] Fazer “Configurar” editar e persistir título, formato, proporção e modo com revisão otimista.
-- [ ] Fazer “Continuar” abrir a etapa ativa real.
-- [ ] Manter botões indisponíveis realmente desabilitados e explicar o motivo por texto/tooltip.
-- [ ] Remover todos os rótulos de demonstração e mensagens de integração futura.
+- [x] Fazer “Configurar” editar e persistir título, formato, proporção e modo com revisão otimista.
+- [x] Fazer “Continuar” abrir a etapa ativa real.
+- [x] Manter botões indisponíveis realmente desabilitados e explicar o motivo por texto/tooltip.
+- [x] Remover todos os rótulos de demonstração e mensagens de integração futura.
 
 ## F04 — workflow e histórico persistentes
 
-- [ ] Ler estados das etapas e histórico diretamente do projeto.
-- [ ] Persistir aprovação, pedido de mudanças e reabertura pelo mesmo núcleo da CLI/MCP.
-- [ ] Preservar revisões, invalidação de dependências e idempotência.
-- [ ] Validar conflitos de revisão e atualizar a interface sem perder dados.
+- [x] Ler estados das etapas e histórico diretamente do projeto.
+- [x] Persistir aprovação, pedido de mudanças e reabertura pelo mesmo núcleo da CLI/MCP.
+- [x] Preservar revisões, invalidação de dependências e idempotência.
+- [x] Validar conflitos de revisão e atualizar a interface sem perder dados.
 
 ## F05 — brief, roteiro e embalagem reais
 
-- [ ] Adicionar ao contrato dados criativos versionados, inicialmente vazios.
-- [ ] Persistir brief, roteiro, direção visual, fontes, títulos, descrição, tags e notas.
-- [ ] Substituir autosave simulado por salvamento real com estados salvando/salvo/erro.
-- [ ] Mostrar versões e histórico reais, sem números inventados.
+- [x] Adicionar ao contrato dados criativos versionados, inicialmente vazios.
+- [x] Persistir brief, roteiro, direção visual, fontes, títulos, descrição, tags e notas.
+- [x] Substituir autosave simulado por salvamento real com estados salvando/salvo/erro.
+- [x] Mostrar versões e histórico reais, sem números inventados.
 
 ## F06 — mídias locais e thumbnails
 
