@@ -7,20 +7,29 @@ Ferramenta audiovisual local para organizar um vídeo da ideia ao pacote final. 
 ## Requisitos e instalação
 
 - Node.js 22 ou superior
-- FFmpeg/FFprobe 6 ou superior
-- Opcional: `yt-dlp` para URLs, whisper.cpp + `large-v3` para transcrição, Chatterbox V3 PT-BR para voz por IA
+- FFmpeg/FFprobe 6 ou superior e, no Linux, `zenity` (seletores nativos)
+- Opcional: `yt-dlp` para URLs, whisper.cpp + `large-v3` para transcrição, Chatterbox PT-BR para voz por IA
 
 ```bash
 npm install
-npm run doctor
+npm run doctor -- --text
 npm run dev
 ```
+
+Na primeira execução abre o assistente **Prepare seu computador** (também disponível em “Dependências” no menu lateral):
+
+- **Essenciais** (Node, FFmpeg, FFprobe, zenity) são pacotes do sistema: o assistente mostra o comando para a sua distribuição (apt, dnf, pacman, zypper; brew/winget como contrato) e nunca executa `sudo`.
+- **Recursos de IA** são opcionais. yt-dlp (2026.10.26) e os pesos Whisper `large-v3` são baixados com tamanho e SHA-256 fixados; whisper.cpp v1.9.5 é compilado a partir do commit fixado `d1be6fde`. Antes de baixar, o assistente mostra origem, licença, tamanho, destino e espaço livre, e exige consentimento. Chatterbox não tem artefato verificável (upstream arquivado) e permanece manual.
+- Tudo vai para `.tools/` (ou `CONTENTLAB_TOOLS_DIR`), sem alterar Python/Node globais. Downloads usam arquivo `.partial`, podem ser pausados, retomados (HTTP Range), cancelados ou repetidos, e só são promovidos após conferir o SHA-256. O estado fica em `.tools/setup-state.json`; a segunda inicialização não baixa de novo, e uma mudança de versão/checksum no catálogo pede atualização.
+- “Agora não” é lembrado; a interface básica funciona sem voz e transcrição.
+
+Pelo terminal: `npm run doctor` (JSON), `npm run doctor -- --text` (legível) e `npm run doctor -- --install whisper-large-v3 --accept` (sem `--accept`, apenas mostra origem, licença e tamanho).
 
 Abra o endereço local mostrado. O comando inicia a interface e a API local juntas. Para uso sem recarga de desenvolvimento, `npm start` compila e serve o aplicativo em `http://127.0.0.1:4173`.
 
 Os dados padrão ficam em `.contentlab/`: projetos criados sem pasta escolhida ficam em `.contentlab/projects`, mídias deduplicadas em `.contentlab/media` e o registro de recentes em `.contentlab/recent-projects.json`. Defina `CONTENTLAB_DATA_DIR` para usar outra raiz. O registro de recentes guarda caminho, ID e título; um caminho ausente ou inválido continua listado com aviso até ser removido dos Recentes.
 
-No Linux, os seletores nativos usam `zenity`. Se ele não estiver disponível, instale-o pelo gerenciador do sistema. Cancelar um seletor não altera o projeto. `npm run doctor` retorna JSON com dependências prontas e soluções para as ausentes. Recursos opcionais com pesos grandes não são baixados silenciosamente.
+No Linux, os seletores nativos usam `zenity`. Se ele não estiver disponível, instale-o pelo gerenciador do sistema. Cancelar um seletor não altera o projeto.
 
 ## Uso
 
@@ -81,7 +90,9 @@ npm audit --omit=dev
 ## Solução de problemas
 
 - `FFmpeg não disponível`: instale FFmpeg/FFprobe e execute `npm run doctor`.
-- Transcrição/voz indisponível: o doctor mostra o runtime/peso ausente; edição e render continuam funcionando.
+- Transcrição/voz indisponível: abra “Dependências” ou rode `npm run doctor -- --text`; edição e render continuam funcionando.
+- Download falhou: “Tentar novamente” retoma do ponto salvo; checksum incorreto descarta o arquivo e recomeça. Pouco espaço é avisado antes de baixar.
+- Compilação do whisper.cpp falhou: instale `git`, `cmake` e um compilador C++ (o assistente mostra o comando) e tente de novo.
 - Conflito de revisão: reinspecione o projeto e refaça o dry-run sobre a revisão atual.
 - Pacote recusado: não force extração; confira manifesto, hash, caminho e se o destino já contém arquivos.
 - Render interrompido: reinicie a fila; jobs que estavam executando voltam para `queued`.

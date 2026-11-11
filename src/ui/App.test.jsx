@@ -3,7 +3,17 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { App } from './App.jsx';
 import { localApi } from './local-api.js';
 
-vi.mock('./local-api.js', () => ({ localApi: { listProjects: vi.fn(), openProject: vi.fn(), createProject: vi.fn(), chooseDirectory: vi.fn(), choosePackage: vi.fn(), chooseMedia: vi.fn(), importPackage: vi.fn(), importMedia: vi.fn(), runProjectAction: vi.fn(), forgetProject: vi.fn(), revealProject: vi.fn(), renameProject: vi.fn(), changeProjectId: vi.fn(), duplicateProject: vi.fn(), exportProject: vi.fn(), deleteProject: vi.fn(), restoreProject: vi.fn(), projectActivities: vi.fn(), cancelProjectActivities: vi.fn() } }));
+vi.mock('./local-api.js', () => ({ localApi: { listProjects: vi.fn(), openProject: vi.fn(), createProject: vi.fn(), chooseDirectory: vi.fn(), choosePackage: vi.fn(), chooseMedia: vi.fn(), importPackage: vi.fn(), importMedia: vi.fn(), runProjectAction: vi.fn(), forgetProject: vi.fn(), revealProject: vi.fn(), renameProject: vi.fn(), changeProjectId: vi.fn(), duplicateProject: vi.fn(), exportProject: vi.fn(), deleteProject: vi.fn(), restoreProject: vi.fn(), projectActivities: vi.fn(), cancelProjectActivities: vi.fn(), setupStatus: vi.fn(), setupJobs: vi.fn(), setupInstall: vi.fn(), setupPause: vi.fn(), setupResume: vi.fn(), setupCancel: vi.fn(), setupOnboarding: vi.fn() } }));
+
+function setupStatus(overrides = {}) {
+  const items = [
+    { id: 'ffmpeg', label: 'FFmpeg', group: 'essential', kind: 'system', required: true, ready: true, detected: 'ffmpeg 6' },
+    { id: 'zenity', label: 'Diálogo nativo (zenity)', group: 'essential', kind: 'system', required: true, ready: true, detected: '4.0' },
+    { id: 'whisper-large-v3', label: 'Pesos Whisper large-v3', group: 'ai', kind: 'download', required: false, ready: false, installable: true, consent: true, downloadBytes: 3095033483, license: 'MIT', origin: 'https://huggingface.co/ggerganov/whisper.cpp', version: 'ggml-large-v3' },
+    { id: 'chatterbox-pt-br', label: 'Chatterbox PT-BR', group: 'ai', kind: 'manual', required: false, ready: false, installable: false, manualSteps: 'Prepare o ambiente manualmente.' },
+  ];
+  return { platform: { os: 'linux', arch: 'x64', distro: 'Zorin OS 18', packageManager: 'apt' }, toolsDirectory: '/app/.tools', freeBytes: 80 * 1024 ** 3, essentialsReady: true, onboarding: { completedAt: null, dismissedAt: null }, items, jobs: [], ...overrides };
+}
 
 function realDetails(overrides = {}) {
   const ids = ['brief', 'script', 'packaging', 'media', 'narration', 'edit', 'review'];
@@ -11,7 +21,7 @@ function realDetails(overrides = {}) {
   return { project, path: '/tmp/meu_projeto', history: [{ id: 'one', type: 'project.created', revision: 1 }], card: { id: project.id, title: project.title, type: project.type, aspectRatio: project.aspectRatio, revision: project.revision, stage: 'brief', progress: 0, path: '/tmp/meu_projeto' } };
 }
 
-beforeEach(() => { vi.clearAllMocks(); localApi.listProjects.mockResolvedValue({ projects: [] }); localApi.chooseDirectory.mockResolvedValue({ path: null }); localApi.choosePackage.mockResolvedValue({ path: null }); });
+beforeEach(() => { vi.clearAllMocks(); localApi.setupStatus.mockResolvedValue(setupStatus({ onboarding: { completedAt: '2026-11-11T00:00:00Z', dismissedAt: null } })); localApi.listProjects.mockResolvedValue({ projects: [] }); localApi.chooseDirectory.mockResolvedValue({ path: null }); localApi.choosePackage.mockResolvedValue({ path: null }); });
 
 test('primeira execução fica vazia e não injeta exemplos', async () => {
   render(<App/>); expect(await screen.findByText(/nenhum projeto recente/i)).toBeInTheDocument(); expect(screen.queryByText(/batman|omnitrix|heróis falham/i)).not.toBeInTheDocument();
@@ -115,4 +125,45 @@ test('exportar usa a pasta escolhida e cancelar o seletor não exporta', async (
   localApi.chooseDirectory.mockResolvedValue({ path: '/backups' }); await openMenu(/exportar zip/i);
   expect(await screen.findByText('Exportado: /backups/meu_projeto-r1.zip')).toBeInTheDocument();
   expect(localApi.exportProject).toHaveBeenCalledWith({ path: '/tmp/meu_projeto', outputDirectory: '/backups', format: 'zip' });
+});
+
+test('primeira execução abre o assistente; “Agora não” é salvo e volta aos projetos', async () => {
+  localApi.setupStatus.mockResolvedValue(setupStatus()); localApi.setupOnboarding.mockResolvedValue({});
+  render(<App/>); expect(await screen.findByRole('heading', { name: /prepare seu computador/i })).toBeInTheDocument();
+  expect(screen.getByText(/essenciais prontos/i)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /agora não/i }));
+  await waitFor(() => expect(localApi.setupOnboarding).toHaveBeenCalledWith('dismissed'));
+  expect(await screen.findByRole('heading', { name: /projetos locais/i })).toBeInTheDocument();
+  expect(localApi.setupInstall).not.toHaveBeenCalled();
+});
+
+test('instalar recursos de IA exige seleção e consentimento com tamanho e licença', async () => {
+  localApi.setupStatus.mockResolvedValue(setupStatus()); localApi.setupInstall.mockResolvedValue([]);
+  render(<App/>); await screen.findByRole('heading', { name: /prepare seu computador/i });
+  const install = screen.getByRole('button', { name: /instalar recursos de ia/i }); expect(install).toBeDisabled();
+  fireEvent.click(screen.getByLabelText(/pesos whisper large-v3/i));
+  expect(screen.getByText(/antes de baixar/i).closest('p').textContent).toMatch(/2,9 GB.*MIT/);
+  expect(install).toBeDisabled();
+  fireEvent.click(screen.getByLabelText(/autorizo o download/i)); fireEvent.click(install);
+  await waitFor(() => expect(localApi.setupInstall).toHaveBeenCalledWith({ ids: ['whisper-large-v3'], consent: ['whisper-large-v3'] }));
+  expect(screen.queryByLabelText(/chatterbox/i)).not.toBeInTheDocument();
+  expect(screen.getByText(/prepare o ambiente manualmente/i)).toBeInTheDocument();
+});
+
+test('essenciais ausentes mostram o comando do sistema e bloqueiam “Começar a usar”', async () => {
+  const status = setupStatus({ essentialsReady: false }); status.items[1] = { ...status.items[1], ready: false, systemCommand: 'sudo apt install zenity' };
+  localApi.setupStatus.mockResolvedValue(status);
+  render(<App/>); await screen.findByRole('heading', { name: /prepare seu computador/i });
+  expect(screen.getByRole('button', { name: /começar a usar/i })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: /instalar essenciais/i }));
+  expect(screen.getAllByText('sudo apt install zenity').length).toBeGreaterThan(0);
+});
+
+test('download pausado oferece retomar e falha oferece tentar novamente', async () => {
+  const status = setupStatus({ onboarding: { completedAt: 'x', dismissedAt: null }, jobs: [{ id: 'j1', itemId: 'whisper-large-v3', label: 'Pesos Whisper large-v3', state: 'paused', phase: 'Pausado; o progresso foi preservado', received: 100, total: 1000 }] });
+  localApi.setupStatus.mockResolvedValue(status); localApi.setupResume.mockResolvedValue({});
+  render(<App/>); fireEvent.click(await screen.findByRole('button', { name: /dependências/i }));
+  expect(await screen.findByText(/progresso foi preservado/i)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /retomar/i }));
+  await waitFor(() => expect(localApi.setupResume).toHaveBeenCalledWith({ jobId: 'j1' }));
 });

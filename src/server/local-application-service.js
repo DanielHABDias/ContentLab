@@ -2,6 +2,7 @@ import { lstat, mkdir, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { idSchema } from '../core/contracts.js';
+import { SetupService } from '../setup/setup-service.js';
 import { ActivityTracker, LifecycleError, SystemOpener, SystemTrash } from './project-lifecycle.js';
 import { ProjectRegistry, readProjectDirectory } from './project-registry.js';
 import { ProjectStore } from '../core/project-store.js';
@@ -12,13 +13,9 @@ import { AgentService } from '../core/agent-service.js';
 import { randomUUID } from 'node:crypto';
 import { MediaService } from '../media/media-service.js';
 import { FfmpegRenderer } from '../render/ffmpeg-renderer.js';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-
-const run = promisify(execFile);
 
 export class LocalApplicationService {
-  constructor({ dataDirectory, dialog = new NativeDialog(), packages = new PackageService(), media = null, renderer = null, trash = new SystemTrash(), opener = new SystemOpener(), activities = new ActivityTracker() }) {
+  constructor({ dataDirectory, dialog = new NativeDialog(), packages = new PackageService(), media = null, renderer = null, trash = new SystemTrash(), opener = new SystemOpener(), activities = new ActivityTracker(), setup = null, toolsDirectory = null }) {
     this.dataDirectory = path.resolve(dataDirectory);
     this.projectsDirectory = path.join(this.dataDirectory, 'projects');
     this.registry = new ProjectRegistry(this.dataDirectory);
@@ -29,6 +26,7 @@ export class LocalApplicationService {
     this.trash = trash;
     this.opener = opener;
     this.activities = activities;
+    this.setup = setup || new SetupService({ toolsDirectory: toolsDirectory || path.join(this.dataDirectory, 'tools') });
   }
 
   async health() {
@@ -221,10 +219,19 @@ export class LocalApplicationService {
     return await this.runProjectAction({ path: directory, baseRevision, action: { type: 'media.add', media: { id: imported.id, kind, uri: imported.path, sha256: imported.hash, rights } } });
   }
 
+  /** Capacidades para as telas de etapa, derivadas do mesmo catálogo do setup. */
   async diagnostics() {
-    const checks = [['ffmpeg', ['-version'], true], ['ffprobe', ['-version'], true], ['yt-dlp', ['--version'], false], ['whisper-cli', ['--help'], false], ['contentlab-chatterbox', ['--version'], false]];
-    return { capabilities: await Promise.all(checks.map(async ([command, args, required]) => { try { const { stdout, stderr } = await run(command, args, { timeout: 10_000, maxBuffer: 1024 * 1024 }); return { id: command, ready: true, required, version: `${stdout || stderr}`.split(/\r?\n/).find(Boolean) }; } catch (error) { return { id: command, ready: false, required, solution: command === 'ffmpeg' || command === 'ffprobe' ? 'Instale FFmpeg/FFprobe pelo gerenciador do sistema.' : `Instale e configure ${command} para habilitar este recurso.` }; } })) };
+    const status = await this.setup.status();
+    return { capabilities: status.items.filter(item => item.id !== 'node').map(item => ({ id: item.id, label: item.label, ready: item.ready, required: item.required, ...(item.ready ? { version: item.detected } : { solution: item.installable ? 'Instale em Dependências.' : item.systemCommand ? `Instale com: ${item.systemCommand}` : item.manualSteps || item.reason || 'Indisponível.' }) })) };
   }
+
+  setupStatus() { return this.setup.status(); }
+  setupInstall(input) { return this.setup.install(input); }
+  setupJobs() { return { jobs: this.setup.jobs() }; }
+  setupPause({ jobId }) { return this.setup.pause(jobId); }
+  setupResume({ jobId }) { return this.setup.resume(jobId); }
+  setupCancel({ jobId }) { return this.setup.cancel(jobId); }
+  async setupOnboarding({ choice }) { return { onboarding: await this.setup.setOnboarding(choice) }; }
 
   async renderProject({ path: directory, outputDirectory }) {
     const project = await readProjectDirectory(directory);

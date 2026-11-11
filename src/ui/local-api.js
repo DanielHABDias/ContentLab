@@ -33,4 +33,11 @@ export const localApi = {
   restoreProject: path => post('/projects/restore', { path }),
   projectActivities: path => post('/projects/activities', { path }),
   cancelProjectActivities: path => post('/projects/cancel', { path }),
+  setupStatus: () => request('/setup/status'),
+  setupJobs: () => request('/setup/jobs'),
+  setupInstall: input => post('/setup/install', input),
+  setupPause: input => post('/setup/pause', input),
+  setupResume: input => post('/setup/resume', input),
+  setupCancel: input => post('/setup/cancel', input),
+  setupOnboarding: choice => post('/setup/onboarding', { choice }),
 };

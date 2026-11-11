@@ -87,18 +87,18 @@ Aceite: excluir não deixa o cartão nem o diretório ativo; remover de Recentes
 
 Objetivo: na primeira execução, detectar o computador e conduzir a instalação do que for necessário sem downloads silenciosos ou repetidos.
 
-- [ ] Criar assistente de primeira execução com diagnóstico de Node, FFmpeg, FFprobe, `zenity`/diálogo nativo, `yt-dlp`, whisper.cpp + `large-v3` e Chatterbox PT-BR.
-- [ ] Separar dependências essenciais das opcionais. A interface básica deve abrir mesmo sem voz/transcrição.
-- [ ] Oferecer “Instalar essenciais”, “Instalar recursos de IA” e “Agora não”, mostrando tamanho estimado, origem, licença, espaço livre e destino antes do download.
-- [ ] Exigir consentimento antes de pesos grandes, código de terceiros ou perfil de voz. Nunca instalar tudo silenciosamente a cada inicialização.
-- [ ] Fixar versão e checksum de cada binário/modelo; baixar para arquivo parcial; verificar integridade; promover por rename atômico.
-- [ ] Suportar pausa, retomada, cancelamento e nova tentativa sem reiniciar downloads válidos.
-- [ ] Guardar estado do setup versionado fora do repositório e revalidar somente quando versão/checksum/requisito mudar.
-- [ ] Preferir dependências isoladas em `.tools/`; não alterar Python/Node global nem configurações do sistema sem ação explícita.
-- [ ] Para pacotes do sistema (FFmpeg, diálogo nativo), mostrar comando por distribuição/SO ou abrir fluxo privilegiado somente após confirmação.
-- [ ] Implementar Linux primeiro e contratos para Windows/macOS; não declarar suporte multiplataforma antes dos testes reais.
-- [ ] Atualizar `npm run doctor` para compartilhar o mesmo catálogo do instalador e produzir diagnóstico legível e JSON.
-- [ ] Criar testes com servidor local/falso para checksum incorreto, queda de rede, pouco disco, retomada e versão já instalada.
+- [x] Criar assistente de primeira execução com diagnóstico de Node, FFmpeg, FFprobe, `zenity`/diálogo nativo, `yt-dlp`, whisper.cpp + `large-v3` e Chatterbox PT-BR.
+- [x] Separar dependências essenciais das opcionais. A interface básica deve abrir mesmo sem voz/transcrição.
+- [x] Oferecer “Instalar essenciais”, “Instalar recursos de IA” e “Agora não”, mostrando tamanho estimado, origem, licença, espaço livre e destino antes do download.
+- [x] Exigir consentimento antes de pesos grandes, código de terceiros ou perfil de voz. Nunca instalar tudo silenciosamente a cada inicialização.
+- [x] Fixar versão e checksum de cada binário/modelo; baixar para arquivo parcial; verificar integridade; promover por rename atômico.
+- [x] Suportar pausa, retomada, cancelamento e nova tentativa sem reiniciar downloads válidos.
+- [x] Guardar estado do setup versionado fora do repositório e revalidar somente quando versão/checksum/requisito mudar.
+- [x] Preferir dependências isoladas em `.tools/`; não alterar Python/Node global nem configurações do sistema sem ação explícita.
+- [x] Para pacotes do sistema (FFmpeg, diálogo nativo), mostrar comando por distribuição/SO ou abrir fluxo privilegiado somente após confirmação.
+- [x] Implementar Linux primeiro e contratos para Windows/macOS; não declarar suporte multiplataforma antes dos testes reais.
+- [x] Atualizar `npm run doctor` para compartilhar o mesmo catálogo do instalador e produzir diagnóstico legível e JSON.
+- [x] Criar testes com servidor local/falso para checksum incorreto, queda de rede, pouco disco, retomada e versão já instalada.
 
 Aceite: uma instalação limpa conduz o usuário até um estado operacional; a segunda inicialização não baixa novamente; falhas deixam instrução acionável e nenhum artefato parcial é tratado como instalado.
 
@@ -265,6 +265,15 @@ Aceite: um usuário novo conclui o fluxo sem terminal, nenhum teste crítico fal
 Não iniciar empacotamento desktop antes de estabilizar armazenamento, setup e operações destrutivas. Não baixar modelos grandes antes de implementar consentimento, checksum, retomada e espaço em disco.
 
 ## Checkpoint de retomada
+
+### F14 concluída (2026-11-11)
+
+- Concluído: catálogo único `src/setup/dependency-catalog.js` (versão, tamanho, SHA-256, licença, origem, comandos por gerenciador) usado por `npm run doctor`, API e assistente; `downloader.js` (HTTPS, `.partial`, Range, SHA-256 contínuo, espaço livre, rename atômico); `setup-service.js` (estado `contentlab-setup-v1` em `.tools/`, jobs com pausar/retomar/cancelar/repetir, consentimento, compilação do whisper.cpp verificando o commit); `SetupWizard.jsx` na primeira execução e em “Dependências”; rotas `/api/v1/setup/*`.
+- Fontes conferidas em 2026-11-11: yt-dlp 2026.10.26 (digests da release GitHub), `ggml-large-v3.bin` (LFS oid no Hugging Face), whisper.cpp v1.9.5 → commit `d1be6fde11ac6e0407606b4e42fe72d34add8037` (MIT).
+- Testes: `src/setup/setup.test.js` (13, servidor HTTP local: checksum incorreto, queda de rede + retomada por Range, servidor sem Range, pouco disco, HTTP externo recusado, segunda inicialização sem download, checksum novo pede atualização, pausa/retomada/cancelamento, ferramentas de build ausentes, commit divergente) e 4 novos de UI. QA no navegador com `.tools` isolado: assistente, consentimento e “Agora não” persistido.
+- Decisões: pacotes do sistema só exibem o comando (sem `sudo`/pkexec); Chatterbox fica `manual` porque não há artefato fixado e verificável; tamanhos exibidos em unidades binárias.
+- Pendências conscientes: nenhum download real de yt-dlp/pesos nem compilação real do whisper.cpp foi executado nesta máquina (exige consentimento do usuário; validar no QA local). Windows/macOS só como contrato (F21/F23). Os serviços de transcrição/URL ainda não consomem `SetupService.toolPath()`; conectar em F16.
+- Próxima tarefa: F15 — tela de Configurações e locks por projeto/processo, começando pelo contrato de raízes (projetos, cache, modelos, render) e validação de escrita.
 
 ### F13 concluída (2026-11-11)
 

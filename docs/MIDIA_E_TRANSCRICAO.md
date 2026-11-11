@@ -6,6 +6,6 @@ URLs exigem HTTPS e `yt-dlp`; playlists e downloads acima de 4 GiB são bloquead
 
 ## Transcrição escolhida
 
-O único perfil suportado é Whisper `large-v3`, executado localmente por `whisper.cpp`, idioma fixado em português. A escolha prioriza precisão e timestamps; nesta máquina de validação há 15 GiB de RAM e 12 CPUs, mas binário/pesos ainda não estão instalados. O Content Lab diagnostica essa ausência e não baixa silenciosamente um modelo grande nem substitui por versão inferior. T12 fornecerá preparação verificável e retomável.
+O único perfil suportado é Whisper `large-v3`, executado localmente por `whisper.cpp`, idioma fixado em português. A escolha prioriza precisão e timestamps; nesta máquina de validação há 15 GiB de RAM e 12 CPUs, mas binário/pesos ainda não estão instalados. O Content Lab diagnostica essa ausência e não baixa silenciosamente um modelo grande nem substitui por versão inferior. O assistente de dependências (F14) prepara `whisper-cli` (whisper.cpp v1.9.5, commit `d1be6fde11ac`) e `ggml-large-v3.bin` (3 095 033 483 bytes, SHA-256 `64d182b4…94d1e2`) em `.tools/`, com consentimento, retomada e verificação.
 
 O resultado inclui JSON com alinhamento e SRT. Qualidade e tempo devem ser medidos com amostra PT-BR licenciada no hardware final antes de declarar o modelo pronto para produção.

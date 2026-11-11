@@ -9,8 +9,8 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(here, '../..');
 const defaultDataDirectory = path.join(repositoryRoot, '.contentlab');
 
-export function createContentLabServer({ dataDirectory = process.env.CONTENTLAB_DATA_DIR || defaultDataDirectory, staticDirectory = path.join(repositoryRoot, 'dist') } = {}) {
-  const application = new LocalApplicationService({ dataDirectory });
+export function createContentLabServer({ dataDirectory = process.env.CONTENTLAB_DATA_DIR || defaultDataDirectory, staticDirectory = path.join(repositoryRoot, 'dist'), toolsDirectory = process.env.CONTENTLAB_TOOLS_DIR || path.join(repositoryRoot, '.tools') } = {}) {
+  const application = new LocalApplicationService({ dataDirectory, toolsDirectory });
   return createServer(async (request, response) => {
     try {
       const url = new URL(request.url, 'http://127.0.0.1');
@@ -23,6 +23,11 @@ export function createContentLabServer({ dataDirectory = process.env.CONTENTLAB_
       }
       if (request.method === 'POST' && url.pathname === '/api/v1/projects/create') return json(response, 201, await application.createProject(await readJson(request)));
       if (request.method === 'POST' && url.pathname === '/api/v1/projects/action') return json(response, 200, await application.runProjectAction(await readJson(request)));
+      if (request.method === 'GET' && url.pathname === '/api/v1/setup/status') return json(response, 200, await application.setupStatus());
+      if (request.method === 'GET' && url.pathname === '/api/v1/setup/jobs') return json(response, 200, application.setupJobs());
+      const setupRoutes = { install: 'setupInstall', pause: 'setupPause', resume: 'setupResume', cancel: 'setupCancel', onboarding: 'setupOnboarding' };
+      const setupMatch = request.method === 'POST' && url.pathname.match(/^\/api\/v1\/setup\/([a-z]+)$/);
+      if (setupMatch && setupRoutes[setupMatch[1]]) return json(response, 200, await application[setupRoutes[setupMatch[1]]](await readJson(request)));
       const lifecycle = { forget: 'forgetProject', reveal: 'revealProject', rename: 'renameProject', 'change-id': 'changeProjectId', duplicate: 'duplicateProject', export: 'exportProject', delete: 'deleteProject', restore: 'restoreProject', activities: 'listActivities', cancel: 'cancelActivities' };
       const lifecycleMatch = request.method === 'POST' && url.pathname.match(/^\/api\/v1\/projects\/([a-z-]+)$/);
       if (lifecycleMatch && lifecycle[lifecycleMatch[1]]) return json(response, 200, await application[lifecycle[lifecycleMatch[1]]](await readJson(request)));
