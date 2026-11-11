@@ -23,11 +23,11 @@ Este plano substitui a aceitação visual usada no ciclo T01–T12 por aceitaç�
 
 ## F01 — servidor local e registro de projetos reais
 
-- [ ] Criar um servidor HTTP local que sirva a aplicação e exponha uma API versionada.
-- [ ] Criar registro persistente de caminhos recentes; remover entradas inexistentes automaticamente.
-- [ ] Listar recentes somente a partir de projetos reais e válidos em disco.
-- [ ] Exibir estado vazio e erro acionável quando o servidor local não estiver disponível.
-- [ ] Testar registro, API e ausência total de dados de demonstração.
+- [x] Criar um servidor HTTP local que sirva a aplicação e exponha uma API versionada.
+- [x] Criar registro persistente de caminhos recentes; remover entradas inexistentes automaticamente.
+- [x] Listar recentes somente a partir de projetos reais e válidos em disco.
+- [x] Exibir estado vazio e erro acionável quando o servidor local não estiver disponível.
+- [x] Testar registro, API e ausência total de dados de demonstração.
 
 ## F02 — criar, abrir e importar projetos
 
