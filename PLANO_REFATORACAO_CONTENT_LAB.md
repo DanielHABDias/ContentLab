@@ -235,3 +235,39 @@ Esta etapa é **obrigatória antes de projetar e implementar a nova arquitetura*
 - Não adicionar hospedagem, APIs comerciais ou serviços pagos como requisitos obrigatórios.
 - Não alterar o repositório do plugin Diazverso nesta etapa.
 - Testar operações antes de declará-las concluídas.
+
+## 7. Protocolo obrigatório de execução pelo Codex local
+
+**Aplicação:** desenvolvimento do Content Lab no clone Git local da máquina do usuário. Este protocolo rege as tarefas T01–T12. O plugin `DanielHABDias/DiazVerso-Plugin` permanece **somente leitura** durante toda esta refatoração.
+
+### Branch, sequência e commits
+- [ ] Executar o desenvolvimento **somente na branch `main`**; não criar branches de feature, branches auxiliares ou PRs. A branch de preparação `refactor/content-lab-v2`, criada anteriormente, **não será utilizada** no desenvolvimento. A preparação já foi incorporada à `main`.
+- [ ] Antes de iniciar, conferir `git branch --show-current`, `git status` e a origem; sincronizar a `main` com `git pull --ff-only` quando seguro. Não descartar alterações locais não versionadas, não forçar push e não sobrescrever trabalho concorrente.
+- [ ] Avançar **autonomamente, em sequência, de T01 até T12**, sem exigir que o usuário diga "próximo" ou autorize cada nova tarefa. Fazer uma pausa apenas por bloqueio real, dependência indisponível, risco de perda de dados, limite de ferramenta ou decisão essencial que não possa ser resolvida responsavelmente.
+- [ ] Para **cada tarefa macro T01–T12**, implementar seu escopo, executar verificações/testes pertinentes, atualizar o checklist e registrar **um único commit ao final da tarefa**, com mensagem objetiva, por exemplo `feat(T01): estabelecer identidade e UX do Content Lab`. Subetapas internas não geram commits separados.
+- [ ] Depois do commit válido, **iniciar automaticamente a tarefa seguinte**. Se testes falharem, corrigir antes de considerar a tarefa concluída; não declarar sucesso nem realizar commit de entrega quebrada. Se não puder concluir, deixar um checkpoint claro e registrar o bloqueio sem inventar aprovação.
+
+### Protocolo obrigatório de contexto e economia de tokens
+Usar **as técnicas concretas do plugin Diazverso**, não apenas dizer que está otimizando. Consultar o repositório público [DiazVerso-Plugin](https://github.com/DanielHABDias/DiazVerso-Plugin) ou sua instalação local **apenas para leitura**, principalmente:
+
+- `skills/diazverso-contexto-eficiente/SKILL.md` — **protocolo principal obrigatório**, lido uma vez por sessão e versão; reutilizar contexto válido.
+- `skills/diazverso-contexto-eficiente/references/skill-map.json` e `scripts/context_map.py` — **grafo/mapa de skills, dependências, caminhos, hashes e indexação incremental** para escolher a skill responsável; usar quando houver ambiguidade/mais de uma candidata. Sem executor, consultar o mapa diretamente.
+- `skills/diazverso-contexto-eficiente/references/roteamento.md` e `scripts/route_request.py` — roteamento por resultado esperado quando necessário, sem abrir o catálogo inteiro.
+- `skills/context-optimization/SKILL.md` — técnicas avançadas de **consulta limitada, resumo de observações, checkpoints, prefixos estáveis e particionamento** somente quando adequadas à tarefa e suportadas pela ferramenta.
+
+**Regras práticas obrigatórias:**
+1. Definir o resultado verificável da tarefa e a próxima ação. Escolher **uma skill principal** e carregar apenas suas dependências concretamente necessárias; não carregar todas as skills, repositórios ou logs de uma vez.
+2. Navegar pelo **grafo de skills e dependências**, preferindo metadados antes dos arquivos completos. Reutilizar leitura se a revisão/hash for válida; revalidar a fonte real antes de alterações importantes.
+3. Ler trechos específicos de arquivos e diffs necessários; reduzir saída de ferramentas a **decisão, evidência, erro relevante e caminho recuperável**. Não suprimir informação útil ao depurar.
+4. Ao fechar cada tarefa, manter **checkpoint curto** (tarefa, commit, verificações, decisões técnicas, pendências e próxima tarefa), no plano temporário enquanto existir. O checkpoint ajuda a retomada, mas **não equivale à compactação interna do contexto**.
+5. Agrupar implementação + testes proporcionais + atualização do plano num resultado funcional; evitar releituras, scaffolding sem necessidade, refatoração fora de escopo e relatórios verbosos.
+6. Medir tokens e custo real **apenas se houver telemetria**; não inventar percentuais de economia, taxas de cache ou capacidade de controlar compactação/KV-cache interna do Codex. Aproveitar comandos de compactação nativa **somente se o ambiente realmente os oferecer**.
+
+O objetivo é minimizar **o custo total para entregar uma tarefa correta**, incluindo repetição e retrabalho. A economia de tokens nunca justifica pular testes, ocultar falhas, perder decisões ou degradar o código.
+
+### Segurança e encerramento
+- Manter o legado preservado em `old/` até a T12; não tocar no repositório do plugin Diazverso.
+- Preservar históricos, licenças, consentimentos, direitos de mídia e dados privados; não enviar arquivos locais a serviços externos sem autorização.
+- A cada tarefa, fazer commit na `main` e, havendo remoto e permissão, enviar com push normal (sem force). Um push recusado por divergência exige inspeção e reconciliação antes de tentar novamente.
+- Ao concluir T12, só apagar `old/` e este plano depois dos testes e documentação permanente confirmados.
+
