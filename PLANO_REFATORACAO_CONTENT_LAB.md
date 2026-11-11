@@ -73,10 +73,32 @@ Prioridades: operação sem hospedagem obrigatória, ausência de serviços pago
 - [ ] Somente depois que a interface, operações locais, CLI/MCP e testes estiverem estáveis, escrever skills orientando agentes a controlar o Content Lab de modo econômico em tokens.
 - [ ] Integração posterior ao plugin Diazverso, sem mudanças nesse repositório agora.
 
-## 4. Etapas de execução
+## 4. Pesquisa de skills, referências e códigos existentes (ANTES da implementação)
+
+Esta etapa é **obrigatória antes de projetar e implementar a nova arquitetura**. Procurar documentação oficial, skills especializadas e repositórios open source, estudar a implementação real e registrar o que funciona, o que pode ser adaptado e o que deve ser descartado. Não escolher ferramentas apenas por popularidade.
+
+### Skills e guias técnicos a localizar e avaliar
+- [ ] **MCP:** skills/guias sobre como projetar, desenvolver, expor, documentar, proteger e testar servidores MCP locais, incluindo transporte `stdio`, contratos de ferramentas, operações em lote, estados e erros estruturados, baixo consumo de tokens e integração com Codex e Claude Code.
+- [ ] **Arquitetura e qualidade de código:** skills/guias sobre organização de projetos, módulos, interfaces, separação de responsabilidades, manutenibilidade, tratamento de erros, testes unitários, testes de integração, testes end-to-end e automação de validações.
+- [ ] **Remotion:** skills, documentação oficial e exemplos para composições, timeline, pré-visualização, renderização, efeitos e integração de edição programática.
+- [ ] **Hyperframes:** skills, documentação e projetos de referência; entender as funcionalidades e arquitetura reais antes de decidir se será reutilizado, substituído ou combinado com Remotion/FFmpeg.
+- [ ] **Edição e produção audiovisual moderna:** boas práticas e exemplos para montar vídeos com precisão (cortes, trilhas/faixas, legendas, sincronização, narração, efeitos, composição, prévia e exportação).
+- [ ] **Plugin Diazverso 1.0:** consultar como **referência somente de leitura**, aproveitando padrões de fluxos, qualidade, identidade, uso de agentes e economia de tokens quando pertinentes. **Não alterar o repositório do plugin nesta refatoração.**
+
+### Repositórios open source de edição automatizada com IA
+- [ ] Pesquisar aplicações e projetos em que um agente ou LLM (ChatGPT, Claude ou outros) produz roteiro, organiza mídias, cria um plano de edição/timeline e renderiza o vídeo automaticamente, mesmo que o exemplo original use API de IA.
+- [ ] Investigar **como o código faz a edição de verdade**, e não apenas a interface de chat: representação de cenas, modelo de timeline, seleção de trechos, sincronização de narração, aplicação de efeitos, geração de legendas, renderização, cache, filas e recuperação de falhas.
+- [ ] Avaliar arquiteturas de renderização declarativa ou baseada em JSON/EDL, integração com Remotion/FFmpeg e mecanismos que geram operações determinísticas a partir de planos estruturados.
+- [ ] Identificar ideias aproveitáveis para o **Content Lab local**, substituindo dependências obrigatórias de APIs pagas/nuvem por controle direto do agente via CLI/MCP, quando viável.
+- [ ] Conferir licença, atividade/manutenção, maturidade, compatibilidade com hardware local, facilidade de teste, segurança, desempenho e custos ocultos antes de reaproveitar código.
+- [ ] Registrar links, comparação das opções, lições de implementação e justificativas das decisões no plano enquanto a pesquisa estiver em andamento. Não copiar projetos inteiros indiscriminadamente.
+
+**Distinção importante:** skills existentes serão **pesquisadas e consultadas desde o começo** para orientar a construção. As **skills próprias do Content Lab/Diazverso, destinadas a ensinar agentes a usar o produto final**, continuarão sendo criadas **somente na última etapa**, após o sistema estar funcional e validado.
+
+## 5. Etapas de execução
 
 1. **Preparação:** isolar código legado em `old/`; criar estrutura inicial da nova versão.
-2. **Levantamento:** identificar componentes reutilizáveis, dependências, ferramentas e fluxos que deverão ser substituídos.
+2. **Levantamento e pesquisa:** identificar componentes reutilizáveis, dependências e fluxos do legado; avaliar skills, documentação, repositórios e técnicas modernas de edição automatizada antes das decisões de arquitetura.
 3. **Arquitetura:** definir contratos do núcleo local, camada manual e controle por agentes; provar compatibilidade local.
 4. **Implementação:** entregar os recursos em módulos e testar cada fluxo.
 5. **Qualidade:** testes automatizados, uso manual, falhas de dependência, cache, desempenho, exportação e testes com agentes.
@@ -84,7 +106,7 @@ Prioridades: operação sem hospedagem obrigatória, ausência de serviços pago
 7. **Skills:** escrever e validar instruções para agentes somente ao final.
 8. **Limpeza:** remover `old/` e este plano apenas depois de validar integralmente a nova versão.
 
-## 5. Regras de trabalho
+## 6. Regras de trabalho
 
 - Registrar decisões e pendências no plano enquanto a refatoração estiver em andamento.
 - Diferenciar requisitos aprovados de sugestões técnicas sujeitas à avaliação.
