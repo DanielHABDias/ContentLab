@@ -6,8 +6,8 @@
 
 ## 1. Estratégia de migração
 
-- [ ] Mover **todo o conteúdo versionado do projeto atual** para `old/`, preservando a hierarquia, sem perder arquivos ou sobrescrever material.
-- [ ] Manter `.git/` e os metadados necessários do repositório na raiz (não mover `.git/`). Preservar o histórico Git.
+- [x] Mover **todo o conteúdo versionado do projeto atual** para `old/`, preservando a hierarquia, sem perder arquivos ou sobrescrever material.
+- [x] Manter `.git/` e os metadados necessários do repositório na raiz (não mover `.git/`). Preservar o histórico Git.
 - [ ] Criar a nova aplicação fora de `old/`, aproveitando o código antigo como referência, sem reativar a aplicação antiga por acidente.
 - [ ] Revisar a estrutura de build e execução para que a aplicação nova rode a partir da raiz.
 - [ ] Somente após a nova versão estar implementada, testada, documentada e aprovada, remover `old/` e este plano.
@@ -60,6 +60,26 @@ Prioridades: operação sem hospedagem obrigatória, ausência de serviços pago
 - [ ] Não reproduzir o fluxo rígido atual.
 - [ ] Avaliar uma abordagem flexível de composição/edição, com liberdade criativa e eventual integração com o plugin no futuro.
 
+### Workflow de produção orientado a projetos (novo requisito)
+- [ ] Tratar **cada vídeo como um projeto persistente independente**. Permitir vários projetos simultâneos, com tipo (longo, curto/Shorts e formatos adicionais), formato de tela, progresso, arquivos e histórico.
+- [ ] Dashboard de projetos com cartões/lista, pesquisa/filtros, estágio atual, próximas ações, progresso e alertas visíveis.
+- [ ] Fluxo-base: **brief/ideia → roteiro → título A/B + thumbnails + descrição + tags → seleção/importação de mídia → narração → edição/motion design → revisão e render → pacote final**. Permitir etapas opcionais, retomada e reordenação quando houver justificativa.
+- [ ] Editor de roteiro dentro do Content Lab com **salvamento automático**, histórico e uma estrutura alinhada às regras de roteiro do plugin Diazverso 1.0. Consultar o plugin como fonte de referência **somente de leitura**, sem duplicar cegamente instruções nem alterar aquele repositório.
+- [ ] Dois títulos A/B, descrição, tags, notas de SEO e thumbnails criadas no aplicativo **ou importadas** devem pertencer ao mesmo projeto; campos relevantes serão exportados no pacote final.
+- [ ] Interface de revisão por etapa: o agente submete uma entrega; a pessoa visualiza, edita ou pede mudanças e **aprova explicitamente** antes de continuar.
+- [ ] Modo com revisões intermediárias **ou** modo autônomo, com aprovação humana somente no final. Escolha por projeto e possibilidade de alterá-la.
+- [ ] Permitir voltar uma ou mais etapas, recuperar versões e recalcular/invalidate aprovações ou resultados posteriores que dependam do material alterado, sem destruir o histórico.
+- [ ] A ferramenta de importação/download/cache continua disponível **independentemente do workflow**, mas pode ser invocada por suas etapas, pela pessoa ou pelo agente.
+- [ ] Sem publicação automática no YouTube/Instagram. A etapa final gera arquivos locais; eventual upload ao Google Drive/planilhas pode ser realizado **posteriormente por agente com acesso e autorização**, sem se tornar dependência obrigatória do Content Lab.
+
+### Redesenho completo do editor (novo requisito)
+- [ ] Refazer o modelo de timeline, não apenas ajustar o JSON antigo. **Fundo/background não será um tipo especial obrigatório**: tratá-lo como uma camada visual ordenável, com propriedades gerais, assim como outros elementos.
+- [ ] Modelo de timeline **versionado, validado e extensível**: tracks, clips, efeitos, transições, animações, áudio, legendas, keyframes, componentes, referências de mídia e estados claros.
+- [ ] Corrigir adaptação entre **16:9 e 9:16**, com coordenadas consistentes, ancoragem, safe areas, estratégias explícitas de crop/fit e possibilidade de layout específico por proporção, sem deslocamento inesperado de elementos.
+- [ ] Permitir edição manual e comandos estruturados de agente no **mesmo documento de projeto**, com pré-visualização, desfazer/refazer, controle de alterações, validação e recuperação.
+- [ ] Tornar simples criar, registrar e reutilizar **componentes TSX de motion design** por agente, aproveitando Remotion/Hyperframes conforme avaliação técnica; manter a edição declarativa comum simples.
+- [ ] Investigar referências modernas de timeline, edição não linear, efeitos, transições, prévia, performance e render incremental. O conteúdo de `old/` é apenas referência: nenhuma arquitetura legada será preservada por obrigação.
+
 ### Funcionalidades que serão removidas
 - [ ] Remover completamente publicação automática em plataformas.
 - [ ] Remover completamente o banco de mídia antigo.
@@ -77,6 +97,13 @@ Prioridades: operação sem hospedagem obrigatória, ausência de serviços pago
 
 Esta etapa é **obrigatória antes de projetar e implementar a nova arquitetura**. Procurar documentação oficial, skills especializadas e repositórios open source, estudar a implementação real e registrar o que funciona, o que pode ser adaptado e o que deve ser descartado. Não escolher ferramentas apenas por popularidade.
 
+### UX/UI, acessibilidade e identidade visual (novos requisitos)
+- [ ] Encontrar e avaliar skills de **UX/UI, frontend design e acessibilidade (a11y)**, além de referências de interfaces profissionais de criação audiovisual.
+- [ ] Pesquisar padrões de **dashboard de múltiplos projetos, workflow visual, estados de aprovação e timeline de editor**, priorizando clareza em vez de enfeites ou muitas abas.
+- [ ] Criar uma **logo original para o Content Lab**, vinculável visualmente ao universo Diazverso por paleta, quadrinhos/halftone e glitch azul/vermelho controlado; **não usar Nox** como mascote/logo do Content Lab.
+- [ ] Desenvolver um design system próprio, com responsividade, contraste, hierarquia, feedback de progresso/erros, acessibilidade e visual moderno sem poluição.
+- [ ] Adotar o frontend como **primeiro foco de execução**, prototipando fluxos e comportamento antes de conectar todos os serviços reais.
+
 ### Skills e guias técnicos a localizar e avaliar
 - [ ] **MCP:** skills/guias sobre como projetar, desenvolver, expor, documentar, proteger e testar servidores MCP locais, incluindo transporte `stdio`, contratos de ferramentas, operações em lote, estados e erros estruturados, baixo consumo de tokens e integração com Codex e Claude Code.
 - [ ] **Arquitetura e qualidade de código:** skills/guias sobre organização de projetos, módulos, interfaces, separação de responsabilidades, manutenibilidade, tratamento de erros, testes unitários, testes de integração, testes end-to-end e automação de validações.
@@ -93,18 +120,98 @@ Esta etapa é **obrigatória antes de projetar e implementar a nova arquitetura*
 - [ ] Conferir licença, atividade/manutenção, maturidade, compatibilidade com hardware local, facilidade de teste, segurança, desempenho e custos ocultos antes de reaproveitar código.
 - [ ] Registrar links, comparação das opções, lições de implementação e justificativas das decisões no plano enquanto a pesquisa estiver em andamento. Não copiar projetos inteiros indiscriminadamente.
 
+### Repositórios e documentação candidatos para benchmark (ainda não aprovados)
+- HyperFrames (site e repositório): https://hyperframes.studio/ e https://github.com/heygen-com/hyperframes
+- Remotion (render React/TSX e skills oficiais): https://www.remotion.dev/docs e https://github.com/remotion-dev/remotion
+- FableCut (timeline JSON, edição visual e MCP): https://github.com/ronak-create/fablecut
+- OpenChatCut (timeline multifaixa, MCP e Remotion): https://github.com/0xsline/OpenChatCut
+- TS AI Video Editor (timeline compartilhada por humanos/agentes): https://github.com/ChopperD00/ts-ai-video-editor
+- MCP TypeScript SDK v2 (`stdio` local): https://ts.sdk.modelcontextprotocol.io/v2/
+- React Flow (candidato para representação visual de workflows, **não obrigatório**): https://reactflow.dev/
+
+**Nenhum desses candidatos está aprovado para copiar código.** Inspecionar implementações, estabilidade, licenças (ex.: AGPL e licença específica do Remotion) e custo real antes da decisão; o próprio editor e motor devem permanecer 100% operáveis localmente. Uma interface visual de workflow não precisa obrigatoriamente de um grafo de nós.
+
 **Distinção importante:** skills existentes serão **pesquisadas e consultadas desde o começo** para orientar a construção. As **skills próprias do Content Lab/Diazverso, destinadas a ensinar agentes a usar o produto final**, continuarão sendo criadas **somente na última etapa**, após o sistema estar funcional e validado.
 
-## 5. Etapas de execução
+## 5. Plano de ação — 12 tarefas macro (executar nesta ordem)
 
-1. **Preparação:** isolar código legado em `old/`; criar estrutura inicial da nova versão.
-2. **Levantamento e pesquisa:** identificar componentes reutilizáveis, dependências e fluxos do legado; avaliar skills, documentação, repositórios e técnicas modernas de edição automatizada antes das decisões de arquitetura.
-3. **Arquitetura:** definir contratos do núcleo local, camada manual e controle por agentes; provar compatibilidade local.
-4. **Implementação:** entregar os recursos em módulos e testar cada fluxo.
-5. **Qualidade:** testes automatizados, uso manual, falhas de dependência, cache, desempenho, exportação e testes com agentes.
-6. **Acabamento:** identidade visual, créditos, documentação e fluxos completos.
-7. **Skills:** escrever e validar instruções para agentes somente ao final.
-8. **Limpeza:** remover `old/` e este plano apenas depois de validar integralmente a nova versão.
+**Status:** [ ] pendente · [x] concluído. Não quebrar artificialmente em dezenas de tarefas; cada tarefa pode ter subtarefas técnicas internas no momento da execução. A pesquisa especializada ocorre antes da implementação de cada módulo, sem criar uma etapa burocrática separada para cada tecnologia.
+
+### T01 — UX/UI, logo e conceito visual do novo Content Lab
+- [ ] Pesquisar skills de UX/UI, acessibilidade e design de frontend; analisar referências atuais de ferramentas criativas.
+- [ ] Criar identidade visual e proposta de logo **original** Content Lab (HQ/halftone/glitch sutil da marca Diazverso, sem Nox), componentes de interface e protótipos navegáveis.
+- **Entrega/aceite:** design system e fluxo visual aprováveis; dashboard/editor identificáveis e fáceis de compreender. **Primeiro foco.**
+
+### T02 — Frontend: dashboard de projetos e workflow visual
+- [ ] Construir a interface inicial para múltiplos vídeos (longos e curtos), lista/cartões, estados, progresso, histórico e ações contextuais.
+- [ ] Expor etapas, pendências, modos **revisão por fase** e **autônomo até a revisão final**, aprovação, solicitação de mudanças e retorno de etapa.
+- **Entrega/aceite:** usuário navega um projeto de ponta a ponta com dados de demonstração, visualiza o estado e consegue simular aprovar, rejeitar e voltar de etapa.
+
+### T03 — Frontend: roteiro e metadados criativos do vídeo
+- [ ] Criar editor de roteiro com formato guiado alinhado ao plugin Diazverso 1.0 (**consulta read-only**), autosave previsto, títulos A/B, descrição, tags e painel de thumbnails.
+- [ ] Permitir thumbnail gerada/criada na aplicação ou importada de fora, sem editor rígido.
+- **Entrega/aceite:** fluxo visual completo para preparar e revisar um vídeo, sem campos desnecessários, com versão/estado de cada entrega.
+
+### T04 — Benchmark técnico, arquitetura nova e contratos
+- [ ] Pesquisar e testar skills de arquitetura, testes, MCP, Remotion, Hyperframes e UX; revisar repositórios de editores com agentes. Comparar o legado em `old/` sem tomar suas decisões como obrigatórias.
+- [ ] Escolher stack e módulos por evidência, compatibilidade local e licença; definir modelo versionado para projetos, workflow, roteiro, mídias e timeline, com plano de migração/validação.
+- [ ] Planejar operações atômicas, efeitos, trilhas, posicionamento responsivo, versionamento, logs, permissões e testes desde o começo.
+- **Entrega/aceite:** documento curto de arquitetura + contratos validados em protótipo; referências e decisões registradas, sem depender de API paga.
+
+### T05 — Núcleo local, persistência e orquestração do workflow
+- [ ] Implementar projeto local multi-vídeo, armazenamento de arquivos e metadados, autosave, checkpoints/versões, histórico e retomada após reinício.
+- [ ] Implementar estados e dependências das etapas, aprovação humana, modo autônomo, reabertura de etapas e invalidação rastreável de resultados posteriores.
+- [ ] Conectar o frontend ao núcleo com operações testáveis e independentes da interface.
+- **Entrega/aceite:** projeto real persistente sobrevive ao reinício; fluxo manual e revisões funcionam sem dados de demonstração.
+
+### T06 — Controle local por agentes: CLI e MCP
+- [ ] Implementar operações semânticas de alto nível para criar/inspecionar projeto, escrever/revisar roteiro, preencher metadados, manipular mídias/timeline, aprovar status quando autorizado e solicitar renders.
+- [ ] Expor o núcleo por **CLI e MCP local**; avaliar primeiro MCP TypeScript SDK v2 com `stdio` para Codex/Claude Code, sem cloud obrigatória.
+- [ ] Aplicar schemas, idempotência, dry-run/diff, operações em lote, respostas compactas, IDs de jobs, progresso e controles para impedir que agentes pulem aprovações.
+- **Entrega/aceite:** agente local e usuário executam operações equivalentes, consistentes e verificáveis, com baixo gasto de tokens.
+
+### T07 — Mídia: importação, cache, cortes e transcrição
+- [ ] Importar URL e arquivo local; manter cache persistente, limpar sob comando, extrair/reaproveitar múltiplos cortes, associar fontes ao projeto.
+- [ ] Integrar modelo único de transcrição de maior precisão **validado para português**, com alinhamento/legendas quando aplicável, sem instalação automática de modelos inferiores.
+- **Entrega/aceite:** a mesma mídia produz diversos cortes sem download repetido; cache, transcrições, falhas e limpeza funcionam.
+
+### T08 — Narração, clonagem de voz e tratamento de áudio
+- [ ] Implementar gravação em takes, cortes, regravação, organização, edição e revisão da narração.
+- [ ] Perfil de voz com amostra guiada e texto de leitura; geração/clonagem de voz local autorizada, avaliando modelos de ponta por qualidade real no português e hardware disponível.
+- [ ] Tratamento de ruído/volume/inteligibilidade, trilha e efeitos sonoros integráveis.
+- **Entrega/aceite:** um roteiro gera narração humana ou IA revisável e exportável, com qualidade testada.
+
+### T09 — Editor novo: timeline unificada e motion design TSX
+- [ ] Reconstruir timeline e JSON versionado com **camadas genéricas** (fundo é uma delas), pistas de vídeo/áudio, elementos, keyframes e transições.
+- [ ] Corrigir layout 16:9/9:16 com ancoragem, crop/fit, safe areas e layouts alternativos, sem saltos inesperados.
+- [ ] Oferecer edição visual e operações de agentes na mesma timeline; criação/importação de componentes **TSX Remotion** com pré-validação e biblioteca de efeitos reutilizáveis.
+- **Entrega/aceite:** editar, desfazer, revisar e reproduzir projeto complexo nos dois formatos sem divergência entre JSON, UI e agente.
+
+### T10 — Preview, render e confiabilidade audiovisual
+- [ ] Implementar pré-visualização fiel, motion design, transições, sincronização de narração, legendas e mixagem, integrando FFmpeg/Remotion/Hyperframes conforme decisão do T04.
+- [ ] Render por projeto/versão, cache incremental quando útil, acompanhamento de jobs, cancelamento, recuperação e validação do arquivo final.
+- **Entrega/aceite:** vídeos longos e verticais renderizam com áudio, posicionamento, efeitos e cortes corretos, comparados com a prévia.
+
+### T11 — Pacote final e entrega opcional por agentes
+- [ ] Gerar pasta ou ZIP portátil por vídeo, incluindo vídeo final, roteiro, títulos A/B, descrição, tags, thumbnails, legendas e manifesto legível por máquina; manter arquivos editáveis conforme escopo.
+- [ ] Expor ação de exportação por interface/CLI/MCP; possibilitar que **um agente externo autorizado** envie o pacote ao Google Drive/atualize planilhas depois, sem implementação de publicação automática e sem exigir conexão à nuvem.
+- **Entrega/aceite:** pacote exportado é completo e utilizável manualmente; nenhuma dependência paga de upload/publicação.
+
+### T12 — Instalador, testes finais, documentação, skills e limpeza
+- [ ] Validar/verificar dependências na inicialização, instalar ausentes quando seguro, tentar novamente falhas transitórias, diagnosticar erros persistentes.
+- [ ] Cobrir testes unitários, integração, E2E, fluxos manuais e com agentes, regressões 16:9/9:16, retomada, erros e desempenho; melhorar UX e documentar instalação, uso e arquitetura.
+- [ ] **Só após estabilidade:** criar e testar as **skills próprias do Content Lab**, ensinar o uso via agentes e planejar integração posterior ao plugin Diazverso **sem modificá-lo agora**.
+- [ ] **Somente após todos os critérios aprovados:** remover `old/` e este plano temporário, preservando documentação permanente no novo projeto.
+- **Entrega/aceite:** instalação e uso local reproduzíveis; todos os fluxos validados e nova aplicação autônoma, sem depender de código legado.
+
+### Regras de aprovação e critérios transversais
+- Cada tarefa macro termina com demonstração verificável e atualização de status, não apenas código escrito.
+- **Humano e agente usam o mesmo núcleo e os mesmos dados**; evitar implementações duplas que causem divergência.
+- Modo de aprovação por etapa pausa trabalho dependente até o usuário aprovar; modo autônomo permite progresso sem validações intermediárias, mas preserva revisão final. Ações externas sensíveis (como upload) continuam dependendo das autorizações aplicáveis.
+- Voltar etapas não elimina histórico e marca conteúdos dependentes como necessitando atualização/validação.
+- A UI é implementada primeiro (T01–T03), com dados de demonstração explícitos, antes da conexão definitiva ao núcleo (T05).
+- A seleção do **melhor modelo** requer benchmark local, suporte a português, licença e capacidade de hardware; somente a opção escolhida será instalada, sem catálogo de modelos inferiores.
+- Uso local e gratuito sem hospedagem obrigatória é requisito. Verificar licenças (especialmente componentes de renderização) antes de adotar qualquer base externa.
 
 ## 6. Regras de trabalho
 
