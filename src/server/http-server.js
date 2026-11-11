@@ -28,6 +28,13 @@ export function createContentLabServer({ dataDirectory = process.env.CONTENTLAB_
       const setupRoutes = { install: 'setupInstall', pause: 'setupPause', resume: 'setupResume', cancel: 'setupCancel', onboarding: 'setupOnboarding' };
       const setupMatch = request.method === 'POST' && url.pathname.match(/^\/api\/v1\/setup\/([a-z]+)$/);
       if (setupMatch && setupRoutes[setupMatch[1]]) return json(response, 200, await application[setupRoutes[setupMatch[1]]](await readJson(request)));
+      if (request.method === 'GET' && url.pathname === '/api/v1/media/file') return await serveMedia(request, response, await application.mediaFile({ path: url.searchParams.get('path'), mediaId: url.searchParams.get('media'), cutId: url.searchParams.get('cut') || undefined }));
+      if (request.method === 'GET' && url.pathname === '/api/v1/jobs') return json(response, 200, application.listJobs({ path: url.searchParams.get('path') || undefined }));
+      if (request.method === 'POST' && url.pathname === '/api/v1/media/upload') return json(response, 201, await application.importMediaUpload({ path: url.searchParams.get('path'), name: url.searchParams.get('name'), rights: url.searchParams.get('rights') || 'pending', size: Number(request.headers['content-length']), stream: request }));
+      const mediaRoutes = { 'import-files': 'importMediaFiles', 'import-url': 'importMediaUrl', usage: 'mediaUsage', remove: 'removeMedia', cut: 'createMediaCut', 'cut-remove': 'removeMediaCut', transcribe: 'transcribeMedia', transcript: 'mediaTranscript', 'transcript-save': 'saveMediaTranscript', search: 'searchTranscripts' };
+      const mediaMatch = request.method === 'POST' && url.pathname.match(/^\/api\/v1\/media\/([a-z-]+)$/);
+      if (mediaMatch && mediaRoutes[mediaMatch[1]]) return json(response, 200, await application[mediaRoutes[mediaMatch[1]]](await readJson(request)));
+      if (request.method === 'POST' && url.pathname === '/api/v1/jobs/cancel') return json(response, 200, application.cancelJob(await readJson(request)));
       const getRoutes = { '/api/v1/settings': 'getSettings', '/api/v1/storage/usage': 'storageUsage', '/api/v1/storage/orphans': 'storageOrphans', '/api/v1/storage/jobs': 'storageJobs', '/api/v1/registry/backups': 'listRegistryBackups' };
       if (request.method === 'GET' && getRoutes[url.pathname]) return json(response, 200, await application[getRoutes[url.pathname]]());
       const postRoutes = { '/api/v1/settings/validate': 'validateFolder', '/api/v1/settings/update': 'updateSettings', '/api/v1/storage/cleanup': 'storageCleanup', '/api/v1/storage/plan': 'planMigration', '/api/v1/storage/migrate': 'startMigration', '/api/v1/storage/cancel': 'cancelMigration', '/api/v1/registry/backup': 'backupRegistry', '/api/v1/registry/restore': 'restoreRegistry' };
@@ -48,6 +55,20 @@ export function createContentLabServer({ dataDirectory = process.env.CONTENTLAB_
       return json(response, status, { error: error.message, ...(typeof error.code === 'string' && /^[A-Z_]+$/.test(error.code) ? { code: error.code } : {}), ...(error.details ? { details: error.details } : {}) });
     }
   });
+}
+
+/** Envia mídia com suporte a Range (necessário para avançar no player). */
+async function serveMedia(request, response, { file, size, contentType }) {
+  const range = request.headers.range?.match(/^bytes=(\d*)-(\d*)$/);
+  if (range) {
+    const start = range[1] ? Number(range[1]) : Math.max(0, size - Number(range[2]));
+    const end = range[1] && range[2] ? Math.min(Number(range[2]), size - 1) : size - 1;
+    if (!(start <= end) || start >= size) { response.writeHead(416, { 'content-range': `bytes */${size}` }); return response.end(); }
+    response.writeHead(206, { 'content-type': contentType, 'content-length': end - start + 1, 'content-range': `bytes ${start}-${end}/${size}`, 'accept-ranges': 'bytes', 'cache-control': 'no-store' });
+    return createReadStream(file, { start, end }).pipe(response);
+  }
+  response.writeHead(200, { 'content-type': contentType, 'content-length': size, 'accept-ranges': 'bytes', 'cache-control': 'no-store' });
+  createReadStream(file).pipe(response);
 }
 
 async function readJson(request) {

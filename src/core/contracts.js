@@ -12,12 +12,35 @@ export const workflowStageSchema = z.object({
   dependsOn: z.array(idSchema).default([]),
 });
 
+export const mediaCutSchema = z.object({
+  id: idSchema,
+  name: z.string().min(1).max(80),
+  start: z.number().nonnegative(),
+  end: z.number().positive(),
+  uri: z.string().min(1),
+  createdAt: z.string(),
+});
+
 export const mediaRefSchema = z.object({
   id: idSchema,
   kind: z.enum(['video', 'audio', 'image', 'subtitle', 'font']),
   uri: z.string().min(1),
   sha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
   rights: z.enum(['owned', 'licensed', 'authorized', 'pending']),
+  name: z.string().max(255).optional(),
+  source: z.object({ type: z.enum(['file', 'url', 'upload']), value: z.string().max(4096) }).optional(),
+  importedAt: z.string().optional(),
+  metadata: z.object({
+    durationSeconds: z.number().nonnegative().nullable(),
+    sizeBytes: z.number().int().nonnegative().nullable(),
+    width: z.number().int().positive().nullable(),
+    height: z.number().int().positive().nullable(),
+    videoCodec: z.string().nullable(),
+    audioCodec: z.string().nullable(),
+    sampleRate: z.number().int().positive().nullable(),
+  }).optional(),
+  cuts: z.array(mediaCutSchema).default([]),
+  transcript: z.object({ status: z.enum(['raw', 'revised']), model: z.string(), language: z.string(), segments: z.number().int().nonnegative(), updatedAt: z.string() }).nullable().default(null),
 });
 
 const keyframeSchema = z.object({
@@ -96,6 +119,10 @@ export const operationSchema = z.object({
     z.object({ type: z.literal('project.update'), title: z.string().min(1).optional(), projectType: z.enum(['long', 'short', 'custom']).optional(), aspectRatio: aspectRatioSchema.optional(), mode: z.enum(['review', 'autonomous']).optional() }),
     z.object({ type: z.literal('creative.update'), creative: projectSchema.shape.creative }),
     z.object({ type: z.literal('media.add'), media: mediaRefSchema }),
+    z.object({ type: z.literal('media.remove'), mediaId: idSchema, detachUsages: z.boolean().default(false) }),
+    z.object({ type: z.literal('media.cut.add'), mediaId: idSchema, cut: mediaCutSchema }),
+    z.object({ type: z.literal('media.cut.remove'), mediaId: idSchema, cutId: idSchema }),
+    z.object({ type: z.literal('media.transcript.set'), mediaId: idSchema, transcript: mediaRefSchema.shape.transcript }),
   ])).min(1).max(100),
 });
 

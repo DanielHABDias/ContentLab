@@ -3,7 +3,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { App } from './App.jsx';
 import { localApi } from './local-api.js';
 
-vi.mock('./local-api.js', () => ({ localApi: { listProjects: vi.fn(), openProject: vi.fn(), createProject: vi.fn(), chooseDirectory: vi.fn(), choosePackage: vi.fn(), chooseMedia: vi.fn(), importPackage: vi.fn(), importMedia: vi.fn(), runProjectAction: vi.fn(), forgetProject: vi.fn(), revealProject: vi.fn(), renameProject: vi.fn(), changeProjectId: vi.fn(), duplicateProject: vi.fn(), exportProject: vi.fn(), deleteProject: vi.fn(), restoreProject: vi.fn(), projectActivities: vi.fn(), cancelProjectActivities: vi.fn(), setupStatus: vi.fn(), setupJobs: vi.fn(), setupInstall: vi.fn(), setupPause: vi.fn(), setupResume: vi.fn(), setupCancel: vi.fn(), setupOnboarding: vi.fn(), relocateProject: vi.fn(), getSettings: vi.fn(), validateFolder: vi.fn(), updateSettings: vi.fn(), storageUsage: vi.fn(), storageOrphans: vi.fn(), storageCleanup: vi.fn(), planMigration: vi.fn(), startMigration: vi.fn(), storageJobs: vi.fn(), cancelMigration: vi.fn(), backupRegistry: vi.fn(), registryBackups: vi.fn(), restoreRegistry: vi.fn() } }));
+vi.mock('./local-api.js', () => ({ localApi: { listProjects: vi.fn(), openProject: vi.fn(), createProject: vi.fn(), chooseDirectory: vi.fn(), choosePackage: vi.fn(), chooseMedia: vi.fn(), importPackage: vi.fn(), importMedia: vi.fn(), runProjectAction: vi.fn(), forgetProject: vi.fn(), revealProject: vi.fn(), renameProject: vi.fn(), changeProjectId: vi.fn(), duplicateProject: vi.fn(), exportProject: vi.fn(), deleteProject: vi.fn(), restoreProject: vi.fn(), projectActivities: vi.fn(), cancelProjectActivities: vi.fn(), setupStatus: vi.fn(), setupJobs: vi.fn(), setupInstall: vi.fn(), setupPause: vi.fn(), setupResume: vi.fn(), setupCancel: vi.fn(), setupOnboarding: vi.fn(), relocateProject: vi.fn(), getSettings: vi.fn(), validateFolder: vi.fn(), updateSettings: vi.fn(), storageUsage: vi.fn(), storageOrphans: vi.fn(), storageCleanup: vi.fn(), planMigration: vi.fn(), startMigration: vi.fn(), storageJobs: vi.fn(), cancelMigration: vi.fn(), backupRegistry: vi.fn(), registryBackups: vi.fn(), restoreRegistry: vi.fn(), importFiles: vi.fn(), importUrl: vi.fn(), mediaUsage: vi.fn(), removeMedia: vi.fn(), createCut: vi.fn(), removeCut: vi.fn(), transcribe: vi.fn(), transcript: vi.fn(), saveTranscript: vi.fn(), searchTranscripts: vi.fn(), jobs: vi.fn(), cancelJob: vi.fn(), upload: vi.fn() } }));
 
 function setupStatus(overrides = {}) {
   const items = [
@@ -280,4 +280,54 @@ test('voz clonada em computador sem RAM suficiente não pode ser marcada e expli
   render(<App/>); await screen.findByRole('heading', { name: /prepare seu computador/i });
   expect(screen.queryByLabelText(/voxcpm2/i)).not.toBeInTheDocument();
   expect(screen.getByText(/este computador tem 8 GB/)).toBeInTheDocument();
+});
+
+function mediaDetails() {
+  const media = { id: 'media_abc', kind: 'audio', uri: '/cache/a.wav', sha256: 'a'.repeat(64), rights: 'owned', name: 'fala.wav', source: { type: 'file', value: '/home/fala.wav' }, metadata: { durationSeconds: 3, sizeBytes: 2048, width: null, height: null, videoCodec: null, audioCodec: 'pcm_s16le', sampleRate: 48000 }, cuts: [], transcript: { status: 'raw', model: 'whisper-large-v3', language: 'pt', segments: 2, updatedAt: 'x' } };
+  const details = realDetails({ media: [media], stages: stageAt('media') });
+  return { ...details, mediaStatus: [{ id: 'media_abc', available: true }] };
+}
+async function openMedia(details) {
+  localApi.setupStatus.mockResolvedValue(gatedSetup(['ffmpeg', 'ffprobe', 'zenity', 'whisper-cli', 'whisper-large-v3']));
+  localApi.listProjects.mockResolvedValue({ projects: [details.card] }); localApi.openProject.mockResolvedValue(details); localApi.jobs.mockResolvedValue({ jobs: [] });
+  localApi.transcript.mockResolvedValue({ transcript: { raw: [{ start: 0, end: 1.5, text: 'Olá mundo' }, { start: 1.5, end: 3, text: 'teste' }], current: [{ start: 0, end: 1.5, text: 'Olá mundo' }, { start: 1.5, end: 3, text: 'teste' }], revised: null, revision: 0, srt: '1' } });
+  render(<App/>); fireEvent.click(await screen.findByRole('button', { name: /abrir meu projeto/i }));
+  fireEvent.click(await screen.findByRole('button', { name: /mídias locais/i }));
+}
+
+test('mídias: importa vários arquivos e mostra detalhes reais da mídia', async () => {
+  const details = mediaDetails(); localApi.chooseMedia.mockResolvedValue({ paths: ['/a.wav', '/b.mp4'] }); localApi.importFiles.mockResolvedValue({ id: 'job_1', state: 'running' });
+  await openMedia(details);
+  expect(await screen.findByText(/Áudio · 0:03,0 · 2 KB · direitos: Própria · transcrição bruta/)).toBeInTheDocument();
+  expect(screen.getByText('/home/fala.wav')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /importar arquivos/i }));
+  await waitFor(() => expect(localApi.importFiles).toHaveBeenCalledWith({ path: '/tmp/meu_projeto', sources: ['/a.wav', '/b.mp4'], rights: 'pending' }));
+  expect(localApi.chooseMedia).toHaveBeenCalledWith('Importar mídias', true);
+});
+
+test('mídias: remover mostra os usos antes de desassociar', async () => {
+  const details = mediaDetails(); localApi.mediaUsage.mockResolvedValue({ thumbnail: true, clips: [{ trackId: 'v', clipId: 'c' }], total: 2 }); localApi.removeMedia.mockResolvedValue({});
+  await openMedia(details);
+  fireEvent.click(await screen.findByRole('button', { name: /remover fala.wav/i }));
+  const dialog = await screen.findByRole('alertdialog', { name: /remover do projeto/i });
+  expect(within(dialog).getByText(/thumbnail da embalagem e 1 clip/)).toBeInTheDocument();
+  fireEvent.click(within(dialog).getByRole('button', { name: /desassociar e remover/i }));
+  await waitFor(() => expect(localApi.removeMedia).toHaveBeenCalledWith({ path: '/tmp/meu_projeto', baseRevision: 1, mediaId: 'media_abc', detachUsages: true }));
+});
+
+test('mídias: URL exige confirmar direitos; transcrição editada salva revisão', async () => {
+  const details = mediaDetails(); localApi.saveTranscript.mockResolvedValue({ revision: 1 });
+  localApi.setupStatus.mockResolvedValue(gatedSetup(['ffmpeg', 'ffprobe', 'zenity', 'yt-dlp', 'whisper-cli', 'whisper-large-v3']));
+  localApi.listProjects.mockResolvedValue({ projects: [details.card] }); localApi.openProject.mockResolvedValue(details); localApi.jobs.mockResolvedValue({ jobs: [] });
+  localApi.transcript.mockResolvedValue({ transcript: { raw: [{ start: 0, end: 1.5, text: 'Olá mundo' }], current: [{ start: 0, end: 1.5, text: 'Olá mundo' }], revised: null, revision: 0, srt: '1' } });
+  render(<App/>); fireEvent.click(await screen.findByRole('button', { name: /abrir meu projeto/i })); fireEvent.click(await screen.findByRole('button', { name: /mídias locais/i }));
+  const form = await screen.findByRole('form', { name: /importar por url/i });
+  fireEvent.change(within(form).getByPlaceholderText(/https/), { target: { value: 'https://exemplo.com/v' } });
+  expect(within(form).getByRole('button', { name: /baixar/i })).toBeDisabled();
+  const segment = await screen.findByLabelText('Trecho 1');
+  expect(screen.getByRole('button', { name: /salvar revisão/i })).toBeDisabled();
+  fireEvent.change(segment, { target: { value: 'Olá, mundo!' } });
+  expect(screen.getByText(/Original: Olá mundo/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /salvar revisão/i }));
+  await waitFor(() => expect(localApi.saveTranscript).toHaveBeenCalledWith({ path: '/tmp/meu_projeto', mediaId: 'media_abc', baseRevision: 0, segments: [{ start: 0, end: 1.5, text: 'Olá, mundo!' }] }));
 });

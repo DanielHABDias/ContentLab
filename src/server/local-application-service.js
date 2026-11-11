@@ -6,6 +6,7 @@ import { idSchema } from '../core/contracts.js';
 import { LOCK_FILE, withProjectLock } from '../core/project-lock.js';
 import { FEATURES, featureBlock } from '../core/capabilities.js';
 import { SetupService } from '../setup/setup-service.js';
+import { MediaOperations } from './media-operations.js';
 import { ActivityTracker, LifecycleError, SystemOpener, SystemTrash } from './project-lifecycle.js';
 import { ProjectRegistry, readProjectDirectory } from './project-registry.js';
 import { ProjectStore } from '../core/project-store.js';
@@ -18,12 +19,13 @@ import { MediaService } from '../media/media-service.js';
 import { FfmpegRenderer } from '../render/ffmpeg-renderer.js';
 
 export class LocalApplicationService {
-  constructor({ dataDirectory, dialog = new NativeDialog(), packages = new PackageService(), media = null, renderer = null, trash = new SystemTrash(), opener = new SystemOpener(), activities = new ActivityTracker(), setup = null, toolsDirectory = null }) {
+  constructor({ dataDirectory, dialog = new NativeDialog(), packages = new PackageService(), media = null, renderer = null, trash = new SystemTrash(), opener = new SystemOpener(), activities = new ActivityTracker(), setup = null, toolsDirectory = null, transcriber = null }) {
     this.dataDirectory = path.resolve(dataDirectory);
     this.projectsDirectory = path.join(this.dataDirectory, 'projects');
     this.registry = new ProjectRegistry(this.dataDirectory, { scanRoots: () => [this.projectsDirectory] });
     this.injected = { media: Boolean(media), renderer: Boolean(renderer), setup: Boolean(setup) };
     this.defaults = { roots: { projects: this.projectsDirectory, media: path.join(this.dataDirectory, 'media'), renderCache: path.join(this.dataDirectory, 'render'), tools: path.resolve(toolsDirectory || path.join(this.dataDirectory, 'tools')), renderOutput: null }, limits: { cacheMaxBytes: null, minFreeBytes: 2 * 1024 ** 3 } };
+    this.mediaOps = new MediaOperations(this, { transcriber });
     this.settingsStore = new SettingsStore(this.dataDirectory, this.defaults);
     this.settings = { revision: 0, roots: { ...this.defaults.roots }, limits: { ...this.defaults.limits } };
     this.storage = new StorageService({
@@ -157,7 +159,7 @@ export class LocalApplicationService {
 
   async chooseDirectory(options) { return { path: await this.dialog.chooseDirectory(options) }; }
   async choosePackage(options) { return { path: await this.dialog.choosePackage(options) }; }
-  async chooseMedia(options) { return { path: await this.dialog.chooseMedia(options) }; }
+  async chooseMedia(options) { const value = await this.dialog.chooseMedia(options); return options?.multiple ? { paths: value ? value.split('\n').filter(Boolean) : [] } : { path: value }; }
 
   async createProject({ title, type, aspectRatio, mode = 'review', parentDirectory }) {
     if (!title?.trim()) throw new Error('Informe o título do projeto');
@@ -322,12 +324,28 @@ export class LocalApplicationService {
   async importMedia({ path: directory, baseRevision, source, rights = 'pending' }) {
     if (!source) throw new Error('Nenhum arquivo foi escolhido');
     await this.requireFeature('media.import');
+    const project = await readProjectDirectory(directory);
+    if (project.revision !== baseRevision) throw new Error(`Conflito de revisão: esperado ${baseRevision}, atual ${project.revision}`);
     const imported = await this.activities.track(directory, 'importação de mídia', () => this.media.importFile(source));
-    const streams = imported.metadata?.streams || [];
-    const extension = path.extname(imported.path).toLowerCase();
-    const kind = streams.some(stream => stream.codec_type === 'video') ? (['.png', '.jpg', '.jpeg', '.webp'].includes(extension) ? 'image' : 'video') : streams.some(stream => stream.codec_type === 'audio') ? 'audio' : 'image';
-    return await this.runProjectAction({ path: directory, baseRevision, action: { type: 'media.add', media: { id: imported.id, kind, uri: imported.path, sha256: imported.hash, rights } } });
+    const result = await this.mediaOps.attach(directory, imported, { rights, source: { type: 'file', value: path.resolve(source) } });
+    return { ...(await this.registerProject(directory)), importResult: result };
   }
+
+  // ---- Mídia completa (F16) ----
+  importMediaFiles(input) { return this.mediaOps.importFiles(input); }
+  importMediaUrl(input) { return this.mediaOps.importUrl(input); }
+  importMediaUpload(input) { return this.mediaOps.importUpload(input); }
+  mediaUsage(input) { return this.mediaOps.usage(input); }
+  removeMedia(input) { return this.mediaOps.remove(input); }
+  createMediaCut(input) { return this.mediaOps.createCut(input); }
+  removeMediaCut(input) { return this.mediaOps.removeCut(input); }
+  mediaFile(input) { return this.mediaOps.file(input); }
+  transcribeMedia(input) { return this.mediaOps.transcribe(input); }
+  mediaTranscript(input) { return this.mediaOps.transcript(input); }
+  saveMediaTranscript(input) { return this.mediaOps.saveTranscript(input); }
+  searchTranscripts(input) { return this.mediaOps.search(input); }
+  listJobs(input) { return this.mediaOps.listJobs(input); }
+  cancelJob(input) { return this.mediaOps.cancelJob(input); }
 
   /** Capacidades para as telas de etapa, derivadas do mesmo catálogo do setup. */
   async diagnostics() {

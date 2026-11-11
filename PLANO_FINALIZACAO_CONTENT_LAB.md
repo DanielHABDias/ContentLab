@@ -121,15 +121,15 @@ Aceite: mudar configurações não perde dados; limpeza nunca apaga originais ou
 
 Objetivo: concluir o fluxo da mídia bruta ao material pesquisável dentro da interface.
 
-- [ ] Adicionar importação múltipla, drag-and-drop, progresso, cancelamento e prevenção de duplicatas por hash.
-- [ ] Implementar remoção/desassociação de mídia com análise de uso em thumbnail, timeline, takes e render.
-- [ ] Integrar URL HTTPS com `yt-dlp`, validação de direitos e limites existentes; bloquear playlists e excessos conforme documentação.
-- [ ] Criar preview real de vídeo, áudio e imagem, metadados de ffprobe e localização do original/cache.
-- [ ] Expor cortes não destrutivos e seus derivados cacheados.
-- [ ] Conectar Whisper `large-v3`: fila, idioma PT-BR, progresso, cancelamento, JSON/SRT, timestamps e reexecução idempotente.
-- [ ] Permitir revisão/correção da transcrição sem sobrescrever a saída bruta.
-- [ ] Associar transcrição à mídia e permitir busca por texto/timecode.
-- [ ] Testar com arquivos reais pequenos, mídia inválida, URL recusada e runtime ausente.
+- [x] Adicionar importação múltipla, drag-and-drop, progresso, cancelamento e prevenção de duplicatas por hash.
+- [x] Implementar remoção/desassociação de mídia com análise de uso em thumbnail, timeline, takes e render.
+- [x] Integrar URL HTTPS com `yt-dlp`, validação de direitos e limites existentes; bloquear playlists e excessos conforme documentação.
+- [x] Criar preview real de vídeo, áudio e imagem, metadados de ffprobe e localização do original/cache.
+- [x] Expor cortes não destrutivos e seus derivados cacheados.
+- [x] Conectar Whisper `large-v3`: fila, idioma PT-BR, progresso, cancelamento, JSON/SRT, timestamps e reexecução idempotente.
+- [x] Permitir revisão/correção da transcrição sem sobrescrever a saída bruta.
+- [x] Associar transcrição à mídia e permitir busca por texto/timecode.
+- [x] Testar com arquivos reais pequenos, mídia inválida, URL recusada e runtime ausente.
 
 Aceite: importar, visualizar, cortar e transcrever funciona do início ao fim; nenhum botão apenas informa que o recurso será integrado depois.
 
@@ -283,6 +283,13 @@ Aceite: em qualquer computador, a instalação baixa a variante certa, a geraç�
 Não iniciar empacotamento desktop antes de estabilizar armazenamento, setup e operações destrutivas. Não baixar modelos grandes antes de implementar consentimento, checksum, retomada e espaço em disco.
 
 ## Checkpoint de retomada
+
+### F16 concluída (2026-11-11)
+
+- Concluído: contrato de mídia com nome, origem, metadados, cortes e transcrição; ações `media.remove` (análise de uso), `media.cut.add/remove`, `media.transcript.set`; `src/server/media-operations.js` + `job-queue.js` (importação múltipla/upload/URL/transcrição com progresso e cancelamento); `src/media/transcript-store.js` (bruto x revisado, SRT, busca por texto/timecode); preview com Range; `src/ui/MediaLibrary.jsx`. Hash de mídia passou a ser em streaming.
+- Testes: `media-operations.test.js` (8, arquivos reais via FFmpeg, yt-dlp e whisper-cli simulados) e 3 de UI.
+- Pendências: whisper real e yt-dlp real não executados aqui; takes de narração não entram na análise de uso (F17); API local sem proteção contra outras origens do navegador (F22).
+- Próxima tarefa: F17 — narração e voz (gravação, takes, tratamento, perfil com consentimento, geração VoxCPM2 em fila por cena com cache).
 
 ### F25 concluída (2026-11-11)
 

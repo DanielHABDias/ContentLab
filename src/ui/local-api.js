@@ -19,7 +19,7 @@ export const localApi = {
   runProjectAction: input => request('/projects/action', { method: 'POST', body: JSON.stringify(input) }),
   chooseDirectory: title => request('/dialog/directory', { method: 'POST', body: JSON.stringify({ title }) }),
   choosePackage: title => request('/dialog/package', { method: 'POST', body: JSON.stringify({ title }) }),
-  chooseMedia: title => request('/dialog/media', { method: 'POST', body: JSON.stringify({ title }) }),
+  chooseMedia: (title, multiple = false) => request('/dialog/media', { method: 'POST', body: JSON.stringify({ title, multiple }) }),
   importPackage: input => request('/packages/import', { method: 'POST', body: JSON.stringify(input) }),
   importMedia: input => request('/media/import', { method: 'POST', body: JSON.stringify(input) }),
   render: input => request('/render', { method: 'POST', body: JSON.stringify(input) }),
@@ -54,4 +54,25 @@ export const localApi = {
   backupRegistry: () => post('/registry/backup', {}),
   registryBackups: () => request('/registry/backups'),
   restoreRegistry: name => post('/registry/restore', { name }),
+  importFiles: input => post('/media/import-files', input),
+  importUrl: input => post('/media/import-url', input),
+  mediaUsage: input => post('/media/usage', input),
+  removeMedia: input => post('/media/remove', input),
+  createCut: input => post('/media/cut', input),
+  removeCut: input => post('/media/cut-remove', input),
+  transcribe: input => post('/media/transcribe', input),
+  transcript: input => post('/media/transcript', input),
+  saveTranscript: input => post('/media/transcript-save', input),
+  searchTranscripts: input => post('/media/search', input),
+  jobs: path => request(`/jobs?path=${encodeURIComponent(path)}`),
+  cancelJob: jobId => post('/jobs/cancel', { jobId }),
+  /** Envio com progresso (arrastar e soltar): o navegador não expõe o caminho do arquivo. */
+  upload: ({ path, file, rights, onProgress = () => {} }) => new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `/api/v1/media/upload?path=${encodeURIComponent(path)}&name=${encodeURIComponent(file.name)}&rights=${encodeURIComponent(rights)}`);
+    xhr.upload.onprogress = event => onProgress(event.loaded, event.total);
+    xhr.onload = () => { let value = {}; try { value = JSON.parse(xhr.responseText); } catch { /* resposta vazia */ } xhr.status < 300 ? resolve(value) : reject(Object.assign(new Error(value.error || `Falha no envio (${xhr.status})`), { code: value.code, details: value.details })); };
+    xhr.onerror = () => reject(new Error('Servidor local indisponível'));
+    xhr.send(file);
+  }),
 };

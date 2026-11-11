@@ -19,9 +19,9 @@ export class NativeDialog {
     return await this.#zenity(['--file-selection', `--title=${title}`, '--file-filter=Pacotes Content Lab | *.contentlab *.zip']);
   }
 
-  async chooseMedia({ title = 'Importar mídia' } = {}) {
+  async chooseMedia({ title = 'Importar mídia', multiple = false } = {}) {
     if (this.platform !== 'linux') throw new Error('Seletor nativo ainda não está disponível neste sistema');
-    return await this.#zenity(['--file-selection', `--title=${title}`, '--file-filter=Mídias | *.mp4 *.mov *.mkv *.webm *.mp3 *.wav *.flac *.m4a *.png *.jpg *.jpeg *.webp']);
+    return await this.#zenity(['--file-selection', `--title=${title}`, ...(multiple ? ['--multiple', '--separator=\n'] : []), '--file-filter=Mídias | *.mp4 *.mov *.mkv *.webm *.mp3 *.wav *.flac *.m4a *.png *.jpg *.jpeg *.webp']);
   }
 
   async #zenity(arguments_) {

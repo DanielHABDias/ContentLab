@@ -44,6 +44,26 @@ function applyActions(project, actions) {
       if (existing >= 0) draft.media[existing] = action.media;
       else draft.media.push(action.media);
     }
+    else if (action.type === 'media.remove') {
+      const usages = mediaUsages(draft, action.mediaId);
+      if (!draft.media.some(item => item.id === action.mediaId)) throw new Error(`Mídia desconhecida: ${action.mediaId}`);
+      if (usages.total && !action.detachUsages) throw Object.assign(new Error(`Mídia em uso: ${describeUsages(usages)}. Confirme para desassociar.`), { code: 'MEDIA_IN_USE', details: { usages } });
+      if (usages.thumbnail) draft.creative.packaging.thumbnailMediaId = null;
+      for (const track of draft.timeline.tracks) track.clips = track.clips.filter(clip => clip.sourceId !== action.mediaId);
+      draft.media = draft.media.filter(item => item.id !== action.mediaId);
+    }
+    else if (action.type === 'media.cut.add' || action.type === 'media.cut.remove' || action.type === 'media.transcript.set') {
+      const media = draft.media.find(item => item.id === action.mediaId);
+      if (!media) throw new Error(`Mídia desconhecida: ${action.mediaId}`);
+      if (action.type === 'media.cut.add') {
+        if (action.cut.end <= action.cut.start) throw new Error('O fim do corte deve ser depois do início');
+        if (media.metadata?.durationSeconds != null && action.cut.end > media.metadata.durationSeconds + 0.05) throw new Error('O corte passa da duração da mídia');
+        media.cuts = [...(media.cuts || []).filter(cut => cut.id !== action.cut.id), action.cut];
+      } else if (action.type === 'media.cut.remove') {
+        if (!(media.cuts || []).some(cut => cut.id === action.cutId)) throw new Error(`Corte desconhecido: ${action.cutId}`);
+        media.cuts = media.cuts.filter(cut => cut.id !== action.cutId);
+      } else media.transcript = action.transcript;
+    }
     else {
       const track = draft.timeline.tracks.find(candidate => candidate.id === action.trackId);
       if (!track) throw new Error(`Track desconhecida: ${action.trackId}`);
@@ -65,6 +85,17 @@ function applyActions(project, actions) {
   }
   draft.revision = project.revision + 1;
   return draft;
+}
+
+/** Onde uma mídia é usada no projeto (thumbnail e clips da timeline). */
+export function mediaUsages(project, mediaId) {
+  const thumbnail = project.creative?.packaging?.thumbnailMediaId === mediaId;
+  const clips = project.timeline.tracks.flatMap(track => track.clips.filter(clip => clip.sourceId === mediaId).map(clip => ({ trackId: track.id, clipId: clip.id })));
+  return { thumbnail, clips, total: clips.length + (thumbnail ? 1 : 0) };
+}
+
+function describeUsages(usages) {
+  return [usages.thumbnail && 'thumbnail', usages.clips.length && `${usages.clips.length} clip(s) na timeline`].filter(Boolean).join(' e ');
 }
 
 function summarizeDiff(before, after) {
