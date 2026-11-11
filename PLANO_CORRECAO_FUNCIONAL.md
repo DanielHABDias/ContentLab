@@ -31,11 +31,11 @@ Este plano substitui a aceitação visual usada no ciclo T01–T12 por aceitaç�
 
 ## F02 — criar, abrir e importar projetos
 
-- [ ] Criar projeto real pelo `ProjectStore`, em pasta escolhida ou na raiz local padrão.
-- [ ] Abrir pasta por seletor nativo e validar `project.json` antes de registrar.
-- [ ] Importar `.contentlab`/ZIP por seletor nativo, inspeção segura e restauração pelo `PackageService`.
-- [ ] Tratar cancelamento, pasta inválida, conflito e indisponibilidade do seletor sem falso sucesso.
-- [ ] Testar os fluxos completos da interface até o disco.
+- [x] Criar projeto real pelo `ProjectStore`, em pasta escolhida ou na raiz local padrão.
+- [x] Abrir pasta por seletor nativo e validar `project.json` antes de registrar.
+- [x] Importar `.contentlab`/ZIP por seletor nativo, inspeção segura e restauração pelo `PackageService`.
+- [x] Tratar cancelamento, pasta inválida, conflito e indisponibilidade do seletor sem falso sucesso.
+- [x] Testar os fluxos completos da interface até o disco.
 
 ## F03 — configuração e navegação do projeto
 

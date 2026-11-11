@@ -20,6 +20,10 @@ export function createContentLabServer({ dataDirectory = process.env.CONTENTLAB_
         const body = await readJson(request);
         return json(response, 200, await application.registerProject(body.path));
       }
+      if (request.method === 'POST' && url.pathname === '/api/v1/projects/create') return json(response, 201, await application.createProject(await readJson(request)));
+      if (request.method === 'POST' && url.pathname === '/api/v1/dialog/directory') return json(response, 200, await application.chooseDirectory(await readJson(request)));
+      if (request.method === 'POST' && url.pathname === '/api/v1/dialog/package') return json(response, 200, await application.choosePackage(await readJson(request)));
+      if (request.method === 'POST' && url.pathname === '/api/v1/packages/import') return json(response, 201, await application.importPackage(await readJson(request)));
       if (url.pathname.startsWith('/api/')) return json(response, 404, { error: 'Rota local desconhecida' });
       return await serveStatic(response, staticDirectory, url.pathname);
     } catch (error) {

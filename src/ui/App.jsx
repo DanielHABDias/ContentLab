@@ -97,8 +97,21 @@ function PackagingPanel({ meta, onChange }) {
 
 function NewProjectDialog({ onClose, onCreate }) {
   const [title, setTitle] = useState('');
-  const [type, setType] = useState('Vídeo longo');
-  return <div className="dialog-backdrop" role="presentation"><form className="dialog" aria-label="Novo projeto" onSubmit={event => { event.preventDefault(); onCreate({ id: Date.now(), title, type, ratio: type === 'Short' ? '9:16' : '16:9', progress: 0, step: 'Ideia e brief', updated: 'Agora', accent: 'blue' }); }}><div className="section-title"><div><span className="eyebrow">Projeto local</span><h2>Novo vídeo</h2></div><button type="button" className="icon-button" aria-label="Fechar" onClick={onClose}><X/></button></div><label>Título<input autoFocus required value={title} onChange={event => setTitle(event.target.value)} placeholder="Nome do projeto"/></label><fieldset><legend>Formato</legend><label><input type="radio" name="type" checked={type === 'Vídeo longo'} onChange={() => setType('Vídeo longo')}/> Vídeo longo · 16:9</label><label><input type="radio" name="type" checked={type === 'Short'} onChange={() => setType('Short')}/> Short · 9:16</label></fieldset><div className="dialog-actions"><button type="button" className="button quiet" onClick={onClose}>Cancelar</button><button className="button primary">Criar projeto</button></div></form></div>;
+  const [type, setType] = useState('long');
+  const [parentDirectory, setParentDirectory] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const chooseLocation = async () => {
+    setError('');
+    try { const result = await localApi.chooseDirectory('Onde criar o projeto?'); if (result.path) setParentDirectory(result.path); }
+    catch (issue) { setError(issue.message); }
+  };
+  const submit = async event => {
+    event.preventDefault(); setBusy(true); setError('');
+    try { await onCreate({ title, type, aspectRatio: type === 'short' ? '9:16' : '16:9', ...(parentDirectory ? { parentDirectory } : {}) }); }
+    catch (issue) { setError(issue.message); setBusy(false); }
+  };
+  return <div className="dialog-backdrop" role="presentation"><form className="dialog" aria-label="Novo projeto" onSubmit={submit}><div className="section-title"><div><span className="eyebrow">Projeto local</span><h2>Novo vídeo</h2></div><button type="button" className="icon-button" aria-label="Fechar" onClick={onClose}><X/></button></div>{error && <div className="notice error" role="alert">{error}</div>}<label>Título<input autoFocus required value={title} onChange={event => setTitle(event.target.value)} placeholder="Nome do projeto"/></label><fieldset><legend>Formato</legend><label><input type="radio" name="type" checked={type === 'long'} onChange={() => setType('long')}/> Vídeo longo · 16:9</label><label><input type="radio" name="type" checked={type === 'short'} onChange={() => setType('short')}/> Short · 9:16</label></fieldset><div className="location-picker"><span><strong>Local</strong><small>{parentDirectory || 'Pasta padrão do Content Lab'}</small></span><button type="button" className="button quiet" onClick={chooseLocation}>Escolher pasta</button></div><div className="dialog-actions"><button type="button" className="button quiet" onClick={onClose}>Cancelar</button><button className="button primary" disabled={busy}>{busy ? 'Criando…' : 'Criar projeto'}</button></div></form></div>;
 }
 
 export function App() {
@@ -114,6 +127,32 @@ export function App() {
     try { const details = await localApi.openProject(card.path); setSelected(details.project); }
     catch (error) { setHomeNotice(error.message); }
   };
+  const createProject = async input => {
+    const details = await localApi.createProject(input);
+    setItems(previous => [details.card, ...previous.filter(item => item.path !== details.card.path)]);
+    setCreating(false);
+    setSelected(details.project);
+  };
+  const chooseAndOpen = async () => {
+    setHomeNotice('');
+    try {
+      const selectedDirectory = await localApi.chooseDirectory('Abrir projeto do Content Lab');
+      if (!selectedDirectory.path) return;
+      const details = await localApi.openProject(selectedDirectory.path);
+      setItems(previous => [details.card, ...previous.filter(item => item.path !== details.card.path)]);
+      setSelected(details.project);
+    } catch (error) { setHomeNotice(error.message); }
+  };
+  const chooseAndImport = async () => {
+    setHomeNotice('');
+    try {
+      const selectedPackage = await localApi.choosePackage('Importar projeto do Content Lab');
+      if (!selectedPackage.path) return;
+      const details = await localApi.importPackage({ packagePath: selectedPackage.path });
+      setItems(previous => [details.card, ...previous.filter(item => item.path !== details.card.path)]);
+      setSelected(details.project);
+    } catch (error) { setHomeNotice(error.message); }
+  };
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -126,11 +165,12 @@ export function App() {
       </aside>
       {selected ? <ProjectView project={selected} onBack={() => setSelected(null)} /> : (
         <main id="main" className="project-home">
-          <header className="home-header"><div><span className="eyebrow">Seu espaço de criação</span><h1>Projetos locais</h1><p>Retome um vídeo ou comece uma nova produção.</p></div><button className="button primary" disabled title="Criação de projetos em preparação"><Plus size={19}/> Novo projeto</button></header>
+          <header className="home-header"><div><span className="eyebrow">Seu espaço de criação</span><h1>Projetos locais</h1><p>Retome um vídeo ou comece uma nova produção.</p></div><button className="button primary" onClick={() => setCreating(true)} disabled={Boolean(serverError)}><Plus size={19}/> Novo projeto</button></header>
           {serverError && <div className="notice error" role="alert"><X size={16}/><span><strong>Servidor local indisponível.</strong> Inicie o Content Lab com <code>npm run dev</code>. {serverError}</span></div>}
           {homeNotice && <div className="notice" role="status"><X size={16}/>{homeNotice}</div>}
-          <div className="quick-actions"><button disabled title="Abertura de pasta em preparação"><FolderOpen/><span><strong>Abrir projeto</strong><small>Escolher uma pasta local</small></span></button><button disabled title="Importação em preparação"><ArrowRight/><span><strong>Importar pacote</strong><small>.contentlab ou ZIP</small></span></button></div>
+          <div className="quick-actions"><button onClick={chooseAndOpen} disabled={Boolean(serverError)}><FolderOpen/><span><strong>Abrir projeto</strong><small>Escolher uma pasta local</small></span></button><button onClick={chooseAndImport} disabled={Boolean(serverError)}><ArrowRight/><span><strong>Importar pacote</strong><small>.contentlab ou ZIP</small></span></button></div>
           <section aria-labelledby="recent-title"><div className="section-title"><h2 id="recent-title">Recentes</h2><span>{items.length} {items.length === 1 ? 'projeto' : 'projetos'}</span></div>{loading ? <p className="empty-state">Carregando projetos locais…</p> : items.length ? <div className="project-grid">{items.map(project => <ProjectCard key={project.path} project={project} onOpen={openRecent}/>)}</div> : <div className="empty-state"><strong>Nenhum projeto recente.</strong><span>Crie um projeto ou abra uma pasta que contenha um project.json válido.</span></div>}</section>
+          {creating && <NewProjectDialog onClose={() => setCreating(false)} onCreate={createProject}/>} 
         </main>
       )}
     </div>

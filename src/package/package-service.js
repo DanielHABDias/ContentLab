@@ -24,12 +24,22 @@ export class PackageService {
 
   async inspect(packagePath) { const entries = await readZip(path.resolve(packagePath)); const manifestEntry = entries.get('contentlab-manifest.json'); if (!manifestEntry) throw new Error('Manifesto .contentlab ausente'); const manifest = JSON.parse(manifestEntry.toString('utf8')); validateManifest(manifest); return { manifest, archiveEntries: entries.size }; }
 
+  async inspectZip(packagePath) { const entries = await readZip(path.resolve(packagePath)); const project = entries.get('project.json'); if (!project) throw new Error('project.json ausente no ZIP'); return { project: JSON.parse(project.toString('utf8')), archiveEntries: entries.size }; }
+
   async restore(packagePath, destination) {
     const target = path.resolve(destination); await mkdir(target, { recursive: true }); const entries = await readZip(path.resolve(packagePath)); const manifestBuffer = entries.get('contentlab-manifest.json'); if (!manifestBuffer) throw new Error('Manifesto .contentlab ausente'); const manifest = JSON.parse(manifestBuffer.toString('utf8')); validateManifest(manifest);
     const planned = [];
     for (const entry of manifest.entries) { const relative = safeRelative(entry.path); const blob = entries.get(`blobs/${entry.hash}`); if (!blob) throw new Error(`Blob ausente: ${entry.hash}`); const actual = createHash('sha256').update(blob).digest('hex'); if (actual !== entry.hash || blob.length !== entry.size) throw new Error(`Integridade inválida: ${entry.path}`); const output = path.resolve(target, relative); if (!output.startsWith(`${target}${path.sep}`)) throw new Error('Caminho fora do destino'); planned.push({ output, blob, mode: entry.mode }); }
     for (const item of planned) { await mkdir(path.dirname(item.output), { recursive: true }); await writeFile(item.output, item.blob, { flag: 'wx', mode: item.mode }); }
     return { destination: target, files: planned.length, schema: manifest.schema };
+  }
+
+  async restoreZip(packagePath, destination) {
+    const target = path.resolve(destination); const entries = await readZip(path.resolve(packagePath));
+    if (!entries.has('project.json')) throw new Error('project.json ausente no ZIP');
+    await mkdir(target, { recursive: true });
+    for (const [relative, contents] of entries) { const output = path.resolve(target, safeRelative(relative)); if (!output.startsWith(`${target}${path.sep}`)) throw new Error('Caminho fora do destino'); await mkdir(path.dirname(output), { recursive: true }); await writeFile(output, contents, { flag: 'wx', mode: 0o600 }); }
+    return { destination: target, files: entries.size, schema: 'zip' };
   }
 }
 
