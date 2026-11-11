@@ -188,9 +188,11 @@ Esta etapa é **obrigatória antes de projetar e implementar a nova arquitetura*
 **Checkpoint T06 (2026-11-11):** `AgentService` compartilhado oferece criação, inspeção compacta e lotes atômicos para timeline/workflow, com `operationId`, revisão-base, dry-run e diff. CLI foi exercitada como processo; MCP oficial funciona por stdio e não escreve logs no stdout. Aprovação exige revisão esperada. Verificações: 15 testes, build e smoke MCP direto. Próxima: T07, mídia/cache/cortes/transcrição.
 
 ### T07 — Mídia: importação, cache, cortes e transcrição
-- [ ] Importar URL e arquivo local; manter cache persistente, limpar sob comando, extrair/reaproveitar múltiplos cortes, associar fontes ao projeto.
-- [ ] Integrar modelo único de transcrição de maior precisão **validado para português**, com alinhamento/legendas quando aplicável, sem instalação automática de modelos inferiores.
+- [x] Importar URL e arquivo local; manter cache persistente, limpar sob comando, extrair/reaproveitar múltiplos cortes, associar fontes ao projeto.
+- [x] Integrar modelo único de transcrição de maior precisão **validado para português**, com alinhamento/legendas quando aplicável, sem instalação automática de modelos inferiores.
 - **Entrega/aceite:** a mesma mídia produz diversos cortes sem download repetido; cache, transcrições, falhas e limpeza funcionam.
+
+**Checkpoint T07 (2026-11-11):** cache SHA-256, importação de arquivo/HTTPS, ffprobe, cortes FFmpeg reutilizáveis e limpeza seletiva implementados. Transcrição fixa `whisper-large-v3` em PT-BR produz JSON/SRT e falha com diagnóstico quando binário/pesos não estão preparados; o hardware atual foi registrado e não houve fallback para modelo inferior. Verificações: 19 testes, incluindo mídia/cortes reais com FFmpeg, e build. Próxima: T08, takes, perfil de voz consentido e tratamento de áudio.
 
 ### T08 — Narração, clonagem de voz e tratamento de áudio
 - [ ] Implementar gravação em takes, cortes, regravação, organização, edição e revisão da narração.
