@@ -28,3 +28,7 @@ backend/remotion/.contentlab-custom-*/
 builtin-assets/music/A Great Darkness Approaches, Can You Feel It_ - ELPHNT.mp3
 builtin-assets/music/Elegy - Asher Fulero.mp3
 builtin-assets/music/Frightmare - Jimena Contreras.mp3
+node_modules/
+dist/
+coverage/
+.contentlab/

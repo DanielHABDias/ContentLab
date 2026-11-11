@@ -143,9 +143,11 @@ Esta etapa é **obrigatória antes de projetar e implementar a nova arquitetura*
 **Status:** [ ] pendente · [x] concluído. Não quebrar artificialmente em dezenas de tarefas; cada tarefa pode ter subtarefas técnicas internas no momento da execução. A pesquisa especializada ocorre antes da implementação de cada módulo, sem criar uma etapa burocrática separada para cada tecnologia.
 
 ### T01 — UX/UI, logo e conceito visual do novo Content Lab
-- [ ] Pesquisar skills de UX/UI, acessibilidade e design de frontend; analisar referências atuais de ferramentas criativas.
-- [ ] Criar identidade visual e proposta de logo **original** Content Lab (HQ/halftone/glitch sutil da marca Diazverso, sem Nox), componentes de interface e protótipos navegáveis.
+- [x] Pesquisar skills de UX/UI, acessibilidade e design de frontend; analisar referências atuais de ferramentas criativas.
+- [x] Criar identidade visual e proposta de logo **original** Content Lab (HQ/halftone/glitch sutil da marca Diazverso, sem Nox), componentes de interface e protótipos navegáveis.
 - **Entrega/aceite:** design system e fluxo visual aprováveis; acesso a projetos/workflow/editor identificáveis e fáceis de compreender. **Primeiro foco.**
+
+**Checkpoint T01 (2026-11-11):** protótipo React/Vite responsivo com entrada de projetos, workflow navegável, marca SVG original e design system documentado. Referências: WCAG 2.2, feedback de progresso e padrões de ferramentas criativas. Verificações: 2 testes de interface e build de produção. Próxima: T02, tornar projetos/workflow interativos com dados de demonstração explícitos.
 
 ### T02 — Frontend: projetos locais e workflow visual (sem dashboard)
 - [ ] Construir entrada simples para **criar, abrir, importar e retomar projetos locais** de múltiplos vídeos (longos ou curtos), sem dashboard; visualizar estados, progresso, histórico e ações dentro de cada projeto, quando relevantes.
@@ -270,4 +272,3 @@ O objetivo é minimizar **o custo total para entregar uma tarefa correta**, incl
 - Preservar históricos, licenças, consentimentos, direitos de mídia e dados privados; não enviar arquivos locais a serviços externos sem autorização.
 - A cada tarefa, fazer commit na `main` e, havendo remoto e permissão, enviar com push normal (sem force). Um push recusado por divergência exige inspeção e reconciliação antes de tentar novamente.
 - Ao concluir T12, só apagar `old/` e este plano depois dos testes e documentação permanente confirmados.
-
