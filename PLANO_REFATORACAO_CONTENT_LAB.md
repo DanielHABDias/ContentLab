@@ -195,10 +195,12 @@ Esta etapa é **obrigatória antes de projetar e implementar a nova arquitetura*
 **Checkpoint T07 (2026-11-11):** cache SHA-256, importação de arquivo/HTTPS, ffprobe, cortes FFmpeg reutilizáveis e limpeza seletiva implementados. Transcrição fixa `whisper-large-v3` em PT-BR produz JSON/SRT e falha com diagnóstico quando binário/pesos não estão preparados; o hardware atual foi registrado e não houve fallback para modelo inferior. Verificações: 19 testes, incluindo mídia/cortes reais com FFmpeg, e build. Próxima: T08, takes, perfil de voz consentido e tratamento de áudio.
 
 ### T08 — Narração, clonagem de voz e tratamento de áudio
-- [ ] Implementar gravação em takes, cortes, regravação, organização, edição e revisão da narração.
-- [ ] Perfil de voz com amostra guiada e texto de leitura; geração/clonagem de voz local autorizada, avaliando modelos de ponta por qualidade real no português e hardware disponível.
-- [ ] Tratamento de ruído/volume/inteligibilidade, trilha e efeitos sonoros integráveis.
+- [x] Implementar gravação em takes, cortes, regravação, organização, edição e revisão da narração.
+- [x] Perfil de voz com amostra guiada e texto de leitura; geração/clonagem de voz local autorizada, avaliando modelos de ponta por qualidade real no português e hardware disponível.
+- [x] Tratamento de ruído/volume/inteligibilidade, trilha e efeitos sonoros integráveis.
 - **Entrega/aceite:** um roteiro gera narração humana ou IA revisável e exportável, com qualidade testada.
+
+**Checkpoint T08 (2026-11-11):** sessões de narração com takes WAV independentes, trim/delete/ordenação/montagem e tratamento FFmpeg (denoise, high-pass, compressor, loudnorm). Perfil de voz registra texto e consentimento obrigatório. Chatterbox Multilingual V3 PT-BR foi escolhido; XTTS-v2 foi descartado pela licença e o risco do upstream arquivado foi registrado. Runtime/pesos ausentes geram diagnóstico explícito. Verificações: 23 testes, incluindo áudio real, e build. Próxima: T09, timeline unificada e componentes TSX.
 
 ### T09 — Editor novo: timeline unificada e motion design TSX
 - [ ] Reconstruir timeline e JSON versionado com **camadas genéricas** (fundo é uma delas), pistas de vídeo/áudio, elementos, keyframes e transições.
