@@ -2,6 +2,8 @@
 
 Leia o `README.md` e a documentação do módulo afetado. Trabalhe na `main` somente quando o usuário pedir explicitamente; preserve alterações locais e valide antes de commitar.
 
+Para continuidade do produto, use `PLANO_FINALIZACAO_CONTENT_LAB.md` como backlog e checkpoint. Execute uma macroetapa por vez e atualize seus critérios somente após validação real.
+
 ## Operação do produto
 
 - Use `skills/contentlab-control/SKILL.md` para controlar projetos por CLI/MCP.
