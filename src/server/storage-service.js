@@ -9,7 +9,7 @@ export const ROOT_KINDS = ['projects', 'media', 'renderCache', 'tools', 'renderO
 /** Raízes cujo conteúdo pode ser migrado. Projetos são pastas independentes: mudar a raiz só afeta projetos novos. */
 export const MIGRATABLE = ['media', 'renderCache', 'tools'];
 /** Partes não relocáveis da pasta de ferramentas (venv guarda caminhos absolutos). */
-const TOOLS_NOT_RELOCATABLE = ['venvs', 'bin/contentlab-chatterbox', 'models/chatterbox', 'src'];
+const TOOLS_NOT_RELOCATABLE = ['venvs', 'bin/contentlab-voice', 'src'];
 
 export class SettingsStore {
   constructor(dataDirectory, defaults) {
@@ -171,7 +171,7 @@ export class StorageService {
     const conflicts = [];
     for (const file of files) { const existing = await stat(path.join(destination, file.relative)).catch(() => null); if (existing && existing.size !== file.size) conflicts.push(file.relative); }
     const bytes = files.reduce((sum, file) => sum + file.size, 0);
-    return { kind, source, target: destination, files: files.length, bytes, freeBytes: folder.freeBytes, sufficient: folder.freeBytes == null || folder.freeBytes > bytes, conflicts, notRelocatable: skipped.length ? 'Ambiente Python do Chatterbox não é relocável e precisará ser reinstalado; o código-fonte de compilação não é copiado.' : null };
+    return { kind, source, target: destination, files: files.length, bytes, freeBytes: folder.freeBytes, sufficient: folder.freeBytes == null || folder.freeBytes > bytes, conflicts, notRelocatable: skipped.length ? 'O ambiente Python da voz clonada não é relocável e precisará ser reinstalado (os pesos são copiados); o código-fonte de compilação não é copiado.' : null };
   }
 
   async startMigration({ kind, target, removeSource = false, busy = () => [] }) {

@@ -10,9 +10,9 @@ function setupStatus(overrides = {}) {
     { id: 'ffmpeg', label: 'FFmpeg', group: 'essential', kind: 'system', required: true, ready: true, detected: 'ffmpeg 6' },
     { id: 'zenity', label: 'Diálogo nativo (zenity)', group: 'essential', kind: 'system', required: true, ready: true, detected: '4.0' },
     { id: 'whisper-large-v3', label: 'Pesos Whisper large-v3', group: 'ai', kind: 'download', required: false, ready: false, installable: true, consent: true, downloadBytes: 3095033483, license: 'MIT', origin: 'https://huggingface.co/ggerganov/whisper.cpp', version: 'ggml-large-v3' },
-    { id: 'chatterbox-pt-br', label: 'Chatterbox PT-BR', group: 'ai', kind: 'manual', required: false, ready: false, installable: false, manualSteps: 'Prepare o ambiente manualmente.' },
+    { id: 'voxcpm2', label: 'VoxCPM2 (voz clonada)', group: 'ai', kind: 'python', required: false, ready: false, installable: true, consent: true, downloadBytes: 7.5 * 1024 ** 3, license: 'Apache-2.0', runtime: { status: 'ready', device: 'cpu', torchBuild: 'cpu', threads: 9, memoryLimitBytes: 12.4 * 1024 ** 3, estimate: { realtimeFactor: 25.4, source: 'referência' }, reasons: [], warnings: ['Radeon RX 580 não tem suporte do ROCm. Usando CPU.'] } },
   ];
-  return { platform: { os: 'linux', arch: 'x64', distro: 'Zorin OS 18', packageManager: 'apt' }, toolsDirectory: '/app/.tools', freeBytes: 80 * 1024 ** 3, essentialsReady: true, onboarding: { completedAt: null, dismissedAt: null }, items, jobs: [], ...overrides };
+  return { platform: { os: 'linux', arch: 'x64', distro: 'Zorin OS 18', packageManager: 'apt' }, hardware: { cpu: { model: 'AMD Ryzen 5 5500', threads: 12 }, memory: { totalBytes: 15.5 * 1024 ** 3, availableBytes: 13 * 1024 ** 3 }, gpus: [{ name: 'Radeon RX 580' }] }, toolsDirectory: '/app/.tools', freeBytes: 80 * 1024 ** 3, essentialsReady: true, onboarding: { completedAt: null, dismissedAt: null }, items, jobs: [], ...overrides };
 }
 
 function realDetails(overrides = {}) {
@@ -146,8 +146,9 @@ test('instalar recursos de IA exige seleção e consentimento com tamanho e lice
   expect(install).toBeDisabled();
   fireEvent.click(screen.getByLabelText(/autorizo o download/i)); fireEvent.click(install);
   await waitFor(() => expect(localApi.setupInstall).toHaveBeenCalledWith({ ids: ['whisper-large-v3'], consent: ['whisper-large-v3'] }));
-  expect(screen.queryByLabelText(/chatterbox/i)).not.toBeInTheDocument();
-  expect(screen.getByText(/prepare o ambiente manualmente/i)).toBeInTheDocument();
+  expect(screen.getByText(/AMD Ryzen 5 5500 · 12 núcleos · RAM 15,5 GB \(13 GB livres\) · Radeon RX 580/)).toBeInTheDocument();
+  expect(screen.getByText(/processador \(CPU\) · PyTorch cpu · 9 núcleos · limite de memória 12,4 GB · ~25,4 s por segundo de áudio \(referência\)/)).toBeInTheDocument();
+  expect(screen.getByText(/RX 580 não tem suporte do ROCm/)).toBeInTheDocument();
 });
 
 test('essenciais ausentes mostram o comando do sistema e bloqueiam “Começar a usar”', async () => {
@@ -270,4 +271,13 @@ test('projeto movido pode ser relocalizado pelo menu', async () => {
   fireEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', { name: /localizar pasta/i }));
   await waitFor(() => expect(localApi.relocateProject).toHaveBeenCalledWith({ path: '/antigo/meu_projeto', newPath: '/novo/meu_projeto' }));
   expect(await screen.findByRole('button', { name: /abrir meu projeto/i })).toBeEnabled();
+});
+
+test('voz clonada em computador sem RAM suficiente não pode ser marcada e explica o motivo', async () => {
+  const status = setupStatus();
+  status.items = status.items.map(item => item.id === 'voxcpm2' ? { ...item, installable: false, problem: 'Este computador não comporta o modelo', runtime: { ...item.runtime, status: 'unsupported', reasons: ['São necessários cerca de 13 GB de RAM no total; este computador tem 8 GB.'] } } : item);
+  localApi.setupStatus.mockResolvedValue(status);
+  render(<App/>); await screen.findByRole('heading', { name: /prepare seu computador/i });
+  expect(screen.queryByLabelText(/voxcpm2/i)).not.toBeInTheDocument();
+  expect(screen.getByText(/este computador tem 8 GB/)).toBeInTheDocument();
 });

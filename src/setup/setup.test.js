@@ -107,7 +107,7 @@ function fakeRun(available = []) {
 async function service(root, url, extra = {}) {
   const osRelease = path.join(root, 'os-release');
   await writeFile(osRelease, 'PRETTY_NAME="Zorin OS 18"\nID=zorin\nID_LIKE="ubuntu debian"\n');
-  return new SetupService({ toolsDirectory: path.join(root, 'tools'), catalog: catalogWith(url), platform: 'linux', arch: 'x64', nodeVersion: 'v24.1.0', run: fakeRun(['ffmpeg', 'ffprobe']), statfsImpl: bigDisk, osRelease, download: options => downloadVerified({ ...options, statfsImpl: bigDisk, ...local }), ...extra });
+  return new SetupService({ toolsDirectory: path.join(root, 'tools'), catalog: catalogWith(url), platform: 'linux', arch: 'x64', nodeVersion: 'v24.1.0', run: fakeRun(['ffmpeg', 'ffprobe']), statfsImpl: bigDisk, osRelease, download: options => downloadVerified({ ...options, statfsImpl: bigDisk, ...local }), detectHardware: async () => cpuMachine(), ...extra });
 }
 
 test('diagnóstico separa essenciais de IA e sugere comando do sistema', async () => {
@@ -119,7 +119,8 @@ test('diagnóstico separa essenciais de IA e sugere comando do sistema', async (
   expect(byId.ffmpeg).toMatchObject({ ready: true, group: 'essential' });
   expect(byId.zenity).toMatchObject({ ready: false, required: true, systemCommand: 'sudo apt install zenity' });
   expect(byId['whisper-large-v3']).toMatchObject({ ready: false, group: 'ai', installable: true, consent: true, downloadBytes: payload.length, license: expect.any(String), origin: expect.stringMatching(/^https:/) });
-  expect(byId['chatterbox-pt-br']).toMatchObject({ ready: false, installable: true, kind: 'python' });
+  expect(byId.voxcpm2).toMatchObject({ ready: false, installable: true, kind: 'python', runtime: { device: 'cpu', status: 'ready', threads: 9 } });
+  expect(status.hardware.cpu.threads).toBe(12);
   expect(status.onboarding).toEqual({ completedAt: null, dismissedAt: null });
 });
 
@@ -195,63 +196,83 @@ test('“Agora não” é lembrado entre inicializações', async () => {
   expect((await (await service(root, 'http://127.0.0.1:1/x')).status()).onboarding.dismissedAt).toEqual(expect.any(String));
 });
 
-// ---- Chatterbox (ambiente Python isolado) ----
+// ---- VoxCPM2 (ambiente Python isolado, PyTorch escolhido pelo hardware) ----
+
+const GiB = 1024 ** 3;
+function cpuMachine(overrides = {}) { return { platform: 'linux', arch: 'x64', cpu: { model: 'Ryzen', threads: 12, flags: ['avx2'] }, memory: { totalBytes: 15.5 * GiB, availableBytes: 13 * GiB, swapBytes: 2 * GiB }, gpus: [{ vendor: 'amd', name: 'Radeon RX 580', rocm: false, architectures: [] }], memoryGuard: 'systemd', ...overrides }; }
+const nvidiaMachine = () => cpuMachine({ gpus: [{ vendor: 'nvidia', name: 'RTX 4070', vramBytes: 12 * GiB, cuda: [13, 0] }] });
 
 function pythonRun({ python = '3.12', pip = true, verify = true, calls = [] } = {}) {
   return async (command, args) => {
     calls.push([path.basename(command), ...args].join(' '));
     if (command === 'python3' && args[0] === '-c') { if (!python) throw Object.assign(new Error('não encontrado'), { code: 'ENOENT' }); return { stdout: `${python}\n`, stderr: '' }; }
-    if (command === 'python') throw Object.assign(new Error('não encontrado'), { code: 'ENOENT' });
-    if (command === 'python3' && args[1] === 'venv') { const { mkdir } = await import('node:fs/promises'); await mkdir(path.join(args[2], 'bin'), { recursive: true }); await writeFile(path.join(args[2], 'bin', 'python'), '#!/bin/sh\nprintf "%s|" "$CONTENTLAB_CHATTERBOX_MODEL" "$@"\n', { mode: 0o755 }); return { stdout: '', stderr: '' }; }
-    if (args.includes('pip')) { if (!pip) throw Object.assign(new Error('pip'), { stderr: 'linha 1\nlinha 2\nERROR: No matching distribution found for torch==2.6.0' }); return { stdout: '', stderr: '' }; }
+    if (/^python(3\.\d+)?$/.test(command)) throw Object.assign(new Error('não encontrado'), { code: 'ENOENT' });
+    if (command === 'python3' && args[1] === 'venv') { const { mkdir } = await import('node:fs/promises'); await mkdir(path.join(args[2], 'bin'), { recursive: true }); await writeFile(path.join(args[2], 'bin', 'python'), '#!/bin/sh\nprintf "%s|" "$CONTENTLAB_VOICE_MODEL" "$HF_HUB_OFFLINE" "$@"\n', { mode: 0o755 }); return { stdout: '', stderr: '' }; }
+    if (args.includes('pip')) { if (!pip) throw Object.assign(new Error('pip'), { stderr: 'linha 1\nlinha 2\nERROR: No matching distribution found for torch==2.15.0' }); return { stdout: '', stderr: '' }; }
     if (args.includes('--fetch-weights')) return { stdout: '{"ok": true}', stderr: '' };
     if (args.includes('--check')) { if (!verify) throw Object.assign(new Error('check'), { stderr: 'ModuleNotFoundError: No module named torch' }); return { stdout: '{"ok": true}', stderr: '' }; }
-    if (command === 'contentlab-chatterbox') throw Object.assign(new Error('não encontrado'), { code: 'ENOENT' });
+    if (command === 'contentlab-voice') throw Object.assign(new Error('não encontrado'), { code: 'ENOENT' });
     return { stdout: 'ok', stderr: '' };
   };
 }
 
-async function chatterboxSetup(root, run, downloads = []) {
+async function voiceSetup(root, run, { downloads = [], hardware = cpuMachine } = {}) {
   const repo = path.join(root, 'repo'); const { mkdir } = await import('node:fs/promises');
-  await mkdir(path.join(repo, 'tools', 'chatterbox'), { recursive: true }); await writeFile(path.join(repo, 'tools', 'chatterbox', 'contentlab_chatterbox.py'), '# adaptador\n');
-  return new SetupService({ toolsDirectory: path.join(root, "pasta d'Ferramentas"), platform: 'linux', arch: 'x64', run, statfsImpl: bigDisk, osRelease: path.join(root, 'nada'), repositoryRoot: repo, download: async options => { downloads.push(options); await mkdir(path.dirname(options.destination), { recursive: true }); await writeFile(options.destination, 'wheel'); return { status: 'installed', path: options.destination }; } });
+  await mkdir(path.join(repo, 'tools', 'voxcpm'), { recursive: true }); await writeFile(path.join(repo, 'tools', 'voxcpm', 'contentlab_voice.py'), '# adaptador\n');
+  return new SetupService({ toolsDirectory: path.join(root, "pasta d'Ferramentas"), platform: 'linux', arch: 'x64', run, statfsImpl: bigDisk, osRelease: path.join(root, 'nada'), repositoryRoot: repo, detectHardware: async () => hardware(), download: async options => { downloads.push(options); await mkdir(path.dirname(options.destination), { recursive: true }); await writeFile(options.destination, 'wheel'); return { status: 'installed', path: options.destination }; } });
 }
+const install = async setup => { const [job] = await setup.install({ ids: ['voxcpm2'], consent: ['voxcpm2'] }); return await setup.waitFor(job.id); };
 
-test('Chatterbox é instalável: wheel verificado, venv isolado, pesos fixados e comando funcional', async () => {
+test('VoxCPM2 instala PyTorch de CPU fixado, wheel verificado, pesos fixados e comando offline funcional', async () => {
   const root = await temp(); const calls = []; const downloads = [];
-  const setup = await chatterboxSetup(root, pythonRun({ calls }), downloads);
-  const item = (await setup.status()).items.find(entry => entry.id === 'chatterbox-pt-br');
-  expect(item).toMatchObject({ kind: 'python', installable: true, consent: true, ready: false, downloadBytes: 6 * 1024 ** 3 });
-  const [job] = await setup.install({ ids: ['chatterbox-pt-br'], consent: ['chatterbox-pt-br'] });
-  await expect(setup.waitFor(job.id)).resolves.toMatchObject({ state: 'completed', phase: 'Instalado e verificado' });
-  expect(downloads[0]).toMatchObject({ sha256: '83782500e3ad4e7c919132e9d7eb8755f29f57c5bde5ec48c655ca23a4eb113c', size: 108543 });
-  expect(calls.some(call => call.includes('--fetch-weights') && call.includes('5bb1f6ee58e50c3b8d408bc82a6d3740c2db6e18'))).toBe(true);
-  const shim = path.join(setup.toolsDirectory, 'bin', 'contentlab-chatterbox');
+  const setup = await voiceSetup(root, pythonRun({ calls }), { downloads });
+  await expect(install(setup)).resolves.toMatchObject({ state: 'completed', phase: 'Instalado e verificado' });
+  expect(downloads[0]).toMatchObject({ sha256: '24da58a30d094a9e9a7ead450ae9cffda0d31eaeba620b61ad99179dd87e486b', size: 88270 });
+  expect(calls).toContain('python -m pip install --disable-pip-version-check --no-input torch==2.15.0 torchaudio==2.11.1 torchcodec==0.17.0 --index-url https://download.pytorch.org/whl/cpu');
+  expect(calls.some(call => call.includes('--fetch-weights') && call.includes('7936080b41163874f38610f46f438e2c0757f9fd'))).toBe(true);
   const { execFileSync } = await import('node:child_process');
-  const output = execFileSync(shim, ['--text', "olá 'mundo'"], { encoding: 'utf8', env: { PATH: process.env.PATH } });
-  expect(output).toBe(`${path.join(setup.toolsDirectory, 'models', 'chatterbox')}|${path.join(setup.toolsDirectory, 'venvs', 'chatterbox', 'contentlab_chatterbox.py')}|--text|olá 'mundo'|`);
-  expect((await setup.status()).items.find(entry => entry.id === 'chatterbox-pt-br')).toMatchObject({ ready: true, managed: true });
+  const output = execFileSync(path.join(setup.toolsDirectory, 'bin', 'contentlab-voice'), ['--text', "olá 'mundo'"], { encoding: 'utf8', env: { PATH: process.env.PATH } });
+  expect(output).toBe(`${path.join(setup.toolsDirectory, 'models', 'voxcpm2')}|1|${path.join(setup.toolsDirectory, 'venvs', 'voxcpm2', 'contentlab_voice.py')}|--text|olá 'mundo'|`);
+  const state = JSON.parse(await readFile(path.join(setup.toolsDirectory, 'setup-state.json'), 'utf8'));
+  expect(state.items.voxcpm2).toMatchObject({ torchBuild: 'cpu', device: 'cpu', revision: '7936080b41163874f38610f46f438e2c0757f9fd' });
+  expect((await setup.status()).items.find(entry => entry.id === 'voxcpm2')).toMatchObject({ ready: true, managed: true });
   const pipCalls = calls.filter(call => call.includes('-m pip install')).length;
-  const [again] = await setup.install({ ids: ['chatterbox-pt-br'], consent: ['chatterbox-pt-br'] });
-  await expect(setup.waitFor(again.id)).resolves.toMatchObject({ phase: 'Já estava instalado' });
+  await expect(install(setup)).resolves.toMatchObject({ phase: 'Já estava instalado' });
   expect(calls.filter(call => call.includes('-m pip install')).length).toBe(pipCalls);
 });
 
-test('Chatterbox sem Python, com pip falho ou verificação falha não fica instalado', async () => {
+test('com GPU NVIDIA instala a build CUDA do driver; trocar de hardware pede reinstalação', async () => {
+  const root = await temp(); const calls = []; let machine = nvidiaMachine;
+  const setup = await voiceSetup(root, pythonRun({ calls }), { hardware: () => machine() });
+  await install(setup);
+  expect(calls.some(call => call.endsWith('torch torchaudio torchcodec --index-url https://download.pytorch.org/whl/cu130'))).toBe(true);
+  machine = cpuMachine;
+  expect((await setup.status()).items.find(entry => entry.id === 'voxcpm2')).toMatchObject({ ready: false, installable: true, problem: 'Instalado para cuda; reinstale para usar cpu' });
+});
+
+test('computador sem RAM suficiente não instala e explica o motivo', async () => {
+  const root = await temp(); const calls = [];
+  const setup = await voiceSetup(root, pythonRun({ calls }), { hardware: () => cpuMachine({ memory: { totalBytes: 8 * GiB, availableBytes: 6 * GiB } }) });
+  expect((await setup.status()).items.find(entry => entry.id === 'voxcpm2')).toMatchObject({ ready: false, installable: false, problem: 'Este computador não comporta o modelo', reason: expect.stringMatching(/8 GB/) });
+  await expect(install(setup)).resolves.toMatchObject({ state: 'failed', code: 'HARDWARE_UNSUPPORTED' });
+  expect(calls.some(call => call.includes('pip'))).toBe(false);
+});
+
+test('VoxCPM2 sem Python compatível, com pip falho ou verificação falha não fica instalado', async () => {
   const root = await temp();
-  const noPython = await chatterboxSetup(root, pythonRun({ python: null }));
-  const [first] = await noPython.install({ ids: ['chatterbox-pt-br'], consent: ['chatterbox-pt-br'] });
-  await expect(noPython.waitFor(first.id)).resolves.toMatchObject({ state: 'failed', code: 'PYTHON_MISSING' });
-  const oldPython = await chatterboxSetup(root, pythonRun({ python: '3.8' }));
-  const [second] = await oldPython.install({ ids: ['chatterbox-pt-br'], consent: ['chatterbox-pt-br'] });
-  await expect(oldPython.waitFor(second.id)).resolves.toMatchObject({ code: 'PYTHON_MISSING' });
-  const pipFails = await chatterboxSetup(root, pythonRun({ pip: false }));
-  const [third] = await pipFails.install({ ids: ['chatterbox-pt-br'], consent: ['chatterbox-pt-br'] });
-  await expect(pipFails.waitFor(third.id)).resolves.toMatchObject({ code: 'PIP_FAILED', error: expect.stringMatching(/No matching distribution/) });
-  const verifyFails = await chatterboxSetup(root, pythonRun({ verify: false }));
-  const [fourth] = await verifyFails.install({ ids: ['chatterbox-pt-br'], consent: ['chatterbox-pt-br'] });
-  await expect(verifyFails.waitFor(fourth.id)).resolves.toMatchObject({ code: 'VERIFY_FAILED' });
-  const bin = path.join(verifyFails.toolsDirectory, 'bin');
-  expect(await exists(path.join(bin, 'contentlab-chatterbox'))).toBe(false);
-  expect(await exists(path.join(bin, 'contentlab-chatterbox.partial'))).toBe(false);
+  await expect(install(await voiceSetup(root, pythonRun({ python: null })))).resolves.toMatchObject({ state: 'failed', code: 'PYTHON_MISSING' });
+  await expect(install(await voiceSetup(root, pythonRun({ python: '3.8' })))).resolves.toMatchObject({ code: 'PYTHON_MISSING' });
+  await expect(install(await voiceSetup(root, pythonRun({ python: '3.13' })))).resolves.toMatchObject({ code: 'PYTHON_MISSING', error: expect.stringMatching(/3\.10 a 3\.12/) });
+  await expect(install(await voiceSetup(root, pythonRun({ pip: false })))).resolves.toMatchObject({ code: 'PIP_FAILED', error: expect.stringMatching(/PyTorch \(cpu\).*No matching distribution/) });
+  const verifyFails = await voiceSetup(root, pythonRun({ verify: false }));
+  await expect(install(verifyFails)).resolves.toMatchObject({ code: 'VERIFY_FAILED' });
+  expect(await exists(path.join(verifyFails.toolsDirectory, 'bin', 'contentlab-voice'))).toBe(false);
+  expect(await exists(path.join(verifyFails.toolsDirectory, 'bin', 'contentlab-voice.partial'))).toBe(false);
+});
+
+test('calibração guarda a velocidade medida e passa a ser usada na estimativa', async () => {
+  const root = await temp(); const setup = await voiceSetup(root, pythonRun());
+  await setup.recordCalibration('voxcpm2', { device: 'cpu', realtimeFactor: 28 });
+  await setup.recordCalibration('voxcpm2', { device: 'cpu', realtimeFactor: 26 });
+  expect((await setup.voicePlan()).estimate).toEqual({ realtimeFactor: 27, source: 'medido' });
 });

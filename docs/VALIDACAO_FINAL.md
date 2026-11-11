@@ -14,7 +14,7 @@ Executada em 11 de novembro de 2026, Linux x64, Node 24.21.0, FFmpeg/FFprobe 6.1
 
 ## Capacidades opcionais diagnosticadas
 
-`yt-dlp`, whisper.cpp/large-v3 e Chatterbox V3 PT-BR não estão instalados nesta máquina. A aplicação mantém edição, cache de arquivos, áudio, render e pacotes operacionais; importação por URL, transcrição e voz por IA retornam diagnóstico e solução, sem fingir sucesso nem instalar pesos não verificados. Antes de uso de produção, essas capacidades exigem os runtimes/pesos documentados e avaliação auditiva PT-BR autorizada.
+`yt-dlp`, whisper.cpp/large-v3 e VoxCPM2 não estão instalados nesta máquina (o VoxCPM2 foi validado no teste comparativo de 2026-11-11 em `.tools/voice-bakeoff`). A aplicação mantém edição, cache de arquivos, áudio, render e pacotes operacionais; importação por URL, transcrição e voz por IA retornam diagnóstico e solução, sem fingir sucesso nem instalar pesos não verificados. Antes de uso de produção, essas capacidades exigem os runtimes/pesos documentados e avaliação auditiva PT-BR autorizada.
 
 ## Comandos
 

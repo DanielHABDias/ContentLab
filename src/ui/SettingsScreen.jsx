@@ -7,7 +7,7 @@ const ROOT_LABELS = {
   projects: ['Projetos', 'Onde novos projetos são criados. Projetos existentes continuam onde estão.'],
   media: ['Cache de mídia', 'Cópias deduplicadas por hash, cortes e índices.'],
   renderCache: ['Cache de render', 'Intermediários reaproveitáveis do render.'],
-  tools: ['Ferramentas e modelos', 'yt-dlp, whisper.cpp, pesos e ambiente do Chatterbox.'],
+  tools: ['Ferramentas e modelos', 'yt-dlp, whisper.cpp, pesos e ambiente da voz clonada (VoxCPM2).'],
   renderOutput: ['Saída padrão de render', 'Vazio = pasta output/ de cada projeto.'],
 };
 const USAGE_LABELS = { projects: 'Projetos', renders: 'Renders nos projetos', objects: 'Mídias originais (cache)', cuts: 'Cortes', staging: 'Downloads temporários', renderCache: 'Cache de render', models: 'Modelos de IA', tools: 'Ferramentas' };

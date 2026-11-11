@@ -8,7 +8,7 @@ export const FEATURES = {
   'media.url': { label: 'Importar vídeo por URL', requires: ['yt-dlp'] },
   transcription: { label: 'Transcrever em português', requires: ['whisper-cli', 'whisper-large-v3'] },
   'narration.treatment': { label: 'Tratar e medir áudio da narração', requires: ['ffmpeg', 'ffprobe'] },
-  'voice.synthetic': { label: 'Gerar voz por IA (Chatterbox)', requires: ['chatterbox-pt-br'] },
+  'voice.synthetic': { label: 'Gerar voz clonada (VoxCPM2)', requires: ['voxcpm2'] },
   render: { label: 'Renderizar e validar o vídeo', requires: ['ffmpeg', 'ffprobe'] },
 };
 

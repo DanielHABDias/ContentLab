@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { CATALOG_VERSION, appliesTo, artifactFor, defaultCatalog } from './dependency-catalog.js';
 import { SetupError, downloadVerified } from './downloader.js';
+import { detectHardware, planVoiceRuntime } from './hardware.js';
 
 const execFileAsync = promisify(execFile);
 const STATE_SCHEMA = 'contentlab-setup-v1';
@@ -24,12 +25,12 @@ async function defaultRun(command, args, options = {}) {
 export class SetupService {
   #jobs = new Map();
 
-  constructor({ toolsDirectory, catalog = defaultCatalog(), platform = process.platform, arch = process.arch, nodeVersion = process.version, run = defaultRun, download = downloadVerified, statfsImpl = statfs, osRelease = '/etc/os-release', env = process.env, repositoryRoot = REPOSITORY_ROOT }) {
+  constructor({ toolsDirectory, catalog = defaultCatalog(), platform = process.platform, arch = process.arch, nodeVersion = process.version, run = defaultRun, download = downloadVerified, statfsImpl = statfs, osRelease = '/etc/os-release', env = process.env, repositoryRoot = REPOSITORY_ROOT, detectHardware: detect = () => detectHardware({ platform }) }) {
     this.toolsDirectory = path.resolve(toolsDirectory);
     this.stateFile = path.join(this.toolsDirectory, 'setup-state.json');
     this.catalog = catalog.filter(item => appliesTo(item, platform));
     this.platform = platform; this.arch = arch; this.nodeVersion = nodeVersion;
-    this.run = run; this.download = download; this.statfs = statfsImpl; this.osRelease = osRelease; this.env = env; this.repositoryRoot = repositoryRoot;
+    this.run = run; this.download = download; this.statfs = statfsImpl; this.osRelease = osRelease; this.env = env; this.repositoryRoot = repositoryRoot; this.detectHardware = detect;
   }
 
   /** Caminho do executável: primeiro `.tools/bin`, depois o PATH do sistema. */
@@ -46,11 +47,22 @@ export class SetupService {
   async status() {
     const state = await this.#readState();
     const distro = await this.#distro();
-    const items = await Promise.all(this.catalog.map(item => this.#inspect(item, state)));
+    const hardware = await this.detectHardware().catch(() => null);
+    const plan = hardware ? planVoiceRuntime(hardware, { calibration: state.calibration?.voxcpm2 || null }) : null;
+    const items = await Promise.all(this.catalog.map(async item => {
+      const inspected = await this.#inspect(item, state);
+      if (item.runtime !== 'voice' || !plan) return inspected;
+      const recorded = state.items[item.id];
+      const withRuntime = { ...inspected, runtime: plan };
+      if (plan.status === 'unsupported') return { ...withRuntime, ready: false, installable: false, problem: 'Este computador não comporta o modelo', reason: plan.reasons.join(' ') };
+      if (inspected.ready && recorded?.torchBuild && recorded.torchBuild !== plan.torchBuild) return { ...withRuntime, ready: false, installable: true, problem: `Instalado para ${recorded.device}; reinstale para usar ${plan.device}` };
+      return withRuntime;
+    }));
     const fsInfo = await this.statfs(await nearestExisting(this.toolsDirectory)).catch(() => null);
     return {
       schema: 'contentlab-setup-status-v1', catalogVersion: CATALOG_VERSION,
       platform: { os: this.platform, arch: this.arch, ...distro },
+      hardware,
       toolsDirectory: this.toolsDirectory,
       freeBytes: fsInfo ? Number(fsInfo.bavail) * Number(fsInfo.bsize) : null,
       essentialsReady: items.filter(item => item.required).every(item => item.ready),
@@ -93,7 +105,7 @@ export class SetupService {
       if (!item || item.kind === 'python') { delete state.items[id]; dropped.push(id); continue; }
       if (entry.path) entry.path = path.join(target, path.relative(this.toolsDirectory, entry.path));
     }
-    const relocated = new SetupService({ toolsDirectory: target, catalog: this.catalog, platform: this.platform, arch: this.arch, run: this.run, download: this.download, statfsImpl: this.statfs, osRelease: this.osRelease, env: this.env, repositoryRoot: this.repositoryRoot });
+    const relocated = new SetupService({ toolsDirectory: target, catalog: this.catalog, platform: this.platform, arch: this.arch, run: this.run, download: this.download, statfsImpl: this.statfs, osRelease: this.osRelease, env: this.env, repositoryRoot: this.repositoryRoot, detectHardware: this.detectHardware });
     await relocated.#writeState(state);
     return { dropped };
   }
@@ -183,18 +195,23 @@ export class SetupService {
   async #python(item, job) {
     const signal = job.controller.signal;
     const [minMajor, minMinor] = item.python.minimum;
+    const [maxMajor, maxMinor] = item.python.maximumExclusive || [99, 0];
+    const plan = item.runtime === 'voice' ? await this.voicePlan() : null;
+    if (plan?.status === 'unsupported') throw new SetupError('HARDWARE_UNSUPPORTED', `Este computador não comporta ${item.label}: ${plan.reasons.join(' ')}`, { plan });
     let python = null;
-    for (const candidate of ['python3', 'python']) {
+    for (const candidate of ['python3.12', 'python3.11', 'python3.10', 'python3', 'python']) {
       try {
         const { stdout } = await this.run(candidate, ['-c', 'import sys, venv, ensurepip; print("%d.%d" % sys.version_info[:2])'], { signal });
         const [major, minor] = stdout.trim().split('.').map(Number);
-        if (major > minMajor || (major === minMajor && minor >= minMinor)) { python = candidate; break; }
+        const aboveMinimum = major > minMajor || (major === minMajor && minor >= minMinor);
+        const belowMaximum = major < maxMajor || (major === maxMajor && minor < maxMinor);
+        if (aboveMinimum && belowMaximum) { python = candidate; break; }
       } catch { /* tenta o próximo */ }
     }
-    if (!python) throw new SetupError('PYTHON_MISSING', `É necessário Python ${minMajor}.${minMinor}+ com venv. Instale com: ${this.#systemCommand(item) || 'o gerenciador do sistema'}`);
+    if (!python) throw new SetupError('PYTHON_MISSING', `É necessário Python ${minMajor}.${minMinor} a ${maxMajor}.${maxMinor - 1} com venv. Instale com: ${this.#systemCommand(item) || 'o gerenciador do sistema'}`);
     const target = path.join(this.toolsDirectory, item.destination);
     const recorded = (await this.#readState()).items[item.id];
-    if (recorded && this.#current(item, recorded) && await stat(target).then(() => true, () => false)) return { status: 'already-installed', path: target };
+    if (recorded && this.#current(item, recorded) && (!plan || recorded.torchBuild === plan.torchBuild) && await stat(target).then(() => true, () => false)) return { status: 'already-installed', path: target, torchBuild: recorded.torchBuild, device: recorded.device };
 
     job.phase = 'Baixando pacote verificado';
     const wheel = path.join(this.toolsDirectory, 'cache', item.wheel.filename);
@@ -206,11 +223,17 @@ export class SetupService {
       job.phase = 'Criando ambiente Python isolado';
       await this.run(python, ['-m', 'venv', environment], { signal, timeout: 10 * 60_000 });
     }
-    job.phase = 'Instalando PyTorch e dependências (pode levar vários minutos)';
-    try { await this.run(environmentPython, ['-m', 'pip', 'install', '--disable-pip-version-check', '--no-input', wheel], { signal, timeout: 2 * 60 * 60_000, maxBuffer: 64 * 1024 * 1024 }); }
+    const pip = ['-m', 'pip', 'install', '--disable-pip-version-check', '--no-input'];
+    if (plan) {
+      job.phase = `Instalando PyTorch para ${plan.device === 'cpu' ? 'CPU' : plan.torchBuild} (pode levar vários minutos)`;
+      try { await this.run(environmentPython, [...pip, ...plan.torch.packages, ...(plan.torch.index ? ['--index-url', plan.torch.index] : [])], { signal, timeout: 2 * 60 * 60_000, maxBuffer: 64 * 1024 * 1024 }); }
+      catch (error) { if (signal.aborted) throw error; throw new SetupError('PIP_FAILED', `Falha ao instalar o PyTorch (${plan.torchBuild}): ${tail(error.stderr || error.message)}`); }
+    }
+    job.phase = 'Instalando o pacote e dependências (pode levar vários minutos)';
+    try { await this.run(environmentPython, [...pip, wheel], { signal, timeout: 2 * 60 * 60_000, maxBuffer: 64 * 1024 * 1024 }); }
     catch (error) { if (signal.aborted) throw error; throw new SetupError('PIP_FAILED', `Falha ao instalar pacotes Python: ${tail(error.stderr || error.message)}`); }
 
-    const adapter = path.join(environment, 'contentlab_chatterbox.py');
+    const adapter = path.join(environment, path.basename(item.adapter));
     await copyFile(path.join(this.repositoryRoot, item.adapter), adapter);
     const models = path.join(this.toolsDirectory, item.weights.destination);
     job.phase = 'Baixando pesos na revisão fixada';
@@ -222,9 +245,9 @@ export class SetupService {
     const partial = `${target}.partial`;
     const script = [
       '#!/bin/sh',
-      `# Gerado pelo Content Lab: Chatterbox ${item.version}, pesos ${item.weights.revision}`,
-      `[ -n "$CONTENTLAB_CHATTERBOX_MODEL" ] || CONTENTLAB_CHATTERBOX_MODEL=${shellQuote(models)}`,
-      'export CONTENTLAB_CHATTERBOX_MODEL',
+      `# Gerado pelo Content Lab: ${item.label} ${item.version}, pesos ${item.weights.revision}, PyTorch ${plan?.torchBuild || 'padrão'}`,
+      `[ -n "$CONTENTLAB_VOICE_MODEL" ] || CONTENTLAB_VOICE_MODEL=${shellQuote(models)}`,
+      'export CONTENTLAB_VOICE_MODEL HF_HUB_OFFLINE=1',
       `exec ${shellQuote(environmentPython)} ${shellQuote(adapter)} "$@"`,
       '',
     ].join('\n');
@@ -232,7 +255,25 @@ export class SetupService {
     try { await this.run(partial, ['--check', '--model', models], { signal, timeout: 10 * 60_000 }); }
     catch (error) { await rm(partial, { force: true }); if (signal.aborted) throw error; throw new SetupError('VERIFY_FAILED', `A instalação não passou na verificação: ${tail(error.stderr || error.message)}`); }
     await rename(partial, target);
-    return { status: 'installed', path: target };
+    return { status: 'installed', path: target, torchBuild: plan?.torchBuild || null, device: plan?.device || null };
+  }
+
+  /** Perfil de hardware atual e plano de execução da voz clonada. */
+  async hardware() { return await this.detectHardware(); }
+
+  async voicePlan() {
+    const state = await this.#readState();
+    return planVoiceRuntime(await this.detectHardware(), { calibration: state.calibration?.voxcpm2 || null });
+  }
+
+  /** Guarda a velocidade real medida, para estimativas futuras desta máquina. */
+  async recordCalibration(engine, { device, realtimeFactor }) {
+    if (!(realtimeFactor > 0)) return;
+    const state = await this.#readState();
+    const previous = state.calibration?.[engine];
+    const value = previous?.device === device ? Math.round(((previous.realtimeFactor * previous.samples + realtimeFactor) / (previous.samples + 1)) * 10) / 10 : realtimeFactor;
+    state.calibration = { ...state.calibration, [engine]: { device, realtimeFactor: value, samples: previous?.device === device ? previous.samples + 1 : 1, updatedAt: new Date().toISOString() } };
+    await this.#writeState(state);
   }
 
   #current(item, recorded) {
@@ -249,7 +290,7 @@ export class SetupService {
   async #record(item, result) {
     const state = await this.#readState();
     const artifact = artifactFor(item, this.platform, this.arch);
-    state.items[item.id] = { version: item.version || null, sha256: artifact?.sha256 || item.wheel?.sha256 || null, size: artifact?.size || null, commit: item.source?.commit || null, revision: item.weights?.revision || null, path: result.path, installedAt: new Date().toISOString() };
+    state.items[item.id] = { version: item.version || null, sha256: artifact?.sha256 || item.wheel?.sha256 || null, size: artifact?.size || null, commit: item.source?.commit || null, revision: item.weights?.revision || null, torchBuild: result.torchBuild || null, device: result.device || null, path: result.path, installedAt: new Date().toISOString() };
     await this.#writeState(state);
   }
 
@@ -306,7 +347,7 @@ export class SetupService {
     try {
       const value = JSON.parse(await readFile(this.stateFile, 'utf8'));
       if (value.schema !== STATE_SCHEMA) throw new Error('schema');
-      return { schema: STATE_SCHEMA, items: value.items || {}, onboarding: { completedAt: null, dismissedAt: null, ...value.onboarding } };
+      return { schema: STATE_SCHEMA, items: value.items || {}, calibration: value.calibration || {}, onboarding: { completedAt: null, dismissedAt: null, ...value.onboarding } };
     } catch (error) {
       if (error.code !== 'ENOENT' && error.message !== 'schema' && !(error instanceof SyntaxError)) throw error;
       return { schema: STATE_SCHEMA, items: {}, onboarding: { completedAt: null, dismissedAt: null } };

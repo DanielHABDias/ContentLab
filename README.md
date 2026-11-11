@@ -8,7 +8,7 @@ Ferramenta audiovisual local para organizar um vídeo da ideia ao pacote final. 
 
 - Node.js 22 ou superior
 - FFmpeg/FFprobe 6 ou superior e, no Linux, `zenity` (seletores nativos)
-- Opcional: `yt-dlp` para URLs, whisper.cpp + `large-v3` para transcrição, Chatterbox PT-BR para voz por IA
+- Opcional: `yt-dlp` para URLs, whisper.cpp + `large-v3` para transcrição, VoxCPM2 para voz clonada (recomendado: 16 GB de RAM ou GPU NVIDIA com 8 GB)
 
 ```bash
 npm install
@@ -19,8 +19,8 @@ npm run dev
 Na primeira execução abre o assistente **Prepare seu computador** (também disponível em “Dependências” no menu lateral):
 
 - **Essenciais** (Node, FFmpeg, FFprobe, zenity) são pacotes do sistema: o assistente mostra o comando para a sua distribuição (apt, dnf, pacman, zypper; brew/winget como contrato) e nunca executa `sudo`.
-- **Recursos de IA** são opcionais. yt-dlp (2026.10.26) e os pesos Whisper `large-v3` são baixados com tamanho e SHA-256 fixados; whisper.cpp v1.9.5 é compilado a partir do commit fixado `d1be6fde`; Chatterbox 0.1.7 é instalado num Python isolado (`.tools/venvs/chatterbox`) a partir do wheel com SHA-256 fixado, com pesos `ResembleAI/chatterbox` na revisão fixada `5bb1f6ee` e o comando `contentlab-chatterbox` verificado antes de ser ativado (requer Python 3.10+ com venv; PyTorch ocupa vários GB). Antes de baixar, o assistente mostra origem, licença, tamanho, destino e espaço livre, e exige consentimento.
-- Etapas e recursos que dependem de algo ausente ficam bloqueados: Mídia, Narração, Edição e Revisão exigem FFmpeg/FFprobe; URL exige yt-dlp; transcrição exige whisper.cpp e os pesos; voz por IA exige Chatterbox. O aviso de bloqueio tem um botão que abre Dependências com os itens necessários já marcados, e o servidor recusa a operação com `DEPENDENCY_MISSING`.
+- **Recursos de IA** são opcionais. yt-dlp (2026.10.26) e os pesos Whisper `large-v3` são baixados com tamanho e SHA-256 fixados; whisper.cpp v1.9.5 é compilado a partir do commit fixado `d1be6fde`; VoxCPM2 2.0.3 é instalado num Python isolado (`.tools/venvs/voxcpm2`) a partir do wheel com SHA-256 fixado, com pesos `openbmb/VoxCPM2` na revisão fixada `7936080b` e o comando `contentlab-voice` verificado antes de ser ativado (requer Python 3.10–3.12 com venv). O Content Lab analisa o computador (RAM total e livre, núcleos, AVX2/bf16, GPU NVIDIA/AMD/Apple) e instala a build certa do PyTorch: CPU (validada), CUDA conforme o driver, ROCm só para GPUs AMD suportadas, MPS no Mac. Cada geração roda com teto de memória sem swap, núcleos reservados ao sistema e prioridade baixa; estourar o teto encerra só a geração. Antes de baixar, o assistente mostra origem, licença, tamanho, destino e espaço livre, e exige consentimento.
+- Etapas e recursos que dependem de algo ausente ficam bloqueados: Mídia, Narração, Edição e Revisão exigem FFmpeg/FFprobe; URL exige yt-dlp; transcrição exige whisper.cpp e os pesos; voz clonada exige VoxCPM2 e hardware compatível. O aviso de bloqueio tem um botão que abre Dependências com os itens necessários já marcados, e o servidor recusa a operação com `DEPENDENCY_MISSING`.
 - Tudo vai para `.tools/` (ou `CONTENTLAB_TOOLS_DIR`), sem alterar Python/Node globais. Downloads usam arquivo `.partial`, podem ser pausados, retomados (HTTP Range), cancelados ou repetidos, e só são promovidos após conferir o SHA-256. O estado fica em `.tools/setup-state.json`; a segunda inicialização não baixa de novo, e uma mudança de versão/checksum no catálogo pede atualização.
 - “Agora não” é lembrado; a interface básica funciona sem voz e transcrição.
 
@@ -38,7 +38,7 @@ Em **Configurações**: pastas de projetos, cache de mídia, cache de render, fe
 
 - Toda pasta nova passa por teste de escrita antes de ser aceita. Nada é movido automaticamente.
 - Mudar a pasta de **projetos** só afeta projetos novos; os existentes continuam onde estão.
-- Para cache de mídia, cache de render e ferramentas com conteúdo, escolha **Migrar dados** (cópia verificada por SHA-256, troca da pasta e, opcionalmente, remoção da origem; falha reverte o destino) ou **Começar vazia** (os dados antigos ficam onde estão). O ambiente Python do Chatterbox não é relocável e é reinstalado após migrar ferramentas.
+- Para cache de mídia, cache de render e ferramentas com conteúdo, escolha **Migrar dados** (cópia verificada por SHA-256, troca da pasta e, opcionalmente, remoção da origem; falha reverte o destino) ou **Começar vazia** (os dados antigos ficam onde estão). O ambiente Python da voz clonada não é relocável e é reinstalado após migrar ferramentas (os pesos são copiados).
 - Mídias são localizadas pelo hash: após migrar o cache, os projetos continuam funcionando sem reescrita.
 - **Limpar derivados** remove cortes, downloads temporários, cache de render e código-fonte de compilação. Mídias sem uso só são removidas por seleção explícita e são reconferidas antes (projetos ausentes impedem garantir que algo é órfão).
 - Projeto movido aparece como “Pasta não encontrada”; use **Localizar pasta…** no menu do cartão.

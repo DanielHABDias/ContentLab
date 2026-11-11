@@ -6,8 +6,35 @@ Cada gravação é um take WAV independente, associado a um trecho do roteiro. T
 
 Um perfil de voz guarda nome, amostra, texto efetivamente lido, titular e data do consentimento. Geração é bloqueada sem esses campos. Recomenda-se amostra limpa de 10–30 segundos, uma única pessoa, sem música/reverberação e com fala natural em português brasileiro. O perfil e a saída permanecem locais.
 
-## Modelo escolhido
+## Modelo escolhido: VoxCPM2
 
-`Chatterbox Multilingual V3 PT-BR` é a única integração. A variante dedicada ao português brasileiro, clonagem por referência, watermark e licença MIT pesaram a favor; XTTS-v2 foi descartado por licença não comercial. A escolha tem risco registrado: o upstream Chatterbox foi arquivado em agosto de 2026, então dependências serão fixadas e a inicialização não fingirá suporte se o runtime não passar no diagnóstico.
+`VoxCPM2` (OpenBMB, Apache-2.0, uso comercial permitido) é a única integração de voz clonada. Ele usa a amostra **e o texto exato lido nela** ("ultimate cloning"), por isso o perfil exige `referenceText`.
 
-O assistente de dependências instala `chatterbox-tts` 0.1.7 (wheel SHA-256 `83782500…4eb113c`) num ambiente Python isolado, baixa os pesos na revisão fixada `5bb1f6ee58e5` (o pacote usaria `main`, que muda) e cria o comando `contentlab-chatterbox` (`tools/chatterbox/contentlab_chatterbox.py`), que carrega os pesos com `from_local`, usa `language_id="pt"` e mantém a marca d'água Perth. Sem instalação, a geração de voz fica bloqueada na etapa Narração com atalho para instalar. A validação auditiva final exige corpus PT-BR autorizado e comparação cega no hardware do usuário antes de declarar qualidade de produção.
+### Como foi escolhido (2026-11-11)
+
+Candidatos locais com licença comercial e português: VoxCPM2, Qwen3-TTS 1.7B (Apache-2.0) e Chatterbox Multilingual (MIT). Fish S2 Pro e Voxtral foram descartados porque a licença não concede uso comercial (canal monetizado) e não cabem nesta máquina. Teste às cegas com a voz do usuário (referência de 32 s, 3 frases novas, notas 1–5 "parece comigo / natural"):
+
+| Motor | Parece comigo | Natural | WER | Pico de RAM | s por s de áudio (CPU) |
+|---|---|---|---|---|---|
+| **VoxCPM2** | **4,7** | **4,3** | 0 | 11,1 GB | ~29 |
+| Qwen3-TTS 1.7B | 4,3 | 3,7 | 0 | 10,2 GB | ~10 |
+| Chatterbox | 3,0 | 2,3 | 0 | 6,7 GB | ~6 |
+
+Limitações: um ouvinte, três frases; os testes públicos em português (relatórios do VoxCPM2 e do ZONOS2) apontam na mesma direção em similaridade. O Chatterbox foi removido.
+
+### Recursos dinâmicos
+
+`src/setup/hardware.js` lê RAM total e disponível, swap, núcleos, AVX2/AVX-512/bf16, GPU NVIDIA (VRAM e CUDA do driver), AMD (gfx e ROCm) e Apple Silicon, e `planVoiceRuntime` decide:
+
+- dispositivo e build do PyTorch: CPU (`torch 2.15.0`, validada), CUDA `cu130`/`cu128`/`cu126` conforme o driver e ≥ 8 GB de VRAM, ROCm 7.1 só para gfx suportados, MPS no Mac (builds de GPU ainda não validadas);
+- núcleos: todos menos ~25% (mínimo 2) reservados ao sistema;
+- teto de memória: entre o necessário (11,5 GB em CPU) e a RAM livre menos 0,5 GB, sem passar de RAM total − reserva;
+- `unsupported` quando a RAM total não comporta; `needs-free-memory` quando falta RAM livre agora.
+
+`VoxCPMVoice` executa cada geração via `systemd-run --user --scope -p MemoryMax=… -p MemorySwapMax=0 nice -n 15` no Linux. Sem esse limite, a primeira tentativa congelou o sistema; com ele, o processo é encerrado e o usuário recebe `MEMORY_LIMIT`. A velocidade real medida recalibra a estimativa por máquina (`setup-state.json`).
+
+### Marca d'água
+
+O VoxCPM2 não declara marca d'água. O canal deve continuar sinalizando conteúdo sintético realista conforme as regras do YouTube, e o consentimento do titular continua obrigatório.
+
+A validação auditiva final continua exigindo corpus PT-BR autorizado no hardware do usuário antes de declarar qualidade de produção.

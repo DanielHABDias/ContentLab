@@ -251,10 +251,28 @@ Objetivo: provar o produto completo antes de chamá-lo de finalizado.
 
 Aceite: um usuário novo conclui o fluxo sem terminal, nenhum teste crítico falha e todas as limitações restantes estão documentadas como tais.
 
+## F25 — voz clonada VoxCPM2 com recursos dinâmicos
+
+Objetivo: substituir o Chatterbox pelo motor que venceu o teste com a voz do usuário e executá-lo dentro dos limites reais de cada computador.
+
+Evidência (2026-11-11, `.tools/voice-bakeoff`, referência de 32 s do usuário, 3 frases, escuta às cegas): VoxCPM2 4,7/4,3 (parece/natural), Qwen3-TTS 4,3/3,7, Chatterbox 3,0/2,3; os três com WER 0. Nesta máquina (Ryzen 12 threads, AVX2 sem bf16 nativo, 15 GiB RAM, AMD RX 580 sem ROCm) o VoxCPM2 em CPU gastou ~29 s por segundo de áudio e pico de 11,1 GB; sem limite de memória, travou o sistema.
+
+- [x] Remover Chatterbox do catálogo, instalador, adaptador, capacidades, documentação e testes; perfis de voz passam a exigir o texto lido na amostra (clonagem com transcrição).
+- [x] Adicionar VoxCPM2 (`voxcpm` 2.0.3 com SHA-256 fixado, pesos `openbmb/VoxCPM2` em revisão fixada, Apache-2.0) instalado em Python isolado.
+- [x] Criar perfil de hardware: RAM total e disponível, swap, núcleos, AVX2/AVX-512/bf16, GPU NVIDIA (VRAM, versão CUDA do driver), AMD (arquitetura gfx e suporte ROCm), Apple Silicon (MPS) e disco livre.
+- [x] Escolher automaticamente dispositivo e build do PyTorch (CPU, CUDA, ROCm, MPS) e recusar com explicação quando o computador não comporta o modelo.
+- [x] Limitar cada geração dinamicamente: teto de memória sem swap (`systemd-run` no Linux), núcleos reservados para o sistema, prioridade baixa e encerramento seguro em vez de travamento.
+- [x] Estimar tempo antes de gerar, medir a velocidade real e recalibrar a estimativa por máquina.
+- [x] Mostrar hardware, plano de execução e alertas na tela de Dependências; bloquear voz clonada com motivo e solução.
+- [x] Testar planos para perfis CPU, NVIDIA, AMD sem ROCm, Apple e pouca RAM; teste de encerramento por limite; QA real de geração nesta máquina.
+
+Aceite: em qualquer computador, a instalação baixa a variante certa, a geração nunca congela o sistema e o usuário vê antes quanto tempo e memória a narração vai exigir.
+
 ---
 
 ## Ordem recomendada de execução
 
+0. F25 (voz clonada VoxCPM2 com recursos dinâmicos) — prioridade definida pelo usuário em 2026-11-11, antes de F16.
 1. F13 (controle e exclusão segura de projetos).
 2. F14–F15 (setup, dependências, configurações e armazenamento).
 3. F16–F17 (mídia, transcrição, narração e voz).
@@ -265,6 +283,15 @@ Aceite: um usuário novo conclui o fluxo sem terminal, nenhum teste crítico fal
 Não iniciar empacotamento desktop antes de estabilizar armazenamento, setup e operações destrutivas. Não baixar modelos grandes antes de implementar consentimento, checksum, retomada e espaço em disco.
 
 ## Checkpoint de retomada
+
+### F25 concluída (2026-11-11)
+
+- Concluído: Chatterbox removido; VoxCPM2 2.0.3 (wheel SHA-256 fixado, pesos `openbmb/VoxCPM2@7936080b`, Apache-2.0) instalável pelo assistente em Python 3.10–3.12 isolado; `src/setup/hardware.js` detecta RAM total/livre, swap, núcleos, AVX2/AVX-512/bf16, NVIDIA (VRAM, CUDA do driver), AMD (gfx/ROCm), Apple e `systemd-run`; `planVoiceRuntime` escolhe dispositivo e build do PyTorch (CPU fixada e validada; cu130/cu128/cu126, rocm7.1 e MPS não validadas), núcleos, teto de memória e estimativa recalibrada pela medição; `VoxCPMVoice` gera com `systemd-run -p MemoryMax -p MemorySwapMax=0 nice` e devolve `MEMORY_LIMIT`, `NEEDS_FREE_MEMORY`, `HARDWARE_UNSUPPORTED`, `CONSENT_REQUIRED` ou `REFERENCE_TEXT_REQUIRED`; tela de Dependências mostra hardware e plano.
+- Evidência: teste às cegas com a voz do usuário (VoxCPM2 4,7/4,3; Qwen3-TTS 4,3/3,7; Chatterbox 3,0/2,3). QA real pelo serviço novo nesta máquina (Ryzen 5 5500, 15,5 GiB, RX 580 sem ROCm): CPU, 9 núcleos, teto 12,2 GB, 3,36 s de áudio 48 kHz em 102 s (30,3 s/s), estimativa recalibrada para "medido". A primeira tentativa sem teto de memória congelou o sistema; com teto, o processo é encerrado sem afetar o resto.
+- Instalação local do usuário: o ambiente validado no teste foi promovido para `.tools/venvs/voxcpm2`, `.tools/models/voxcpm2` e `.tools/bin/contentlab-voice`, registrado em `setup-state.json` (reconhecido como instalado); Chatterbox, Qwen3-TTS e ferramentas de avaliação apagados (~14 GB liberados).
+- Testes: `src/setup/hardware.test.js` (6 perfis), instalador VoxCPM2 (5), serviço de voz (4) e UI (2 novos).
+- Pendências conscientes: builds CUDA/ROCm/MPS sem teste real; na CPU desta máquina uma narração de 10 min leva cerca de 5 h — a geração em fila por cena com cache e progresso fica para F17; fine-tuning (LoRA) com mais minutos da voz do usuário não foi implementado.
+- Próxima tarefa: F16 — mídia completa, URLs e transcrição.
 
 ### F15 concluída (2026-11-11)
 

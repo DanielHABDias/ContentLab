@@ -38,7 +38,7 @@ export function SetupWizard({ firstRun = false, focus = [], onClose, onFinished,
   const choose = async choice => act(async () => { await localApi.setupOnboarding(choice); (choice === 'completed' ? onFinished : onClose)?.(); });
 
   return <main id="main" className="workspace setup">
-    <header className="project-header"><div><span className="eyebrow">{firstRun ? 'Primeira execução' : 'Dependências'}</span><h1>Prepare seu computador</h1><p className="setup-meta">{status.platform.distro} · {status.platform.os}-{status.platform.arch} · {formatBytes(status.freeBytes)} livres em <code>{status.toolsDirectory}</code></p></div>{!firstRun && <button className="button quiet" onClick={onClose}>Voltar</button>}</header>
+    <header className="project-header"><div><span className="eyebrow">{firstRun ? 'Primeira execução' : 'Dependências'}</span><h1>Prepare seu computador</h1><p className="setup-meta">{status.platform.distro} · {status.platform.os}-{status.platform.arch} · {formatBytes(status.freeBytes)} livres em <code>{status.toolsDirectory}</code></p>{status.hardware && <HardwareLine hardware={status.hardware}/>}</div>{!firstRun && <button className="button quiet" onClick={onClose}>Voltar</button>}</header>
     {error && <div className="notice error" role="alert"><X size={16}/>{error}</div>}
     {focus.length > 0 && <FocusNotice focus={focus} items={status.items}/>}
 
@@ -78,6 +78,7 @@ function DependencyRow({ item, job, selectable, checked, onToggle, controls }) {
       <small>{item.description}</small>
       <small>{[item.version && `versão ${item.version}`, item.downloadBytes && formatBytes(item.downloadBytes), item.license && `licença ${item.license}`].filter(Boolean).join(' · ')}{item.origin && <> · <a href={item.origin} target="_blank" rel="noreferrer">origem</a></>}</small>
       {!item.ready && (item.installable ? null : item.systemCommand ? <small>Instale com <code>{item.systemCommand}</code></small> : item.manualSteps ? <small>{item.manualSteps}</small> : item.reason && <small>{item.reason}</small>)}
+      {item.runtime && <RuntimeSummary plan={item.runtime}/>}
       {job && <span className="job" role="status" aria-live="polite"><span>{job.phase}{progress != null && ACTIVE.includes(job.state) ? ` · ${progress}%` : ''}{job.error ? ` — ${job.error}` : ''}</span>{progress != null && ['running', 'paused'].includes(job.state) && <span className="progress" aria-hidden="true"><i style={{ width: `${progress}%` }}/></span>}</span>}
     </span>
     <span className="dependency-side">{controls}<span className={item.ready ? 'available' : 'missing'}>{item.ready ? 'Pronto' : item.required ? 'Ausente' : 'Não instalado'}</span></span>
@@ -95,4 +96,21 @@ function FocusNotice({ focus, items }) {
   const pending = items.filter(item => focus.includes(item.id));
   const ready = pending.every(item => item.ready);
   return <div className={`notice ${ready ? '' : 'error'}`} role="status">{ready ? <><Check size={16}/> Dependências instaladas. Volte ao projeto para continuar.</> : <span>Necessário para continuar: <strong>{pending.filter(item => !item.ready).map(item => item.label).join(', ')}</strong>. {pending.some(item => !item.ready && item.installable) ? 'Os itens instaláveis já estão marcados abaixo.' : 'Siga o comando indicado em cada item.'}</span>}</div>;
+}
+
+function HardwareLine({ hardware }) {
+  const gpus = hardware.gpus.length ? hardware.gpus.map(gpu => gpu.name).join(', ') : 'nenhuma GPU detectada';
+  return <p className="setup-meta">{hardware.cpu.model} · {hardware.cpu.threads} núcleos · RAM {formatBytes(hardware.memory.totalBytes)} ({formatBytes(hardware.memory.availableBytes)} livres) · {gpus}</p>;
+}
+
+const DEVICE_LABELS = { cpu: 'processador (CPU)', cuda: 'GPU', mps: 'GPU Apple (MPS)' };
+
+/** Onde e com quais limites a voz clonada vai rodar neste computador. */
+export function RuntimeSummary({ plan }) {
+  const estimate = plan.estimate.realtimeFactor ? `~${String(plan.estimate.realtimeFactor).replace('.', ',')} s por segundo de áudio (${plan.estimate.source})` : `tempo ${plan.estimate.source}`;
+  return <span className={`runtime ${plan.status}`}>
+    <small><strong>Neste computador:</strong> {DEVICE_LABELS[plan.device]} · PyTorch {plan.torchBuild} · {plan.threads} núcleos · limite de memória {formatBytes(plan.memoryLimitBytes)} · {estimate}</small>
+    {plan.reasons.map(reason => <small key={reason} className="missing">{reason}</small>)}
+    {plan.warnings.map(warning => <small key={warning} className="muted">{warning}</small>)}
+  </span>;
 }

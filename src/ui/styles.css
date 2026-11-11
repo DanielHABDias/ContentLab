@@ -41,3 +41,4 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--lime); outline-
 @media (max-width: 760px) { .gate { grid-template-columns: 1fr; } }
 .settings .workflow-card { margin-top: 22px; }.settings .section-title h2 { display: flex; align-items: center; gap: 8px; }.limits { display: grid; gap: 14px; }.limits label { display: grid; gap: 7px; font-size: 13px; font-weight: 700; max-width: 320px; }.limits input { min-height: 42px; border: 1px solid #3e3e4c; border-radius: 8px; background: #0f0f15; color: var(--ink); padding: 0 12px; }.limits .button { justify-self: start; flex: 0 0 auto; }.settings .media-list li > span:first-child { min-width: 0; }
 .muted { color: var(--muted); }
+.runtime { display: grid; gap: 3px; margin-top: 4px; padding: 8px 10px; border-left: 3px solid var(--blue); background: rgba(39,168,255,.06); border-radius: 4px; }.runtime.unsupported,.runtime.needs-free-memory { border-left-color: var(--red); background: rgba(255,63,87,.06); }
