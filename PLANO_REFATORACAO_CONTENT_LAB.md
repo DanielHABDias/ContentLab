@@ -2,7 +2,7 @@
 
 > **Documento temporário de execução.** Será removido juntamente com a pasta `old/` após a conclusão e validação da refatoração. A documentação final deve permanecer no projeto.
 >
-> **Escopo exclusivo:** repositório `ContentLab`. Não modificar o repositório do plugin **Diazverso 1.0** nesta etapa.
+> **Escopo exclusivo:** repositório `ContentLab`. Não modificar o [plugin Diazverso](https://github.com/DanielHABDias/DiazVerso-Plugin) nesta etapa. Consultar sempre sua versão atual disponível, sem fixar número de versão neste plano.
 
 ## 1. Estratégia de migração
 
