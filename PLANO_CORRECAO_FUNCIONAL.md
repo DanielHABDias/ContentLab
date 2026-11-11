@@ -73,28 +73,28 @@ Este plano substitui a aceitação visual usada no ciclo T01–T12 por aceitaç�
 
 ## F08 — varredura de controles e teste de aceitação
 
-- [ ] Inventariar cada botão, link, campo, seletor e área com hover; conectar ou desabilitar com motivo.
-- [ ] Criar teste de aceitação cobrindo primeira execução vazia, criar, abrir, configurar, continuar, salvar e reabrir.
-- [ ] Confirmar por busca que não restam exemplos, avisos de implementação futura ou sucessos simulados.
-- [ ] Rodar `npm run check`, `npm run doctor` e `npm audit --omit=dev`.
+- [x] Inventariar cada botão, link, campo, seletor e área com hover; conectar ou desabilitar com motivo.
+- [x] Criar teste de aceitação cobrindo primeira execução vazia, criar, abrir, configurar, continuar, salvar e reabrir.
+- [x] Confirmar por busca que não restam exemplos, avisos de implementação futura ou sucessos simulados.
+- [x] Rodar `npm run check`, `npm run doctor` e `npm audit --omit=dev`.
 
 ## F09 — documentação e operação local
 
-- [ ] Atualizar README com comando único para iniciar interface + API.
-- [ ] Documentar pasta padrão, registro de recentes, seletor nativo e recuperação de erros.
-- [ ] Validar instalação limpa e reinício preservando projetos.
+- [x] Atualizar README com comando único para iniciar interface + API.
+- [x] Documentar pasta padrão, registro de recentes, seletor nativo e recuperação de erros.
+- [x] Validar instalação limpa e reinício preservando projetos.
 
 ## F10 — revisão de acessibilidade e estados de interação
 
-- [ ] Revisar foco, teclado, leitores de tela, loading, vazio, erro e disabled.
-- [ ] Garantir que hover indique ação disponível; controles inertes não podem parecer clicáveis.
-- [ ] Testar layouts 16:9 e 9:16.
+- [x] Revisar foco, teclado, leitores de tela, loading, vazio, erro e disabled.
+- [x] Garantir que hover indique ação disponível; controles inertes não podem parecer clicáveis.
+- [x] Testar layouts 16:9 e 9:16.
 
 ## F11 — migração e compatibilidade
 
-- [ ] Ignorar/remover com segurança os cartões antigos do `localStorage`, sem transformá-los em projetos.
-- [ ] Migrar projetos `contentlab-project-v1` existentes sem inventar conteúdo.
-- [ ] Verificar compatibilidade CLI/MCP/pacotes após extensão do contrato.
+- [x] Ignorar/remover com segurança os cartões antigos do `localStorage`, sem transformá-los em projetos.
+- [x] Migrar projetos `contentlab-project-v1` existentes sem inventar conteúdo.
+- [x] Verificar compatibilidade CLI/MCP/pacotes após extensão do contrato.
 
 ## F12 — validação final e entrega
 

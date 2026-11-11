@@ -16,11 +16,15 @@ npm run doctor
 npm run dev
 ```
 
-Abra o endereço local mostrado. `npm run doctor` retorna JSON com dependências prontas e soluções para as ausentes. Recursos opcionais com pesos grandes não são baixados silenciosamente.
+Abra o endereço local mostrado. O comando inicia a interface e a API local juntas. Para uso sem recarga de desenvolvimento, `npm start` compila e serve o aplicativo em `http://127.0.0.1:4173`.
+
+Os dados padrão ficam em `.contentlab/`: projetos criados sem pasta escolhida ficam em `.contentlab/projects`, mídias deduplicadas em `.contentlab/media` e o registro de recentes em `.contentlab/recent-projects.json`. Defina `CONTENTLAB_DATA_DIR` para usar outra raiz. O registro de recentes guarda apenas caminhos; projetos removidos deixam de aparecer automaticamente.
+
+No Linux, os seletores nativos usam `zenity`. Se ele não estiver disponível, instale-o pelo gerenciador do sistema. Cancelar um seletor não altera o projeto. `npm run doctor` retorna JSON com dependências prontas e soluções para as ausentes. Recursos opcionais com pesos grandes não são baixados silenciosamente.
 
 ## Uso
 
-A tela inicial cria, abre, importa e retoma projetos locais sem dashboard. Dentro do projeto, escolha revisão por etapa ou modo autônomo até a revisão final. Reabrir uma etapa preserva o histórico e invalida dependências posteriores.
+A tela inicial cria, abre, importa e retoma projetos locais reais. Não são inseridos exemplos. “Abrir projeto” espera uma pasta cujo nome corresponda ao `id` de um `project.json` válido; “Importar pacote” aceita `.contentlab` e ZIP seguro. Dentro do projeto, escolha revisão por etapa ou modo autônomo até a revisão final. Reabrir uma etapa preserva o histórico e invalida dependências posteriores.
 
 O editor de roteiro separa fala, direção visual e fontes; packaging mantém títulos A/B, descrição, tags e thumbnails. A timeline usa camadas genéricas, keyframes, undo/redo e layouts próprios para 16:9 e 9:16. Preview e render compartilham o mesmo plano.
 
@@ -72,3 +76,6 @@ npm audit --omit=dev
 - Conflito de revisão: reinspecione o projeto e refaça o dry-run sobre a revisão atual.
 - Pacote recusado: não force extração; confira manifesto, hash, caminho e se o destino já contém arquivos.
 - Render interrompido: reinicie a fila; jobs que estavam executando voltam para `queued`.
+- `Servidor local indisponível`: inicie com `npm run dev` (desenvolvimento) ou `npm start` (compilado), em vez de abrir o HTML diretamente.
+- Seletor não abre: confirme que a sessão é gráfica e que `zenity` está instalado.
+- Projeto não aparece em Recentes: abra novamente a pasta; caminhos removidos são descartados do registro.
