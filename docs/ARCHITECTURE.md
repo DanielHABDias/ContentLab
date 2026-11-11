@@ -46,6 +46,16 @@ Os schemas executáveis estão em `src/core/contracts.js`. Migrações futuras s
 - MCP usa `stdio`; logs vão para `stderr`, nunca `stdout`. Aprovação de etapa só ocorre por comando explícito autorizado.
 - Clonagem de voz exige consentimento registrado no perfil. Upload/publicação não pertencem ao núcleo.
 
+## CLI e MCP
+
+```bash
+CONTENTLAB_DATA_DIR=/caminho/projetos npm run contentlab -- project.inspect project_id
+CONTENTLAB_DATA_DIR=/caminho/projetos npm run contentlab -- project.run operacao.json
+npm run mcp
+```
+
+CLI e MCP instanciam o mesmo `AgentService`. Respostas padrão são compactas; inspeção completa é uma escolha explícita do chamador. Operações aceitam `dryRun`, revisão-base e ID idempotente. No MCP, `stdout` é reservado ao transporte `stdio`.
+
 ## Testes
 
 Contratos e comandos têm testes unitários; armazenamento, ferramentas e jobs usam integração com diretórios temporários; UI usa testes de comportamento; render inclui frames dourados nas duas proporções e inspeção de mídia com ffprobe. E2E cobre UI, CLI e MCP contra o mesmo projeto.

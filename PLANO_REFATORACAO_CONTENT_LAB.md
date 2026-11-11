@@ -180,10 +180,12 @@ Esta etapa é **obrigatória antes de projetar e implementar a nova arquitetura*
 **Checkpoint T05 (2026-11-11):** `ProjectStore` grava manifesto por rename atômico, snapshots imutáveis e journal; leitura por nova instância comprova retomada. Núcleo puro controla aprovação, pedido de mudanças, reabertura e invalidação transitiva com revisão otimista. Adaptador da UI persiste a lista local e mantém o núcleo independente. Verificações: 12 testes, incluindo reinício/conflito/histórico, e build. Próxima: T06, CLI e MCP sobre o mesmo núcleo.
 
 ### T06 — Controle local por agentes: CLI e MCP
-- [ ] Implementar operações semânticas de alto nível para criar/inspecionar projeto, escrever/revisar roteiro, preencher metadados, manipular mídias/timeline, aprovar status quando autorizado e solicitar renders.
-- [ ] Expor o núcleo por **CLI e MCP local**; avaliar primeiro MCP TypeScript SDK v2 com `stdio` para Codex/Claude Code, sem cloud obrigatória.
-- [ ] Aplicar schemas, idempotência, dry-run/diff, operações em lote, respostas compactas, IDs de jobs, progresso e controles para impedir que agentes pulem aprovações.
+- [x] Implementar operações semânticas de alto nível para criar/inspecionar projeto, escrever/revisar roteiro, preencher metadados, manipular mídias/timeline, aprovar status quando autorizado e solicitar renders.
+- [x] Expor o núcleo por **CLI e MCP local**; avaliar primeiro MCP TypeScript SDK v2 com `stdio` para Codex/Claude Code, sem cloud obrigatória.
+- [x] Aplicar schemas, idempotência, dry-run/diff, operações em lote, respostas compactas, IDs de jobs, progresso e controles para impedir que agentes pulem aprovações.
 - **Entrega/aceite:** agente local e usuário executam operações equivalentes, consistentes e verificáveis, com baixo gasto de tokens.
+
+**Checkpoint T06 (2026-11-11):** `AgentService` compartilhado oferece criação, inspeção compacta e lotes atômicos para timeline/workflow, com `operationId`, revisão-base, dry-run e diff. CLI foi exercitada como processo; MCP oficial funciona por stdio e não escreve logs no stdout. Aprovação exige revisão esperada. Verificações: 15 testes, build e smoke MCP direto. Próxima: T07, mídia/cache/cortes/transcrição.
 
 ### T07 — Mídia: importação, cache, cortes e transcrição
 - [ ] Importar URL e arquivo local; manter cache persistente, limpar sob comando, extrair/reaproveitar múltiplos cortes, associar fontes ao projeto.

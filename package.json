@@ -11,9 +11,12 @@
     "build": "vite build",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "npm run test && npm run build"
+    "check": "npm run test && npm run build",
+    "contentlab": "node src/adapters/cli.js",
+    "mcp": "node src/adapters/mcp-server.js"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "@vitejs/plugin-react": "latest",
     "lucide-react": "latest",
     "react": "latest",
