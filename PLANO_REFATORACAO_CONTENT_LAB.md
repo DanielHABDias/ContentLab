@@ -150,9 +150,11 @@ Esta etapa é **obrigatória antes de projetar e implementar a nova arquitetura*
 **Checkpoint T01 (2026-11-11):** protótipo React/Vite responsivo com entrada de projetos, workflow navegável, marca SVG original e design system documentado. Referências: WCAG 2.2, feedback de progresso e padrões de ferramentas criativas. Verificações: 2 testes de interface e build de produção. Próxima: T02, tornar projetos/workflow interativos com dados de demonstração explícitos.
 
 ### T02 — Frontend: projetos locais e workflow visual (sem dashboard)
-- [ ] Construir entrada simples para **criar, abrir, importar e retomar projetos locais** de múltiplos vídeos (longos ou curtos), sem dashboard; visualizar estados, progresso, histórico e ações dentro de cada projeto, quando relevantes.
-- [ ] Expor etapas, pendências, modos **revisão por fase** e **autônomo até a revisão final**, aprovação, solicitação de mudanças e retorno de etapa.
+- [x] Construir entrada simples para **criar, abrir, importar e retomar projetos locais** de múltiplos vídeos (longos ou curtos), sem dashboard; visualizar estados, progresso, histórico e ações dentro de cada projeto, quando relevantes.
+- [x] Expor etapas, pendências, modos **revisão por fase** e **autônomo até a revisão final**, aprovação, solicitação de mudanças e retorno de etapa.
 - **Entrega/aceite:** usuário abre um projeto e navega seu workflow de ponta a ponta com dados de demonstração, visualiza o estado e consegue simular aprovar, rejeitar e voltar de etapa.
+
+**Checkpoint T02 (2026-11-11):** criação de projeto longo/Short, retomada de recentes, modos de revisão/autônomo, aprovação, pedido de mudanças, reabertura com invalidação comunicada e histórico, todos marcados como demonstração. Verificações: 4 testes de interface e build. Próxima: T03, editor de roteiro, packaging e thumbnails.
 
 ### T03 — Frontend: roteiro e metadados criativos do vídeo
 - [ ] Criar editor de roteiro com formato guiado alinhado ao plugin Diazverso (**consulta read-only**), autosave previsto, títulos A/B, descrição, tags e painel de thumbnails.
