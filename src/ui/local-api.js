@@ -16,5 +16,7 @@ export const localApi = {
   runProjectAction: input => request('/projects/action', { method: 'POST', body: JSON.stringify(input) }),
   chooseDirectory: title => request('/dialog/directory', { method: 'POST', body: JSON.stringify({ title }) }),
   choosePackage: title => request('/dialog/package', { method: 'POST', body: JSON.stringify({ title }) }),
+  chooseMedia: title => request('/dialog/media', { method: 'POST', body: JSON.stringify({ title }) }),
   importPackage: input => request('/packages/import', { method: 'POST', body: JSON.stringify(input) }),
+  importMedia: input => request('/media/import', { method: 'POST', body: JSON.stringify(input) }),
 };

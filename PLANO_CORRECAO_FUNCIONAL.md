@@ -60,10 +60,10 @@ Este plano substitui a aceitação visual usada no ciclo T01–T12 por aceitaç�
 
 ## F06 — mídias locais e thumbnails
 
-- [ ] Tornar “Mídias locais” uma área funcional, com estado vazio explícito.
-- [ ] Importar arquivos reais via seletor, calcular hash, registrar direitos e associar ao projeto.
-- [ ] Listar apenas arquivos reais e sinalizar arquivo ausente.
-- [ ] Fazer importação de thumbnail usar o mesmo catálogo e persistir a seleção.
+- [x] Tornar “Mídias locais” uma área funcional, com estado vazio explícito.
+- [x] Importar arquivos reais via seletor, calcular hash, registrar direitos e associar ao projeto.
+- [x] Listar apenas arquivos reais e sinalizar arquivo ausente.
+- [x] Fazer importação de thumbnail usar o mesmo catálogo e persistir a seleção.
 
 ## F07 — narração, edição e render com disponibilidade honesta
 

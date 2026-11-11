@@ -1,4 +1,5 @@
 import { mkdtemp, rm } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, expect, test } from 'vitest';
@@ -47,4 +48,15 @@ test('persiste configuração, conteúdo criativo e workflow no mesmo núcleo', 
   expect(details.project).toMatchObject({ title: 'Operações persistidas', mode: 'autonomous', revision: 4, creative: { script: { hook: 'Texto salvo em disco' } } });
   expect(details.project.stages[0]).toMatchObject({ id: 'brief', state: 'changes_requested', revision: 1 });
   expect(details.history).toHaveLength(4);
+});
+
+test('importa mídia real, calcula hash e associa direitos ao projeto', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'contentlab-project-media-')); roots.push(root);
+  const source = path.join(root, 'tone.wav');
+  execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=0.2', source]);
+  const service = new LocalApplicationService({ dataDirectory: path.join(root, 'data') });
+  const created = await service.createProject({ title: 'Com mídia', type: 'long', aspectRatio: '16:9' });
+  const imported = await service.importMedia({ path: created.path, baseRevision: 1, source, rights: 'owned' });
+  expect(imported.project.media[0]).toMatchObject({ kind: 'audio', rights: 'owned', sha256: expect.stringMatching(/^[a-f0-9]{64}$/) });
+  expect(imported.mediaStatus).toEqual([{ id: imported.project.media[0].id, available: true }]);
 });

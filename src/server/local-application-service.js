@@ -7,14 +7,16 @@ import { PackageService } from '../package/package-service.js';
 import { NativeDialog } from './native-dialog.js';
 import { AgentService } from '../core/agent-service.js';
 import { randomUUID } from 'node:crypto';
+import { MediaService } from '../media/media-service.js';
 
 export class LocalApplicationService {
-  constructor({ dataDirectory, dialog = new NativeDialog(), packages = new PackageService() }) {
+  constructor({ dataDirectory, dialog = new NativeDialog(), packages = new PackageService(), media = null }) {
     this.dataDirectory = path.resolve(dataDirectory);
     this.projectsDirectory = path.join(this.dataDirectory, 'projects');
     this.registry = new ProjectRegistry(this.dataDirectory);
     this.dialog = dialog;
     this.packages = packages;
+    this.media = media || new MediaService(path.join(this.dataDirectory, 'media'));
   }
 
   async health() {
@@ -27,7 +29,9 @@ export class LocalApplicationService {
   async inspectProject(directory) {
     const project = await readProjectDirectory(directory);
     const history = await this.#history(directory);
-    return { project, history, path: path.resolve(directory) };
+    const { stat } = await import('node:fs/promises');
+    const mediaStatus = await Promise.all(project.media.map(async item => { try { await stat(item.uri); return { id: item.id, available: true }; } catch { return { id: item.id, available: false }; } }));
+    return { project, history, mediaStatus, path: path.resolve(directory) };
   }
 
   async registerProject(directory) {
@@ -38,6 +42,7 @@ export class LocalApplicationService {
 
   async chooseDirectory(options) { return { path: await this.dialog.chooseDirectory(options) }; }
   async choosePackage(options) { return { path: await this.dialog.choosePackage(options) }; }
+  async chooseMedia(options) { return { path: await this.dialog.chooseMedia(options) }; }
 
   async createProject({ title, type, aspectRatio, mode = 'review', parentDirectory }) {
     if (!title?.trim()) throw new Error('Informe o título do projeto');
@@ -88,6 +93,15 @@ export class LocalApplicationService {
     const agent = new AgentService(store);
     await agent.run({ schema: 'contentlab-operation-v1', operationId: `op_${randomUUID().replaceAll('-', '')}`, projectId: project.id, baseRevision, dryRun: false, actions: [action] });
     return await this.registerProject(absolute);
+  }
+
+  async importMedia({ path: directory, baseRevision, source, rights = 'pending' }) {
+    if (!source) throw new Error('Nenhum arquivo foi escolhido');
+    const imported = await this.media.importFile(source);
+    const streams = imported.metadata?.streams || [];
+    const extension = path.extname(imported.path).toLowerCase();
+    const kind = streams.some(stream => stream.codec_type === 'video') ? (['.png', '.jpg', '.jpeg', '.webp'].includes(extension) ? 'image' : 'video') : streams.some(stream => stream.codec_type === 'audio') ? 'audio' : 'image';
+    return await this.runProjectAction({ path: directory, baseRevision, action: { type: 'media.add', media: { id: imported.id, kind, uri: imported.path, sha256: imported.hash, rights } } });
   }
 
   async #availableId(root, preferred) {
