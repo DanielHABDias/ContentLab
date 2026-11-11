@@ -266,6 +266,12 @@ Não iniciar empacotamento desktop antes de estabilizar armazenamento, setup e o
 
 ## Checkpoint de retomada
 
+### Ajuste pós-F14 (pedido do usuário, 2026-11-11)
+
+- Todas as dependências opcionais instaláveis pela aplicação: Chatterbox passou de `manual` para `python` (wheel verificado, venv isolado, pesos em revisão fixada, comando verificado antes de ativar).
+- Bloqueio por dependência: `src/core/capabilities.js` mapeia etapa/recurso → dependências; `StageGate`/`FeatureList`/`DependencyNotice` bloqueiam com botão para Dependências já com os itens marcados; servidor recusa com `DEPENDENCY_MISSING` (`importMedia`, `renderProject`).
+- Pendente: instalação real do Chatterbox não foi executada nesta máquina (PyTorch de vários GB); validar no QA local. Ao implementar URL (F16), transcrição (F16) e voz (F17), chamar `requireFeature` com `media.url`, `transcription` e `voice.synthetic`.
+
 ### F14 concluída (2026-11-11)
 
 - Concluído: catálogo único `src/setup/dependency-catalog.js` (versão, tamanho, SHA-256, licença, origem, comandos por gerenciador) usado por `npm run doctor`, API e assistente; `downloader.js` (HTTPS, `.partial`, Range, SHA-256 contínuo, espaço livre, rename atômico); `setup-service.js` (estado `contentlab-setup-v1` em `.tools/`, jobs com pausar/retomar/cancelar/repetir, consentimento, compilação do whisper.cpp verificando o commit); `SetupWizard.jsx` na primeira execução e em “Dependências”; rotas `/api/v1/setup/*`.

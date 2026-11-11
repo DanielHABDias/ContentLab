@@ -119,7 +119,7 @@ test('diagnóstico separa essenciais de IA e sugere comando do sistema', async (
   expect(byId.ffmpeg).toMatchObject({ ready: true, group: 'essential' });
   expect(byId.zenity).toMatchObject({ ready: false, required: true, systemCommand: 'sudo apt install zenity' });
   expect(byId['whisper-large-v3']).toMatchObject({ ready: false, group: 'ai', installable: true, consent: true, downloadBytes: payload.length, license: expect.any(String), origin: expect.stringMatching(/^https:/) });
-  expect(byId['chatterbox-pt-br']).toMatchObject({ ready: false, installable: false, reason: 'Instalação manual' });
+  expect(byId['chatterbox-pt-br']).toMatchObject({ ready: false, installable: true, kind: 'python' });
   expect(status.onboarding).toEqual({ completedAt: null, dismissedAt: null });
 });
 
@@ -193,4 +193,65 @@ test('“Agora não” é lembrado entre inicializações', async () => {
   const root = await temp(); const setup = await service(root, 'http://127.0.0.1:1/x');
   await setup.setOnboarding('dismissed');
   expect((await (await service(root, 'http://127.0.0.1:1/x')).status()).onboarding.dismissedAt).toEqual(expect.any(String));
+});
+
+// ---- Chatterbox (ambiente Python isolado) ----
+
+function pythonRun({ python = '3.12', pip = true, verify = true, calls = [] } = {}) {
+  return async (command, args) => {
+    calls.push([path.basename(command), ...args].join(' '));
+    if (command === 'python3' && args[0] === '-c') { if (!python) throw Object.assign(new Error('não encontrado'), { code: 'ENOENT' }); return { stdout: `${python}\n`, stderr: '' }; }
+    if (command === 'python') throw Object.assign(new Error('não encontrado'), { code: 'ENOENT' });
+    if (command === 'python3' && args[1] === 'venv') { const { mkdir } = await import('node:fs/promises'); await mkdir(path.join(args[2], 'bin'), { recursive: true }); await writeFile(path.join(args[2], 'bin', 'python'), '#!/bin/sh\nprintf "%s|" "$CONTENTLAB_CHATTERBOX_MODEL" "$@"\n', { mode: 0o755 }); return { stdout: '', stderr: '' }; }
+    if (args.includes('pip')) { if (!pip) throw Object.assign(new Error('pip'), { stderr: 'linha 1\nlinha 2\nERROR: No matching distribution found for torch==2.6.0' }); return { stdout: '', stderr: '' }; }
+    if (args.includes('--fetch-weights')) return { stdout: '{"ok": true}', stderr: '' };
+    if (args.includes('--check')) { if (!verify) throw Object.assign(new Error('check'), { stderr: 'ModuleNotFoundError: No module named torch' }); return { stdout: '{"ok": true}', stderr: '' }; }
+    if (command === 'contentlab-chatterbox') throw Object.assign(new Error('não encontrado'), { code: 'ENOENT' });
+    return { stdout: 'ok', stderr: '' };
+  };
+}
+
+async function chatterboxSetup(root, run, downloads = []) {
+  const repo = path.join(root, 'repo'); const { mkdir } = await import('node:fs/promises');
+  await mkdir(path.join(repo, 'tools', 'chatterbox'), { recursive: true }); await writeFile(path.join(repo, 'tools', 'chatterbox', 'contentlab_chatterbox.py'), '# adaptador\n');
+  return new SetupService({ toolsDirectory: path.join(root, "pasta d'Ferramentas"), platform: 'linux', arch: 'x64', run, statfsImpl: bigDisk, osRelease: path.join(root, 'nada'), repositoryRoot: repo, download: async options => { downloads.push(options); await mkdir(path.dirname(options.destination), { recursive: true }); await writeFile(options.destination, 'wheel'); return { status: 'installed', path: options.destination }; } });
+}
+
+test('Chatterbox é instalável: wheel verificado, venv isolado, pesos fixados e comando funcional', async () => {
+  const root = await temp(); const calls = []; const downloads = [];
+  const setup = await chatterboxSetup(root, pythonRun({ calls }), downloads);
+  const item = (await setup.status()).items.find(entry => entry.id === 'chatterbox-pt-br');
+  expect(item).toMatchObject({ kind: 'python', installable: true, consent: true, ready: false, downloadBytes: 6 * 1024 ** 3 });
+  const [job] = await setup.install({ ids: ['chatterbox-pt-br'], consent: ['chatterbox-pt-br'] });
+  await expect(setup.waitFor(job.id)).resolves.toMatchObject({ state: 'completed', phase: 'Instalado e verificado' });
+  expect(downloads[0]).toMatchObject({ sha256: '83782500e3ad4e7c919132e9d7eb8755f29f57c5bde5ec48c655ca23a4eb113c', size: 108543 });
+  expect(calls.some(call => call.includes('--fetch-weights') && call.includes('5bb1f6ee58e50c3b8d408bc82a6d3740c2db6e18'))).toBe(true);
+  const shim = path.join(setup.toolsDirectory, 'bin', 'contentlab-chatterbox');
+  const { execFileSync } = await import('node:child_process');
+  const output = execFileSync(shim, ['--text', "olá 'mundo'"], { encoding: 'utf8', env: { PATH: process.env.PATH } });
+  expect(output).toBe(`${path.join(setup.toolsDirectory, 'models', 'chatterbox')}|${path.join(setup.toolsDirectory, 'venvs', 'chatterbox', 'contentlab_chatterbox.py')}|--text|olá 'mundo'|`);
+  expect((await setup.status()).items.find(entry => entry.id === 'chatterbox-pt-br')).toMatchObject({ ready: true, managed: true });
+  const pipCalls = calls.filter(call => call.includes('-m pip install')).length;
+  const [again] = await setup.install({ ids: ['chatterbox-pt-br'], consent: ['chatterbox-pt-br'] });
+  await expect(setup.waitFor(again.id)).resolves.toMatchObject({ phase: 'Já estava instalado' });
+  expect(calls.filter(call => call.includes('-m pip install')).length).toBe(pipCalls);
+});
+
+test('Chatterbox sem Python, com pip falho ou verificação falha não fica instalado', async () => {
+  const root = await temp();
+  const noPython = await chatterboxSetup(root, pythonRun({ python: null }));
+  const [first] = await noPython.install({ ids: ['chatterbox-pt-br'], consent: ['chatterbox-pt-br'] });
+  await expect(noPython.waitFor(first.id)).resolves.toMatchObject({ state: 'failed', code: 'PYTHON_MISSING' });
+  const oldPython = await chatterboxSetup(root, pythonRun({ python: '3.8' }));
+  const [second] = await oldPython.install({ ids: ['chatterbox-pt-br'], consent: ['chatterbox-pt-br'] });
+  await expect(oldPython.waitFor(second.id)).resolves.toMatchObject({ code: 'PYTHON_MISSING' });
+  const pipFails = await chatterboxSetup(root, pythonRun({ pip: false }));
+  const [third] = await pipFails.install({ ids: ['chatterbox-pt-br'], consent: ['chatterbox-pt-br'] });
+  await expect(pipFails.waitFor(third.id)).resolves.toMatchObject({ code: 'PIP_FAILED', error: expect.stringMatching(/No matching distribution/) });
+  const verifyFails = await chatterboxSetup(root, pythonRun({ verify: false }));
+  const [fourth] = await verifyFails.install({ ids: ['chatterbox-pt-br'], consent: ['chatterbox-pt-br'] });
+  await expect(verifyFails.waitFor(fourth.id)).resolves.toMatchObject({ code: 'VERIFY_FAILED' });
+  const bin = path.join(verifyFails.toolsDirectory, 'bin');
+  expect(await exists(path.join(bin, 'contentlab-chatterbox'))).toBe(false);
+  expect(await exists(path.join(bin, 'contentlab-chatterbox.partial'))).toBe(false);
 });

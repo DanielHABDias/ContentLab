@@ -2,6 +2,7 @@ import { lstat, mkdir, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { idSchema } from '../core/contracts.js';
+import { FEATURES, featureBlock } from '../core/capabilities.js';
 import { SetupService } from '../setup/setup-service.js';
 import { ActivityTracker, LifecycleError, SystemOpener, SystemTrash } from './project-lifecycle.js';
 import { ProjectRegistry, readProjectDirectory } from './project-registry.js';
@@ -212,6 +213,7 @@ export class LocalApplicationService {
 
   async importMedia({ path: directory, baseRevision, source, rights = 'pending' }) {
     if (!source) throw new Error('Nenhum arquivo foi escolhido');
+    await this.requireFeature('media.import');
     const imported = await this.activities.track(directory, 'importação de mídia', () => this.media.importFile(source));
     const streams = imported.metadata?.streams || [];
     const extension = path.extname(imported.path).toLowerCase();
@@ -225,6 +227,12 @@ export class LocalApplicationService {
     return { capabilities: status.items.filter(item => item.id !== 'node').map(item => ({ id: item.id, label: item.label, ready: item.ready, required: item.required, ...(item.ready ? { version: item.detected } : { solution: item.installable ? 'Instale em Dependências.' : item.systemCommand ? `Instale com: ${item.systemCommand}` : item.manualSteps || item.reason || 'Indisponível.' }) })) };
   }
 
+  /** Recusa a operação quando faltam dependências, indicando quais instalar. */
+  async requireFeature(featureId) {
+    const missing = featureBlock(featureId, (await this.setup.status()).items);
+    if (missing.length) throw new LifecycleError('DEPENDENCY_MISSING', `Para ${FEATURES[featureId].label.toLowerCase()}, instale: ${missing.map(item => item.label).join(', ')}`, { feature: featureId, missing: missing.map(item => item.id) });
+  }
+
   setupStatus() { return this.setup.status(); }
   setupInstall(input) { return this.setup.install(input); }
   setupJobs() { return { jobs: this.setup.jobs() }; }
@@ -234,6 +242,7 @@ export class LocalApplicationService {
   async setupOnboarding({ choice }) { return { onboarding: await this.setup.setOnboarding(choice) }; }
 
   async renderProject({ path: directory, outputDirectory }) {
+    await this.requireFeature('render');
     const project = await readProjectDirectory(directory);
     const targetDirectory = outputDirectory ? path.resolve(outputDirectory) : path.join(path.resolve(directory), 'output');
     await mkdir(targetDirectory, { recursive: true });

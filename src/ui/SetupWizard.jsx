@@ -9,10 +9,10 @@ const ACTIVE = ['running', 'queued'];
  * Assistente de primeira execução e tela de dependências. Nada é baixado sem
  * seleção e consentimento explícitos; pacotes do sistema só têm o comando exibido.
  */
-export function SetupWizard({ firstRun = false, onClose, onFinished }) {
+export function SetupWizard({ firstRun = false, focus = [], onClose, onFinished, onChanged }) {
   const [status, setStatus] = useState(null); const [error, setError] = useState(''); const [selected, setSelected] = useState([]); const [consent, setConsent] = useState(false); const [showEssentials, setShowEssentials] = useState(false); const [copied, setCopied] = useState('');
-  const load = useCallback(async () => { try { const value = await localApi.setupStatus(); setStatus(value); return value; } catch (issue) { setError(issue.message); return null; } }, []);
-  useEffect(() => { load(); }, [load]);
+  const load = useCallback(async () => { try { const value = await localApi.setupStatus(); setStatus(value); onChanged?.(value); return value; } catch (issue) { setError(issue.message); return null; } }, []);
+  useEffect(() => { load().then(value => { if (value && focus.length) setSelected(value.items.filter(item => focus.includes(item.id) && item.installable && !item.ready).map(item => item.id)); }); }, [load]); // eslint-disable-line react-hooks/exhaustive-deps
   const jobs = status?.jobs || [];
   const running = jobs.some(job => ACTIVE.includes(job.state));
   useEffect(() => {
@@ -40,6 +40,7 @@ export function SetupWizard({ firstRun = false, onClose, onFinished }) {
   return <main id="main" className="workspace setup">
     <header className="project-header"><div><span className="eyebrow">{firstRun ? 'Primeira execução' : 'Dependências'}</span><h1>Prepare seu computador</h1><p className="setup-meta">{status.platform.distro} · {status.platform.os}-{status.platform.arch} · {formatBytes(status.freeBytes)} livres em <code>{status.toolsDirectory}</code></p></div>{!firstRun && <button className="button quiet" onClick={onClose}>Voltar</button>}</header>
     {error && <div className="notice error" role="alert"><X size={16}/>{error}</div>}
+    {focus.length > 0 && <FocusNotice focus={focus} items={status.items}/>}
 
     <section className="workflow-card" aria-labelledby="essentials-title">
       <div className="section-title"><div><span className="eyebrow">Obrigatório</span><h2 id="essentials-title">Essenciais</h2></div><button className="button quiet" onClick={() => load()}><RefreshCw size={16}/> Verificar novamente</button></div>
@@ -88,4 +89,10 @@ function JobControls({ job, onPause, onResume, onCancel }) {
   if (job.state === 'paused') return <><button className="mini-button" onClick={onResume}><Play size={14}/> Retomar</button><button className="mini-button" onClick={onCancel}>Cancelar</button></>;
   if (job.state === 'failed') return <><button className="mini-button" onClick={onResume}><RefreshCw size={14}/> Tentar novamente</button><button className="mini-button" onClick={onCancel}>Descartar</button></>;
   return null;
+}
+
+function FocusNotice({ focus, items }) {
+  const pending = items.filter(item => focus.includes(item.id));
+  const ready = pending.every(item => item.ready);
+  return <div className={`notice ${ready ? '' : 'error'}`} role="status">{ready ? <><Check size={16}/> Dependências instaladas. Volte ao projeto para continuar.</> : <span>Necessário para continuar: <strong>{pending.filter(item => !item.ready).map(item => item.label).join(', ')}</strong>. {pending.some(item => !item.ready && item.installable) ? 'Os itens instaláveis já estão marcados abaixo.' : 'Siga o comando indicado em cada item.'}</span>}</div>;
 }

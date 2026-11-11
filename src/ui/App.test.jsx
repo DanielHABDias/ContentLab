@@ -167,3 +167,60 @@ test('download pausado oferece retomar e falha oferece tentar novamente', async 
   fireEvent.click(screen.getByRole('button', { name: /retomar/i }));
   await waitFor(() => expect(localApi.setupResume).toHaveBeenCalledWith({ jobId: 'j1' }));
 });
+
+function stageAt(activeId) {
+  const ids = ['brief', 'script', 'packaging', 'media', 'narration', 'edit', 'review'];
+  const index = ids.indexOf(activeId);
+  return ids.map((id, position) => ({ id, state: position < index ? 'approved' : position === index ? 'active' : 'pending', revision: 1, approvedRevision: position < index ? 1 : null, dependsOn: position ? [ids[position - 1]] : [] }));
+}
+function gatedSetup(ready) {
+  const base = setupStatus({ onboarding: { completedAt: 'x', dismissedAt: null } });
+  const extra = [
+    { id: 'ffprobe', label: 'FFprobe', group: 'essential', required: true },
+    { id: 'yt-dlp', label: 'yt-dlp', group: 'ai', installable: true, consent: true, downloadBytes: 41166968, license: 'Unlicense' },
+    { id: 'whisper-cli', label: 'whisper.cpp (whisper-cli)', group: 'ai', installable: true, consent: true, license: 'MIT' },
+  ];
+  base.items = [...base.items, ...extra].map(item => ({ ...item, ready: ready.includes(item.id) }));
+  base.essentialsReady = ['ffmpeg', 'ffprobe', 'zenity'].every(id => ready.includes(id));
+  return base;
+}
+
+test('etapa sem dependência obrigatória fica bloqueada e leva à tela de dependências', async () => {
+  const details = realDetails({ stages: stageAt('media') });
+  localApi.setupStatus.mockResolvedValue(gatedSetup(['zenity'])); localApi.listProjects.mockResolvedValue({ projects: [details.card] }); localApi.openProject.mockResolvedValue(details);
+  render(<App/>); fireEvent.click(await screen.findByRole('button', { name: /abrir meu projeto/i }));
+  expect(await screen.findAllByText(/requer dependências/i)).not.toHaveLength(0);
+  fireEvent.click(screen.getByRole('button', { name: /continuar/i }));
+  expect(await screen.findByRole('heading', { name: /etapa bloqueada/i })).toBeInTheDocument();
+  expect(screen.getByText(/precisa de FFmpeg e FFprobe/i)).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /renderizar/i })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /instalar dependências/i }));
+  expect(await screen.findByRole('heading', { name: /prepare seu computador/i })).toBeInTheDocument();
+  expect(await screen.findByText(/necessário para continuar/i)).toHaveTextContent(/FFmpeg, FFprobe/);
+});
+
+test('recurso bloqueado dentro da etapa abre dependências com o item já marcado', async () => {
+  const details = realDetails({ stages: stageAt('media') });
+  localApi.setupStatus.mockResolvedValue(gatedSetup(['ffmpeg', 'ffprobe', 'zenity'])); localApi.listProjects.mockResolvedValue({ projects: [details.card] }); localApi.openProject.mockResolvedValue(details);
+  render(<App/>); fireEvent.click(await screen.findByRole('button', { name: /abrir meu projeto/i }));
+  fireEvent.click(await screen.findByRole('button', { name: /continuar/i }));
+  const features = await screen.findByRole('list', { name: /recursos desta etapa/i });
+  expect(within(features).getByText('Importar mídia local').closest('li')).toHaveTextContent('Disponível');
+  expect(within(features).getByText('Importar vídeo por URL').closest('li')).toHaveTextContent(/Bloqueado: requer yt-dlp/);
+  expect(within(features).getByText('Transcrever em português').closest('li')).toHaveTextContent(/whisper.cpp \(whisper-cli\) e Pesos Whisper large-v3/);
+  fireEvent.click(within(features).getByRole('button', { name: /desbloquear importar vídeo por url/i }));
+  expect(await screen.findByLabelText('yt-dlp')).toBeChecked();
+  expect(screen.getByLabelText(/pesos whisper large-v3/i)).not.toBeChecked();
+});
+
+test('erro DEPENDENCY_MISSING do servidor oferece instalar as dependências', async () => {
+  const details = realDetails({ stages: stageAt('review') });
+  localApi.setupStatus.mockResolvedValue(gatedSetup(['ffmpeg', 'ffprobe', 'zenity'])); localApi.listProjects.mockResolvedValue({ projects: [details.card] }); localApi.openProject.mockResolvedValue(details);
+  localApi.chooseDirectory.mockResolvedValue({ path: '/saida' }); localApi.render = vi.fn().mockRejectedValue(Object.assign(new Error('Para renderizar, instale: FFmpeg'), { code: 'DEPENDENCY_MISSING', details: { missing: ['ffmpeg'] } }));
+  render(<App/>); fireEvent.click(await screen.findByRole('button', { name: /abrir meu projeto/i }));
+  fireEvent.click(await screen.findByRole('button', { name: /continuar/i }));
+  fireEvent.click(await screen.findByRole('button', { name: /renderizar vídeo/i }));
+  expect(await screen.findByText(/para renderizar, instale/i)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /instalar dependências/i }));
+  expect(await screen.findByRole('heading', { name: /prepare seu computador/i })).toBeInTheDocument();
+});

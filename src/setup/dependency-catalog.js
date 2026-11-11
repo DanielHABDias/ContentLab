@@ -8,7 +8,8 @@
  * - runtime:  o próprio Node em execução.
  * - download: arquivo único baixado para `.tools/`, verificado por SHA-256.
  * - build:    código-fonte em commit fixo compilado localmente para `.tools/bin`.
- * - manual:   sem artefato verificável; somente detecção e instruções.
+ * - python:   ambiente Python isolado em `.tools/venvs` com pacote de SHA-256 fixado
+ *             e pesos numa revisão fixada do Hugging Face.
  */
 
 export const CATALOG_VERSION = 1;
@@ -77,11 +78,17 @@ export function defaultCatalog() {
       destination: 'models/ggml-large-v3.bin', executable: false,
     },
     {
-      id: 'chatterbox-pt-br', label: 'Chatterbox PT-BR (voz por IA)', group: 'ai', kind: 'manual', required: false, consent: true,
-      description: 'Voz sintética com consentimento registrado. Upstream arquivado: sem artefato fixado e verificável para instalação automática.',
-      detect: { command: 'contentlab-chatterbox', args: ['--version'] },
-      license: 'MIT', origin: 'https://github.com/resemble-ai/chatterbox',
-      manualSteps: 'Prepare um ambiente Python isolado com o Chatterbox Multilingual e exponha o comando contentlab-chatterbox no PATH. Consulte docs/NARRACAO_E_VOZ.md.',
+      id: 'chatterbox-pt-br', label: 'Chatterbox PT-BR (voz por IA)', group: 'ai', kind: 'python', required: false, consent: true, platforms: ['linux', 'darwin'],
+      description: 'Voz sintética com consentimento registrado e marca d’água. Instala Python isolado, PyTorch e os pesos (vários GB).', version: '0.1.7',
+      detect: { command: 'contentlab-chatterbox', args: ['--version'] }, tool: 'contentlab-chatterbox',
+      license: 'MIT', origin: 'https://pypi.org/project/chatterbox-tts/0.1.7/',
+      python: { minimum: [3, 10] },
+      wheel: { url: 'https://files.pythonhosted.org/packages/py3/c/chatterbox-tts/chatterbox_tts-0.1.7-py3-none-any.whl', size: 108543, sha256: '83782500e3ad4e7c919132e9d7eb8755f29f57c5bde5ec48c655ca23a4eb113c', filename: 'chatterbox_tts-0.1.7-py3-none-any.whl' },
+      weights: { repository: 'ResembleAI/chatterbox', revision: '5bb1f6ee58e50c3b8d408bc82a6d3740c2db6e18', destination: 'models/chatterbox' },
+      adapter: 'tools/chatterbox/contentlab_chatterbox.py', environment: 'venvs/chatterbox',
+      estimatedBytes: 6 * 1024 ** 3,
+      systemCommands: { apt: 'sudo apt install python3 python3-venv', dnf: 'sudo dnf install python3', pacman: 'sudo pacman -S python', zypper: 'sudo zypper install python3', brew: 'brew install python@3.12' },
+      destination: 'bin/contentlab-chatterbox', executable: true,
     },
   ];
 }

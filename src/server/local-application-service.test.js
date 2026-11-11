@@ -60,3 +60,14 @@ test('importa mídia real, calcula hash e associa direitos ao projeto', async ()
   expect(imported.project.media[0]).toMatchObject({ kind: 'audio', rights: 'owned', sha256: expect.stringMatching(/^[a-f0-9]{64}$/) });
   expect(imported.mediaStatus).toEqual([{ id: imported.project.media[0].id, available: true }]);
 });
+
+test('operações recusam com DEPENDENCY_MISSING quando faltam dependências', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'contentlab-gate-')); roots.push(root);
+  const setup = { status: async () => ({ items: [{ id: 'ffmpeg', label: 'FFmpeg', ready: false }, { id: 'ffprobe', label: 'FFprobe', ready: true }] }) };
+  const renderer = { render: async () => { throw new Error('não deveria renderizar'); } };
+  const service = new LocalApplicationService({ dataDirectory: path.join(root, 'data'), setup, renderer });
+  const created = await service.createProject({ title: 'Bloqueado', type: 'long', aspectRatio: '16:9' });
+  await expect(service.importMedia({ path: created.path, baseRevision: 1, source: '/qualquer.wav' })).rejects.toMatchObject({ code: 'DEPENDENCY_MISSING', details: { feature: 'media.import', missing: ['ffmpeg'] } });
+  await expect(service.renderProject({ path: created.path, outputDirectory: path.join(root, 'out') })).rejects.toMatchObject({ code: 'DEPENDENCY_MISSING', message: expect.stringMatching(/FFmpeg/) });
+  expect((await service.inspectProject(created.path)).project.media).toEqual([]);
+});
