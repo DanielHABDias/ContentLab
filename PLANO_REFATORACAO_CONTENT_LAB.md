@@ -157,9 +157,11 @@ Esta etapa é **obrigatória antes de projetar e implementar a nova arquitetura*
 **Checkpoint T02 (2026-11-11):** criação de projeto longo/Short, retomada de recentes, modos de revisão/autônomo, aprovação, pedido de mudanças, reabertura com invalidação comunicada e histórico, todos marcados como demonstração. Verificações: 4 testes de interface e build. Próxima: T03, editor de roteiro, packaging e thumbnails.
 
 ### T03 — Frontend: roteiro e metadados criativos do vídeo
-- [ ] Criar editor de roteiro com formato guiado alinhado ao plugin Diazverso (**consulta read-only**), autosave previsto, títulos A/B, descrição, tags e painel de thumbnails.
-- [ ] Permitir thumbnail gerada/criada na aplicação ou importada de fora, sem editor rígido.
+- [x] Criar editor de roteiro com formato guiado alinhado ao plugin Diazverso (**consulta read-only**), autosave previsto, títulos A/B, descrição, tags e painel de thumbnails.
+- [x] Permitir thumbnail gerada/criada na aplicação ou importada de fora, sem editor rígido.
 - **Entrega/aceite:** fluxo visual completo para preparar e revisar um vídeo, sem campos desnecessários, com versão/estado de cada entrega.
+
+**Checkpoint T03 (2026-11-11):** editor guiado separa narração e direção visual, mostra autosave/histórico e oferece packaging com títulos A/B substantivos, descrição, tags, SEO e conceitos/arquivos de thumbnail com estado e direitos. Estrutura consultada no plugin Diazverso v1.1.0 somente para leitura. Verificações: 5 testes de interface e build. Próxima: T04, benchmark técnico, arquitetura e contratos versionados.
 
 ### T04 — Benchmark técnico, arquitetura nova e contratos
 - [ ] Pesquisar e testar skills de arquitetura, testes, MCP, Remotion, Hyperframes e UX; revisar repositórios de editores com agentes **e estudar vídeos/showreels/tutoriais de motion design de alta qualidade**, registrando técnica, timing e adaptação original para a identidade Diazverso. Comparar o legado em `old/` sem tomar suas decisões como obrigatórias.

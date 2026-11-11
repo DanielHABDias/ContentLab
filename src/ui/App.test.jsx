@@ -33,3 +33,13 @@ test('cria projeto local de demonstração', () => {
   fireEvent.click(screen.getByRole('button', { name: /criar projeto/i }));
   expect(screen.getByRole('heading', { name: 'Meu piloto' })).toBeInTheDocument();
 });
+
+test('edita roteiro com autosave e packaging A/B', async () => {
+  render(<App />);
+  fireEvent.click(screen.getByRole('button', { name: /abrir o detalhe que muda o batman/i }));
+  fireEvent.click(screen.getByRole('button', { name: /abrir etapa/i }));
+  expect(screen.getByRole('heading', { name: /roteiro e embalagem/i })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('tab', { name: /títulos e thumbnails/i }));
+  expect(screen.getByDisplayValue(/por que todo herói precisa falhar/i)).toBeInTheDocument();
+  expect(screen.getByText(/estado: preliminar/i)).toBeInTheDocument();
+});

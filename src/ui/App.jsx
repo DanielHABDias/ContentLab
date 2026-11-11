@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, ChevronRight, Clock3, FolderOpen, History, LayoutTemplate, MessageSquareText, Plus, RotateCcw, Settings2, Sparkles, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, ChevronRight, Clock3, FileText, FolderOpen, History, ImagePlus, LayoutTemplate, MessageSquareText, Plus, RotateCcw, Save, Settings2, Sparkles, Tag, X } from 'lucide-react';
 import { Logo } from './Logo.jsx';
 
 const projects = [
@@ -31,6 +31,7 @@ function ProjectView({ project, onBack }) {
   const [mode, setMode] = useState('review');
   const [notice, setNotice] = useState('');
   const [events, setEvents] = useState([{ id: 1, text: `${steps[Math.max(0, initial - 1)]} aprovado`, time: 'Hoje, 14:18' }]);
+  const [editorOpen, setEditorOpen] = useState(false);
   const record = (text) => setEvents(previous => [{ id: Date.now(), text, time: 'Agora' }, ...previous]);
   const approve = () => {
     if (active >= steps.length - 1) return;
@@ -47,6 +48,7 @@ function ProjectView({ project, onBack }) {
     setActive(index);
     setNotice(`${steps[index]} reaberto sem apagar o histórico.`);
   };
+  if (editorOpen) return <CreativeEditor project={project} onBack={() => setEditorOpen(false)} />;
   return (
     <main id="main" className="workspace">
       <button className="text-button" aria-label="Voltar aos projetos" onClick={onBack}><ArrowLeft size={16}/> Projetos</button>
@@ -62,7 +64,7 @@ function ProjectView({ project, onBack }) {
             <li className={index < active ? 'done' : index === active ? 'active' : ''} key={step}>
               <span className="step-index">{index < active ? <Check size={16}/> : String(index + 1).padStart(2, '0')}</span>
               <span><strong>{step}</strong><small>{index < active ? 'Aprovado' : index === active ? 'Em andamento' : 'Aguardando'}</small></span>
-              {index === active && <button className="mini-button">Abrir etapa</button>}
+              {index === active && <button className="mini-button" onClick={() => setEditorOpen(true)}>Abrir etapa</button>}
               {index < active && <button className="reopen-button" onClick={() => reopen(index)}><RotateCcw size={14}/> Reabrir</button>}
             </li>
           ))}
@@ -76,6 +78,23 @@ function ProjectView({ project, onBack }) {
       <section className="history-card" aria-labelledby="history-title"><div className="section-title"><h2 id="history-title"><History size={20}/> Histórico</h2><span>{events.length} eventos</span></div><ul>{events.map(event => <li key={event.id}><span>{event.text}</span><small>{event.time}</small></li>)}</ul></section>
     </main>
   );
+}
+
+function CreativeEditor({ project, onBack }) {
+  const [tab, setTab] = useState('script');
+  const [saved, setSaved] = useState('Salvo agora');
+  const [script, setScript] = useState({ hook: 'Todo herói falha. Mas algumas quedas revelam mais sobre coragem do que qualquer vitória.', development: 'A falha não encerra a jornada: ela expõe o conflito, cobra uma escolha e dá peso à transformação.', payoff: 'No fim, o que define o herói não é evitar a queda — é o que ele faz depois dela.', visual: 'Abrir com silhueta em queda; cortar para três escolhas decisivas; tipografia acompanha apenas as palavras-chave.' });
+  const [meta, setMeta] = useState({ titleA: 'Por que todo herói precisa falhar', titleB: 'A queda que transforma um herói', description: 'Uma análise sobre falha, escolha e transformação nas grandes histórias.', tags: 'heróis, narrativa, quadrinhos, cinema', seo: 'Tese e promessa alinhadas. Confirmar nomes e fontes antes da aprovação.' });
+  const change = (setter, key, value) => { setter(previous => ({ ...previous, [key]: value })); setSaved('Salvando…'); window.setTimeout(() => setSaved('Salvo agora'), 250); };
+  return <main id="main" className="creative-editor"><header className="editor-top"><button className="text-button" onClick={onBack}><ArrowLeft size={16}/> Workflow</button><div><span className="eyebrow">{project.title}</span><h1>Roteiro e embalagem</h1></div><span className="save-state" role="status"><Save size={15}/>{saved}</span></header><div className="editor-tabs" role="tablist"><button role="tab" aria-selected={tab === 'script'} onClick={() => setTab('script')}><FileText size={17}/> Roteiro</button><button role="tab" aria-selected={tab === 'package'} onClick={() => setTab('package')}><Tag size={17}/> Títulos e thumbnails</button></div>{tab === 'script' ? <section className="editor-layout"><div className="script-page"><div className="page-meta"><span>Versão 3</span><span>Roteiro {project.type === 'Short' ? 'Short' : 'longo'}</span></div><h2>{project.title}</h2><ScriptField label={project.type === 'Short' ? 'Abertura · hook imediato' : 'Abertura · gancho e entrega'} value={script.hook} onChange={value => change(setScript, 'hook', value)}/><ScriptField label="Desenvolvimento · argumento e contraste" value={script.development} onChange={value => change(setScript, 'development', value)}/><ScriptField label="Payoff · síntese e CTA contextual" value={script.payoff} onChange={value => change(setScript, 'payoff', value)}/><ScriptField label="Direção visual · não narrar" visual value={script.visual} onChange={value => change(setScript, 'visual', value)}/></div><aside className="editor-aside"><span className="eyebrow">Estrutura</span><ol><li className="ready"><Check/>Brief e tese</li><li className="active">Roteiro narrado</li><li>Fontes e direitos</li><li>Revisão factual</li></ol><div className="version-box"><History/><span><strong>Histórico local</strong><small>3 versões · última agora</small></span></div></aside></section> : <PackagingPanel meta={meta} onChange={(key, value) => change(setMeta, key, value)}/>}</main>;
+}
+
+function ScriptField({ label, value, onChange, visual = false }) {
+  return <label className={visual ? 'script-block visual-note' : 'script-block'}><span>{label}</span><textarea value={value} onChange={event => onChange(event.target.value)} rows={visual ? 3 : 4}/><small>{value.trim().split(/\s+/).filter(Boolean).length} palavras</small></label>;
+}
+
+function PackagingPanel({ meta, onChange }) {
+  return <section className="packaging"><div className="metadata-form"><span className="eyebrow">Duas promessas distintas</span><h2>Títulos A/B</h2><label>Título A <small>Clareza e tese</small><input value={meta.titleA} onChange={event => onChange('titleA', event.target.value)}/></label><label>Título B <small>Curiosidade ou contraste</small><input value={meta.titleB} onChange={event => onChange('titleB', event.target.value)}/></label><label>Descrição<textarea rows="5" value={meta.description} onChange={event => onChange('description', event.target.value)}/></label><label>Tags<input value={meta.tags} onChange={event => onChange('tags', event.target.value)}/></label><label>Notas de SEO<textarea rows="3" value={meta.seo} onChange={event => onChange('seo', event.target.value)}/></label></div><div className="thumb-panel"><div className="section-title"><div><span className="eyebrow">Conceitos e arquivos</span><h2>Thumbnails</h2></div><button className="button quiet"><ImagePlus size={17}/> Importar</button></div><div className="thumb-grid"><button className="thumb-concept thumb-a"><span>A</span><strong>Contradição</strong><small>Assunto dominante + queda visual</small></button><button className="thumb-concept thumb-b"><span>B</span><strong>Consequência</strong><small>Antes/depois com foco único</small></button><button className="thumb-drop"><ImagePlus/><strong>Criar ou importar</strong><small>PNG ou JPEG · 16:9</small></button></div><div className="rights-note"><strong>Estado: preliminar</strong><span>Fontes e direitos dos assets ainda precisam de revisão.</span></div></div></section>;
 }
 
 function NewProjectDialog({ onClose, onCreate }) {
