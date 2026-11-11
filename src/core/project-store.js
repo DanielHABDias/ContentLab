@@ -1,4 +1,4 @@
-import { appendFile, mkdir, open, readFile, rename, writeFile } from 'node:fs/promises';
+import { appendFile, lstat, mkdir, open, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { parseProject } from './contracts.js';
@@ -6,13 +6,31 @@ import { parseProject } from './contracts.js';
 export class ProjectStore {
   constructor(root) { this.root = path.resolve(root); }
 
-  async create(project) {
+  async create(project, event = {}) {
     const parsed = parseProject(project);
     const directory = this.#directory(parsed.id);
     try { await readFile(path.join(directory, 'project.json')); throw new Error(`Projeto já existe: ${parsed.id}`); } catch (error) { if (error.code !== 'ENOENT') throw error; }
     await mkdir(path.join(directory, 'versions'), { recursive: true });
-    await this.#commit(directory, parsed, { type: 'project.created' });
+    await this.#commit(directory, parsed, { ...event, type: 'project.created' });
     return parsed;
+  }
+
+  /**
+   * Muda ID e pasta numa operação separada: valida, renomeia a pasta e grava a
+   * nova revisão; qualquer falha devolve a pasta ao nome original.
+   */
+  async changeId(projectId, expectedRevision, nextId) {
+    const source = this.#directory(projectId);
+    const target = this.#directory(nextId);
+    if (projectId === nextId) throw new Error('O novo ID é igual ao atual');
+    const current = await this.read(projectId);
+    if (current.revision !== expectedRevision) throw new Error(`Conflito de revisão: esperado ${expectedRevision}, atual ${current.revision}`);
+    try { await lstat(target); throw new Error(`Já existe uma pasta chamada ${nextId}`); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+    const next = parseProject({ ...structuredClone(current), id: nextId, revision: current.revision + 1 });
+    await rename(source, target);
+    try { await this.#commit(target, next, { type: 'project.id_changed', from: projectId, to: nextId }); }
+    catch (error) { await rename(target, source).catch(() => {}); throw error; }
+    return next;
   }
 
   async read(projectId) {

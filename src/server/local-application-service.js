@@ -1,5 +1,8 @@
-import { mkdir } from 'node:fs/promises';
+import { lstat, mkdir, rm } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
+import { idSchema } from '../core/contracts.js';
+import { ActivityTracker, LifecycleError, SystemOpener, SystemTrash } from './project-lifecycle.js';
 import { ProjectRegistry, readProjectDirectory } from './project-registry.js';
 import { ProjectStore } from '../core/project-store.js';
 import { createWorkflow } from '../core/workflow.js';
@@ -15,7 +18,7 @@ import { promisify } from 'node:util';
 const run = promisify(execFile);
 
 export class LocalApplicationService {
-  constructor({ dataDirectory, dialog = new NativeDialog(), packages = new PackageService(), media = null, renderer = null }) {
+  constructor({ dataDirectory, dialog = new NativeDialog(), packages = new PackageService(), media = null, renderer = null, trash = new SystemTrash(), opener = new SystemOpener(), activities = new ActivityTracker() }) {
     this.dataDirectory = path.resolve(dataDirectory);
     this.projectsDirectory = path.join(this.dataDirectory, 'projects');
     this.registry = new ProjectRegistry(this.dataDirectory);
@@ -23,6 +26,9 @@ export class LocalApplicationService {
     this.packages = packages;
     this.media = media || new MediaService(path.join(this.dataDirectory, 'media'));
     this.renderer = renderer || new FfmpegRenderer(path.join(this.dataDirectory, 'render'));
+    this.trash = trash;
+    this.opener = opener;
+    this.activities = activities;
   }
 
   async health() {
@@ -93,17 +99,122 @@ export class LocalApplicationService {
 
   async runProjectAction({ path: directory, baseRevision, action }) {
     const absolute = path.resolve(directory);
+    return await this.activities.track(absolute, 'escrita', async () => {
+      const project = await readProjectDirectory(absolute);
+      if (project.revision !== baseRevision) throw new Error(`Conflito de revisão: esperado ${baseRevision}, atual ${project.revision}`);
+      const store = new ProjectStore(path.dirname(absolute));
+      const agent = new AgentService(store);
+      await agent.run({ schema: 'contentlab-operation-v1', operationId: `op_${randomUUID().replaceAll('-', '')}`, projectId: project.id, baseRevision, dryRun: false, actions: [action] });
+      return await this.registerProject(absolute);
+    });
+  }
+
+  // ---- Ciclo de vida do projeto (F13) ----
+
+  async revealProject({ path: directory }) {
+    const absolute = path.resolve(directory);
+    await readProjectDirectory(absolute);
+    await this.opener.reveal(absolute);
+    return { revealed: absolute };
+  }
+
+  /** Tira o projeto dos Recentes sem tocar na pasta. */
+  async forgetProject({ path: directory }) {
+    const result = await this.registry.remove(directory);
+    return { ...result, path: path.resolve(directory) };
+  }
+
+  /** Muda somente o título; ID e pasta são preservados. */
+  async renameProject({ path: directory, baseRevision, title }) {
+    if (!title?.trim()) throw new Error('Informe o novo título');
+    return await this.runProjectAction({ path: directory, baseRevision, action: { type: 'project.update', title: title.trim() } });
+  }
+
+  /** Muda ID e pasta numa operação separada, atômica e validada. */
+  async changeProjectId({ path: directory, baseRevision, id }) {
+    const absolute = path.resolve(directory);
+    if (!idSchema.safeParse(id).success) throw new LifecycleError('INVALID_ID', 'ID inválido: use de 3 a 64 caracteres minúsculos, números, _ ou -, começando por letra');
+    this.activities.assertIdle(absolute, 'mudar o ID');
     const project = await readProjectDirectory(absolute);
-    if (project.revision !== baseRevision) throw new Error(`Conflito de revisão: esperado ${baseRevision}, atual ${project.revision}`);
-    const store = new ProjectStore(path.dirname(absolute));
-    const agent = new AgentService(store);
-    await agent.run({ schema: 'contentlab-operation-v1', operationId: `op_${randomUUID().replaceAll('-', '')}`, projectId: project.id, baseRevision, dryRun: false, actions: [action] });
+    const parent = path.dirname(absolute);
+    const target = path.join(parent, id);
+    await this.activities.track(absolute, 'mudança de ID', async () => {
+      const next = await new ProjectStore(parent).changeId(project.id, baseRevision, id);
+      await this.registry.relocate(absolute, target, { id: next.id, title: next.title });
+    });
+    return await this.registerProject(target);
+  }
+
+  /** Nova pasta, novo ID e revisão 1; mídia continua referenciada pelo hash. */
+  async duplicateProject({ path: directory, title }) {
+    const absolute = path.resolve(directory);
+    const source = await readProjectDirectory(absolute);
+    const parent = path.dirname(absolute);
+    const nextTitle = title?.trim() || `${source.title} (cópia)`;
+    const id = await this.#availableId(parent, slug(nextTitle));
+    const copy = { ...structuredClone(source), id, title: nextTitle, revision: 1 };
+    await new ProjectStore(parent).create(copy, { duplicatedFrom: { id: source.id, path: absolute, revision: source.revision } });
+    return await this.registerProject(path.join(parent, id));
+  }
+
+  async exportProject({ path: directory, outputDirectory, format = 'contentlab', includeRenders = false }) {
+    const absolute = path.resolve(directory);
+    if (!outputDirectory) throw new Error('Escolha a pasta de destino da exportação');
+    if (!['contentlab', 'zip'].includes(format)) throw new Error('Formato de exportação inválido');
+    const project = await readProjectDirectory(absolute);
+    const target = path.resolve(outputDirectory);
+    if (target === absolute || target.startsWith(`${absolute}${path.sep}`)) throw new Error('Escolha um destino fora da pasta do projeto');
+    const extension = format === 'zip' ? 'zip' : 'contentlab';
+    const output = await availableFile(path.join(target, `${project.id}-r${project.revision}.${extension}`));
+    const include = relative => includeRenders || !(relative === 'output' || relative.startsWith('output/'));
+    return await this.activities.track(absolute, 'exportação', async () => {
+      const result = format === 'zip' ? await this.packages.exportZip(absolute, output, { include }) : await this.packages.exportContentLab(absolute, output, { include });
+      return { path: result.path, size: result.size, files: result.files, format };
+    });
+  }
+
+  listActivities({ path: directory }) { return { activities: this.activities.list(directory) }; }
+  cancelActivities({ path: directory }) { return this.activities.cancel(directory); }
+
+  /**
+   * Exclusão segura: confirmação pelo ID exato, bloqueio com operação ativa,
+   * lixeira recuperável por padrão e permanente só com backup ou dupla confirmação.
+   */
+  async deleteProject({ path: directory, confirmation, mode = 'trash', backupPath = null, permanentConfirmation = null }) {
+    const absolute = path.resolve(directory);
+    if ((await lstat(absolute)).isSymbolicLink()) throw new Error('Por segurança, links simbólicos não são excluídos; remova-o dos Recentes');
+    const project = await readProjectDirectory(absolute);
+    if ([path.resolve('/'), os.homedir(), this.dataDirectory, this.projectsDirectory].includes(absolute)) throw new Error('Caminho protegido não pode ser excluído');
+    if (confirmation !== project.id) throw new LifecycleError('CONFIRMATION_REQUIRED', `Digite exatamente “${project.id}” para confirmar`);
+    this.activities.assertIdle(absolute, 'excluir o projeto');
+    const summary = { id: project.id, title: project.title, path: absolute };
+    if (mode === 'trash') {
+      await this.activities.track(absolute, 'exclusão', () => this.trash.trash(absolute));
+      await this.registry.remove(absolute);
+      return { ...summary, deleted: true, method: 'trash', restorable: true };
+    }
+    if (mode !== 'permanent') throw new Error('Modo de exclusão inválido');
+    if (permanentConfirmation !== `EXCLUIR ${project.id}`) throw new LifecycleError('PERMANENT_CONFIRMATION_REQUIRED', `Para excluir sem lixeira, digite “EXCLUIR ${project.id}”`);
+    if (backupPath) {
+      const backup = path.resolve(backupPath);
+      if (backup.startsWith(`${absolute}${path.sep}`)) throw new Error('O backup não pode ficar dentro da pasta que será excluída');
+      if (backup.endsWith('.contentlab')) await this.packages.inspect(backup); else await this.packages.inspectZip(backup);
+    }
+    await this.activities.track(absolute, 'exclusão', () => rm(absolute, { recursive: true }));
+    await this.registry.remove(absolute);
+    return { ...summary, deleted: true, method: 'permanent', restorable: Boolean(backupPath), backupPath: backupPath ? path.resolve(backupPath) : null };
+  }
+
+  /** Restaura da lixeira para o local original e valida o projeto. */
+  async restoreProject({ path: directory }) {
+    const absolute = path.resolve(directory);
+    await this.trash.restore(absolute);
     return await this.registerProject(absolute);
   }
 
   async importMedia({ path: directory, baseRevision, source, rights = 'pending' }) {
     if (!source) throw new Error('Nenhum arquivo foi escolhido');
-    const imported = await this.media.importFile(source);
+    const imported = await this.activities.track(directory, 'importação de mídia', () => this.media.importFile(source));
     const streams = imported.metadata?.streams || [];
     const extension = path.extname(imported.path).toLowerCase();
     const kind = streams.some(stream => stream.codec_type === 'video') ? (['.png', '.jpg', '.jpeg', '.webp'].includes(extension) ? 'image' : 'video') : streams.some(stream => stream.codec_type === 'audio') ? 'audio' : 'image';
@@ -120,7 +231,7 @@ export class LocalApplicationService {
     const targetDirectory = outputDirectory ? path.resolve(outputDirectory) : path.join(path.resolve(directory), 'output');
     await mkdir(targetDirectory, { recursive: true });
     const output = path.join(targetDirectory, `${project.id}-r${project.revision}.mp4`);
-    return await this.renderer.render(project, { output });
+    return await this.activities.track(directory, 'render', signal => this.renderer.render(project, { output, signal }), { cancellable: true });
   }
 
   async #availableId(root, preferred) {
@@ -143,6 +254,16 @@ export class LocalApplicationService {
       throw error;
     }
   }
+}
+
+async function availableFile(preferred) {
+  const extension = path.extname(preferred);
+  const base = preferred.slice(0, -extension.length);
+  for (let index = 0; index < 1000; index += 1) {
+    const candidate = index ? `${base}-${index + 1}${extension}` : preferred;
+    try { await lstat(candidate); } catch (error) { if (error.code === 'ENOENT') return candidate; throw error; }
+  }
+  throw new Error('Não foi possível gerar um nome de arquivo disponível');
 }
 
 function slug(value) {

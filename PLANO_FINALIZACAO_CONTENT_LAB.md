@@ -71,15 +71,15 @@ Cada macroetapa deve gerar um commit próprio na `main`, seguido de push normal.
 
 Objetivo: o usuário deve controlar o ciclo de vida do projeto sem editar pastas manualmente.
 
-- [ ] Adicionar menu de ações por projeto: abrir, revelar pasta, renomear, duplicar, exportar, remover de Recentes e excluir.
-- [ ] “Remover de Recentes” deve alterar apenas o registro, nunca apagar a pasta.
-- [ ] “Excluir projeto” deve mostrar nome e caminho exatos, exigir confirmação explícita e usar lixeira recuperável do sistema quando disponível.
-- [ ] Se a lixeira não estiver disponível, oferecer export/backup antes de qualquer exclusão permanente e pedir nova confirmação.
-- [ ] Impedir exclusão quando houver operação de escrita/render ativa; permitir cancelar ou aguardar.
-- [ ] Renomear título sem mudar o ID por padrão. Uma mudança de pasta/ID deve ser operação separada, atômica e validada.
-- [ ] Duplicar deve gerar novo ID, revisão inicial coerente e histórico informando a origem, sem duplicar objetos de mídia endereçados por hash.
-- [ ] Exibir tamanho, última abertura, última modificação e aviso de caminho ausente nos Recentes.
-- [ ] Criar testes para cancelamento, lixeira, projeto ausente, conflito, duplicação e remoção sem exclusão.
+- [x] Adicionar menu de ações por projeto: abrir, revelar pasta, renomear, duplicar, exportar, remover de Recentes e excluir.
+- [x] “Remover de Recentes” deve alterar apenas o registro, nunca apagar a pasta.
+- [x] “Excluir projeto” deve mostrar nome e caminho exatos, exigir confirmação explícita e usar lixeira recuperável do sistema quando disponível.
+- [x] Se a lixeira não estiver disponível, oferecer export/backup antes de qualquer exclusão permanente e pedir nova confirmação.
+- [x] Impedir exclusão quando houver operação de escrita/render ativa; permitir cancelar ou aguardar.
+- [x] Renomear título sem mudar o ID por padrão. Uma mudança de pasta/ID deve ser operação separada, atômica e validada.
+- [x] Duplicar deve gerar novo ID, revisão inicial coerente e histórico informando a origem, sem duplicar objetos de mídia endereçados por hash.
+- [x] Exibir tamanho, última abertura, última modificação e aviso de caminho ausente nos Recentes.
+- [x] Criar testes para cancelamento, lixeira, projeto ausente, conflito, duplicação e remoção sem exclusão.
 
 Aceite: excluir não deixa o cartão nem o diretório ativo; remover de Recentes preserva integralmente o projeto; restaurar da lixeira recupera um projeto válido.
 
@@ -265,6 +265,17 @@ Aceite: um usuário novo conclui o fluxo sem terminal, nenhum teste crítico fal
 Não iniciar empacotamento desktop antes de estabilizar armazenamento, setup e operações destrutivas. Não baixar modelos grandes antes de implementar consentimento, checksum, retomada e espaço em disco.
 
 ## Checkpoint de retomada
+
+### F13 concluída (2026-11-11)
+
+- Concluído: menu por projeto (abrir, revelar, renomear, duplicar, exportar `.contentlab`/ZIP, remover de Recentes, excluir); Recentes com tamanho, datas e aviso de caminho ausente/inválido; exclusão com confirmação pelo ID, lixeira `gio trash`, “Desfazer” por leitura direta dos `.trashinfo` (freedesktop) e exclusão permanente com backup opcional + segunda confirmação; bloqueio por `ActivityTracker` com cancelamento de render; `ProjectStore.changeId` atômico com rollback.
+- Arquivos: `src/server/project-lifecycle.js` (lixeira, abridor, atividades, tamanho), `project-registry.js`, `local-application-service.js`, `http-server.js` (`/api/v1/projects/{forget,reveal,rename,change-id,duplicate,export,delete,restore,activities,cancel}`), `src/core/project-store.js`, `src/ui/ProjectManagement.jsx`, `App.jsx`, `styles.css`.
+- Testes: `src/server/project-lifecycle.test.js` (11, incluindo `gio trash` real isolado por `XDG_DATA_HOME`) e 7 novos em `src/ui/App.test.jsx`. QA manual no navegador com dados isolados: excluir → cartão some → Desfazer → projeto válido.
+- Decisões: `gio trash --list` usa o daemon GVfs (ignora `XDG_DATA_HOME` e escapa acentos), por isso a restauração lê `info/*.trashinfo`. O rastreador de atividades é por processo; locks entre processos ficam para F15.
+- Pendências conscientes: as operações de ciclo de vida ainda não estão na CLI/MCP (paridade em F20); “relocalizar” caminho ausente fica em F15; lixeira em Windows/macOS sem teste real (F21).
+- Próxima tarefa: F14, começando pelo catálogo único de dependências (versão, checksum, tamanho, licença, origem) compartilhado entre `npm run doctor` e o assistente.
+
+### Checkpoint anterior
 
 - Fonte: `main` sincronizada após o ciclo funcional.
 - Próxima tarefa: F13 — projetar contratos de remoção de Recentes, lixeira e exclusão segura antes de alterar a interface.

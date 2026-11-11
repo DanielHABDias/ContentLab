@@ -13,7 +13,7 @@ function project(id, title = 'Real') {
   return { schema: 'contentlab-project-v1', id, title, type: 'long', aspectRatio: '16:9', mode: 'review', revision: 1, stages: createWorkflow(), media: [], timeline: { schema: 'contentlab-timeline-v1', fps: 30, durationInFrames: 300, aspectRatio: '16:9', safeArea: { top: .05, right: .05, bottom: .08, left: .05 }, tracks: [] } };
 }
 
-test('lista somente projetos reais registrados e limpa caminhos removidos', async () => {
+test('lista projetos reais e sinaliza caminhos inválidos sem removê-los do registro', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'contentlab-registry-')); roots.push(root);
   const projects = path.join(root, 'projects');
   await new ProjectStore(projects).create(project('real_project'));
@@ -21,7 +21,9 @@ test('lista somente projetos reais registrados e limpa caminhos removidos', asyn
   await registry.open(path.join(projects, 'real_project'));
   await mkdir(path.join(root, 'missing'));
   await writeFile(path.join(root, 'data', 'recent-projects.json'), JSON.stringify({ projects: [{ path: path.join(root, 'missing'), openedAt: '2026-01-01' }, { path: path.join(projects, 'real_project'), openedAt: '2026-01-02' }] }));
-  expect(await registry.list()).toMatchObject([{ id: 'real_project', title: 'Real', path: path.join(projects, 'real_project') }]);
+  expect(await registry.list()).toMatchObject([{ id: 'missing', status: 'invalid' }, { id: 'real_project', title: 'Real', status: 'ready', path: path.join(projects, 'real_project') }]);
+  await registry.remove(path.join(root, 'missing'));
+  expect(await registry.list()).toMatchObject([{ id: 'real_project' }]);
 });
 
 test('recusa pasta sem project.json válido', async () => {

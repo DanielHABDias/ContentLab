@@ -1,9 +1,9 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
 import { App } from './App.jsx';
 import { localApi } from './local-api.js';
 
-vi.mock('./local-api.js', () => ({ localApi: { listProjects: vi.fn(), openProject: vi.fn(), createProject: vi.fn(), chooseDirectory: vi.fn(), choosePackage: vi.fn(), chooseMedia: vi.fn(), importPackage: vi.fn(), importMedia: vi.fn(), runProjectAction: vi.fn() } }));
+vi.mock('./local-api.js', () => ({ localApi: { listProjects: vi.fn(), openProject: vi.fn(), createProject: vi.fn(), chooseDirectory: vi.fn(), choosePackage: vi.fn(), chooseMedia: vi.fn(), importPackage: vi.fn(), importMedia: vi.fn(), runProjectAction: vi.fn(), forgetProject: vi.fn(), revealProject: vi.fn(), renameProject: vi.fn(), changeProjectId: vi.fn(), duplicateProject: vi.fn(), exportProject: vi.fn(), deleteProject: vi.fn(), restoreProject: vi.fn(), projectActivities: vi.fn(), cancelProjectActivities: vi.fn() } }));
 
 function realDetails(overrides = {}) {
   const ids = ['brief', 'script', 'packaging', 'media', 'narration', 'edit', 'review'];
@@ -27,4 +27,92 @@ test('configurar persiste e continuar abre a etapa real', async () => {
 
 test('aprovação usa operação persistente em vez de estado simulado', async () => {
   const details = realDetails(); localApi.listProjects.mockResolvedValue({ projects: [details.card] }); localApi.openProject.mockResolvedValue(details); localApi.runProjectAction.mockResolvedValue(realDetails({ ...details.project, revision: 2 })); render(<App/>); fireEvent.click(await screen.findByRole('button', { name: /abrir meu projeto/i })); fireEvent.click(await screen.findByRole('button', { name: /aprovar etapa/i })); await waitFor(() => expect(localApi.runProjectAction).toHaveBeenCalledWith({ path: '/tmp/meu_projeto', baseRevision: 1, action: { type: 'stage.approve', stageId: 'brief', expectedRevision: 0 } }));
+});
+
+function cardWith(overrides = {}) { return { ...realDetails().card, status: 'ready', sizeBytes: 2048, modifiedAt: '2026-11-10T10:00:00Z', openedAt: '2026-11-11T10:00:00Z', ...overrides }; }
+async function openMenu(item) { fireEvent.click(await screen.findByRole('button', { name: /ações de meu projeto/i })); fireEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', { name: item })); }
+
+test('cartão mostra tamanho e datas; remover de Recentes só chama o registro', async () => {
+  localApi.listProjects.mockResolvedValue({ projects: [cardWith()] }); localApi.forgetProject.mockResolvedValue({ removed: 1 });
+  render(<App/>); expect(await screen.findByText(/2 KB · modificado/)).toBeInTheDocument();
+  await openMenu(/remover de recentes/i);
+  await waitFor(() => expect(localApi.forgetProject).toHaveBeenCalledWith('/tmp/meu_projeto'));
+  expect(localApi.deleteProject).not.toHaveBeenCalled();
+  expect(await screen.findByText(/a pasta continua em \/tmp\/meu_projeto/i)).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /abrir meu projeto/i })).not.toBeInTheDocument();
+});
+
+test('excluir exige o ID exato, remove o cartão e permite desfazer pela lixeira', async () => {
+  const card = cardWith(); localApi.listProjects.mockResolvedValue({ projects: [card] });
+  localApi.deleteProject.mockResolvedValue({ id: 'meu_projeto', title: 'Meu projeto', path: card.path, deleted: true, method: 'trash', restorable: true });
+  localApi.restoreProject.mockResolvedValue({ ...realDetails(), card });
+  render(<App/>); await openMenu(/excluir projeto/i);
+  const dialog = screen.getByRole('alertdialog', { name: /excluir projeto/i });
+  expect(within(dialog).getByText('/tmp/meu_projeto')).toBeInTheDocument();
+  const submit = within(dialog).getByRole('button', { name: /mover para a lixeira/i });
+  expect(submit).toBeDisabled();
+  fireEvent.change(within(dialog).getByLabelText(/para confirmar/i), { target: { value: 'meu_projet' } }); expect(submit).toBeDisabled();
+  fireEvent.change(within(dialog).getByLabelText(/para confirmar/i), { target: { value: 'meu_projeto' } }); fireEvent.click(submit);
+  await waitFor(() => expect(localApi.deleteProject).toHaveBeenCalledWith({ path: '/tmp/meu_projeto', confirmation: 'meu_projeto', mode: 'trash' }));
+  expect(await screen.findByText(/movido para a lixeira/i)).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /abrir meu projeto/i })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /desfazer/i }));
+  expect(await screen.findByRole('button', { name: /abrir meu projeto/i })).toBeInTheDocument();
+  expect(localApi.restoreProject).toHaveBeenCalledWith('/tmp/meu_projeto');
+});
+
+test('exclusão com render ativo oferece cancelar e não fecha em falso sucesso', async () => {
+  localApi.listProjects.mockResolvedValue({ projects: [cardWith()] });
+  localApi.deleteProject.mockRejectedValue(Object.assign(new Error('ocupado'), { code: 'PROJECT_BUSY', details: { activities: [{ kind: 'render', cancellable: true }] } }));
+  localApi.cancelProjectActivities.mockResolvedValue({ cancelled: 1, remaining: 0 }); localApi.projectActivities.mockResolvedValue({ activities: [] });
+  render(<App/>); await openMenu(/excluir projeto/i);
+  fireEvent.change(screen.getByLabelText(/para confirmar/i), { target: { value: 'meu_projeto' } }); fireEvent.click(screen.getByRole('button', { name: /mover para a lixeira/i }));
+  expect(await screen.findByText(/operações em andamento neste projeto: render/i)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /cancelar operações/i }));
+  await waitFor(() => expect(localApi.cancelProjectActivities).toHaveBeenCalledWith('/tmp/meu_projeto'));
+  expect(await screen.findByRole('button', { name: /mover para a lixeira/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /abrir meu projeto/i })).toBeInTheDocument();
+});
+
+test('sem lixeira, exclusão permanente exige segunda confirmação', async () => {
+  localApi.listProjects.mockResolvedValue({ projects: [cardWith()] });
+  localApi.deleteProject.mockRejectedValueOnce(Object.assign(new Error('Lixeira indisponível'), { code: 'TRASH_UNAVAILABLE' })).mockResolvedValueOnce({ id: 'meu_projeto', title: 'Meu projeto', path: '/tmp/meu_projeto', deleted: true, method: 'permanent', restorable: false });
+  render(<App/>); await openMenu(/excluir projeto/i);
+  fireEvent.change(screen.getByLabelText(/para confirmar/i), { target: { value: 'meu_projeto' } }); fireEvent.click(screen.getByRole('button', { name: /mover para a lixeira/i }));
+  const permanent = await screen.findByRole('button', { name: /excluir permanentemente/i });
+  expect(screen.getByRole('button', { name: /exportar backup/i })).toBeInTheDocument();
+  expect(permanent).toBeDisabled();
+  fireEvent.change(screen.getByLabelText(/excluir permanentemente/i), { target: { value: 'EXCLUIR meu_projeto' } }); fireEvent.click(permanent);
+  await waitFor(() => expect(localApi.deleteProject).toHaveBeenLastCalledWith({ path: '/tmp/meu_projeto', confirmation: 'meu_projeto', mode: 'permanent', permanentConfirmation: 'EXCLUIR meu_projeto', backupPath: null }));
+  expect(await screen.findByText(/excluído permanentemente/i)).toBeInTheDocument();
+});
+
+test('projeto ausente não abre e só permite remover dos Recentes', async () => {
+  localApi.listProjects.mockResolvedValue({ projects: [{ id: 'meu_projeto', title: 'Meu projeto', path: '/sumiu/meu_projeto', status: 'missing', problem: 'Pasta não encontrada' }] });
+  render(<App/>); expect(await screen.findByText(/pasta não encontrada/i)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /abrir meu projeto/i })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: /ações de meu projeto/i }));
+  const menu = screen.getByRole('menu');
+  expect(within(menu).getByRole('menuitem', { name: /excluir/i })).toBeDisabled();
+  expect(within(menu).getByRole('menuitem', { name: /remover de recentes/i })).toBeEnabled();
+  fireEvent.keyDown(menu, { key: 'Escape' }); expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+});
+
+test('renomear muda só o título sem trocar o ID', async () => {
+  const card = cardWith(); localApi.listProjects.mockResolvedValue({ projects: [card] });
+  localApi.renameProject.mockResolvedValue({ ...realDetails({ title: 'Novo nome', revision: 2 }), card: { ...card, title: 'Novo nome', revision: 2 } });
+  render(<App/>); await openMenu(/renomear/i);
+  fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Novo nome' } }); fireEvent.click(screen.getByRole('button', { name: /salvar/i }));
+  await waitFor(() => expect(localApi.renameProject).toHaveBeenCalledWith({ path: '/tmp/meu_projeto', baseRevision: 1, title: 'Novo nome' }));
+  expect(localApi.changeProjectId).not.toHaveBeenCalled();
+  expect(await screen.findByRole('button', { name: /abrir novo nome/i })).toBeInTheDocument();
+});
+
+test('exportar usa a pasta escolhida e cancelar o seletor não exporta', async () => {
+  localApi.listProjects.mockResolvedValue({ projects: [cardWith()] }); localApi.exportProject.mockResolvedValue({ path: '/backups/meu_projeto-r1.zip' });
+  render(<App/>); await openMenu(/exportar zip/i);
+  await waitFor(() => expect(localApi.chooseDirectory).toHaveBeenCalled()); expect(localApi.exportProject).not.toHaveBeenCalled();
+  localApi.chooseDirectory.mockResolvedValue({ path: '/backups' }); await openMenu(/exportar zip/i);
+  expect(await screen.findByText('Exportado: /backups/meu_projeto-r1.zip')).toBeInTheDocument();
+  expect(localApi.exportProject).toHaveBeenCalledWith({ path: '/tmp/meu_projeto', outputDirectory: '/backups', format: 'zip' });
 });

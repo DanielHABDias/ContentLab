@@ -18,13 +18,22 @@ npm run dev
 
 Abra o endereço local mostrado. O comando inicia a interface e a API local juntas. Para uso sem recarga de desenvolvimento, `npm start` compila e serve o aplicativo em `http://127.0.0.1:4173`.
 
-Os dados padrão ficam em `.contentlab/`: projetos criados sem pasta escolhida ficam em `.contentlab/projects`, mídias deduplicadas em `.contentlab/media` e o registro de recentes em `.contentlab/recent-projects.json`. Defina `CONTENTLAB_DATA_DIR` para usar outra raiz. O registro de recentes guarda apenas caminhos; projetos removidos deixam de aparecer automaticamente.
+Os dados padrão ficam em `.contentlab/`: projetos criados sem pasta escolhida ficam em `.contentlab/projects`, mídias deduplicadas em `.contentlab/media` e o registro de recentes em `.contentlab/recent-projects.json`. Defina `CONTENTLAB_DATA_DIR` para usar outra raiz. O registro de recentes guarda caminho, ID e título; um caminho ausente ou inválido continua listado com aviso até ser removido dos Recentes.
 
 No Linux, os seletores nativos usam `zenity`. Se ele não estiver disponível, instale-o pelo gerenciador do sistema. Cancelar um seletor não altera o projeto. `npm run doctor` retorna JSON com dependências prontas e soluções para as ausentes. Recursos opcionais com pesos grandes não são baixados silenciosamente.
 
 ## Uso
 
 A tela inicial cria, abre, importa e retoma projetos locais reais. Não são inseridos exemplos. “Abrir projeto” espera uma pasta cujo nome corresponda ao `id` de um `project.json` válido; “Importar pacote” aceita `.contentlab` e ZIP seguro. Dentro do projeto, escolha revisão por etapa ou modo autônomo até a revisão final. Reabrir uma etapa preserva o histórico e invalida dependências posteriores.
+
+### Gerenciar projetos
+
+O menu “⋯” de cada cartão oferece abrir, revelar pasta, renomear, duplicar, exportar (`.contentlab` ou ZIP, sem renders), remover de Recentes e excluir. Cada cartão mostra tamanho, última modificação e última abertura.
+
+- **Remover de Recentes** altera só o registro; a pasta fica intacta.
+- **Renomear** muda o título sem alterar ID e pasta. Mudar pasta/ID é opção avançada separada: valida o novo ID, recusa conflitos e desfaz o rename se a gravação falhar.
+- **Duplicar** cria novo ID, revisão 1 e histórico com a origem; mídias continuam referenciadas pelo hash, sem copiar objetos.
+- **Excluir** mostra nome, ID e caminho exatos, exige digitar o ID e move a pasta para a lixeira do sistema (`gio trash`), com “Desfazer”. Sem lixeira, oferece backup e exige digitar `EXCLUIR <id>` antes da exclusão permanente. Exclusão e mudança de ID ficam bloqueadas durante escrita, exportação ou render; o render pode ser cancelado no próprio diálogo.
 
 O editor de roteiro separa fala, direção visual e fontes; packaging mantém títulos A/B, descrição, tags e thumbnails. A timeline usa camadas genéricas, keyframes, undo/redo e layouts próprios para 16:9 e 9:16. Preview e render compartilham o mesmo plano.
 
@@ -78,4 +87,5 @@ npm audit --omit=dev
 - Render interrompido: reinicie a fila; jobs que estavam executando voltam para `queued`.
 - `Servidor local indisponível`: inicie com `npm run dev` (desenvolvimento) ou `npm start` (compilado), em vez de abrir o HTML diretamente.
 - Seletor não abre: confirme que a sessão é gráfica e que `zenity` está instalado.
-- Projeto não aparece em Recentes: abra novamente a pasta; caminhos removidos são descartados do registro.
+- Projeto não aparece em Recentes: abra novamente a pasta. Cartão com “Pasta não encontrada”: a pasta foi movida ou apagada; abra-a no novo local e remova a entrada antiga.
+- “Restaurar” falhou: o item já saiu da lixeira ou existe outra pasta no local original; mova-a e tente de novo.

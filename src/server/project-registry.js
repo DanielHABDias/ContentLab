@@ -2,6 +2,7 @@ import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { parseProject } from '../core/contracts.js';
+import { directorySize } from './project-lifecycle.js';
 
 export class ProjectRegistry {
   constructor(dataDirectory) {
@@ -9,21 +10,22 @@ export class ProjectRegistry {
     this.file = path.join(this.dataDirectory, 'recent-projects.json');
   }
 
-  async list() {
+  /**
+   * Recentes são um índice de conveniência: caminhos ausentes ou inválidos
+   * continuam listados com aviso até o usuário removê-los, nunca são apagados.
+   */
+  async list({ withSize = true } = {}) {
     const entries = await this.#read();
-    const projects = [];
-    const valid = [];
-    for (const entry of entries) {
+    return await Promise.all(entries.map(async entry => {
       try {
         const project = await readProjectDirectory(entry.path);
-        projects.push(toCard(project, entry.path, entry.openedAt));
-        valid.push(entry);
-      } catch {
-        // A recent item is a convenience index, never a source of truth.
+        const modified = await stat(path.join(entry.path, 'project.json'));
+        return toCard(project, entry.path, entry.openedAt, { modifiedAt: modified.mtime.toISOString(), sizeBytes: withSize ? await directorySize(entry.path) : null });
+      } catch (error) {
+        const status = error.code === 'ENOENT' && error.path === path.resolve(entry.path) ? 'missing' : 'invalid';
+        return { id: entry.id || path.basename(entry.path), title: entry.title || path.basename(entry.path), path: entry.path, openedAt: entry.openedAt || null, status, problem: status === 'missing' ? 'Pasta não encontrada' : `Projeto inválido: ${error.message}` };
       }
-    }
-    if (valid.length !== entries.length) await this.#write(valid);
-    return projects;
+    }));
   }
 
   async open(directory) {
@@ -31,14 +33,25 @@ export class ProjectRegistry {
     const project = await readProjectDirectory(absolute);
     const entries = (await this.#read()).filter(entry => entry.path !== absolute);
     const openedAt = new Date().toISOString();
-    entries.unshift({ path: absolute, openedAt });
+    entries.unshift({ path: absolute, openedAt, id: project.id, title: project.title });
     await this.#write(entries.slice(0, 50));
-    return { project, card: toCard(project, absolute, openedAt) };
+    const modified = await stat(path.join(absolute, 'project.json'));
+    return { project, card: toCard(project, absolute, openedAt, { modifiedAt: modified.mtime.toISOString(), sizeBytes: await directorySize(absolute) }) };
   }
 
+  /** Remove somente a entrada do registro; a pasta do projeto nunca é tocada. */
   async remove(directory) {
     const absolute = path.resolve(directory);
-    await this.#write((await this.#read()).filter(entry => entry.path !== absolute));
+    const entries = await this.#read();
+    const remaining = entries.filter(entry => entry.path !== absolute);
+    await this.#write(remaining);
+    return { removed: entries.length - remaining.length };
+  }
+
+  async relocate(from, to, { id, title } = {}) {
+    const source = path.resolve(from);
+    const entries = (await this.#read()).map(entry => entry.path === source ? { ...entry, path: path.resolve(to), ...(id ? { id } : {}), ...(title ? { title } : {}) } : entry);
+    await this.#write(entries);
   }
 
   async #read() {
@@ -67,7 +80,7 @@ export async function readProjectDirectory(directory) {
   return project;
 }
 
-export function toCard(project, directory, openedAt = null) {
+export function toCard(project, directory, openedAt = null, extra = {}) {
   const active = project.stages.find(stage => ['active', 'changes_requested'].includes(stage.state)) || project.stages.at(-1);
   const approved = project.stages.filter(stage => stage.state === 'approved').length;
   return {
@@ -82,5 +95,8 @@ export function toCard(project, directory, openedAt = null) {
     mediaCount: project.media.length,
     path: directory,
     openedAt,
+    status: 'ready',
+    modifiedAt: extra.modifiedAt || null,
+    sizeBytes: extra.sizeBytes ?? null,
   };
 }

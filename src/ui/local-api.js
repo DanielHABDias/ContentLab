@@ -4,9 +4,11 @@ async function request(pathname, options = {}) {
     headers: { 'content-type': 'application/json', ...options.headers },
   });
   const value = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(value.error || `Falha local (${response.status})`);
+  if (!response.ok) throw Object.assign(new Error(value.error || `Falha local (${response.status})`), { code: value.code, details: value.details });
   return value;
 }
+
+const post = (pathname, input) => request(pathname, { method: 'POST', body: JSON.stringify(input) });
 
 export const localApi = {
   health: () => request('/health'),
@@ -21,4 +23,14 @@ export const localApi = {
   importPackage: input => request('/packages/import', { method: 'POST', body: JSON.stringify(input) }),
   importMedia: input => request('/media/import', { method: 'POST', body: JSON.stringify(input) }),
   render: input => request('/render', { method: 'POST', body: JSON.stringify(input) }),
+  forgetProject: path => post('/projects/forget', { path }),
+  revealProject: path => post('/projects/reveal', { path }),
+  renameProject: input => post('/projects/rename', input),
+  changeProjectId: input => post('/projects/change-id', input),
+  duplicateProject: input => post('/projects/duplicate', input),
+  exportProject: input => post('/projects/export', input),
+  deleteProject: input => post('/projects/delete', input),
+  restoreProject: path => post('/projects/restore', { path }),
+  projectActivities: path => post('/projects/activities', { path }),
+  cancelProjectActivities: path => post('/projects/cancel', { path }),
 };

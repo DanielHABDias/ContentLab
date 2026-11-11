@@ -23,6 +23,9 @@ export function createContentLabServer({ dataDirectory = process.env.CONTENTLAB_
       }
       if (request.method === 'POST' && url.pathname === '/api/v1/projects/create') return json(response, 201, await application.createProject(await readJson(request)));
       if (request.method === 'POST' && url.pathname === '/api/v1/projects/action') return json(response, 200, await application.runProjectAction(await readJson(request)));
+      const lifecycle = { forget: 'forgetProject', reveal: 'revealProject', rename: 'renameProject', 'change-id': 'changeProjectId', duplicate: 'duplicateProject', export: 'exportProject', delete: 'deleteProject', restore: 'restoreProject', activities: 'listActivities', cancel: 'cancelActivities' };
+      const lifecycleMatch = request.method === 'POST' && url.pathname.match(/^\/api\/v1\/projects\/([a-z-]+)$/);
+      if (lifecycleMatch && lifecycle[lifecycleMatch[1]]) return json(response, 200, await application[lifecycle[lifecycleMatch[1]]](await readJson(request)));
       if (request.method === 'POST' && url.pathname === '/api/v1/dialog/directory') return json(response, 200, await application.chooseDirectory(await readJson(request)));
       if (request.method === 'POST' && url.pathname === '/api/v1/dialog/package') return json(response, 200, await application.choosePackage(await readJson(request)));
       if (request.method === 'POST' && url.pathname === '/api/v1/dialog/media') return json(response, 200, await application.chooseMedia(await readJson(request)));
@@ -32,7 +35,8 @@ export function createContentLabServer({ dataDirectory = process.env.CONTENTLAB_
       if (url.pathname.startsWith('/api/')) return json(response, 404, { error: 'Rota local desconhecida' });
       return await serveStatic(response, staticDirectory, url.pathname);
     } catch (error) {
-      return json(response, 400, { error: error.message });
+      const status = error.code === 'PROJECT_BUSY' || /Conflito de revisão/.test(error.message) ? 409 : 400;
+      return json(response, status, { error: error.message, ...(typeof error.code === 'string' && /^[A-Z_]+$/.test(error.code) ? { code: error.code } : {}), ...(error.details ? { details: error.details } : {}) });
     }
   });
 }
