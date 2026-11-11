@@ -9,7 +9,7 @@
 4. **Trabalhar somente na branch `main` do clone local**, sem branches/PRs. Conferir branch e estado antes de agir; sincronizar com Git sem sobrescrever alterações. Commits da refatoração ficam na `main`; fazer push normal quando possível, nunca force push.
 
 ## Economia de tokens e skills obrigatórias
-Seguir **obrigatoriamente** as técnicas reais do plugin Diazverso 1.0: https://github.com/DanielHABDias/DiazVerso-Plugin (somente leitura; não modificar este repositório).
+Seguir **obrigatoriamente** as técnicas reais do plugin Diazverso (versão atual disponível no repositório): https://github.com/DanielHABDias/DiazVerso-Plugin (somente leitura; não modificar este repositório).
 
 - Ler `skills/diazverso-contexto-eficiente/SKILL.md` **uma vez por sessão/versão**. Usar seleção da skill principal por resultado e leitura incremental, sem carregar tudo.
 - Usar o **grafo/mapa de dependências** em `skills/diazverso-contexto-eficiente/references/skill-map.json` e, se disponível, `scripts/context_map.py` para seleção/índice com hashes; `references/roteamento.md` e `scripts/route_request.py` apenas se necessários.
