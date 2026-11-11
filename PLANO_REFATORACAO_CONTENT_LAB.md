@@ -203,10 +203,12 @@ Esta etapa é **obrigatória antes de projetar e implementar a nova arquitetura*
 **Checkpoint T08 (2026-11-11):** sessões de narração com takes WAV independentes, trim/delete/ordenação/montagem e tratamento FFmpeg (denoise, high-pass, compressor, loudnorm). Perfil de voz registra texto e consentimento obrigatório. Chatterbox Multilingual V3 PT-BR foi escolhido; XTTS-v2 foi descartado pela licença e o risco do upstream arquivado foi registrado. Runtime/pesos ausentes geram diagnóstico explícito. Verificações: 23 testes, incluindo áudio real, e build. Próxima: T09, timeline unificada e componentes TSX.
 
 ### T09 — Editor novo: timeline unificada e motion design TSX
-- [ ] Reconstruir timeline e JSON versionado com **camadas genéricas** (fundo é uma delas), pistas de vídeo/áudio, elementos, keyframes e transições.
-- [ ] Corrigir layout 16:9/9:16 com ancoragem, crop/fit, safe areas e layouts alternativos, sem saltos inesperados.
-- [ ] Oferecer edição visual e operações de agentes na mesma timeline; criação/importação de componentes **TSX Remotion** com pré-validação e biblioteca de efeitos reutilizáveis.
+- [x] Reconstruir timeline e JSON versionado com **camadas genéricas** (fundo é uma delas), pistas de vídeo/áudio, elementos, keyframes e transições.
+- [x] Corrigir layout 16:9/9:16 com ancoragem, crop/fit, safe areas e layouts alternativos, sem saltos inesperados.
+- [x] Oferecer edição visual e operações de agentes na mesma timeline; criação/importação de componentes **TSX Remotion** com pré-validação e biblioteca de efeitos reutilizáveis.
 - **Entrega/aceite:** editar, desfazer, revisar e reproduzir projeto complexo nos dois formatos sem divergência entre JSON, UI e agente.
+
+**Checkpoint T09 (2026-11-11):** `TimelineEngine` aplica comandos sobre o contrato compartilhado, com undo/redo, clips/camadas genéricas e keyframes. Layout normalizado resolve âncoras e variantes 16:9/9:16 de forma determinística. Registro TSX compila fonte, valida allowlist/bloqueios e salva manifesto com hash; `KineticEmphasis` inicia a biblioteca. Verificações: 27 testes e build. Próxima: T10, preview/render/jobs e validação audiovisual.
 
 ### T10 — Preview, render e confiabilidade audiovisual
 - [ ] Implementar pré-visualização fiel, motion design, transições, sincronização de narração, legendas e mixagem, integrando FFmpeg/Remotion/Hyperframes conforme decisão do T04.

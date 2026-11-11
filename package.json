@@ -28,6 +28,7 @@
     "@testing-library/jest-dom": "latest",
     "@testing-library/react": "latest",
     "jsdom": "latest",
+    "typescript": "^5.9.3",
     "vitest": "latest"
   }
 }
