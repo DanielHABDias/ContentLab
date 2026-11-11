@@ -98,6 +98,6 @@ Este plano substitui a aceitação visual usada no ciclo T01–T12 por aceitaç�
 
 ## F12 — validação final e entrega
 
-- [ ] Executar a suíte completa e uma sessão manual no navegador.
-- [ ] Conferir que o diretório Git está limpo e os commits F01–F12 estão na `main`.
-- [ ] Fazer push normal e registrar apenas limitações reais restantes.
+- [x] Executar a suíte completa e uma sessão manual no navegador.
+- [x] Conferir que o diretório Git está limpo e os commits do ciclo funcional estão na `main`.
+- [x] Fazer push normal e registrar apenas limitações reais restantes.
