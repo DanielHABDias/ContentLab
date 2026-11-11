@@ -1,0 +1,19 @@
+---
+name: contentlab-control
+description: Controlar projetos locais do Content Lab por CLI ou MCP para inspecionar, revisar e aplicar mudanças verificáveis em workflow e timeline. Use quando o pedido envolve operar um projeto Content Lab; não use para publicar em redes sociais.
+---
+
+# Controle do Content Lab
+
+Use o núcleo local; não edite `project.json` ou a timeline diretamente.
+
+1. Descubra a raiz autorizada e inspecione o projeto em formato compacto com `project.inspect`/`project_inspect`.
+2. Preserve `id` e `revision`. Prepare uma operação `contentlab-operation-v1` com `operationId` único e `baseRevision` igual à leitura atual.
+3. Execute primeiro com `dryRun: true`. Revise o diff de clips, etapas e revisão.
+4. Só aplique a mesma intenção com `dryRun: false` quando estiver no escopo autorizado. IDs repetidos são idempotentes.
+5. Aprovação exige ordem explícita do usuário e `expectedRevision` da etapa. Não converta silêncio ou uma entrega do agente em aprovação humana.
+6. Reinspecione após escrita. Em conflito de revisão, pare, leia o estado atual e recalcule; não force nem sobrescreva.
+
+Respostas devem ser compactas: IDs, revisão, mudança, estado e erro acionável. Jobs longos são acompanhados por ID, sem polling agressivo. Upload e publicação externa não fazem parte do Content Lab.
+
+Para pacotes, use a skill `contentlab-packages`.

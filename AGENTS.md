@@ -1,28 +1,18 @@
-# Content Lab — instruções obrigatórias para Codex/agentes de desenvolvimento
+# Content Lab — instruções para agentes
 
-> Este arquivo é a entrada operacional da nova versão. O legado está em `old/` e serve **somente como referência**.
+Leia o `README.md` e a documentação do módulo afetado. Trabalhe na `main` somente quando o usuário pedir explicitamente; preserve alterações locais e valide antes de commitar.
 
-## Começar e continuar
-1. Ler **`PLANO_REFATORACAO_CONTENT_LAB.md`**, inclusive seu protocolo de execução (seção 7).
-2. Identificar a primeira tarefa **T01–T12** não concluída. Executá-la, testar, atualizar o plano e fazer **um commit por tarefa macro**.
-3. Continuar automaticamente para a próxima tarefa, **sem pedir "próximo"**. Interromper apenas por bloqueio genuíno, risco de perda de dados, falta de acesso ou decisão indispensável.
-4. **Trabalhar somente na branch `main` do clone local**, sem branches/PRs. Conferir branch e estado antes de agir; sincronizar com Git sem sobrescrever alterações. Commits da refatoração ficam na `main`; fazer push normal quando possível, nunca force push.
+## Operação do produto
 
-## Economia de tokens e skills obrigatórias
-Seguir **obrigatoriamente** as técnicas reais do plugin Diazverso (versão atual disponível no repositório): https://github.com/DanielHABDias/DiazVerso-Plugin (somente leitura; não modificar este repositório).
+- Use `skills/contentlab-control/SKILL.md` para controlar projetos por CLI/MCP.
+- Use `skills/contentlab-packages/SKILL.md` para `.contentlab` e ZIP.
+- Interface, CLI e MCP devem chamar o mesmo núcleo; não edite manifestos diretamente.
+- Mantenha contratos versionados, operações idempotentes, dry-run e revisões otimistas.
+- Não implemente publicação automática nem banco de mídia social.
+- Plugin Diazverso é referência somente leitura e não faz parte deste repositório.
 
-- Ler `skills/diazverso-contexto-eficiente/SKILL.md` **uma vez por sessão/versão**. Usar seleção da skill principal por resultado e leitura incremental, sem carregar tudo.
-- Usar o **grafo/mapa de dependências** em `skills/diazverso-contexto-eficiente/references/skill-map.json` e, se disponível, `scripts/context_map.py` para seleção/índice com hashes; `references/roteamento.md` e `scripts/route_request.py` apenas se necessários.
-- Para tarefas que justifiquem, consultar `skills/context-optimization/SKILL.md` sobre consultas limitadas, resumos de observações e checkpoints. **Compactação de contexto nativa só se o host suportar**; checkpoints não controlam a memória interna do agente.
-- Reutilizar resultados válidos, ler apenas arquivos/trechos necessários, verificar versões antes de escrever, resumir saídas volumosas sem esconder erros, evitar chamadas repetidas e manter checkpoint curto para retomada.
-- Não inventar métricas ou percentuais de economia de tokens; testes e qualidade são obrigatórios.
+## Qualidade
 
-## Disciplina de implementação
-- **Primeiro frontend/UX (T01–T03)**, depois arquitetura e serviços segundo a sequência do plano.
-- Não criar dashboard nem módulos de publicação/banco de mídia antigos. Manter interfaces objetivas, sem explicações artificialmente geradas ou comentários redundantes.
-- Usar código modular, contratos versionados, testes e documentação final. Validar resultados reais antes do commit de cada tarefa.
-- A referência ao plugin Diazverso é somente leitura; skills próprias do Content Lab são entregues **no final**, como definido na T12.
-- Preservar `old/` até a validação final, sem apagar ou reaproveitar código automaticamente.
-- Não instalar serviços pagos ou depender de hospedagem para a execução local.
+Execute `npm run check`, testes proporcionais do módulo e `npm audit --omit=dev`. Para mídia/render, valide arquivos reais com FFmpeg/ffprobe. Não declare transcrição, voz ou render prontos se dependências/artefatos reais não foram verificados.
 
-As decisões de produto, definição das 12 tarefas, critérios de aceite e política de commits estão no **plano temporário**. Em caso de divergência, observar as instruções mais recentes e explícitas do usuário.
+Mensagens da interface são curtas e acionáveis. Preserve acessibilidade, layouts 16:9/9:16, histórico, consentimento de voz, direitos de mídia e extração segura de pacotes.

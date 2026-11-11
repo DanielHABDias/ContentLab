@@ -13,7 +13,9 @@
     "test:watch": "vitest",
     "check": "npm run test && npm run build",
     "contentlab": "node src/adapters/cli.js",
-    "mcp": "node src/adapters/mcp-server.js"
+    "mcp": "node src/adapters/mcp-server.js",
+    "doctor": "node scripts/bootstrap.mjs --check",
+    "prepare:local": "node scripts/bootstrap.mjs --prepare"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
