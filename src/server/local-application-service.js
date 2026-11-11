@@ -8,15 +8,21 @@ import { NativeDialog } from './native-dialog.js';
 import { AgentService } from '../core/agent-service.js';
 import { randomUUID } from 'node:crypto';
 import { MediaService } from '../media/media-service.js';
+import { FfmpegRenderer } from '../render/ffmpeg-renderer.js';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const run = promisify(execFile);
 
 export class LocalApplicationService {
-  constructor({ dataDirectory, dialog = new NativeDialog(), packages = new PackageService(), media = null }) {
+  constructor({ dataDirectory, dialog = new NativeDialog(), packages = new PackageService(), media = null, renderer = null }) {
     this.dataDirectory = path.resolve(dataDirectory);
     this.projectsDirectory = path.join(this.dataDirectory, 'projects');
     this.registry = new ProjectRegistry(this.dataDirectory);
     this.dialog = dialog;
     this.packages = packages;
     this.media = media || new MediaService(path.join(this.dataDirectory, 'media'));
+    this.renderer = renderer || new FfmpegRenderer(path.join(this.dataDirectory, 'render'));
   }
 
   async health() {
@@ -102,6 +108,19 @@ export class LocalApplicationService {
     const extension = path.extname(imported.path).toLowerCase();
     const kind = streams.some(stream => stream.codec_type === 'video') ? (['.png', '.jpg', '.jpeg', '.webp'].includes(extension) ? 'image' : 'video') : streams.some(stream => stream.codec_type === 'audio') ? 'audio' : 'image';
     return await this.runProjectAction({ path: directory, baseRevision, action: { type: 'media.add', media: { id: imported.id, kind, uri: imported.path, sha256: imported.hash, rights } } });
+  }
+
+  async diagnostics() {
+    const checks = [['ffmpeg', ['-version'], true], ['ffprobe', ['-version'], true], ['yt-dlp', ['--version'], false], ['whisper-cli', ['--help'], false], ['contentlab-chatterbox', ['--version'], false]];
+    return { capabilities: await Promise.all(checks.map(async ([command, args, required]) => { try { const { stdout, stderr } = await run(command, args, { timeout: 10_000, maxBuffer: 1024 * 1024 }); return { id: command, ready: true, required, version: `${stdout || stderr}`.split(/\r?\n/).find(Boolean) }; } catch (error) { return { id: command, ready: false, required, solution: command === 'ffmpeg' || command === 'ffprobe' ? 'Instale FFmpeg/FFprobe pelo gerenciador do sistema.' : `Instale e configure ${command} para habilitar este recurso.` }; } })) };
+  }
+
+  async renderProject({ path: directory, outputDirectory }) {
+    const project = await readProjectDirectory(directory);
+    const targetDirectory = outputDirectory ? path.resolve(outputDirectory) : path.join(path.resolve(directory), 'output');
+    await mkdir(targetDirectory, { recursive: true });
+    const output = path.join(targetDirectory, `${project.id}-r${project.revision}.mp4`);
+    return await this.renderer.render(project, { output });
   }
 
   async #availableId(root, preferred) {

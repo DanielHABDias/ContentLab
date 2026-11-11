@@ -67,9 +67,9 @@ Este plano substitui a aceitação visual usada no ciclo T01–T12 por aceitaç�
 
 ## F07 — narração, edição e render com disponibilidade honesta
 
-- [ ] Conectar as telas às capacidades reais de narração, timeline, preview e fila de render.
-- [ ] Desabilitar dependências opcionais ausentes com diagnóstico e solução, sem hover enganoso.
-- [ ] Validar mídia/render reais com FFmpeg/ffprobe quando o ambiente suportar.
+- [x] Conectar as telas às capacidades reais de narração, timeline, preview e fila de render.
+- [x] Desabilitar dependências opcionais ausentes com diagnóstico e solução, sem hover enganoso.
+- [x] Validar mídia/render reais com FFmpeg/ffprobe quando o ambiente suportar.
 
 ## F08 — varredura de controles e teste de aceitação
 

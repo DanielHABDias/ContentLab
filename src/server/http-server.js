@@ -16,6 +16,7 @@ export function createContentLabServer({ dataDirectory = process.env.CONTENTLAB_
       const url = new URL(request.url, 'http://127.0.0.1');
       if (request.method === 'GET' && url.pathname === '/api/v1/health') return json(response, 200, await application.health());
       if (request.method === 'GET' && url.pathname === '/api/v1/projects') return json(response, 200, { projects: await application.listProjects() });
+      if (request.method === 'GET' && url.pathname === '/api/v1/diagnostics') return json(response, 200, await application.diagnostics());
       if (request.method === 'POST' && url.pathname === '/api/v1/projects/open') {
         const body = await readJson(request);
         return json(response, 200, await application.registerProject(body.path));
@@ -27,6 +28,7 @@ export function createContentLabServer({ dataDirectory = process.env.CONTENTLAB_
       if (request.method === 'POST' && url.pathname === '/api/v1/dialog/media') return json(response, 200, await application.chooseMedia(await readJson(request)));
       if (request.method === 'POST' && url.pathname === '/api/v1/packages/import') return json(response, 201, await application.importPackage(await readJson(request)));
       if (request.method === 'POST' && url.pathname === '/api/v1/media/import') return json(response, 201, await application.importMedia(await readJson(request)));
+      if (request.method === 'POST' && url.pathname === '/api/v1/render') return json(response, 201, await application.renderProject(await readJson(request)));
       if (url.pathname.startsWith('/api/')) return json(response, 404, { error: 'Rota local desconhecida' });
       return await serveStatic(response, staticDirectory, url.pathname);
     } catch (error) {

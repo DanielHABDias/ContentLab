@@ -11,6 +11,7 @@ async function request(pathname, options = {}) {
 export const localApi = {
   health: () => request('/health'),
   listProjects: () => request('/projects'),
+  diagnostics: () => request('/diagnostics'),
   openProject: path => request('/projects/open', { method: 'POST', body: JSON.stringify({ path }) }),
   createProject: input => request('/projects/create', { method: 'POST', body: JSON.stringify(input) }),
   runProjectAction: input => request('/projects/action', { method: 'POST', body: JSON.stringify(input) }),
@@ -19,4 +20,5 @@ export const localApi = {
   chooseMedia: title => request('/dialog/media', { method: 'POST', body: JSON.stringify({ title }) }),
   importPackage: input => request('/packages/import', { method: 'POST', body: JSON.stringify(input) }),
   importMedia: input => request('/media/import', { method: 'POST', body: JSON.stringify(input) }),
+  render: input => request('/render', { method: 'POST', body: JSON.stringify(input) }),
 };
