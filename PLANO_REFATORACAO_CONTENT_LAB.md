@@ -64,7 +64,7 @@ Prioridades: operação sem hospedagem obrigatória, ausência de serviços pago
 - [ ] Tratar **cada vídeo como um projeto persistente independente**. Permitir vários projetos simultâneos, com tipo (longo, curto/Shorts e formatos adicionais), formato de tela, progresso, arquivos e histórico.
 - [ ] **Sem dashboard:** abrir, criar, importar e retomar vários projetos de vídeo por uma área simples de projetos locais; dentro de cada projeto, mostrar somente as etapas, progresso e aprovações úteis, sem métricas de redes sociais.
 - [ ] Fluxo-base: **brief/ideia → roteiro → título A/B + thumbnails + descrição + tags → seleção/importação de mídia → narração → edição/motion design → revisão e render → pacote final**. Permitir etapas opcionais, retomada e reordenação quando houver justificativa.
-- [ ] Editor de roteiro dentro do Content Lab com **salvamento automático**, histórico e uma estrutura alinhada às regras de roteiro do plugin Diazverso 1.0. Consultar o plugin como fonte de referência **somente de leitura**, sem duplicar cegamente instruções nem alterar aquele repositório.
+- [ ] Editor de roteiro dentro do Content Lab com **salvamento automático**, histórico e uma estrutura alinhada às regras de roteiro do plugin Diazverso. Consultar o plugin como fonte de referência **somente de leitura**, sem duplicar cegamente instruções nem alterar aquele repositório.
 - [ ] Dois títulos A/B, descrição, tags, notas de SEO e thumbnails criadas no aplicativo **ou importadas** devem pertencer ao mesmo projeto; campos relevantes serão exportados no pacote final.
 - [ ] Interface de revisão por etapa: o agente submete uma entrega; a pessoa visualiza, edita ou pede mudanças e **aprova explicitamente** antes de continuar.
 - [ ] Modo com revisões intermediárias **ou** modo autônomo, com aprovação humana somente no final. Escolha por projeto e possibilidade de alterá-la.
@@ -110,7 +110,7 @@ Esta etapa é **obrigatória antes de projetar e implementar a nova arquitetura*
 - [ ] **Remotion:** skills, documentação oficial e exemplos para composições, timeline, pré-visualização, renderização, efeitos e integração de edição programática.
 - [ ] **Hyperframes:** skills, documentação e projetos de referência; entender as funcionalidades e arquitetura reais antes de decidir se será reutilizado, substituído ou combinado com Remotion/FFmpeg.
 - [ ] **Edição e produção audiovisual moderna:** boas práticas e exemplos para montar vídeos com precisão (cortes, trilhas/faixas, legendas, sincronização, narração, efeitos, composição, prévia e exportação).
-- [ ] **Plugin Diazverso 1.0:** consultar como **referência somente de leitura**, aproveitando padrões de fluxos, qualidade, identidade, uso de agentes e economia de tokens quando pertinentes. **Não alterar o repositório do plugin nesta refatoração.**
+- [ ] **Plugin Diazverso:** consultar como **referência somente de leitura**, aproveitando padrões de fluxos, qualidade, identidade, uso de agentes e economia de tokens quando pertinentes. **Não alterar o repositório do plugin nesta refatoração.**
 
 ### Análise de vídeos e práticas modernas de motion design
 - [ ] Analisar vídeos, breakdowns, reels, showreels, tutoriais e projetos de motion design de alta qualidade, identificando **movimento, easing, keyframes, tipografia cinética, transições, composição, sincronização com áudio e ritmo narrativo**.
@@ -153,7 +153,7 @@ Esta etapa é **obrigatória antes de projetar e implementar a nova arquitetura*
 - **Entrega/aceite:** usuário abre um projeto e navega seu workflow de ponta a ponta com dados de demonstração, visualiza o estado e consegue simular aprovar, rejeitar e voltar de etapa.
 
 ### T03 — Frontend: roteiro e metadados criativos do vídeo
-- [ ] Criar editor de roteiro com formato guiado alinhado ao plugin Diazverso 1.0 (**consulta read-only**), autosave previsto, títulos A/B, descrição, tags e painel de thumbnails.
+- [ ] Criar editor de roteiro com formato guiado alinhado ao plugin Diazverso (**consulta read-only**), autosave previsto, títulos A/B, descrição, tags e painel de thumbnails.
 - [ ] Permitir thumbnail gerada/criada na aplicação ou importada de fora, sem editor rígido.
 - **Entrega/aceite:** fluxo visual completo para preparar e revisar um vídeo, sem campos desnecessários, com versão/estado de cada entrega.
 
