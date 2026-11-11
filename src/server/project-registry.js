@@ -1,13 +1,40 @@
-import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, readdir, rename, stat, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { parseProject } from '../core/contracts.js';
 import { directorySize } from './project-lifecycle.js';
 
 export class ProjectRegistry {
-  constructor(dataDirectory) {
+  constructor(dataDirectory, { scanRoots = () => [] } = {}) {
     this.dataDirectory = path.resolve(dataDirectory);
     this.file = path.join(this.dataDirectory, 'recent-projects.json');
+    this.backupsDirectory = path.join(this.dataDirectory, 'backups');
+    this.scanRoots = scanRoots;
+    this.lastRecovery = null;
+  }
+
+  /** Cópia datada do registro, para restauração manual. */
+  async backup() {
+    const entries = await this.#read();
+    await mkdir(this.backupsDirectory, { recursive: true });
+    const file = path.join(this.backupsDirectory, `recent-projects-${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
+    await writeFile(file, `${JSON.stringify({ schema: 'contentlab-recents-v1', projects: entries }, null, 2)}\n`, { mode: 0o600 });
+    return { path: file, projects: entries.length };
+  }
+
+  async listBackups() {
+    const names = (await readdir(this.backupsDirectory).catch(() => [])).filter(name => /^recent-projects-.*\.json$/.test(name)).sort().reverse();
+    return names.map(name => ({ name, path: path.join(this.backupsDirectory, name) }));
+  }
+
+  /** Restaura um backup datado; a versão atual vira backup antes. */
+  async restoreBackup(name) {
+    if (!/^recent-projects-[\w-]+\.json$/.test(name)) throw new Error('Backup inválido');
+    const value = JSON.parse(await readFile(path.join(this.backupsDirectory, name), 'utf8'));
+    if (!Array.isArray(value?.projects)) throw new Error('Backup sem lista de projetos');
+    await this.backup();
+    await this.#write(value.projects.filter(entry => typeof entry?.path === 'string'));
+    return { restored: value.projects.length };
   }
 
   /**
@@ -55,17 +82,41 @@ export class ProjectRegistry {
   }
 
   async #read() {
-    try {
-      const value = JSON.parse(await readFile(this.file, 'utf8'));
-      return Array.isArray(value?.projects) ? value.projects.filter(entry => typeof entry?.path === 'string') : [];
-    } catch (error) {
+    const parse = async file => {
+      const value = JSON.parse(await readFile(file, 'utf8'));
+      if (!Array.isArray(value?.projects)) throw new SyntaxError('lista ausente');
+      return value.projects.filter(entry => typeof entry?.path === 'string');
+    };
+    try { return await parse(this.file); }
+    catch (error) {
       if (error.code === 'ENOENT') return [];
-      throw new Error(`Registro de projetos inválido: ${error.message}`);
+      if (!(error instanceof SyntaxError)) throw error;
     }
+    // Registro corrompido: preserva o arquivo e recupera sem perder projetos.
+    const corrupted = path.join(this.dataDirectory, `recent-projects.corrupted-${Date.now()}.json`);
+    await rename(this.file, corrupted).catch(() => {});
+    let entries = null; let source = 'backup';
+    try { entries = await parse(`${this.file}.bak`); } catch { entries = null; }
+    if (!entries) { source = 'scan'; entries = await this.#scan(); }
+    await this.#write(entries, { keepBackup: false });
+    this.lastRecovery = { source, recovered: entries.length, corrupted, at: new Date().toISOString() };
+    return entries;
   }
 
-  async #write(projects) {
+  async #scan() {
+    const entries = [];
+    for (const root of await this.scanRoots()) {
+      for (const name of await readdir(root).catch(() => [])) {
+        const directory = path.join(root, name);
+        try { const project = await readProjectDirectory(directory); entries.push({ path: directory, openedAt: null, id: project.id, title: project.title }); } catch { /* não é projeto */ }
+      }
+    }
+    return entries;
+  }
+
+  async #write(projects, { keepBackup = true } = {}) {
     await mkdir(this.dataDirectory, { recursive: true });
+    if (keepBackup) await copyFile(this.file, `${this.file}.bak`).catch(error => { if (error.code !== 'ENOENT') throw error; });
     const temporary = path.join(this.dataDirectory, `.recent-${randomUUID()}.tmp`);
     await writeFile(temporary, `${JSON.stringify({ schema: 'contentlab-recents-v1', projects }, null, 2)}\n`, { mode: 0o600 });
     await rename(temporary, this.file);

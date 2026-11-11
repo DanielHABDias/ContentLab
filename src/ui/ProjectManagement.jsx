@@ -45,6 +45,7 @@ function ActionsMenu({ project, ready, onAction }) {
     ['duplicate', 'Duplicar', Copy, ready],
     ['export-contentlab', 'Exportar .contentlab', Download, ready],
     ['export-zip', 'Exportar ZIP', Download, ready],
+    ['relocate', 'Localizar pasta…', FolderSearch, !ready],
     ['forget', 'Remover de Recentes', XCircle, true],
     ['delete', 'Excluir projeto…', Trash2, ready],
   ];
@@ -68,7 +69,7 @@ function ActionsMenu({ project, ready, onAction }) {
   return <div className="card-menu">
     <button ref={trigger} className="icon-button" aria-label={`Ações de ${project.title}`} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined} onClick={() => setOpen(value => !value)}><MoreHorizontal size={18}/></button>
     {open && <div ref={menu} id={id} role="menu" aria-label={`Ações de ${project.title}`} className="menu" onKeyDown={keyDown}>
-      {items.map(([action, label, Icon, enabled]) => <button key={action} role="menuitem" className={action === 'delete' ? 'danger' : ''} disabled={!enabled} title={enabled ? '' : 'Indisponível: a pasta do projeto não foi encontrada'} onClick={() => { setOpen(false); trigger.current?.focus(); onAction(action, project); }}><Icon size={16}/> {label}</button>)}
+      {items.map(([action, label, Icon, enabled]) => <button key={action} role="menuitem" className={action === 'delete' ? 'danger' : ''} disabled={!enabled} title={enabled ? '' : action === 'relocate' ? 'A pasta do projeto está no lugar' : 'Indisponível: a pasta do projeto não foi encontrada'} onClick={() => { setOpen(false); trigger.current?.focus(); onAction(action, project); }}><Icon size={16}/> {label}</button>)}
     </div>}
   </div>;
 }

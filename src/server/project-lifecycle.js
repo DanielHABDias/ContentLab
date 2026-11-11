@@ -116,6 +116,8 @@ export class ActivityTracker {
     return { cancelled: cancelled.length, remaining: entries.length - cancelled.length };
   }
 
+  any() { return this.#active.size > 0; }
+
   assertIdle(directory, action) {
     const activities = this.list(directory);
     if (activities.length) throw new LifecycleError('PROJECT_BUSY', `Não é possível ${action} enquanto houver operação em andamento: ${activities.map(item => item.kind).join(', ')}`, { activities });

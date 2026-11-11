@@ -32,6 +32,19 @@ Os dados padrão ficam em `.contentlab/`: projetos criados sem pasta escolhida f
 
 No Linux, os seletores nativos usam `zenity`. Se ele não estiver disponível, instale-o pelo gerenciador do sistema. Cancelar um seletor não altera o projeto.
 
+## Configurações, armazenamento e recuperação
+
+Em **Configurações**: pastas de projetos, cache de mídia, cache de render, ferramentas/modelos e saída padrão de render; limites de disco; uso por categoria; limpeza; backup do registro.
+
+- Toda pasta nova passa por teste de escrita antes de ser aceita. Nada é movido automaticamente.
+- Mudar a pasta de **projetos** só afeta projetos novos; os existentes continuam onde estão.
+- Para cache de mídia, cache de render e ferramentas com conteúdo, escolha **Migrar dados** (cópia verificada por SHA-256, troca da pasta e, opcionalmente, remoção da origem; falha reverte o destino) ou **Começar vazia** (os dados antigos ficam onde estão). O ambiente Python do Chatterbox não é relocável e é reinstalado após migrar ferramentas.
+- Mídias são localizadas pelo hash: após migrar o cache, os projetos continuam funcionando sem reescrita.
+- **Limpar derivados** remove cortes, downloads temporários, cache de render e código-fonte de compilação. Mídias sem uso só são removidas por seleção explícita e são reconferidas antes (projetos ausentes impedem garantir que algo é órfão).
+- Projeto movido aparece como “Pasta não encontrada”; use **Localizar pasta…** no menu do cartão.
+- O registro de Recentes guarda uma cópia a cada alteração; se corromper, é recuperado do backup ou reconstruído varrendo a pasta de projetos, preservando o arquivo corrompido.
+- Escritas usam a trava `.contentlab.lock` por projeto, válida entre interface, CLI e MCP. Se um processo morrer no meio, a trava obsoleta é recuperada e temporários órfãos são removidos.
+
 ## Uso
 
 A tela inicial cria, abre, importa e retoma projetos locais reais. Não são inseridos exemplos. “Abrir projeto” espera uma pasta cujo nome corresponda ao `id` de um `project.json` válido; “Importar pacote” aceita `.contentlab` e ZIP seguro. Dentro do projeto, escolha revisão por etapa ou modo autônomo até a revisão final. Reabrir uma etapa preserva o histórico e invalida dependências posteriores.
@@ -95,6 +108,7 @@ npm audit --omit=dev
 - Download falhou: “Tentar novamente” retoma do ponto salvo; checksum incorreto descarta o arquivo e recomeça. Pouco espaço é avisado antes de baixar.
 - Compilação do whisper.cpp falhou: instale `git`, `cmake` e um compilador C++ (o assistente mostra o comando) e tente de novo.
 - Conflito de revisão: reinspecione o projeto e refaça o dry-run sobre a revisão atual.
+- “Projeto em uso por outro processo”: outra janela, a CLI ou o MCP está gravando; aguarde. Se o processo já terminou, a trava é recuperada automaticamente.
 - Pacote recusado: não force extração; confira manifesto, hash, caminho e se o destino já contém arquivos.
 - Render interrompido: reinicie a fila; jobs que estavam executando voltam para `queued`.
 - `Servidor local indisponível`: inicie com `npm run dev` (desenvolvimento) ou `npm start` (compilado), em vez de abrir o HTML diretamente.

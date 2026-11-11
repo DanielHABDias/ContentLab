@@ -3,7 +3,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { App } from './App.jsx';
 import { localApi } from './local-api.js';
 
-vi.mock('./local-api.js', () => ({ localApi: { listProjects: vi.fn(), openProject: vi.fn(), createProject: vi.fn(), chooseDirectory: vi.fn(), choosePackage: vi.fn(), chooseMedia: vi.fn(), importPackage: vi.fn(), importMedia: vi.fn(), runProjectAction: vi.fn(), forgetProject: vi.fn(), revealProject: vi.fn(), renameProject: vi.fn(), changeProjectId: vi.fn(), duplicateProject: vi.fn(), exportProject: vi.fn(), deleteProject: vi.fn(), restoreProject: vi.fn(), projectActivities: vi.fn(), cancelProjectActivities: vi.fn(), setupStatus: vi.fn(), setupJobs: vi.fn(), setupInstall: vi.fn(), setupPause: vi.fn(), setupResume: vi.fn(), setupCancel: vi.fn(), setupOnboarding: vi.fn() } }));
+vi.mock('./local-api.js', () => ({ localApi: { listProjects: vi.fn(), openProject: vi.fn(), createProject: vi.fn(), chooseDirectory: vi.fn(), choosePackage: vi.fn(), chooseMedia: vi.fn(), importPackage: vi.fn(), importMedia: vi.fn(), runProjectAction: vi.fn(), forgetProject: vi.fn(), revealProject: vi.fn(), renameProject: vi.fn(), changeProjectId: vi.fn(), duplicateProject: vi.fn(), exportProject: vi.fn(), deleteProject: vi.fn(), restoreProject: vi.fn(), projectActivities: vi.fn(), cancelProjectActivities: vi.fn(), setupStatus: vi.fn(), setupJobs: vi.fn(), setupInstall: vi.fn(), setupPause: vi.fn(), setupResume: vi.fn(), setupCancel: vi.fn(), setupOnboarding: vi.fn(), relocateProject: vi.fn(), getSettings: vi.fn(), validateFolder: vi.fn(), updateSettings: vi.fn(), storageUsage: vi.fn(), storageOrphans: vi.fn(), storageCleanup: vi.fn(), planMigration: vi.fn(), startMigration: vi.fn(), storageJobs: vi.fn(), cancelMigration: vi.fn(), backupRegistry: vi.fn(), registryBackups: vi.fn(), restoreRegistry: vi.fn() } }));
 
 function setupStatus(overrides = {}) {
   const items = [
@@ -223,4 +223,51 @@ test('erro DEPENDENCY_MISSING do servidor oferece instalar as dependências', as
   expect(await screen.findByText(/para renderizar, instale/i)).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /instalar dependências/i }));
   expect(await screen.findByRole('heading', { name: /prepare seu computador/i })).toBeInTheDocument();
+});
+
+function settingsFixture() {
+  const root = path => ({ path, exists: true, isDefault: true });
+  return { revision: 3, roots: { projects: root('/data/projects'), media: root('/data/media'), renderCache: root('/data/render'), tools: root('/app/.tools'), renderOutput: { path: null, exists: null } }, limits: { cacheMaxBytes: null, minFreeBytes: 2 * 1024 ** 3 }, migratable: ['media', 'renderCache', 'tools'], recoveredFrom: null, registryRecovery: null };
+}
+function mockSettings() {
+  localApi.getSettings.mockResolvedValue(settingsFixture());
+  localApi.storageUsage.mockResolvedValue({ categories: { projects: { bytes: 1024, count: 1, path: '/data/projects' }, objects: { bytes: 5 * 1024 ** 2, path: '/data/media/objects' }, cuts: { bytes: 2048, path: '/data/media/cuts' } }, derivedBytes: 2048, freeBytes: 50 * 1024 ** 3, warnings: [], unanalyzedProjects: 0 });
+  localApi.storageJobs.mockResolvedValue({ jobs: [] }); localApi.registryBackups.mockResolvedValue({ backups: [] });
+}
+
+test('mudar cache com dados abre migração assistida com plano antes de mover', async () => {
+  mockSettings(); localApi.chooseDirectory.mockResolvedValue({ path: '/disco2/cache' }); localApi.validateFolder.mockResolvedValue({ writable: true });
+  localApi.updateSettings.mockRejectedValue(Object.assign(new Error('decida'), { code: 'MIGRATION_DECISION_REQUIRED', details: { kind: 'media', usedBytes: 5000 } }));
+  localApi.planMigration.mockResolvedValue({ kind: 'media', source: '/data/media', target: '/disco2/cache', files: 12, bytes: 5 * 1024 ** 2, freeBytes: 10 * 1024 ** 3, sufficient: true, conflicts: [], notRelocatable: null });
+  localApi.startMigration.mockResolvedValue({ id: 'm1', state: 'running' });
+  render(<App/>); fireEvent.click(await screen.findByRole('button', { name: /configurações/i }));
+  expect(await screen.findByText('5 MB')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /alterar cache de mídia/i }));
+  const dialog = await screen.findByRole('dialog', { name: /mover dados/i });
+  expect(within(dialog).getByText(/12 arquivos · 5 MB/)).toBeInTheDocument();
+  expect(localApi.validateFolder).toHaveBeenCalledWith('/disco2/cache');
+  fireEvent.click(within(dialog).getByRole('button', { name: /migrar dados/i }));
+  await waitFor(() => expect(localApi.startMigration).toHaveBeenCalledWith({ kind: 'media', target: '/disco2/cache', removeSource: false }));
+});
+
+test('limpar derivados pede confirmação e não remove nada se cancelado', async () => {
+  mockSettings(); localApi.storageCleanup.mockResolvedValue({ removed: ['cortes'], bytes: 2048 });
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
+  render(<App/>); fireEvent.click(await screen.findByRole('button', { name: /configurações/i }));
+  fireEvent.click(await screen.findByRole('button', { name: /limpar derivados/i }));
+  expect(localApi.storageCleanup).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: /limpar derivados/i }));
+  await waitFor(() => expect(localApi.storageCleanup).toHaveBeenCalledWith({}));
+  expect(await screen.findByText(/liberado 2 KB/i)).toBeInTheDocument();
+  confirm.mockRestore();
+});
+
+test('projeto movido pode ser relocalizado pelo menu', async () => {
+  const missing = { id: 'meu_projeto', title: 'Meu projeto', path: '/antigo/meu_projeto', status: 'missing', problem: 'Pasta não encontrada' };
+  localApi.listProjects.mockResolvedValue({ projects: [missing] }); localApi.chooseDirectory.mockResolvedValue({ path: '/novo/meu_projeto' });
+  localApi.relocateProject.mockResolvedValue({ ...realDetails(), path: '/novo/meu_projeto', card: { ...cardWith(), path: '/novo/meu_projeto' } });
+  render(<App/>); fireEvent.click(await screen.findByRole('button', { name: /ações de meu projeto/i }));
+  fireEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', { name: /localizar pasta/i }));
+  await waitFor(() => expect(localApi.relocateProject).toHaveBeenCalledWith({ path: '/antigo/meu_projeto', newPath: '/novo/meu_projeto' }));
+  expect(await screen.findByRole('button', { name: /abrir meu projeto/i })).toBeEnabled();
 });

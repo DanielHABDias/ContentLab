@@ -59,3 +59,10 @@ CLI e MCP instanciam o mesmo `AgentService`. Respostas padrão são compactas; i
 ## Testes
 
 Contratos e comandos têm testes unitários; armazenamento, ferramentas e jobs usam integração com diretórios temporários; UI usa testes de comportamento; render inclui frames dourados nas duas proporções e inspeção de mídia com ffprobe. E2E cobre UI, CLI e MCP contra o mesmo projeto.
+
+## Armazenamento e concorrência (F13–F15)
+
+- `src/core/project-lock.js`: trava exclusiva por projeto (`O_EXCL`), reentrante no processo, usada por `ProjectStore.update/changeId`; travas de processos mortos no mesmo host são recuperadas.
+- `src/server/storage-service.js`: `settings.json` (`contentlab-settings-v1`, revisão otimista e `.bak`), validação de pastas, uso de disco, limpeza com análise de referências e migração copiar→verificar→trocar→(remover) com rollback.
+- `src/server/project-registry.js`: Recentes com `.bak`, backups datados e reconstrução por varredura.
+- `src/setup/`: catálogo de dependências, downloader verificado e instalador; `src/core/capabilities.js` mapeia etapas/recursos para dependências.

@@ -1,7 +1,8 @@
-import { appendFile, lstat, mkdir, open, readFile, rename, writeFile } from 'node:fs/promises';
+import { appendFile, lstat, mkdir, open, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { parseProject } from './contracts.js';
+import { LOCK_FILE, withProjectLock } from './project-lock.js';
 
 export class ProjectStore {
   constructor(root) { this.root = path.resolve(root); }
@@ -23,6 +24,10 @@ export class ProjectStore {
     const source = this.#directory(projectId);
     const target = this.#directory(nextId);
     if (projectId === nextId) throw new Error('O novo ID é igual ao atual');
+    return await withProjectLock(source, 'mudança de ID', () => this.#changeId(projectId, expectedRevision, nextId, source, target));
+  }
+
+  async #changeId(projectId, expectedRevision, nextId, source, target) {
     const current = await this.read(projectId);
     if (current.revision !== expectedRevision) throw new Error(`Conflito de revisão: esperado ${expectedRevision}, atual ${current.revision}`);
     try { await lstat(target); throw new Error(`Já existe uma pasta chamada ${nextId}`); } catch (error) { if (error.code !== 'ENOENT') throw error; }
@@ -30,6 +35,8 @@ export class ProjectStore {
     await rename(source, target);
     try { await this.#commit(target, next, { type: 'project.id_changed', from: projectId, to: nextId }); }
     catch (error) { await rename(target, source).catch(() => {}); throw error; }
+    // A trava viajou com a pasta renomeada; a pasta de origem não existe mais.
+    await rm(path.join(target, LOCK_FILE), { force: true });
     return next;
   }
 
@@ -39,12 +46,14 @@ export class ProjectStore {
 
   async update(projectId, expectedRevision, mutate, event) {
     const directory = this.#directory(projectId);
-    const current = await this.read(projectId);
-    if (current.revision !== expectedRevision) throw new Error(`Conflito de revisão: esperado ${expectedRevision}, atual ${current.revision}`);
-    const next = parseProject(await mutate(structuredClone(current)));
-    if (next.id !== current.id || next.revision !== current.revision + 1) throw new Error('Atualização deve preservar o ID e incrementar uma revisão');
-    await this.#commit(directory, next, event);
-    return next;
+    return await withProjectLock(directory, event?.type || 'escrita', async () => {
+      const current = await this.read(projectId);
+      if (current.revision !== expectedRevision) throw new Error(`Conflito de revisão: esperado ${expectedRevision}, atual ${current.revision}`);
+      const next = parseProject(await mutate(structuredClone(current)));
+      if (next.id !== current.id || next.revision !== current.revision + 1) throw new Error('Atualização deve preservar o ID e incrementar uma revisão');
+      await this.#commit(directory, next, event);
+      return next;
+    });
   }
 
   async history(projectId) {

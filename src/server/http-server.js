@@ -28,7 +28,11 @@ export function createContentLabServer({ dataDirectory = process.env.CONTENTLAB_
       const setupRoutes = { install: 'setupInstall', pause: 'setupPause', resume: 'setupResume', cancel: 'setupCancel', onboarding: 'setupOnboarding' };
       const setupMatch = request.method === 'POST' && url.pathname.match(/^\/api\/v1\/setup\/([a-z]+)$/);
       if (setupMatch && setupRoutes[setupMatch[1]]) return json(response, 200, await application[setupRoutes[setupMatch[1]]](await readJson(request)));
-      const lifecycle = { forget: 'forgetProject', reveal: 'revealProject', rename: 'renameProject', 'change-id': 'changeProjectId', duplicate: 'duplicateProject', export: 'exportProject', delete: 'deleteProject', restore: 'restoreProject', activities: 'listActivities', cancel: 'cancelActivities' };
+      const getRoutes = { '/api/v1/settings': 'getSettings', '/api/v1/storage/usage': 'storageUsage', '/api/v1/storage/orphans': 'storageOrphans', '/api/v1/storage/jobs': 'storageJobs', '/api/v1/registry/backups': 'listRegistryBackups' };
+      if (request.method === 'GET' && getRoutes[url.pathname]) return json(response, 200, await application[getRoutes[url.pathname]]());
+      const postRoutes = { '/api/v1/settings/validate': 'validateFolder', '/api/v1/settings/update': 'updateSettings', '/api/v1/storage/cleanup': 'storageCleanup', '/api/v1/storage/plan': 'planMigration', '/api/v1/storage/migrate': 'startMigration', '/api/v1/storage/cancel': 'cancelMigration', '/api/v1/registry/backup': 'backupRegistry', '/api/v1/registry/restore': 'restoreRegistry' };
+      if (request.method === 'POST' && postRoutes[url.pathname]) return json(response, 200, await application[postRoutes[url.pathname]](await readJson(request)));
+      const lifecycle = { relocate: 'relocateProject', forget: 'forgetProject', reveal: 'revealProject', rename: 'renameProject', 'change-id': 'changeProjectId', duplicate: 'duplicateProject', export: 'exportProject', delete: 'deleteProject', restore: 'restoreProject', activities: 'listActivities', cancel: 'cancelActivities' };
       const lifecycleMatch = request.method === 'POST' && url.pathname.match(/^\/api\/v1\/projects\/([a-z-]+)$/);
       if (lifecycleMatch && lifecycle[lifecycleMatch[1]]) return json(response, 200, await application[lifecycle[lifecycleMatch[1]]](await readJson(request)));
       if (request.method === 'POST' && url.pathname === '/api/v1/dialog/directory') return json(response, 200, await application.chooseDirectory(await readJson(request)));
@@ -40,7 +44,7 @@ export function createContentLabServer({ dataDirectory = process.env.CONTENTLAB_
       if (url.pathname.startsWith('/api/')) return json(response, 404, { error: 'Rota local desconhecida' });
       return await serveStatic(response, staticDirectory, url.pathname);
     } catch (error) {
-      const status = error.code === 'PROJECT_BUSY' || /Conflito de revisão/.test(error.message) ? 409 : 400;
+      const status = ['PROJECT_BUSY', 'PROJECT_LOCKED', 'SETTINGS_CONFLICT', 'MIGRATION_RUNNING'].includes(error.code) || /Conflito de revisão/.test(error.message) ? 409 : 400;
       return json(response, status, { error: error.message, ...(typeof error.code === 'string' && /^[A-Z_]+$/.test(error.code) ? { code: error.code } : {}), ...(error.details ? { details: error.details } : {}) });
     }
   });

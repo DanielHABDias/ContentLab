@@ -81,6 +81,23 @@ export class SetupService {
     });
   }
 
+  /**
+   * Após migrar `.tools/` para `target`: reescreve caminhos do estado e descarta
+   * instalações não relocáveis (ambiente Python), que voltam a pedir instalação.
+   */
+  async relocate(target) {
+    const state = await this.#readState();
+    const dropped = [];
+    for (const [id, entry] of Object.entries(state.items)) {
+      const item = this.catalog.find(candidate => candidate.id === id);
+      if (!item || item.kind === 'python') { delete state.items[id]; dropped.push(id); continue; }
+      if (entry.path) entry.path = path.join(target, path.relative(this.toolsDirectory, entry.path));
+    }
+    const relocated = new SetupService({ toolsDirectory: target, catalog: this.catalog, platform: this.platform, arch: this.arch, run: this.run, download: this.download, statfsImpl: this.statfs, osRelease: this.osRelease, env: this.env, repositoryRoot: this.repositoryRoot });
+    await relocated.#writeState(state);
+    return { dropped };
+  }
+
   jobs() { return [...this.#jobs.values()].map(publicJob); }
 
   pause(jobId) { const job = this.#job(jobId); if (job.state !== 'running') throw new SetupError('INVALID_STATE', 'Só é possível pausar um download em andamento'); job.controller.abort('pause'); return publicJob(job); }

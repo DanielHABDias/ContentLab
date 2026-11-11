@@ -106,14 +106,14 @@ Aceite: uma instalação limpa conduz o usuário até um estado operacional; a s
 
 Objetivo: tornar caminhos, cache e manutenção compreensíveis e seguros.
 
-- [ ] Criar tela Configurações com raiz de projetos, cache de mídia, downloads/modelos, saída de render e limites de disco.
-- [ ] Validar e testar escrita antes de aceitar uma nova pasta; não mover dados automaticamente.
-- [ ] Implementar migração assistida entre raízes com plano, espaço necessário, progresso, verificação e rollback.
-- [ ] Mostrar uso de disco por projetos, objetos, cortes, renders e modelos.
-- [ ] Limpar apenas derivados/cache por padrão; objetos usados por projetos exigem análise de referências.
-- [ ] Implementar backup/restauração do registro e recuperação de registro corrompido sem perder projetos.
-- [ ] Detectar projeto movido e permitir relocalizar a pasta.
-- [ ] Adicionar locks por projeto/processo e recuperação segura após encerramento inesperado.
+- [x] Criar tela Configurações com raiz de projetos, cache de mídia, downloads/modelos, saída de render e limites de disco.
+- [x] Validar e testar escrita antes de aceitar uma nova pasta; não mover dados automaticamente.
+- [x] Implementar migração assistida entre raízes com plano, espaço necessário, progresso, verificação e rollback.
+- [x] Mostrar uso de disco por projetos, objetos, cortes, renders e modelos.
+- [x] Limpar apenas derivados/cache por padrão; objetos usados por projetos exigem análise de referências.
+- [x] Implementar backup/restauração do registro e recuperação de registro corrompido sem perder projetos.
+- [x] Detectar projeto movido e permitir relocalizar a pasta.
+- [x] Adicionar locks por projeto/processo e recuperação segura após encerramento inesperado.
 
 Aceite: mudar configurações não perde dados; limpeza nunca apaga originais ou mídias ainda referenciadas.
 
@@ -265,6 +265,14 @@ Aceite: um usuário novo conclui o fluxo sem terminal, nenhum teste crítico fal
 Não iniciar empacotamento desktop antes de estabilizar armazenamento, setup e operações destrutivas. Não baixar modelos grandes antes de implementar consentimento, checksum, retomada e espaço em disco.
 
 ## Checkpoint de retomada
+
+### F15 concluída (2026-11-11)
+
+- Concluído: tela Configurações (`src/ui/SettingsScreen.jsx`) com raízes de projetos, cache de mídia, cache de render, ferramentas/modelos e saída de render; validação com teste de escrita; migração assistida (plano com arquivos/tamanho/espaço/conflitos, cópia verificada por SHA-256, troca de raiz, remoção opcional da origem, rollback); uso de disco por categoria e avisos de limite; limpeza de derivados e de mídias órfãs com reconferência; backup/restauração do registro e recuperação de registro corrompido (backup → varredura); “Localizar pasta…” para projeto movido; trava por projeto entre processos com recuperação após encerramento inesperado.
+- Decisões: mudar a raiz de projetos não move projetos (são pastas independentes); mídia resolvida pelo SHA-256 quando o caminho gravado some, então migrar o cache não reescreve projetos; venv do Chatterbox não é relocável (é descartado do estado e reinstalado); render e exportação não seguram a trava de arquivo para não bloquear edição longa (protegidos pelo rastreador do processo).
+- Testes: `src/core/project-lock.test.js` (4, incluindo processo filho real segurando a trava e processo morto), `src/server/storage.test.js` (10) e 3 de UI. QA visual da tela com dados isolados.
+- Pendências conscientes: confirmações da tela usam `window.confirm` (substituir por diálogo acessível em F21, junto com `window.prompt`); a análise de órfãos só conhece projetos dos Recentes e da pasta padrão; travas de outro host em pasta de rede não são recuperadas automaticamente.
+- Próxima tarefa: F16 — mídia completa: importação múltipla com progresso, URL via `yt-dlp` resolvido por `SetupService.toolPath()` + `requireFeature('media.url')`, preview e transcrição conectada.
 
 ### Ajuste pós-F14 (pedido do usuário, 2026-11-11)
 

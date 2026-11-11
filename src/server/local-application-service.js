@@ -1,7 +1,9 @@
-import { lstat, mkdir, rm } from 'node:fs/promises';
+import { lstat, mkdir, rm, stat } from 'node:fs/promises';
+import { MIGRATABLE, ROOT_KINDS, SettingsStore, StorageService, sizeOf, validateFolder } from './storage-service.js';
 import os from 'node:os';
 import path from 'node:path';
 import { idSchema } from '../core/contracts.js';
+import { LOCK_FILE, withProjectLock } from '../core/project-lock.js';
 import { FEATURES, featureBlock } from '../core/capabilities.js';
 import { SetupService } from '../setup/setup-service.js';
 import { ActivityTracker, LifecycleError, SystemOpener, SystemTrash } from './project-lifecycle.js';
@@ -19,7 +21,15 @@ export class LocalApplicationService {
   constructor({ dataDirectory, dialog = new NativeDialog(), packages = new PackageService(), media = null, renderer = null, trash = new SystemTrash(), opener = new SystemOpener(), activities = new ActivityTracker(), setup = null, toolsDirectory = null }) {
     this.dataDirectory = path.resolve(dataDirectory);
     this.projectsDirectory = path.join(this.dataDirectory, 'projects');
-    this.registry = new ProjectRegistry(this.dataDirectory);
+    this.registry = new ProjectRegistry(this.dataDirectory, { scanRoots: () => [this.projectsDirectory] });
+    this.injected = { media: Boolean(media), renderer: Boolean(renderer), setup: Boolean(setup) };
+    this.defaults = { roots: { projects: this.projectsDirectory, media: path.join(this.dataDirectory, 'media'), renderCache: path.join(this.dataDirectory, 'render'), tools: path.resolve(toolsDirectory || path.join(this.dataDirectory, 'tools')), renderOutput: null }, limits: { cacheMaxBytes: null, minFreeBytes: 2 * 1024 ** 3 } };
+    this.settingsStore = new SettingsStore(this.dataDirectory, this.defaults);
+    this.settings = { revision: 0, roots: { ...this.defaults.roots }, limits: { ...this.defaults.limits } };
+    this.storage = new StorageService({
+      context: async () => ({ roots: this.settings.roots, limits: this.settings.limits, projects: await this.registry.list(), readProject: readProjectDirectory }),
+      onMigrated: ({ kind, target }) => this.#migrated(kind, target),
+    });
     this.dialog = dialog;
     this.packages = packages;
     this.media = media || new MediaService(path.join(this.dataDirectory, 'media'));
@@ -30,18 +40,112 @@ export class LocalApplicationService {
     this.setup = setup || new SetupService({ toolsDirectory: toolsDirectory || path.join(this.dataDirectory, 'tools') });
   }
 
+  /** Carrega as configurações uma vez e aplica as raízes aos serviços. */
+  ready() { this.readyPromise ||= this.settingsStore.read().then(settings => this.#apply(settings)); return this.readyPromise; }
+
+  #apply(settings) {
+    this.settings = { revision: settings.revision, roots: settings.roots, limits: settings.limits };
+    this.settingsRecovered = settings.recoveredFrom || null;
+    this.projectsDirectory = settings.roots.projects;
+    if (!this.injected.media) this.media = new MediaService(settings.roots.media);
+    if (!this.injected.renderer) this.renderer = new FfmpegRenderer(settings.roots.renderCache);
+    if (!this.injected.setup && this.setup.toolsDirectory !== settings.roots.tools) this.setup = new SetupService({ toolsDirectory: settings.roots.tools });
+    return this.settings;
+  }
+
+  // ---- Configurações e armazenamento (F15) ----
+
+  async getSettings() {
+    await this.ready();
+    const roots = await Promise.all(ROOT_KINDS.map(async kind => {
+      const value = this.settings.roots[kind];
+      if (!value) return [kind, { path: null, exists: null }];
+      const info = await stat(value).catch(() => null);
+      return [kind, { path: value, exists: Boolean(info?.isDirectory()), isDefault: value === this.defaults.roots[kind] }];
+    }));
+    return { revision: this.settings.revision, roots: Object.fromEntries(roots), limits: this.settings.limits, defaults: this.defaults, migratable: MIGRATABLE, recoveredFrom: this.settingsRecovered, registryRecovery: this.registry.lastRecovery };
+  }
+
+  async validateFolder({ path: folder }) { return await validateFolder(folder); }
+
+  /**
+   * Muda raízes/limites com revisão otimista. Nunca move dados: se a raiz atual
+   * de um item migrável tem conteúdo, exige escolher migrar ou começar vazia.
+   */
+  async updateSettings({ baseRevision, roots = {}, limits = {}, emptyRoots = [] }) {
+    await this.ready();
+    if (baseRevision !== this.settings.revision) throw new LifecycleError('SETTINGS_CONFLICT', `Configurações mudaram em outra janela (revisão ${this.settings.revision}); recarregue`);
+    const next = { revision: this.settings.revision + 1, roots: { ...this.settings.roots }, limits: { ...this.settings.limits } };
+    for (const [kind, value] of Object.entries(roots)) {
+      if (!ROOT_KINDS.includes(kind)) throw new Error(`Raiz desconhecida: ${kind}`);
+      if (kind === 'renderOutput' && value === null) { next.roots.renderOutput = null; continue; }
+      const checked = await validateFolder(value);
+      if (checked.path === this.settings.roots[kind]) continue;
+      if (MIGRATABLE.includes(kind)) {
+        const used = await sizeOf(this.settings.roots[kind]);
+        if (used > 0 && !emptyRoots.includes(kind)) throw new LifecycleError('MIGRATION_DECISION_REQUIRED', `A pasta atual tem ${used} bytes. Migre os dados ou confirme começar com a nova pasta vazia (os dados antigos ficam onde estão).`, { kind, usedBytes: used });
+      }
+      next.roots[kind] = checked.path;
+    }
+    for (const [key, value] of Object.entries(limits)) {
+      if (!(key in this.defaults.limits)) throw new Error(`Limite desconhecido: ${key}`);
+      if (!(value === null || (Number.isInteger(value) && value >= 0))) throw new Error('Limites devem ser bytes inteiros ou vazio');
+      next.limits[key] = value;
+    }
+    this.#apply({ ...(await this.settingsStore.write(next)) });
+    return await this.getSettings();
+  }
+
+  async #migrated(kind, target) {
+    const next = { revision: this.settings.revision + 1, roots: { ...this.settings.roots, [kind]: target }, limits: this.settings.limits };
+    if (kind === 'tools') await this.setup.relocate?.(target);
+    this.#apply(await this.settingsStore.write(next));
+  }
+
+  async storageUsage() { await this.ready(); return await this.storage.usage(); }
+  async storageOrphans() { await this.ready(); return await this.storage.orphans(); }
+  async storageCleanup(input) { await this.ready(); if (this.activities.any()) throw new LifecycleError('PROJECT_BUSY', 'Aguarde terminar as operações em andamento antes de limpar'); return await this.storage.cleanup(input); }
+  async planMigration(input) { await this.ready(); return await this.storage.planMigration(input); }
+  async startMigration(input) {
+    await this.ready();
+    return await this.storage.startMigration({ ...input, busy: kind => [...(this.activities.any() ? ['operações de projeto'] : []), ...(kind === 'tools' && this.setup.jobs().some(job => ['running', 'queued'].includes(job.state)) ? ['instalações de dependências'] : [])] });
+  }
+  storageJobs() { return { jobs: this.storage.jobs() }; }
+  cancelMigration({ jobId }) { return this.storage.cancel(jobId); }
+  async backupRegistry() { return await this.registry.backup(); }
+  async listRegistryBackups() { return { backups: await this.registry.listBackups() }; }
+  async restoreRegistry({ name }) { return await this.registry.restoreBackup(name); }
+
+  /** Relocaliza um projeto movido: o novo caminho precisa conter o mesmo projeto. */
+  async relocateProject({ path: previous, newPath }) {
+    if (!newPath) throw new Error('Escolha a pasta onde o projeto está agora');
+    const project = await readProjectDirectory(newPath);
+    const entry = (await this.registry.list({ withSize: false })).find(item => item.path === path.resolve(previous));
+    if (!entry) throw new Error('Projeto não está nos Recentes');
+    if (entry.id !== project.id) throw new LifecycleError('PROJECT_MISMATCH', `A pasta escolhida contém “${project.id}”, não “${entry.id}”`);
+    await this.registry.relocate(previous, newPath, { id: project.id, title: project.title });
+    return await this.registerProject(newPath);
+  }
+
+  /** Mídia é endereçada por hash: se o caminho gravado sumiu, procura no cache atual. */
+  async resolveMediaPath(item) {
+    if (await stat(item.uri).then(() => true, () => false)) return item.uri;
+    const candidate = path.join(this.media.root, 'objects', item.sha256.slice(0, 2), `${item.sha256}${path.extname(item.uri)}`);
+    return await stat(candidate).then(() => candidate, () => null);
+  }
+
   async health() {
+    await this.ready();
     await mkdir(this.projectsDirectory, { recursive: true });
     return { status: 'ready', api: 'contentlab-local-v1', dataDirectory: this.dataDirectory };
   }
 
-  async listProjects() { return await this.registry.list(); }
+  async listProjects() { await this.ready(); return await this.registry.list(); }
 
   async inspectProject(directory) {
     const project = await readProjectDirectory(directory);
     const history = await this.#history(directory);
-    const { stat } = await import('node:fs/promises');
-    const mediaStatus = await Promise.all(project.media.map(async item => { try { await stat(item.uri); return { id: item.id, available: true }; } catch { return { id: item.id, available: false }; } }));
+    const mediaStatus = await Promise.all(project.media.map(async item => { const resolved = await this.resolveMediaPath(item); return { id: item.id, available: Boolean(resolved), ...(resolved && resolved !== item.uri ? { resolvedPath: resolved } : {}) }; }));
     return { project, history, mediaStatus, path: path.resolve(directory) };
   }
 
@@ -57,6 +161,7 @@ export class LocalApplicationService {
 
   async createProject({ title, type, aspectRatio, mode = 'review', parentDirectory }) {
     if (!title?.trim()) throw new Error('Informe o título do projeto');
+    await this.ready();
     const id = await this.#availableId(parentDirectory || this.projectsDirectory, slug(title));
     const root = path.resolve(parentDirectory || this.projectsDirectory);
     const project = {
@@ -74,6 +179,7 @@ export class LocalApplicationService {
 
   async importPackage({ packagePath, parentDirectory }) {
     if (!packagePath) throw new Error('Nenhum pacote foi escolhido');
+    await this.ready();
     const root = path.resolve(parentDirectory || this.projectsDirectory);
     const extension = path.extname(packagePath).toLowerCase();
     const inspection = extension === '.contentlab' ? await this.packages.inspect(packagePath) : await this.packages.inspectZip(packagePath);
@@ -165,7 +271,7 @@ export class LocalApplicationService {
     if (target === absolute || target.startsWith(`${absolute}${path.sep}`)) throw new Error('Escolha um destino fora da pasta do projeto');
     const extension = format === 'zip' ? 'zip' : 'contentlab';
     const output = await availableFile(path.join(target, `${project.id}-r${project.revision}.${extension}`));
-    const include = relative => includeRenders || !(relative === 'output' || relative.startsWith('output/'));
+    const include = relative => relative !== LOCK_FILE && (includeRenders || !(relative === 'output' || relative.startsWith('output/')));
     return await this.activities.track(absolute, 'exportação', async () => {
       const result = format === 'zip' ? await this.packages.exportZip(absolute, output, { include }) : await this.packages.exportContentLab(absolute, output, { include });
       return { path: result.path, size: result.size, files: result.files, format };
@@ -188,7 +294,9 @@ export class LocalApplicationService {
     this.activities.assertIdle(absolute, 'excluir o projeto');
     const summary = { id: project.id, title: project.title, path: absolute };
     if (mode === 'trash') {
-      await this.activities.track(absolute, 'exclusão', () => this.trash.trash(absolute));
+      // A trava confirma que nenhum outro processo (CLI/MCP) está gravando; é
+      // removida antes de mover para a lixeira para não voltar junto na restauração.
+      await this.activities.track(absolute, 'exclusão', () => withProjectLock(absolute, 'exclusão', async () => { await rm(path.join(absolute, LOCK_FILE), { force: true }); await this.trash.trash(absolute); }));
       await this.registry.remove(absolute);
       return { ...summary, deleted: true, method: 'trash', restorable: true };
     }
@@ -199,7 +307,7 @@ export class LocalApplicationService {
       if (backup.startsWith(`${absolute}${path.sep}`)) throw new Error('O backup não pode ficar dentro da pasta que será excluída');
       if (backup.endsWith('.contentlab')) await this.packages.inspect(backup); else await this.packages.inspectZip(backup);
     }
-    await this.activities.track(absolute, 'exclusão', () => rm(absolute, { recursive: true }));
+    await this.activities.track(absolute, 'exclusão', () => withProjectLock(absolute, 'exclusão', () => rm(absolute, { recursive: true })));
     await this.registry.remove(absolute);
     return { ...summary, deleted: true, method: 'permanent', restorable: Boolean(backupPath), backupPath: backupPath ? path.resolve(backupPath) : null };
   }
@@ -223,18 +331,20 @@ export class LocalApplicationService {
 
   /** Capacidades para as telas de etapa, derivadas do mesmo catálogo do setup. */
   async diagnostics() {
+    await this.ready();
     const status = await this.setup.status();
     return { capabilities: status.items.filter(item => item.id !== 'node').map(item => ({ id: item.id, label: item.label, ready: item.ready, required: item.required, ...(item.ready ? { version: item.detected } : { solution: item.installable ? 'Instale em Dependências.' : item.systemCommand ? `Instale com: ${item.systemCommand}` : item.manualSteps || item.reason || 'Indisponível.' }) })) };
   }
 
   /** Recusa a operação quando faltam dependências, indicando quais instalar. */
   async requireFeature(featureId) {
+    await this.ready();
     const missing = featureBlock(featureId, (await this.setup.status()).items);
     if (missing.length) throw new LifecycleError('DEPENDENCY_MISSING', `Para ${FEATURES[featureId].label.toLowerCase()}, instale: ${missing.map(item => item.label).join(', ')}`, { feature: featureId, missing: missing.map(item => item.id) });
   }
 
-  setupStatus() { return this.setup.status(); }
-  setupInstall(input) { return this.setup.install(input); }
+  async setupStatus() { await this.ready(); return this.setup.status(); }
+  async setupInstall(input) { await this.ready(); return this.setup.install(input); }
   setupJobs() { return { jobs: this.setup.jobs() }; }
   setupPause({ jobId }) { return this.setup.pause(jobId); }
   setupResume({ jobId }) { return this.setup.resume(jobId); }
@@ -243,8 +353,10 @@ export class LocalApplicationService {
 
   async renderProject({ path: directory, outputDirectory }) {
     await this.requireFeature('render');
-    const project = await readProjectDirectory(directory);
-    const targetDirectory = outputDirectory ? path.resolve(outputDirectory) : path.join(path.resolve(directory), 'output');
+    await this.ready();
+    const stored = await readProjectDirectory(directory);
+    const project = { ...stored, media: await Promise.all(stored.media.map(async item => ({ ...item, uri: (await this.resolveMediaPath(item)) || item.uri }))) };
+    const targetDirectory = outputDirectory ? path.resolve(outputDirectory) : this.settings.roots.renderOutput || path.join(path.resolve(directory), 'output');
     await mkdir(targetDirectory, { recursive: true });
     const output = path.join(targetDirectory, `${project.id}-r${project.revision}.mp4`);
     return await this.activities.track(directory, 'render', signal => this.renderer.render(project, { output, signal }), { cancellable: true });
