@@ -276,3 +276,9 @@ test('calibração guarda a velocidade medida e passa a ser usada na estimativa'
   await setup.recordCalibration('voxcpm2', { device: 'cpu', realtimeFactor: 26 });
   expect((await setup.voicePlan()).estimate).toEqual({ realtimeFactor: 27, source: 'medido' });
 });
+
+test('runtime de voz aponta para o shim instalado e para a pasta de pesos, não para o nome do item', () => {
+  const setup = new SetupService({ toolsDirectory: '/ferramentas', platform: 'linux', arch: 'x64' });
+  expect(setup.voiceRuntime('voxcpm2')).toEqual({ runner: '/ferramentas/bin/contentlab-voice', modelPath: '/ferramentas/models/voxcpm2' });
+  expect(() => setup.voiceRuntime('ffmpeg')).toThrow(/desconhecido/);
+});

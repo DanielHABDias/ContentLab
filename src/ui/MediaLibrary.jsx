@@ -84,11 +84,11 @@ function UrlImport({ projectPath, blocked, onOpenSetup, onStarted }) {
   </form>;
 }
 
-function JobsPanel({ jobs, uploads, onCancel }) {
+export function JobsPanel({ jobs, uploads, onCancel }) {
   if (!jobs.length && !uploads.length) return null;
   return <section className="workflow-card jobs" aria-label="Tarefas de mídia" aria-live="polite"><ul className="media-list">
     {uploads.map(item => <li key={item.id}><span><strong>{item.name}</strong><small>{item.state === 'enviando' ? `Enviando ${Math.round((100 * item.loaded) / Math.max(1, item.total))}%` : item.state}</small></span></li>)}
-    {jobs.slice(0, 8).map(job => <li key={job.id}><span><strong>{job.label}</strong><small>{job.progress.phase}{job.progress.total ? ` · ${job.progress.done}/${job.progress.total}` : ''}{job.error ? ` — ${job.error}` : ''}{job.result?.imported != null ? ` · ${job.result.imported} importado(s), ${job.result.duplicates} repetido(s), ${job.result.failed} com falha` : ''}</small>{job.state === 'running' && job.progress.total ? <span className="progress"><i style={{ width: `${Math.round((100 * job.progress.done) / job.progress.total)}%` }}/></span> : null}</span>
+    {jobs.slice(0, 8).map(job => <li key={job.id}><span><strong>{job.label}</strong><small>{job.progress.phase}{job.progress.total ? ` · ${job.progress.done}/${job.progress.total}` : ''}{job.error ? ` — ${job.error}` : ''}{job.result?.imported != null ? ` · ${job.result.imported} importado(s), ${job.result.duplicates} repetido(s), ${job.result.failed} com falha` : ''}{job.result?.generated != null ? ` · ${job.result.generated} gerada(s), ${job.result.cached} do cache` : ''}</small>{job.state === 'running' && job.progress.total ? <span className="progress"><i style={{ width: `${Math.round((100 * job.progress.done) / job.progress.total)}%` }}/></span> : null}</span>
       {job.state === 'running' ? <button className="mini-button" onClick={() => onCancel(job.id)}>Cancelar</button> : <span className={job.state === 'completed' ? 'available' : 'missing'}>{({ completed: 'Concluído', failed: 'Falhou', cancelled: 'Cancelado' })[job.state]}</span>}</li>)}
   </ul></section>;
 }

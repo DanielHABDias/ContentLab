@@ -23,6 +23,7 @@ Na primeira execução abre o assistente **Prepare seu computador** (também dis
 - Etapas e recursos que dependem de algo ausente ficam bloqueados: Mídia, Narração, Edição e Revisão exigem FFmpeg/FFprobe; URL exige yt-dlp; transcrição exige whisper.cpp e os pesos; voz clonada exige VoxCPM2 e hardware compatível. O aviso de bloqueio tem um botão que abre Dependências com os itens necessários já marcados, e o servidor recusa a operação com `DEPENDENCY_MISSING`.
 - Tudo vai para `.tools/` (ou `CONTENTLAB_TOOLS_DIR`), sem alterar Python/Node globais. Downloads usam arquivo `.partial`, podem ser pausados, retomados (HTTP Range), cancelados ou repetidos, e só são promovidos após conferir o SHA-256. O estado fica em `.tools/setup-state.json`; a segunda inicialização não baixa de novo, e uma mudança de versão/checksum no catálogo pede atualização.
 - “Agora não” é lembrado; a interface básica funciona sem voz e transcrição.
+- Narração: grave (com permissão explícita do microfone) ou importe takes, corte e reordene sem alterar originais, ouça o preview A/B do tratamento e monte um WAV 48 kHz mono medido. A voz clonada exige perfil com consentimento do titular e gera o roteiro cena a cena, reaproveitando o que não mudou.
 
 Pelo terminal: `npm run doctor` (JSON), `npm run doctor -- --text` (legível) e `npm run doctor -- --install whisper-large-v3 --accept` (sem `--accept`, apenas mostra origem, licença e tamanho).
 

@@ -127,7 +127,7 @@ function runAbortable(command, args, { signal, onStderr = () => {}, timeout = 6 
   });
 }
 
-async function sha256File(file) { const hash = createHash('sha256'); for await (const chunk of createReadStream(file)) hash.update(chunk); return hash.digest('hex'); }
+export async function sha256File(file) { const hash = createHash('sha256'); for await (const chunk of createReadStream(file)) hash.update(chunk); return hash.digest('hex'); }
 async function exists(file) { try { await stat(file); return true; } catch { return false; } }
 function safeExtension(file) { const extension = path.extname(file).toLowerCase(); return /^\.[a-z0-9]{1,8}$/.test(extension) ? extension : '.bin'; }
 function sanitize(value) { return value.normalize('NFKD').replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-|-$/g, '').slice(0, 48) || 'cut'; }

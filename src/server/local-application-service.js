@@ -7,6 +7,7 @@ import { LOCK_FILE, withProjectLock } from '../core/project-lock.js';
 import { FEATURES, featureBlock } from '../core/capabilities.js';
 import { SetupService } from '../setup/setup-service.js';
 import { MediaOperations } from './media-operations.js';
+import { NarrationOperations } from './narration-operations.js';
 import { ActivityTracker, LifecycleError, SystemOpener, SystemTrash } from './project-lifecycle.js';
 import { ProjectRegistry, readProjectDirectory } from './project-registry.js';
 import { ProjectStore } from '../core/project-store.js';
@@ -19,13 +20,14 @@ import { MediaService } from '../media/media-service.js';
 import { FfmpegRenderer } from '../render/ffmpeg-renderer.js';
 
 export class LocalApplicationService {
-  constructor({ dataDirectory, dialog = new NativeDialog(), packages = new PackageService(), media = null, renderer = null, trash = new SystemTrash(), opener = new SystemOpener(), activities = new ActivityTracker(), setup = null, toolsDirectory = null, transcriber = null }) {
+  constructor({ dataDirectory, dialog = new NativeDialog(), packages = new PackageService(), media = null, renderer = null, trash = new SystemTrash(), opener = new SystemOpener(), activities = new ActivityTracker(), setup = null, toolsDirectory = null, transcriber = null, voice = null }) {
     this.dataDirectory = path.resolve(dataDirectory);
     this.projectsDirectory = path.join(this.dataDirectory, 'projects');
     this.registry = new ProjectRegistry(this.dataDirectory, { scanRoots: () => [this.projectsDirectory] });
     this.injected = { media: Boolean(media), renderer: Boolean(renderer), setup: Boolean(setup) };
     this.defaults = { roots: { projects: this.projectsDirectory, media: path.join(this.dataDirectory, 'media'), renderCache: path.join(this.dataDirectory, 'render'), tools: path.resolve(toolsDirectory || path.join(this.dataDirectory, 'tools')), renderOutput: null }, limits: { cacheMaxBytes: null, minFreeBytes: 2 * 1024 ** 3 } };
     this.mediaOps = new MediaOperations(this, { transcriber });
+    this.narrationOps = new NarrationOperations(this, { voice });
     this.settingsStore = new SettingsStore(this.dataDirectory, this.defaults);
     this.settings = { revision: 0, roots: { ...this.defaults.roots }, limits: { ...this.defaults.limits } };
     this.storage = new StorageService({
@@ -346,6 +348,21 @@ export class LocalApplicationService {
   searchTranscripts(input) { return this.mediaOps.search(input); }
   listJobs(input) { return this.mediaOps.listJobs(input); }
   cancelJob(input) { return this.mediaOps.cancelJob(input); }
+
+  narrationState(input) { return this.narrationOps.state(input); }
+  narrationImport(input) { return this.narrationOps.importFiles(input); }
+  narrationUpload(input) { return this.narrationOps.upload(input); }
+  narrationUpdateTake(input) { return this.narrationOps.updateTake(input); }
+  narrationReorder(input) { return this.narrationOps.reorder(input); }
+  narrationDeleteTake(input) { return this.narrationOps.deleteTake(input); }
+  narrationPreview(input) { return this.narrationOps.preview(input); }
+  narrationAssemble(input) { return this.narrationOps.assemble(input); }
+  narrationFile(input) { return this.narrationOps.file(input); }
+  voiceProfileCreate(input) { return this.narrationOps.createProfile(input); }
+  voiceProfileReport(input) { return this.narrationOps.profileReport(input); }
+  voiceProfileDelete(input) { return this.narrationOps.deleteProfile(input); }
+  voiceGenerate(input) { return this.narrationOps.generate(input); }
+  voicePlan() { return this.narrationOps.voicePlan(); }
 
   /** Capacidades para as telas de etapa, derivadas do mesmo catálogo do setup. */
   async diagnostics() {

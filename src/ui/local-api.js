@@ -66,6 +66,25 @@ export const localApi = {
   searchTranscripts: input => post('/media/search', input),
   jobs: path => request(`/jobs?path=${encodeURIComponent(path)}`),
   cancelJob: jobId => post('/jobs/cancel', { jobId }),
+  narration: path => post('/narration/state', { path }),
+  narrationImport: input => post('/narration/import', input),
+  updateTake: input => post('/narration/take-update', input),
+  reorderTakes: input => post('/narration/reorder', input),
+  deleteTake: input => post('/narration/take-delete', input),
+  narrationPreview: input => post('/narration/preview', input),
+  assembleNarration: input => post('/narration/assemble', input),
+  createVoiceProfile: input => post('/narration/profile-create', input),
+  voiceProfileReport: profileId => post('/narration/profile-report', { profileId }),
+  deleteVoiceProfile: profileId => post('/narration/profile-delete', { profileId, confirm: true }),
+  generateVoice: input => post('/narration/generate', input),
+  voicePlan: () => post('/narration/voice-plan', {}),
+  /** Gravação do microfone (Blob) enviada como corpo bruto. */
+  uploadTake: async ({ path, blob, name, origin = 'recording' }) => {
+    const response = await fetch(`/api/v1/narration/upload?path=${encodeURIComponent(path)}&name=${encodeURIComponent(name)}&origin=${origin}`, { method: 'POST', body: blob, headers: { 'content-type': 'application/octet-stream' } });
+    const value = await response.json().catch(() => ({}));
+    if (!response.ok) throw Object.assign(new Error(value.error || `Falha no envio (${response.status})`), { code: value.code, details: value.details });
+    return value;
+  },
   /** Envio com progresso (arrastar e soltar): o navegador não expõe o caminho do arquivo. */
   upload: ({ path, file, rights, onProgress = () => {} }) => new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();

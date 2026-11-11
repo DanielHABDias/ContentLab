@@ -137,14 +137,14 @@ Aceite: importar, visualizar, cortar e transcrever funciona do início ao fim; n
 
 Objetivo: disponibilizar gravação, tratamento, montagem e voz consentida na interface.
 
-- [ ] Criar sessão de narração por projeto e listar takes reais.
-- [ ] Gravar pelo microfone somente após permissão explícita; permitir também importar áudio existente.
-- [ ] Cortar, renomear, reordenar, excluir e montar takes sem modificar originais.
-- [ ] Expor redução de ruído, high-pass, compressão e normalização, com preview antes de aplicar.
-- [ ] Medir duração, pico e loudness; validar WAV/48 kHz/mono nos derivados esperados.
-- [ ] Criar perfil Chatterbox apenas com titular, consentimento, data, texto lido e amostra válida.
-- [ ] Integrar geração PT-BR, watermark/metadados aplicáveis, fila, cancelamento e diagnóstico de runtime/modelo.
-- [ ] Permitir excluir perfil e todos os derivados de voz com confirmação e relatório do que será afetado.
+- [x] Criar sessão de narração por projeto e listar takes reais.
+- [x] Gravar pelo microfone somente após permissão explícita; permitir também importar áudio existente.
+- [x] Cortar, renomear, reordenar, excluir e montar takes sem modificar originais.
+- [x] Expor redução de ruído, high-pass, compressão e normalização, com preview antes de aplicar.
+- [x] Medir duração, pico e loudness; validar WAV/48 kHz/mono nos derivados esperados.
+- [x] Criar perfil VoxCPM2 apenas com titular, consentimento, data, texto lido e amostra válida.
+- [x] Integrar geração PT-BR, metadados aplicáveis (VoxCPM2 não tem marca d'água), fila, cancelamento e diagnóstico de runtime/modelo.
+- [x] Permitir excluir perfil e todos os derivados de voz com confirmação e relatório do que será afetado.
 - [ ] Realizar QA auditivo com corpus PT-BR autorizado antes de declarar qualidade de produção.
 
 Aceite: uma narração pode ser gravada/importada, tratada, montada e usada no projeto; voz sintética permanece bloqueada sem consentimento completo.
@@ -283,6 +283,14 @@ Aceite: em qualquer computador, a instalação baixa a variante certa, a geraç�
 Não iniciar empacotamento desktop antes de estabilizar armazenamento, setup e operações destrutivas. Não baixar modelos grandes antes de implementar consentimento, checksum, retomada e espaço em disco.
 
 ## Checkpoint de retomada
+
+### F17 concluída (2026-11-11)
+
+- Concluído: `src/server/narration-operations.js` + `src/audio/narration-service.js` (takes em `<projeto>/narration/` com original preservado e WAV 48 kHz mono de trabalho; corte/nome/ordem não destrutivos com revisão otimista; tratamento com silêncio, ruído, high-pass, presets do Voice Studio via rubberband/bass, compressão e loudnorm; preview A/B medido; montagem em job validada como WAV 48 kHz mono e vinculada ao catálogo; perfis globais em `<dados>/voices/` com titular, consentimento, texto lido e amostra de 3–60 s; geração VoxCPM2 por cena em fila com cache por chave SHA-256, cenas desatualizadas, cancelamento e trava entre processos; exclusão de perfil com relatório e remoção dos derivados). `SetupService.voiceRuntime()` corrige o caminho do shim/pesos. Tela `src/ui/NarrationStudio.jsx` na etapa Narração; `ConfirmDialog` acessível já usado aqui.
+- Evidência real nesta máquina: amostra do usuário (32,5 s) virou perfil; 1 cena gerada pelo VoxCPM2 real em 132 s (CPU, 9 núcleos, teto 12,4 GB); segunda execução veio do cache; montagem WAV 48 kHz mono, -17,7 LUFS, pico -1,5 dBTP. Arquivos para escuta em `.tools/qa-f17/`.
+- Testes: `narration-operations.test.js` (8, FFmpeg real e voz simulada), `narration-service.test.js` (6), setup (+1) e `NarrationStudio.test.jsx` (5). Total 140.
+- Pendências: QA auditivo com corpus PT-BR maior (a fala gerada de 36 caracteres saiu com 1,9 s; confirmar ritmo pela escuta); clipes muito curtos não atingem o alvo de loudness (gating EBU R128); a etapa Narração só abre quando está ativa no workflow; fila de jobs é em memória (persistência fica para F19); exclusão de perfil só varre projetos dos Recentes; takes não entram na análise de uso de mídia; pastas `narration/previews` e `staging` ainda entram na exportação do projeto.
+- Próxima tarefa: F18 — timeline, preview e edição visual.
 
 ### F16 concluída (2026-11-11)
 

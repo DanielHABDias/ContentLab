@@ -1,10 +1,23 @@
 # Narração, voz e áudio
 
-Cada gravação é um take WAV independente, associado a um trecho do roteiro. Takes podem ser cortados, removidos, regravados, reordenados e montados sem alterar os originais. O tratamento local usa redução de ruído opcional, high-pass, compressão leve e normalização EBU R128; o alvo padrão é -16 LUFS e o pico verdadeiro -1,5 dB.
+Tudo fica em `<projeto>/narration/` (`src/audio/narration-service.js` + `src/server/narration-operations.js`), pela mesma API usada pela interface:
+
+- **Takes**: gravação pelo microfone (só depois do clique em “Permitir microfone”; captura sem cancelamento de eco/ruído do navegador) ou importação de áudio/vídeo. Cada take guarda o original como veio (`takes/<id>/original.*`) e um WAV de trabalho PCM 48 kHz mono (`take.wav`).
+- **Montagem não destrutiva**: renomear, cortar (início/fim gravados no manifesto, aplicados com `atrim` só na montagem), reordenar e excluir. `narration.json` tem revisão otimista (`NARRATION_CONFLICT` → HTTP 409).
+- **Tratamento** (na ordem): cortar silêncio das pontas, redução de ruído (`afftdn`), high-pass 80 Hz, preset de timbre, compressão leve e loudness EBU R128 (`loudnorm`, alvo -14/-16/-19 LUFS, pico verdadeiro -1,5 dB). Presets do antigo Voice Studio: Original, Quente (-0,5 st, +3 dB graves), Suave (+0,5 st, +1 dB), Equilibrada (0 st, +1,5 dB) e Grave (-1,5 st, +4 dB); tom via `rubberband` com formantes preservados e graves via `bass` em 110 Hz.
+- **Preview A/B**: os primeiros 20 s sem e com tratamento, ambos medidos.
+- **Medição**: `measureAudio` informa duração, codec, taxa, canais, loudness integrado e pico verdadeiro (`ebur128`) e se o arquivo é WAV 48 kHz mono.
+- **Montar narração**: job com progresso e cancelamento; a saída precisa ser WAV 48 kHz mono, fica medida no manifesto e entra no catálogo do projeto como mídia de áudio (direitos: própria). Excluir um take usado marca a montagem como desatualizada.
 
 ## Perfil e consentimento
 
-Um perfil de voz guarda nome, amostra, texto efetivamente lido, titular e data do consentimento. Geração é bloqueada sem esses campos. Recomenda-se amostra limpa de 10–30 segundos, uma única pessoa, sem música/reverberação e com fala natural em português brasileiro. O perfil e a saída permanecem locais.
+Perfis ficam fora dos projetos, em `<dados>/voices/<id>/` (permissão 0700/0600), e são criados a partir de um take: o assistente pede nome, titular, o texto exato lido e a marcação explícita de consentimento. O servidor recusa sem consentimento (`CONSENT_REQUIRED`), sem texto (`REFERENCE_TEXT_REQUIRED`) ou com amostra fora de 3–60 s ou silenciosa; a data do consentimento é gravada pelo servidor. Recomenda-se amostra limpa de 10–30 s, uma pessoa, sem música/reverberação e fala natural em PT-BR.
+
+**Excluir perfil** primeiro mostra o relatório (projetos dos Recentes afetados, takes gerados, bytes e montagens que os usam) e só apaga com confirmação: remove a amostra, os takes gerados com esse perfil, a montagem que os usava e a mídia correspondente no catálogo. Projetos fora dos Recentes não são varridos.
+
+## Geração por cena
+
+O roteiro vira cenas pelos parágrafos de Abertura, Desenvolvimento e Payoff (Direção visual e Fontes não são narradas). `voice.generate` exige `voice.synthetic` (VoxCPM2 instalado), roda uma geração por vez no computador (`VOICE_BUSY`), cena a cena, com fase, estimativa pela velocidade medida e cancelamento. Cada take gerado guarda `sceneId`, `profileId` e uma chave SHA-256 de modelo + perfil + amostra + texto de referência + texto da cena: gerar de novo reaproveita as cenas iguais e só refaz as que mudaram; takes cujo texto mudou aparecem como desatualizados.
 
 ## Modelo escolhido: VoxCPM2
 

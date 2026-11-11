@@ -39,6 +39,13 @@ export class SetupService {
     return await stat(local).then(() => local, () => name);
   }
 
+  /** Executável (shim) e pasta de pesos de um runtime Python de voz instalado. */
+  voiceRuntime(id = 'voxcpm2') {
+    const item = this.catalog.find(entry => entry.id === id);
+    if (!item?.weights) throw new Error(`Runtime de voz desconhecido: ${id}`);
+    return { runner: path.join(this.toolsDirectory, item.destination), modelPath: path.join(this.toolsDirectory, item.weights.destination) };
+  }
+
   modelPath(id) {
     const item = this.catalog.find(entry => entry.id === id);
     return item?.destination ? path.join(this.toolsDirectory, item.destination) : null;

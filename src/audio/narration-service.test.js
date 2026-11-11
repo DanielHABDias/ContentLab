@@ -4,32 +4,41 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { afterEach, expect, test } from 'vitest';
 import { writeFile } from 'node:fs/promises';
-import { NarrationService, VoiceProfileStore, VoxCPMVoice } from './narration-service.js';
+import { VoiceProfileStore, VoxCPMVoice, measureAudio, normalizeTreatment, renderParts, scenesFromScript, treatmentFilters } from './narration-service.js';
 
 const roots = [];
 afterEach(async () => Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true }))));
-async function setup() { const root = await mkdtemp(path.join(os.tmpdir(), 'contentlab-audio-')); roots.push(root); const a = path.join(root, 'a.wav'); const b = path.join(root, 'b.wav'); execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'sine=frequency=220:duration=1', a]); execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'sine=frequency=330:duration=1', b]); return { root, a, b, service: new NarrationService(path.join(root, 'narration')) }; }
+async function setup() { const root = await mkdtemp(path.join(os.tmpdir(), 'contentlab-audio-')); roots.push(root); const a = path.join(root, 'a.wav'); const b = path.join(root, 'b.wav'); execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'sine=frequency=220:duration=4', a]); execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'sine=frequency=330:duration=1', b]); return { root, a, b }; }
 
-test('organiza, corta, exclui e monta takes independentes', async () => {
-  const { root, a, b, service } = await setup(); await service.createSession('project_audio');
-  const first = await service.addTake('project_audio', a, { label: 'Gancho' }); const second = await service.addTake('project_audio', b, { label: 'Corpo' });
-  await service.trimTake('project_audio', first.id, { start: 0, end: .5 });
-  const output = path.join(root, 'narration.wav'); await service.assemble('project_audio', [first.id, second.id], output);
-  expect((await stat(output)).size).toBeGreaterThan(1000);
-  await service.deleteTake('project_audio', second.id); expect((await service.read('project_audio')).takes).toHaveLength(1);
+test('monta trechos com corte não destrutivo em WAV 48 kHz mono', async () => {
+  const { root, a, b } = await setup(); const before = await readFile(a);
+  const output = await renderParts('ffmpeg', [{ file: a, start: 1, end: 2.5 }, { file: b }], path.join(root, 'out', 'montagem.wav'));
+  expect(await measureAudio({}, output)).toMatchObject({ wav48kMono: true, durationSeconds: expect.closeTo(2.5, 1) });
+  expect(await readFile(a)).toEqual(before);
 });
 
-test('tratamento gera áudio inteligível sem substituir origem', async () => {
-  const { root, a, service } = await setup(); const output = path.join(root, 'treated.wav'); const before = await readFile(a);
-  const result = await service.treat(a, output, { denoise: true, targetLufs: -16 });
-  expect(result.filters.join()).toMatch(/loudnorm/); expect(await readFile(a)).toEqual(before); expect((await stat(output)).size).toBeGreaterThan(1000);
+test('tratamento valida parâmetros e mede loudness e pico', async () => {
+  const { root, a } = await setup();
+  expect(() => normalizeTreatment({ targetLufs: -5 })).toThrow(/LUFS/);
+  expect(() => normalizeTreatment({ preset: 'robô' })).toThrow(/Preset/);
+  expect(treatmentFilters({ trimSilence: false, denoise: false, highpass: false, compress: false, normalize: false, preset: 'original' })).toEqual([]);
+  const treated = await renderParts('ffmpeg', [{ file: a }], path.join(root, 'tratado.wav'), { filters: treatmentFilters({ preset: 'deep', targetLufs: -16 }) });
+  const measures = await measureAudio({}, treated);
+  expect(measures.integratedLufs).toBeCloseTo(-16, 0);
+  expect(measures.truePeakDb).toBeLessThanOrEqual(-1);
+});
+
+test('roteiro vira cenas só com o que é narrado', () => {
+  expect(scenesFromScript({ hook: 'Oi.', development: 'A\n\nB', payoff: '  ', visual: 'Câmera', sources: 'x' }).map(scene => scene.label)).toEqual(['Abertura 1', 'Desenvolvimento 1', 'Desenvolvimento 2']);
 });
 
 test('perfil de voz exige consentimento verificável', async () => {
   const { root, a } = await setup(); const store = new VoiceProfileStore(path.join(root, 'voices'));
-  await expect(store.create({ name: 'Sem consentimento', samplePath: a, referenceText: 'Texto' })).rejects.toThrow(/consentimento/i);
-  const profile = await store.create({ name: 'Daniel', samplePath: a, referenceText: 'Texto de referência', consent: { granted: true, holder: 'Daniel', grantedAt: '2026-11-11T00:00:00Z' } });
-  expect(profile.model).toBe('voxcpm2');
+  await expect(store.create({ name: 'Sem consentimento', holder: 'Daniel', samplePath: a, referenceText: 'Texto' })).rejects.toThrow(/consentimento/i);
+  const profile = await store.create({ name: 'Daniel', holder: 'Daniel', consent: true, samplePath: a, referenceText: 'Texto de referência' });
+  expect(profile).toMatchObject({ model: 'voxcpm2', consent: { granted: true, holder: 'Daniel' } });
+  expect(await store.list()).toHaveLength(1);
+  await store.remove(profile.id); expect(await store.list()).toEqual([]);
 });
 
 const plan = (overrides = {}) => ({ status: 'ready', device: 'cpu', threads: 9, memoryLimitBytes: 12 * 1024 ** 3, memoryGuard: 'systemd', reasons: [], ...overrides });
