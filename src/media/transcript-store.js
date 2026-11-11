@@ -96,3 +96,20 @@ export function searchSegments(segments, query) {
 function round(value) { return Math.round(value * 1000) / 1000; }
 async function readJson(file) { try { return JSON.parse(await readFile(file, 'utf8')); } catch (error) { if (error.code === 'ENOENT') return null; throw error; } }
 async function atomic(file, contents) { const temporary = `${file}.${randomUUID()}.tmp`; await writeFile(temporary, contents, { mode: 0o600 }); await rename(temporary, file); }
+
+/** Lê SRT (UTF-8, com ou sem BOM) em trechos validados. */
+export function parseSrt(text) {
+  const blocks = String(text).replace(/^\uFEFF/, '').replace(/\r/g, '').split(/\n\s*\n/);
+  const segments = [];
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    const index = lines.findIndex(line => line.includes('-->'));
+    if (index < 0) continue;
+    const [from, to] = lines[index].split('-->').map(part => part.trim().split(/\s+/)[0]);
+    const start = parseTimecode(from); const end = parseTimecode(to);
+    const content = lines.slice(index + 1).join('\n').replace(/<[^>]+>/g, '').trim();
+    if (start !== null && end !== null && content) segments.push({ start, end, text: content });
+  }
+  if (!segments.length) throw new Error('SRT sem legendas válidas');
+  return validateSegments(segments.sort((a, b) => a.start - b.start));
+}

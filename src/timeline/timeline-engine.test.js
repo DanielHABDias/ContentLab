@@ -29,3 +29,9 @@ test('registro TSX compila allowlist e bloqueia acesso ao sistema', async () => 
   const manifest = await registry.register({ id: 'kinetic_title', source: "import React from 'react'; export const Title=({text}:{text:string})=><div>{text}</div>;", propsSchema: { text: 'string' } }); expect(manifest.hash).toHaveLength(64);
   await expect(registry.register({ id: 'unsafe_component', source: "import fs from 'node:fs'; export default ()=>null;" })).rejects.toThrow(/não permitido/);
 });
+
+test('enquadramento próprio vale só para a proporção indicada', async () => {
+  const { applyTimelineCommands } = await import('./timeline-engine.js');
+  const timeline = applyTimelineCommands(base, [{ op: 'clip.add', trackId: 'visual_main', clip: { id: 'layer_title', type: 'text', text: 'Oi', startFrame: 0, durationInFrames: 30 } }, { op: 'clip.update', trackId: 'visual_main', clipId: 'layer_title', patch: { layout: { '9:16': { x: .5, y: .3, width: .8, height: .2 } } } }]);
+  expect(Object.keys(timeline.tracks[0].clips[0].layout)).toEqual(['9:16']);
+});

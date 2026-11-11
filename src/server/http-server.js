@@ -33,6 +33,10 @@ export function createContentLabServer({ dataDirectory = process.env.CONTENTLAB_
       const mediaRoutes = { 'import-files': 'importMediaFiles', 'import-url': 'importMediaUrl', usage: 'mediaUsage', remove: 'removeMedia', cut: 'createMediaCut', 'cut-remove': 'removeMediaCut', transcribe: 'transcribeMedia', transcript: 'mediaTranscript', 'transcript-save': 'saveMediaTranscript', search: 'searchTranscripts' };
       const mediaMatch = request.method === 'POST' && url.pathname.match(/^\/api\/v1\/media\/([a-z-]+)$/);
       if (mediaMatch && mediaRoutes[mediaMatch[1]]) return json(response, 200, await application[mediaRoutes[mediaMatch[1]]](await readJson(request)));
+      if (request.method === 'GET' && url.pathname === '/api/v1/edit/preview') return await serveMedia(request, response, await application.editPreviewFile({ name: url.searchParams.get('name') }));
+      const editRoutes = { state: 'editState', apply: 'editTimeline', undo: 'editUndo', redo: 'editRedo', 'add-media': 'editAddMedia', captions: 'editCaptions', aspect: 'editAspect', frame: 'editFrame', clip: 'editClip' };
+      const editMatch = request.method === 'POST' && url.pathname.match(/^\/api\/v1\/edit\/([a-z-]+)$/);
+      if (editMatch && editRoutes[editMatch[1]]) return json(response, 200, await application[editRoutes[editMatch[1]]](await readJson(request)));
       if (request.method === 'GET' && url.pathname === '/api/v1/narration/file') return await serveMedia(request, response, await application.narrationFile({ path: url.searchParams.get('path'), takeId: url.searchParams.get('take') || undefined, preview: url.searchParams.get('preview') || undefined, assembled: url.searchParams.get('assembled') === '1', profileId: url.searchParams.get('profile') || undefined, original: url.searchParams.get('original') === '1' }));
       if (request.method === 'POST' && url.pathname === '/api/v1/narration/upload') return json(response, 201, await application.narrationUpload({ path: url.searchParams.get('path'), name: url.searchParams.get('name'), origin: url.searchParams.get('origin') || 'recording', size: Number(request.headers['content-length']), stream: request }));
       const narrationRoutes = { state: 'narrationState', import: 'narrationImport', 'take-update': 'narrationUpdateTake', reorder: 'narrationReorder', 'take-delete': 'narrationDeleteTake', preview: 'narrationPreview', assemble: 'narrationAssemble', 'profile-create': 'voiceProfileCreate', 'profile-report': 'voiceProfileReport', 'profile-delete': 'voiceProfileDelete', generate: 'voiceGenerate', 'voice-plan': 'voicePlan' };
@@ -55,7 +59,7 @@ export function createContentLabServer({ dataDirectory = process.env.CONTENTLAB_
       if (url.pathname.startsWith('/api/')) return json(response, 404, { error: 'Rota local desconhecida' });
       return await serveStatic(response, staticDirectory, url.pathname);
     } catch (error) {
-      const status = ['PROJECT_BUSY', 'PROJECT_LOCKED', 'SETTINGS_CONFLICT', 'MIGRATION_RUNNING', 'NARRATION_CONFLICT', 'TRANSCRIPT_CONFLICT', 'VOICE_BUSY'].includes(error.code) || /Conflito de revisão/.test(error.message) ? 409 : 400;
+      const status = ['PROJECT_BUSY', 'PROJECT_LOCKED', 'SETTINGS_CONFLICT', 'MIGRATION_RUNNING', 'NARRATION_CONFLICT', 'TRANSCRIPT_CONFLICT', 'VOICE_BUSY', 'HISTORY_STALE'].includes(error.code) || /Conflito de revisão/.test(error.message) ? 409 : 400;
       return json(response, status, { error: error.message, ...(typeof error.code === 'string' && /^[A-Z_]+$/.test(error.code) ? { code: error.code } : {}), ...(error.details ? { details: error.details } : {}) });
     }
   });

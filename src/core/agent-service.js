@@ -1,5 +1,6 @@
 import { parseOperation, parseProject } from './contracts.js';
 import { approveStage, reopenStage, requestChanges } from './workflow.js';
+import { applyTimelineCommands, validateTimeline } from '../timeline/timeline-engine.js';
 
 export class AgentService {
   constructor(store) { this.store = store; }
@@ -63,6 +64,12 @@ function applyActions(project, actions) {
         if (!(media.cuts || []).some(cut => cut.id === action.cutId)) throw new Error(`Corte desconhecido: ${action.cutId}`);
         media.cuts = media.cuts.filter(cut => cut.id !== action.cutId);
       } else media.transcript = action.transcript;
+    }
+    else if (action.type === 'timeline.edit') draft.timeline = applyTimelineCommands(draft.timeline, action.commands, { media: draft.media });
+    else if (action.type === 'timeline.replace') {
+      if (action.timeline.aspectRatio !== draft.timeline.aspectRatio) throw new Error('Desfazer não muda a proporção do projeto');
+      validateTimeline(action.timeline, draft.media);
+      draft.timeline = structuredClone(action.timeline);
     }
     else {
       const track = draft.timeline.tracks.find(candidate => candidate.id === action.trackId);

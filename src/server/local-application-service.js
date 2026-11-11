@@ -8,6 +8,7 @@ import { FEATURES, featureBlock } from '../core/capabilities.js';
 import { SetupService } from '../setup/setup-service.js';
 import { MediaOperations } from './media-operations.js';
 import { NarrationOperations } from './narration-operations.js';
+import { EditOperations } from './edit-operations.js';
 import { ActivityTracker, LifecycleError, SystemOpener, SystemTrash } from './project-lifecycle.js';
 import { ProjectRegistry, readProjectDirectory } from './project-registry.js';
 import { ProjectStore } from '../core/project-store.js';
@@ -28,6 +29,7 @@ export class LocalApplicationService {
     this.defaults = { roots: { projects: this.projectsDirectory, media: path.join(this.dataDirectory, 'media'), renderCache: path.join(this.dataDirectory, 'render'), tools: path.resolve(toolsDirectory || path.join(this.dataDirectory, 'tools')), renderOutput: null }, limits: { cacheMaxBytes: null, minFreeBytes: 2 * 1024 ** 3 } };
     this.mediaOps = new MediaOperations(this, { transcriber });
     this.narrationOps = new NarrationOperations(this, { voice });
+    this.editOps = new EditOperations(this);
     this.settingsStore = new SettingsStore(this.dataDirectory, this.defaults);
     this.settings = { revision: 0, roots: { ...this.defaults.roots }, limits: { ...this.defaults.limits } };
     this.storage = new StorageService({
@@ -206,14 +208,14 @@ export class LocalApplicationService {
     return await this.registerProject(destination);
   }
 
-  async runProjectAction({ path: directory, baseRevision, action }) {
+  async runProjectAction({ path: directory, baseRevision, action, actions }) {
     const absolute = path.resolve(directory);
     return await this.activities.track(absolute, 'escrita', async () => {
       const project = await readProjectDirectory(absolute);
       if (project.revision !== baseRevision) throw new Error(`Conflito de revisão: esperado ${baseRevision}, atual ${project.revision}`);
       const store = new ProjectStore(path.dirname(absolute));
       const agent = new AgentService(store);
-      await agent.run({ schema: 'contentlab-operation-v1', operationId: `op_${randomUUID().replaceAll('-', '')}`, projectId: project.id, baseRevision, dryRun: false, actions: [action] });
+      await agent.run({ schema: 'contentlab-operation-v1', operationId: `op_${randomUUID().replaceAll('-', '')}`, projectId: project.id, baseRevision, dryRun: false, actions: actions || [action] });
       return await this.registerProject(absolute);
     });
   }
@@ -349,6 +351,16 @@ export class LocalApplicationService {
   listJobs(input) { return this.mediaOps.listJobs(input); }
   cancelJob(input) { return this.mediaOps.cancelJob(input); }
 
+  editState(input) { return this.editOps.state(input); }
+  editTimeline(input) { return this.editOps.edit(input); }
+  editUndo(input) { return this.editOps.undo(input); }
+  editRedo(input) { return this.editOps.redo(input); }
+  editAddMedia(input) { return this.editOps.addMediaClip(input); }
+  editCaptions(input) { return this.editOps.captions(input); }
+  editAspect(input) { return this.editOps.setAspectRatio(input); }
+  editFrame(input) { return this.editOps.frame(input); }
+  editClip(input) { return this.editOps.clip(input); }
+  editPreviewFile(input) { return this.editOps.previewFile(input); }
   narrationState(input) { return this.narrationOps.state(input); }
   narrationImport(input) { return this.narrationOps.importFiles(input); }
   narrationUpload(input) { return this.narrationOps.upload(input); }

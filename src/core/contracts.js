@@ -58,9 +58,15 @@ export const clipSchema = z.object({
   componentId: idSchema.optional(),
   fit: z.enum(['cover', 'contain', 'stretch']).default('cover'),
   anchor: z.enum(['center', 'top', 'bottom', 'left', 'right']).default('center'),
-  layout: z.record(aspectRatioSchema, z.object({ x: z.number(), y: z.number(), width: z.number().positive(), height: z.number().positive() })).optional(),
+  layout: z.partialRecord(aspectRatioSchema, z.object({ x: z.number(), y: z.number(), width: z.number().positive(), height: z.number().positive() })).optional(),
   keyframes: z.record(z.string(), z.array(keyframeSchema)).default({}),
   effects: z.array(z.object({ id: idSchema, type: z.string().min(1), enabled: z.boolean().default(true), params: z.record(z.string(), z.unknown()).default({}) })).default([]),
+  /** Ponto de entrada na mídia (frames do projeto): corte sem alterar o arquivo. */
+  sourceInFrame: z.number().int().nonnegative().default(0),
+  name: z.string().max(120).optional(),
+  text: z.string().max(2000).optional(),
+  volume: z.number().min(0).max(4).default(1),
+  style: z.enum(['legenda', 'destaque', 'titulo']).default('legenda'),
 });
 
 export const trackSchema = z.object({
@@ -122,9 +128,28 @@ export const operationSchema = z.object({
     z.object({ type: z.literal('media.remove'), mediaId: idSchema, detachUsages: z.boolean().default(false) }),
     z.object({ type: z.literal('media.cut.add'), mediaId: idSchema, cut: mediaCutSchema }),
     z.object({ type: z.literal('media.cut.remove'), mediaId: idSchema, cutId: idSchema }),
+    z.object({ type: z.literal('timeline.edit'), commands: z.array(timelineCommandSchema()).min(1).max(500) }),
+    z.object({ type: z.literal('timeline.replace'), timeline: z.lazy(() => timelineSchema), reason: z.enum(['undo', 'redo', 'restore']) }),
     z.object({ type: z.literal('media.transcript.set'), mediaId: idSchema, transcript: mediaRefSchema.shape.transcript }),
   ])).min(1).max(100),
 });
+
+/** Comandos de edição da timeline (aplicados em ordem, validados no fim). */
+function timelineCommandSchema() {
+  const ref = { trackId: idSchema, clipId: idSchema };
+  const patch = z.object({ fit: clipSchema.shape.fit.optional(), anchor: clipSchema.shape.anchor.optional(), layout: clipSchema.shape.layout, keyframes: clipSchema.shape.keyframes.optional(), effects: clipSchema.shape.effects.optional(), text: z.string().max(2000).optional(), name: z.string().max(120).optional(), volume: z.number().min(0).max(4).optional(), style: clipSchema.shape.style.optional() }).strict();
+  return z.discriminatedUnion('op', [
+    z.object({ op: z.literal('clip.add'), trackId: idSchema, clip: clipSchema }),
+    z.object({ op: z.literal('clip.update'), ...ref, patch }),
+    z.object({ op: z.literal('clip.move'), ...ref, startFrame: z.number().int().nonnegative(), toTrackId: idSchema.optional() }),
+    z.object({ op: z.literal('clip.trim'), ...ref, startFrame: z.number().int().nonnegative(), durationInFrames: z.number().int().positive(), sourceInFrame: z.number().int().nonnegative().optional(), ripple: z.boolean().default(false) }),
+    z.object({ op: z.literal('clip.split'), ...ref, frame: z.number().int().positive(), newClipId: idSchema }),
+    z.object({ op: z.literal('clip.remove'), ...ref, ripple: z.boolean().default(false) }),
+    z.object({ op: z.literal('track.add'), track: trackSchema }),
+    z.object({ op: z.literal('track.update'), trackId: idSchema, name: z.string().min(1).max(80).optional(), muted: z.boolean().optional(), locked: z.boolean().optional() }),
+    z.object({ op: z.literal('timeline.update'), durationInFrames: z.number().int().positive().optional(), safeArea: timelineSchema.shape.safeArea.optional() }),
+  ]);
+}
 
 export function parseProject(value) { return projectSchema.parse(value); }
 export function parseOperation(value) { return operationSchema.parse(value); }

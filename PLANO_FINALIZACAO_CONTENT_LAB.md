@@ -153,14 +153,14 @@ Aceite: uma narração pode ser gravada/importada, tratada, montada e usada no p
 
 Objetivo: transformar a timeline persistente existente em uma superfície de edição real.
 
-- [ ] Implementar tracks, clips, seleção, trim, split, mover, ripple opcional, mute/lock e snap.
-- [ ] Conectar undo/redo ao histórico de comandos, inclusive após reabrir a sessão quando aplicável.
-- [ ] Expor propriedades de fit, âncora, layout por proporção, efeitos e keyframes.
-- [ ] Criar preview sincronizado usando o mesmo `RenderPlan` do render final.
+- [x] Implementar tracks, clips, seleção, trim, split, mover, ripple opcional, mute/lock e snap.
+- [x] Conectar undo/redo ao histórico de comandos, inclusive após reabrir a sessão quando aplicável.
+- [x] Expor propriedades de fit, âncora, layout por proporção, efeitos e keyframes.
+- [x] Criar preview sincronizado usando o mesmo `RenderPlan` do render final.
 - [ ] Integrar componentes TSX/Remotion com allowlist, build isolado e erro recuperável.
-- [ ] Exibir safe areas e alternância 16:9, 9:16, 1:1 e 4:5 sem alterar silenciosamente composições aprovadas.
-- [ ] Adicionar legendas a partir de SRT/transcrição com edição e estilos acessíveis.
-- [ ] Testar áudio/vídeo sincronizados, mídia ausente, clip fora da duração e projetos longos.
+- [x] Exibir safe areas e alternância 16:9, 9:16, 1:1 e 4:5 sem alterar silenciosamente composições aprovadas.
+- [x] Adicionar legendas a partir de SRT/transcrição com edição e estilos acessíveis.
+- [x] Testar áudio/vídeo sincronizados, mídia ausente, clip fora da duração e projetos longos.
 
 Aceite: o usuário consegue montar e revisar um vídeo pela interface, e preview/render compartilham duração, enquadramento e fontes.
 
@@ -283,6 +283,13 @@ Aceite: em qualquer computador, a instalação baixa a variante certa, a geraç�
 Não iniciar empacotamento desktop antes de estabilizar armazenamento, setup e operações destrutivas. Não baixar modelos grandes antes de implementar consentimento, checksum, retomada e espaço em disco.
 
 ## Checkpoint de retomada
+
+### F18 parcial — falta Remotion (2026-11-11)
+
+- Concluído: ação `timeline.edit` (clip.add/update/move/trim/split/remove com ripple, track.add/update com mute/lock, timeline.update) validada no núcleo (sobreposição, track bloqueada, mídia ausente/incompatível, trecho além da mídia); `timeline.replace` para desfazer/refazer persistente em `<projeto>/timeline-history.json` (reinicia com `HISTORY_STALE` se a timeline mudou por fora); `RenderPlan` v2 + `src/render/ffmpeg-graph.js` compartilhado por render final, frame PNG e trecho com áudio (camadas, fit/âncora/layout por proporção, fades, opacidade por keyframes, legendas drawtext por linha, mistura de áudio); `src/server/edit-operations.js` (legendas de transcrição/SRT, troca de proporção com relatório e reabertura de etapa aprovada, previews em cache); `src/ui/TimelineEditor.jsx` (botão Timeline no projeto e etapa Edição). Corrigido: `layout` passou a `z.partialRecord` (zod 4 exigia todas as proporções).
+- Evidência real: render de 14 s 1920×1080 H.264/AAC validado por ffprobe com 2 clips, legenda acentuada na área segura e sobreposição contida com fade; testes com pixels reais (155+ testes).
+- Pendências: componentes TSX/Remotion (registro com allowlist existe, runtime/build isolado não implementado); importar SRT pela interface (só via API); QA visual do editor no navegador não concluída; muitos clips abrem muitas entradas no FFmpeg (render segmentado em F19).
+- Próxima tarefa: concluir item Remotion da F18 ou seguir para F19.
 
 ### F17 concluída (2026-11-11)
 
