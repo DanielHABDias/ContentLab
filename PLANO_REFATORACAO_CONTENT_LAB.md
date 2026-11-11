@@ -164,10 +164,12 @@ Esta etapa é **obrigatória antes de projetar e implementar a nova arquitetura*
 **Checkpoint T03 (2026-11-11):** editor guiado separa narração e direção visual, mostra autosave/histórico e oferece packaging com títulos A/B substantivos, descrição, tags, SEO e conceitos/arquivos de thumbnail com estado e direitos. Estrutura consultada no plugin Diazverso v1.1.0 somente para leitura. Verificações: 5 testes de interface e build. Próxima: T04, benchmark técnico, arquitetura e contratos versionados.
 
 ### T04 — Benchmark técnico, arquitetura nova e contratos
-- [ ] Pesquisar e testar skills de arquitetura, testes, MCP, Remotion, Hyperframes e UX; revisar repositórios de editores com agentes **e estudar vídeos/showreels/tutoriais de motion design de alta qualidade**, registrando técnica, timing e adaptação original para a identidade Diazverso. Comparar o legado em `old/` sem tomar suas decisões como obrigatórias.
-- [ ] Escolher stack e módulos por evidência, compatibilidade local e licença; definir modelo versionado para projetos, workflow, roteiro, mídias e timeline, com plano de migração/validação.
-- [ ] Planejar operações atômicas, efeitos, trilhas, posicionamento responsivo, versionamento, logs, permissões e testes desde o começo.
+- [x] Pesquisar e testar skills de arquitetura, testes, MCP, Remotion, Hyperframes e UX; revisar repositórios de editores com agentes **e estudar vídeos/showreels/tutoriais de motion design de alta qualidade**, registrando técnica, timing e adaptação original para a identidade Diazverso. Comparar o legado em `old/` sem tomar suas decisões como obrigatórias.
+- [x] Escolher stack e módulos por evidência, compatibilidade local e licença; definir modelo versionado para projetos, workflow, roteiro, mídias e timeline, com plano de migração/validação.
+- [x] Planejar operações atômicas, efeitos, trilhas, posicionamento responsivo, versionamento, logs, permissões e testes desde o começo.
 - **Entrega/aceite:** documento curto de arquitetura + contratos validados em protótipo; referências e decisões registradas, sem depender de API paga.
+
+**Checkpoint T04 (2026-11-11):** arquitetura local, módulos, limites de confiança, persistência e estratégia de testes documentados; benchmark compara Remotion, Hyperframes, FableCut, OpenChatCut, Timeline Studio e legado, incluindo licenças e motion design. Contratos Zod versionados para projeto, workflow, mídia, timeline e lotes atômicos. Verificações: 9 testes e build. Próxima: T05, persistência real e núcleo de workflow.
 
 ### T05 — Núcleo local, persistência e orquestração do workflow
 - [ ] Implementar projeto local multi-vídeo, armazenamento de arquivos e metadados, autosave, checkpoints/versões, histórico e retomada após reinício.
