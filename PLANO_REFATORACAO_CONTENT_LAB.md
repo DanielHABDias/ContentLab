@@ -211,9 +211,11 @@ Esta etapa é **obrigatória antes de projetar e implementar a nova arquitetura*
 **Checkpoint T09 (2026-11-11):** `TimelineEngine` aplica comandos sobre o contrato compartilhado, com undo/redo, clips/camadas genéricas e keyframes. Layout normalizado resolve âncoras e variantes 16:9/9:16 de forma determinística. Registro TSX compila fonte, valida allowlist/bloqueios e salva manifesto com hash; `KineticEmphasis` inicia a biblioteca. Verificações: 27 testes e build. Próxima: T10, preview/render/jobs e validação audiovisual.
 
 ### T10 — Preview, render e confiabilidade audiovisual
-- [ ] Implementar pré-visualização fiel, motion design, transições, sincronização de narração, legendas e mixagem, integrando FFmpeg/Remotion/Hyperframes conforme decisão do T04.
-- [ ] Render por projeto/versão, cache incremental quando útil, acompanhamento de jobs, cancelamento, recuperação e validação do arquivo final.
+- [x] Implementar pré-visualização fiel, motion design, transições, sincronização de narração, legendas e mixagem, integrando FFmpeg/Remotion/Hyperframes conforme decisão do T04.
+- [x] Render por projeto/versão, cache incremental quando útil, acompanhamento de jobs, cancelamento, recuperação e validação do arquivo final.
 - **Entrega/aceite:** vídeos longos e verticais renderizam com áudio, posicionamento, efeitos e cortes corretos, comparados com a prévia.
+
+**Checkpoint T10 (2026-11-11):** preview e render compartilham plano/fingerprint; preview interpola keyframes. Adaptador FFmpeg gera H.264/AAC, normaliza áudio real, cacheia e valida streams/dimensões/duração. Fila persistente expõe fase/progresso, cancelamento e recuperação de jobs. Testes reais 1920×1080 e 1080×1920 corrigiram extensão parcial e tratamento de silêncio. Verificações: 31 testes e build. Próxima: T11, `.contentlab`, ZIP e extração segura.
 
 ### T11 — Pacotes .contentlab, ZIP e entrega opcional por agentes
 - [ ] Definir o formato de projeto portátil versionado **`.contentlab`** (extensão proposta), com manifesto/estrutura documentados e capacidade de **importar, abrir e descomprimir dentro do Content Lab**; incluir roteiro, títulos A/B, descrição, tags, thumbnails, legendas, timeline, ajustes e recursos necessários. Vídeo final e intermediários opcionais conforme tipo de exportação.
