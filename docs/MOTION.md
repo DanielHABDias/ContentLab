@@ -47,7 +47,7 @@ Para voltar à timeline de clips, use `motion_plan_set` com `plan: null`. Na int
 - **O Nox em opinião e humor (`aparte`):**
   - a cena desfoca e o Nox aparece inteiro, subindo pela borda de baixo, com as pernas fora do quadro;
   - cada fala (`falas: [{ pose, humor, icone, texto }]`) troca a pose de uma vez, em stop motion, com balão de ícone ou texto;
-  - cada pose é um PNG pronto do Nox (gesto e olhos desenhados) em `assets/brand/nox/poses/<pose>.png`; `<pose>-2`, `-3`… são variantes sorteadas a cada fala. Opcional: PNG sem olhos com `poses.json` recebe os olhos do humor pedido. Lista e pedido para gerar em `skills/diazverso-nox/references/poses.md` do plugin. Sem o PNG, entra o Nox canônico com o humor;
+  - cada pose é um PNG pronto do Nox (gesto e olhos desenhados) em `assets/brand/nox/poses/<pose>.png`; `<pose>-b`, `-c`… são variantes sorteadas. Lista e pedido para gerar em `skills/diazverso-nox/references/poses.md` do plugin. Sem o PNG, entra o Nox canônico com o humor;
   - o catálogo `assets/brand/nox/poses/catalogo.json` (do plugin) lista as 21 poses com gesto, olhos e tons;
   - enquanto o Nox fala, a pose troca a cada ~0,85 s (até 5 por beat): a primeira no tom da frase (pergunta → `pensando`/`ombros`, piada → `rindo`/`arminha`, erro → `facepalm`), as seguintes em tons vizinhos, sem repetir em seguida; o balão fica até a próxima fala com ícone ou texto;
   - frases de emoção (piada, erro, tristeza, vitória, discordância, surpresa, opinião) chamam o aparte por cima da cena;

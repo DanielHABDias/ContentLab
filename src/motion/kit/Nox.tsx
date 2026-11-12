@@ -63,16 +63,9 @@ export const Nox: React.FC<{ mood: Mood; height: number; x: number; y: number; f
 
 /**
  * Poses do Nox (stop motion): PNGs prontos do Nox inteiro (gesto e olhos desenhados) em
- * `assets/brand/nox/poses/<pose>.png`; `<pose>-2.png`, `-3`… são variantes sorteadas a cada fala.
- * Opcional: um PNG sem olhos com entrada no `poses.json` recebe os olhos do humor pedido, desenhados pelo kit.
+ * `assets/brand/nox/poses/<pose>.png`; `<pose>-b.png`… são variantes sorteadas. Catálogo: `catalogo.json`.
  */
-export type PoseInfo = {
-  src: string; w: number; h: number; pose?: string;
-  /** Centros dos olhos em pixels do PNG; largura do olho esquerdo (no canônico, 80 px com a figura de 669 px). */
-  olhos?: { esquerdo: [number, number]; direito: [number, number]; largura?: number; largura_direito?: number; angulo?: number } | null;
-  /** Olho escondido pela mão (esquerdo/direito da imagem). */
-  cobre?: 'nenhum' | 'esquerdo' | 'direito' | 'ambos';
-};
+export type PoseInfo = { src: string; w: number; h: number; pose?: string };
 export const NoxPoses = createContext<Record<string, string | PoseInfo>>({});
 export const POSES = ['pensando', 'arminha', 'apontando', 'ombros', 'joinha', 'facepalm', 'bracos-cruzados', 'acenando', 'rindo', 'assustado', 'comemorando', 'explicando', 'parado'] as const;
 export type Pose = typeof POSES[number];
@@ -97,21 +90,7 @@ export const NoxPose: React.FC<{ pose?: Pose | string; mood?: Mood; height: numb
   const angle = tilt + b.r + (info ? 0 : lean[pose] || 0);
   const box: React.CSSProperties = { position: 'absolute', left: cx + b.x, top: bottom - height + b.y, height, transform: `translateX(-50%) scaleX(${flip ? -1 : 1}) rotate(${angle}deg)`, transformOrigin: '50% 100%' };
   if (typeof info === 'string') return <Img src={info} style={{ ...box, width: 'auto' }} />;
-  if (info) {
-    const o = info.olhos; const cobre = info.cobre || 'nenhum';
-    const eye = (side: 'L' | 'R', [x, y]: [number, number], s: number) => (
-      <g transform={`rotate(${o?.angulo || 0} ${x} ${y}) translate(${x} ${y}) scale(${s}) translate(${-x} ${-y})`}><Eye cx={x} cy={y} mood={mood} side={side} blink={0} look={0} /></g>
-    );
-    return (
-      <div style={{ ...box, width: (height * info.w) / info.h }}>
-        <Img src={info.src} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
-        {o && <svg viewBox={`0 0 ${info.w} ${info.h}`} width="100%" height="100%" style={{ position: 'absolute', inset: 0, overflow: 'visible' }}>
-          {cobre !== 'esquerdo' && cobre !== 'ambos' && eye('L', o.esquerdo, (o.largura || 80) / 80)}
-          {cobre !== 'direito' && cobre !== 'ambos' && eye('R', o.direito, (o.largura_direito || (o.largura || 80) * 0.75) / 60)}
-        </svg>}
-      </div>
-    );
-  }
+  if (info) return <Img src={info.src} style={{ ...box, width: (height * info.w) / info.h }} />;
   const w = (height * 412) / 669;
   return <div style={{ ...box, width: w }}><Nox mood={mood} height={height} x={0} y={0} blinkEvery={100000} /></div>;
 };

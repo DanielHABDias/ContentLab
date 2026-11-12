@@ -1,4 +1,4 @@
-import { copyFile, link, mkdir, mkdtemp, open, readdir, readFile, rm, stat } from 'node:fs/promises';
+import { copyFile, link, mkdir, mkdtemp, open, readdir, rm, stat } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
@@ -22,33 +22,19 @@ const chromium = plan => (plan.beats.some(beat => SCENES_3D.has(beat.scene)) ? {
  * narração, legenda por palavra e trilha com ducking, e normaliza o áudio para −14 LUFS com limitador.
  */
 const pngSize = async file => { const handle = await open(file, 'r'); try { const head = Buffer.alloc(24); await handle.read(head, 0, 24, 0); return head.toString('ascii', 12, 16) === 'IHDR' ? { w: head.readUInt32BE(16), h: head.readUInt32BE(20) } : null; } finally { await handle.close(); } };
-const point = value => Array.isArray(value) && value.length === 2 && value.every(Number.isFinite) ? value : null;
-
 /**
- * Poses do Nox: `poses.json` (formato 1) liga cada pose ao PNG sem olhos e à posição dos olhos, que o kit
- * redesenha com o humor pedido (opcional). PNG solto, sem entrada no JSON, já traz os olhos desenhados e vale como está;
- * o sufixo `-2`, `-3`… (ou `-b`) faz dele variante da mesma pose, sorteada a cada fala.
+ * Poses do Nox: PNGs prontos (gesto e olhos desenhados) em `assets/brand/nox/poses/`; o nome do arquivo é a pose
+ * e o sufixo `-b`, `-c`… (ou `-2`, `-3`…) faz dele variante da mesma pose, sorteada pelo kit.
  */
 export async function loadNoxPoses(dir, prefix) {
   const names = (await readdir(dir).catch(() => [])).filter(name => /^[a-z0-9-]+\.png$/.test(name));
-  const manifest = await readFile(path.join(dir, 'poses.json'), 'utf8').then(JSON.parse).catch(() => ({}));
-  const poses = {}; const files = new Set();
-  for (const [name, entry] of Object.entries(manifest.poses || {})) {
-    const file = entry?.arquivo; if (!/^[a-z0-9-]+$/.test(name) || !names.includes(file)) continue;
-    const size = await pngSize(path.join(dir, file)); if (!size) continue;
-    const eyes = entry.olhos && point(entry.olhos.esquerdo) && point(entry.olhos.direito) ? { esquerdo: entry.olhos.esquerdo, direito: entry.olhos.direito, largura: Number(entry.olhos.largura) || undefined, largura_direito: Number(entry.olhos.largura_direito) || undefined, angulo: Number(entry.olhos.angulo) || 0 } : null;
-    poses[name] = { src: `${prefix}${file}`, ...size, pose: typeof entry.pose === 'string' ? entry.pose : name, olhos: eyes, cobre: ['esquerdo', 'direito', 'ambos'].includes(entry.cobre) ? entry.cobre : 'nenhum' };
-    files.add(file);
-  }
-  // PNG solto (sem entrada no JSON) já vem com os olhos desenhados; `pensando-2.png` é variante de `pensando`.
+  const poses = {}; const files = [];
   for (const file of names) {
-    if (files.has(file) || Object.values(manifest.poses || {}).some(entry => entry?.arquivo === file)) continue;
     const size = await pngSize(path.join(dir, file)); if (!size) continue;
     const name = file.slice(0, -4);
-    poses[name] = { src: `${prefix}${file}`, ...size, pose: name.replace(/-(\d+|[a-z])$/, ''), olhos: null, cobre: 'nenhum' };
-    files.add(file);
+    poses[name] = { src: `${prefix}${file}`, ...size, pose: name.replace(/-(\d+|[a-z])$/, '') }; files.push(file);
   }
-  return { poses, files: [...files] };
+  return { poses, files };
 }
 
 export class MotionRenderer {

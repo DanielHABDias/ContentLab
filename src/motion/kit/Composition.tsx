@@ -17,7 +17,7 @@ export type MotionProps = {
   plan: { fps: number; width: number; height: number; duration: number; beats: Beat[]; captions?: boolean; musicVolume?: number; duck?: number };
   assets: Record<string, Asset>;
   narration?: string | null; music?: string | null; words?: Word[];
-  /** Poses do Nox disponíveis (poses.json): nome → PNG sem olhos + posição dos olhos; formato antigo: nome → caminho. */
+  /** Poses do Nox disponíveis: nome do arquivo → PNG pronto (`pose` = nome sem o sufixo da variante). */
   poses?: Record<string, string | PoseInfo>;
 };
 
