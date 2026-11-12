@@ -21,7 +21,7 @@ const NO_CAPTION = new Set(['titulo', 'cta']);
 const ALL_SCENES: Record<string, React.FC<any>> = { ...SCENES, ...SCENES_3D };
 
 /** Legenda palavra a palavra: blocos de até 3 palavras; a palavra falada fica amarela. */
-const Captions: React.FC<{ words: Word[]; fps: number; hidden: (t: number) => boolean }> = ({ words, fps, hidden }) => {
+const Captions: React.FC<{ words: Word[]; fps: number; hidden: (t: number) => boolean; vertical?: boolean }> = ({ words, fps, hidden, vertical }) => {
   const t = useCurrentFrame() / fps;
   if (hidden(t)) return null;
   const blocks: Word[][] = []; let block: Word[] = [];
@@ -35,8 +35,8 @@ const Captions: React.FC<{ words: Word[]; fps: number; hidden: (t: number) => bo
   const current = blocks.find((b, i) => t >= b[0].start - 0.05 && t < (blocks[i + 1]?.[0].start ?? b[b.length - 1].end + 0.4));
   if (!current) return null;
   return (
-    <AbsoluteFill style={{ justifyContent: 'flex-end', alignItems: 'center', paddingBottom: 70, pointerEvents: 'none' }}>
-      <div style={{ fontFamily: ANTON, fontSize: 66, background: 'rgba(11,11,16,.88)', padding: '4px 26px', borderRadius: 10, boxShadow: `6px 6px 0 ${C.red}`, textTransform: 'uppercase', letterSpacing: 1 }}>
+    <AbsoluteFill style={{ justifyContent: 'flex-end', alignItems: 'center', paddingBottom: vertical ? '24%' : 70, pointerEvents: 'none' }}>
+      <div style={{ fontFamily: ANTON, fontSize: vertical ? 78 : 66, background: 'rgba(11,11,16,.88)', padding: '4px 26px', borderRadius: 10, boxShadow: `6px 6px 0 ${C.red}`, textTransform: 'uppercase', letterSpacing: 1 }}>
         {current.map((w, i) => <span key={i} style={{ color: t >= w.start && t < w.end + 0.1 ? C.yellow : '#fff' }}>{w.text}{i < current.length - 1 ? ' ' : ''}</span>)}
       </div>
     </AbsoluteFill>
@@ -62,7 +62,7 @@ export const MotionVideo: React.FC<MotionProps> = (raw) => {
         })}
         {beats.filter(b => b.flash !== false && b.at > 0).map(b => <Flash key={`f${b.id}`} at={frames(b.at)} length={5} />)}
         <Film />
-        {plan.captions !== false && words.length > 0 && <Captions words={words} fps={fps} hidden={captionHidden} />}
+        {plan.captions !== false && words.length > 0 && <Captions words={words} fps={fps} hidden={captionHidden} vertical={plan.height > plan.width} />}
         {narration && <Audio src={narration} />}
         {music && <Audio src={music} volume={f => base * (words.length && speaking(f / fps) ? duck : 1)} />}
         {beats.flatMap(beat => (beat.sfx || []).map((cue, i) => (
@@ -82,6 +82,6 @@ export const Root: React.FC = () => (
     <Composition id="DiazversoMotion" component={MotionVideo} calculateMetadata={calculateMetadata} durationInFrames={1} fps={30} width={1920} height={1080}
       defaultProps={{ plan: { fps: 30, width: 1920, height: 1080, duration: 3, beats: [{ id: 'b1', scene: 'titulo', at: 0, duration: 3, props: { palavras: ['DIAZVERSO'] } }] }, assets: {} }} />
     <Composition id="DiazversoThumb" component={Thumbnail} calculateMetadata={calculateThumb} durationInFrames={1} fps={30} width={1280} height={720}
-      defaultProps={{ assets: {}, texto: 'O HERÓI *CHATO*', humor: 'tedio' }} />
+      defaultProps={{ assets: {}, texto: 'O HERÓI *CHATO*' }} />
   </>
 );

@@ -2,7 +2,9 @@
 // QA do modo composição pelo MCP real (como um chat faria):
 //  A) vídeo narrado: roteiro → mídias da "obra" (próprias) → narração → transcrição → motion_plan_auto →
 //     motion_preview → render → entrega;
-//  B) o demo "herói perfeito" refeito pelo Content Lab: sem narração, beats escritos pelo agente (motion_plan_set).
+//  B) o demo "herói perfeito" refeito pelo Content Lab: sem narração, beats escritos pelo agente (motion_plan_set);
+//  C) Short 9:16 narrado com plano automático (cenas diagramadas para vertical, apartes do Nox).
+// --only=ac roda só os cenários escolhidos.
 // Extrai frames do vídeo final e mede o áudio.   node scripts/qa-motion.mjs [--keep]
 import { execFileSync, spawnSync } from 'node:child_process';
 import { copyFile, mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
@@ -30,7 +32,7 @@ async function waitJob(projectPath, jobId, label) { for (;;) { const job = await
 const approve = async projectPath => { const { currentStage } = await call('project_get', { path: projectPath }); if (currentStage?.missing?.length) throw new Error(`Etapa ${currentStage.id} incompleta: ${currentStage.missing.join(', ')}`); await call('stage_approve', { path: projectPath }); };
 const probe = file => JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration:stream=codec_type,width,height,r_frame_rate', '-of', 'json', file], { encoding: 'utf8' }));
 const loudness = file => spawnSync('ffmpeg', ['-hide_banner', '-nostats', '-i', file, '-af', 'ebur128=peak=true', '-f', 'null', '-'], { encoding: 'utf8' }).stderr;
-const sheet = async (video, out, every = 1) => execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', video, '-vf', `fps=1/${every},scale=320:-1,tile=8x8`, '-frames:v', '1', out]);
+const sheet = async (video, out, every = 1) => execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', video, '-vf', `fps=1/${every},scale=w=320:h=320:force_original_aspect_ratio=decrease,tile=8x8`, '-frames:v', '1', out]);
 
 // "Cenas da obra": mídias próprias com nomes descritivos (Nox, ícones do Diazverso e um trecho de vídeo gerado).
 const brand = path.join(root, 'assets/brand');
@@ -39,8 +41,9 @@ const icons = ['escudo', 'lampada', 'balanca', 'caminho', 'mascara', 'raio'].map
 const nox = path.join(mediaDir, 'nox.png'); await copyFile(path.join(brand, 'nox/Nox.png'), nox);
 const clip = path.join(mediaDir, 'muralha-caindo.mp4'); execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc2=s=1280x720:r=30:d=6', '-vf', 'hue=s=0.3,eq=contrast=1.3', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', clip]);
 
-async function project({ title, brief, script, packaging }) {
-  const created = await call('project_create', { title, type: 'long', mode: 'autonomous' }); const projectPath = created.path;
+const only = process.argv.find(arg => arg.startsWith('--only='))?.slice(7) || 'abc';
+async function project({ title, brief, script, packaging, type = 'long' }) {
+  const created = await call('project_create', { title, type, mode: 'autonomous' }); const projectPath = created.path;
   await call('creative_write', { path: projectPath, brief }); await approve(projectPath);
   await call('creative_write', { path: projectPath, script }); await approve(projectPath);
   await call('creative_write', { path: projectPath, packaging }); await approve(projectPath);
@@ -65,6 +68,7 @@ try {
   const kit = await call('motion_kit'); note(`kit: ${Object.keys(kit.cenas).length} cenas, ${kit.humores.length} humores do Nox, ${kit.sfx.length} SFX`);
 
   // A) Vídeo narrado, plano automático.
+  if (only.includes('a')) {
   const a = await project({
     title: 'O escudo que pesava demais',
     brief: { thesis: 'Proteger tudo o tempo todo impede o herói de escolher o que importa', audience: 'Fãs de heróis', promise: 'Entender por que um herói precisa escolher o que proteger', notes: 'Nox participa' },
@@ -84,9 +88,11 @@ try {
   const auto = await call('motion_plan_auto', { path: a });
   note(`  plano: ${auto.beats} beats em ${auto.durationSeconds} s (média ${auto.averageBeat} s) · cenas ${JSON.stringify(auto.scenes)} · ${auto.media} mídia(s) · avisos: ${auto.warnings.join(' | ') || 'nenhum'}`);
   const preview = await call('motion_preview', { path: a, seconds: [1, 6, 12, 20, 30] }); note(`  prévia: ${preview.files.length} frames`);
-  results.push({ label: 'A narrado (plano automático)', ...(await finish(a, 'a')), previews: preview.files });
+  results.push({ key: 'a-narrado', label: 'A narrado (plano automático)', ...(await finish(a, 'a')), previews: preview.files });
+  }
 
   // B) O demo refeito pelo Content Lab: sem narração, beats do agente.
+  if (only.includes('b')) {
   const b = await project({
     title: 'Por que um herói perfeito é chato',
     brief: { thesis: 'Uma fraqueza cria a história', audience: 'Fãs de heróis', promise: 'Entender por que heróis precisam de fraquezas', notes: 'Sem narração' },
@@ -114,14 +120,40 @@ try {
   ];
   let at = 0; const plan = { narration: false, captions: false, music: { volume: 0.55, duck: 1 }, beats: beats.map((beat, i) => { const value = { id: `b${i + 1}`, at, ...beat }; at += beat.duration; return value; }) };
   const set = await call('motion_plan_set', { path: b, plan }); note(`  plano do agente: ${set.beats} beats em ${set.durationSeconds} s · cenas ${JSON.stringify(set.scenes)}`);
-  results.push({ label: 'B demo refeito (sem narração)', ...(await finish(b, 'b')) });
+  results.push({ key: 'b-demo-refeito', label: 'B demo refeito (sem narração)', ...(await finish(b, 'b')) });
+  }
+
+  // C) Short 9:16 narrado, plano automático.
+  if (only.includes('c')) {
+  const c = await project({
+    type: 'short',
+    title: 'O herói que não podia perder',
+    brief: { thesis: 'Sem risco não existe história', audience: 'Fãs de heróis', promise: 'Entender em 1 minuto por que herói precisa de fraqueza', notes: 'Short' },
+    script: {
+      hook: 'Esse herói nunca perdeu uma luta. E é exatamente esse o problema.',
+      development: 'Olha esse escudo. Aguenta qualquer coisa. Legal, né?\n\nSó que quando nada pode dar errado, você para de se importar. Pra que torcer se ele sempre vence?\n\nAí a muralha cai. Pela primeira vez, ele pode perder. E de repente você não consegue parar de olhar.\n\nO raio não deixa ele mais forte. A lâmpada mostra a escolha. Salvar um, ou salvar outro?',
+      payoff: 'Fraqueza não estraga o herói. Ela cria a história. Qual herói você só começou a gostar quando ele perdeu?',
+    },
+    packaging: { titleA: 'O herói que não podia perder', titleB: 'Por que herói invencível é chato', description: 'Por que fraqueza cria história.', tags: 'shorts, heróis, diazverso', seo: 'herói fraqueza' },
+  });
+  note(`▶ C: ${path.basename(c)} (Short 9:16 narrado, plano automático)`);
+  const importedC = await call('media_import_files', { path: c, files: [...icons, clip], rights: 'owned' }); await waitJob(c, importedC.jobId, 'importação');
+  await call('audio_library', { path: c, seconds: 80 }); await approve(c);
+  const narrationC = await call('narration_generate', { path: c, engine: 'standard', voice: 'pm_alex' }); await waitJob(c, narrationC.jobId, 'narração');
+  const assembledC = await call('narration_assemble', { path: c, preset: 'balanced' }); await waitJob(c, assembledC.jobId, 'montagem da narração');
+  const transcribedC = await call('narration_transcribe', { path: c }); if (transcribedC.jobId) await waitJob(c, transcribedC.jobId, 'transcrição');
+  const autoC = await call('motion_plan_auto', { path: c });
+  note(`  plano: ${autoC.beats} beats em ${autoC.durationSeconds} s (média ${autoC.averageBeat} s) · cenas ${JSON.stringify(autoC.scenes)} · avisos: ${autoC.warnings.join(' | ') || 'nenhum'}`);
+  const previewC = await call('motion_preview', { path: c }); note(`  prévia: ${previewC.files.length} frames`);
+  results.push({ key: 'c-short', label: 'C Short 9:16 (plano automático)', ...(await finish(c, 'c')), previews: previewC.files });
+  }
 } catch (error) {
   note(`✘ ${error.stack || error.message}`); process.exitCode = 1;
 } finally {
   await call('contentlab_stop', { force: true }).catch(() => {});
   await client.close();
   const keep = path.join(root, '.tools/qa-f29'); await mkdir(keep, { recursive: true });
-  for (const [i, item] of results.entries()) { const dir = path.join(keep, i ? 'b-demo-refeito' : 'a-narrado'); await mkdir(dir, { recursive: true }); await copyFile(item.output, path.join(dir, 'video.mp4')); await copyFile(item.frames, path.join(dir, 'frames.png')); for (const file of item.previews || []) await copyFile(file, path.join(dir, path.basename(file))); for (const file of await readdir(item.delivery.directory)) if (file.endsWith('.md')) await copyFile(path.join(item.delivery.directory, file), path.join(dir, file)); }
+  for (const item of results) { const dir = path.join(keep, item.key); await rm(dir, { recursive: true, force: true }); await mkdir(dir, { recursive: true }); await copyFile(item.output, path.join(dir, 'video.mp4')); await copyFile(item.frames, path.join(dir, 'frames.png')); for (const file of item.previews || []) await copyFile(file, path.join(dir, path.basename(file))); for (const file of await readdir(item.delivery.directory)) if (file.endsWith('.md')) await copyFile(path.join(item.delivery.directory, file), path.join(dir, file)); }
   const report = ['# QA do modo composição via MCP', '', `Executado em ${new Date().toISOString()} · ${os.platform()} ${os.arch()} · kit de motion Diazverso`, '', 'Mídias próprias com nomes descritivos fazem o papel das cenas das obras; num vídeo real entram imagens e trechos das obras citadas, com direitos confirmados.', '', '| Produção | Formato | Duração | Loudness | Pico | Verificação |', '| --- | --- | --- | --- | --- | --- |', ...results.map(item => `| ${item.label} | ${item.size} | ${item.duration.toFixed(1)} s | ${item.lufs} LUFS | ${item.peak} dBTP | ${item.delivery.checks.filter(check => check.ok).length}/${item.delivery.checks.length} |`), '', '## Registro', '', '```text', ...log, '```', ''].join('\n');
   await writeFile(path.join(root, 'docs', 'QA_MOTION.md'), report);
   console.log(`\nRelatório: docs/QA_MOTION.md · amostras: .tools/qa-f29 · artefatos: ${process.argv.includes('--keep') ? work : '(removidos)'}`);

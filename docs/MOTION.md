@@ -40,21 +40,23 @@ O ritmo segue as referências do canal: uma troca de informação a cada 1,5–3
 
 Para voltar à timeline de clips, use `motion_plan_set` com `plan: null`. Na interface, use Produção assistida → *Montar em motion (composição)*.
 
-## Cenas 3D
+## O Nox e os Shorts
 
-- **`nox3d`:** o Nox em 3D cai em cena, a câmera gira em volta e ele faz um gesto: `acenar`, `apontar`, `pular`, `pensar` ou `parado`. Os olhos seguem os 8 humores, e há texto opcional ao lado.
-- **`paineis3d`:** a câmera voa por 2 a 4 painéis com imagens da obra no espaço, com rótulo e uma conclusão no fim.
+- **Aparte (`aparte`):** a cena da obra continua atrás e desfoca, e o Nox sobe pelo meio, da cintura para cima. Ele comenta em 1 a 4 tempos (`falas: [{ humor, icone, texto }]`), mudando de posição e de expressão, com um balão de ícone ou texto acima. No fim ele desce e o fundo volta nítido. O plano automático usa o aparte nas perguntas e comentários sobre o que está na tela, e o Nox de corpo inteiro só raramente.
+- **Shorts 9:16:** todas as cenas têm layout próprio para 1080×1920. O conteúdo fica entre 12% e 72% da altura e a legenda acima da interface do Shorts. O teste real está em `npm run qa:motion -- --only=c`.
 
-Quando o plano tem cena 3D, o render liga o WebGL por software (`gl: "swangle"`); funciona sem placa de vídeo. Nesta máquina, a cena 3D leva cerca de 4 s de render por segundo de vídeo. Use no máximo uma a cada ~30 s.
+## Cena 3D
+
+`paineis3d`: a câmera voa por 2 a 4 painéis com imagens da obra no espaço, com rótulo e conclusão. Quando o plano tem essa cena, o render liga o WebGL por software (`gl: "swangle"`), que funciona sem placa de vídeo e leva cerca de 4 s de render por segundo de cena. Use no máximo uma a cada ~30 s.
 
 ## Thumbnail
 
-`thumbnails_generate` usa o mesmo kit (composição `DiazversoThumb`, 1280×720). Cada variante A/B tem:
+`thumbnails_generate` usa o mesmo kit (composição `DiazversoThumb`, 1280×720). Por padrão, a thumbnail é limpa: fundo preto ou branco e o personagem grande; um PNG com fundo transparente aparece como recorte. Cada variante A/B tem:
 
 - `mediaId`: a obra, assunto dominante;
 - `text`: até 4 palavras, com a palavra-chave entre `*asteriscos*`;
 - `humor`: o Nox, opcional;
-- opcionais: `side` (lado do texto), `tone` (cor de destaque), `badge` (selo) e `mediaIdB` (layout VS).
+- opcionais: `background` (`preto`, `branco` ou `cena`), `side` (lado do texto), `tone` (cor de destaque), `badge` (selo) e `mediaIdB` (layout VS).
 
 Sem variantes, as palavras de impacto dos títulos A e B viram o texto. Versões de 320 px ficam em `output/previas/` para conferir no tamanho do celular. A thumbnail antiga, com o título sobre um frame, continua disponível com `style: "simple"`.
 
@@ -74,7 +76,7 @@ Sem variantes, as palavras de impacto dos títulos A e B viram o texto. Versões
   - `evidencia`, `pagina` e `comparacao`;
   - `numero`, `ficha`, `formula` e `lista`;
   - `cta`;
-  - 3D: `nox3d` e `paineis3d`.
+  - `aparte` (o Nox comentando sobre a cena) e `paineis3d` (3D).
   - Props, exemplos e regras: `motion_kit`.
 - **Humores do Nox:** `bravo`, `feliz`, `surpreso`, `tedio`, `confuso`, `piscada`, `determinado` e `triste`.
 - **SFX:** `pop`, `tick`, `type`, `whoosh`, `swish`, `impact`, `sub`, `glitch`, `riser`, `ding`, `error` e `camera`.
@@ -99,7 +101,6 @@ O kit, o catálogo, o Nox sem olhos e os SFX vêm do plugin. Depois de mudar o p
 
 ## Limites
 
-- **Formatos:** a composição é desenhada para 16:9. Em 9:16, as cenas renderizam, mas não são diagramadas para vertical.
 - **Mídia:** o Content Lab não busca nem baixa cenas das obras. Escolher a mídia e confirmar os direitos é com você.
 - **Plano automático:** é um ponto de partida. O resultado melhora quando o agente revisa as prévias e ajusta os beats.
 

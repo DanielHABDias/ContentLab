@@ -39,6 +39,9 @@ const twoLines = text => { const words = String(text).split(' '); if (words.leng
 const NEGATIVE = /\b(nunca|ninguém|nada|falh|perd|chato|tédio|fracass|caiu|cai|morre|morte|errad|erro|problema|pior|vazio)/i;
 const SURPRISE = /[!?]$|\b(imagina|incrível|absurdo|olha só|mas|sério)\b/i;
 const mood = text => (/\?$/.test(text) ? 'surpreso' : NEGATIVE.test(text) ? 'tedio' : SURPRISE.test(text) ? 'surpreso' : /\b(então|porque|princípio|lição|entender)\b/i.test(text) ? 'determinado' : 'feliz');
+/** Ícone do balão do Nox pelo assunto da frase (kit: icons.tsx). */
+const ICON_RULES = [[/dinheiro|grana|pag[ao]|preço|caro|rico/, 'dinheiro'], [/tempo|anos?\b|hora|demor|rápido demais/, 'relogio'], [/\bam[oa]r?\b|gosta|coração|paix/, 'coracao'], [/morr|morte|matar|mata\b/, 'caveira'], [/ideia|percebe|entend|lição|aprend/, 'lampada'], [/poder|força|forte|energia/, 'raio'], [/proteg|defend|escudo/, 'escudo'], [/\brei\b|melhor|maior|domina/, 'coroa'], [/incrível|absurd|explod|insano/, 'fogo'], [/errad|erro|nunca|falh|fracass/, 'errado'], [/certo|acert|sempre|funciona/, 'certo'], [/olha|\bvê\b|\bver\b|repara/, 'olho'], [/pensa|mente|cabeça|lógica/, 'cerebro'], [/venc|ganh|vitória|campe/, 'trofeu']];
+const iconFor = text => { const folded = fold(text); const hit = ICON_RULES.find(([rule]) => rule.test(folded)); return hit ? hit[1] : /\?$/.test(text) ? 'interrogacao' : 'exclamacao'; };
 const NUMBER = /(\d+(?:[.,]\d+)?)\s*(%|mil|milhões|bilhões|anos)?/gi;
 /** Primeiro número que não é um ano (anos viram contexto, não contador). */
 const numberIn = text => [...String(text).matchAll(NUMBER)].find(match => !/^(1[0-9]{3}|20[0-9]{2})$/.test(match[1]) || match[2] === '%') || null;
@@ -72,14 +75,14 @@ export function timeSentences(windows, words = []) {
 export function planMotion({ windows, words = [], media = [], title = '', question = '', end = null }) {
   const timed = timeSentences(windows, words);
   const pool = media.map(item => ({ ...item, key: fold(String(item.name || '').replace(/\.[a-z0-9]+$/i, '')) }));
-  let next = 0; const recent = [];
+  let next = 0; const recent = []; let lastMedia = null;
   const pick = text => {
     if (!pool.length) return null;
     const said = new Set(fold(text).split(/[^a-z0-9]+/).filter(word => word.length >= 3));
     const named = pool.find(item => !recent.includes(item.id) && item.key.split(/[^a-z0-9]+/).some(word => word.length >= 3 && said.has(word)));
     let chosen = named; for (let tries = 0; !chosen && tries < pool.length; tries += 1) { const candidate = pool[next++ % pool.length]; if (!recent.includes(candidate.id) || pool.length <= 2) chosen = candidate; }
     chosen ||= pool[next++ % pool.length]; recent.push(chosen.id); if (recent.length > Math.min(3, pool.length - 1)) recent.shift();
-    return { ...chosen, cited: chosen === named };
+    lastMedia = chosen.id; return { ...chosen, cited: chosen === named };
   };
   const named = text => pool.some(item => item.key && fold(text).split(/[^a-z0-9]+/).some(word => word.length >= 3 && item.key.split(/[^a-z0-9]+/).includes(word)));
   const beats = []; let id = 0;
@@ -106,6 +109,12 @@ export function planMotion({ windows, words = [], media = [], title = '', questi
         push('numero', at, len, { valor: value, de: 0, sufixo: suffix, rotulo: short(text, 44), fonte: 'roteiro', tendencia: NEGATIVE.test(text) ? 'desce' : 'sobe' }, { sfx: [{ name: 'tick', at: 0.2, volume: 0.4 }, { name: 'tick', at: 0.5, volume: 0.4 }, { name: 'ding', at: Math.min(len - 0.2, 1.2), volume: 0.4 }] });
         continue;
       }
+      // Pergunta ou piada sobre o que está na tela: aparte do Nox sobre a cena desfocada (da cintura para cima).
+      if (question_ && p === pieces - 1 && lastMedia && recentScenes().at(-1) !== 'aparte') {
+        const falas = len >= 2.6 ? [{ humor: 'surpreso', icone: iconFor(text) }, { humor: mood(text) === 'surpreso' ? 'confuso' : mood(text), texto: short(text, 22).toUpperCase() }] : [{ humor: 'surpreso', icone: iconFor(text) }];
+        push('aparte', at, len, { midia: `media:${lastMedia}`, falas }, { sfx: [{ name: 'swish', at: 0, volume: 0.45 }, { name: 'pop', at: 0.45, volume: 0.6 }], flash: false });
+        continue;
+      }
       if (question_ && p === pieces - 1) { const scene = avoid('nox', 'frase'); push(scene, at, len, scene === 'nox' ? { humor: 'surpreso', texto: short(text, 26).toUpperCase(), fundo: 'explosao' } : { linhas: twoLines(short(text, 64)), humor: 'surpreso' }, { sfx: [{ name: 'pop', at: 0.1, volume: 0.6 }] }); if (scene === 'frase') beats.at(-1).legenda = false; continue; }
       if (item.role === 'payoff' && p === 0) { push('frase', at, len, { linhas: twoLines(short(text, 70)), destaque: ending(text) }, { sfx: [{ name: 'swish', at: 0, volume: 0.4 }, { name: 'impact', at: len * 0.55, volume: 0.7 }] }); beats.at(-1).legenda = false; continue; }
       const asset = pool.length && (named(text) || (p + index) % 3 !== 2) ? pick(text) : null;
@@ -115,11 +124,15 @@ export function planMotion({ windows, words = [], media = [], title = '', questi
           const two = pool.length >= 2 && len >= 2.4 && (index + p) % 4 === 1;
           const tag = item_ => (item_.cited ? label(item_.name) : undefined);
           if (two) { const other = pick(`${text} outra`); push('pagina', at, len, { paineis: [{ midia: `media:${asset.id}`, rotulo: tag(asset) }, { midia: `media:${other.id}`, rotulo: tag(other) }] }, { sfx: [{ name: 'camera', at: 0, volume: 0.5 }, { name: 'camera', at: len * 0.4, volume: 0.5 }] }); }
-          else push('evidencia', at, len, { midia: `media:${asset.id}`, rotulo: tag(asset), humor: (index + p) % 3 === 0 ? mood(text) : undefined, movimento: ['entrar', 'sair', 'panoramica'][(index + p) % 3] }, { flash: false });
+          else push('evidencia', at, len, { midia: `media:${asset.id}`, rotulo: tag(asset), humor: (index + p) % 6 === 0 ? mood(text) : undefined, movimento: ['entrar', 'sair', 'panoramica'][(index + p) % 3] }, { flash: false });
           continue;
         }
       }
-      const scene = avoid((index + p) % 2 ? 'nox' : 'frase', (index + p) % 2 ? 'frase' : 'nox');
+      // Sem mídia para esta frase: o Nox comenta por cima da última cena (aparte) ou a frase vira texto pensado;
+      // o Nox de corpo inteiro fica para poucos momentos.
+      const turn = (index + p) % 3;
+      if (turn === 1 && lastMedia && recentScenes().at(-1) !== 'aparte') { push('aparte', at, len, { midia: `media:${lastMedia}`, falas: [{ humor: mood(text), icone: iconFor(text) }, ...(len >= 2.6 ? [{ humor: mood(text) === 'feliz' ? 'piscada' : 'determinado', texto: short(text, 22).toUpperCase() }] : [])] }, { sfx: [{ name: 'swish', at: 0, volume: 0.45 }, { name: 'pop', at: 0.45, volume: 0.6 }], flash: false }); continue; }
+      const scene = avoid(turn === 2 && !beats.slice(-6).some(beat => beat.scene === 'nox') ? 'nox' : 'frase', 'frase');
       if (scene === 'nox') push('nox', at, len, { humor: mood(text), texto: short(text, 26).toUpperCase(), fundo: ['explosao', 'meio-tom', 'estrelas'][(index + p) % 3], lado: (index + p) % 2 ? 'direita' : 'esquerda' }, { sfx: [{ name: 'pop', at: 0.05, volume: 0.55 }] });
       else { push('frase', at, len, { linhas: twoLines(short(text, 64)) }); beats.at(-1).legenda = false; }
     }

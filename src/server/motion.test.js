@@ -68,18 +68,36 @@ test('thumbnail do kit: still real 1280×720 com mídia da obra, texto e Nox', a
   } finally { await rm(dir, { recursive: true, force: true }); }
 }, 180_000);
 
-test('cenas 3D: Nox 3D renderiza com WebGL (swangle) num still real', async () => {
+test('cenas 3D: painéis no espaço renderizam com WebGL (swangle) num still real', async () => {
   const { mkdtemp, rm, readFile } = await import('node:fs/promises');
+  const { execFileSync } = await import('node:child_process');
   const os = await import('node:os'); const path = await import('node:path');
   const { MotionRenderer } = await import('../render/motion-renderer.js');
-  expect(MOTION_KIT.cenas.nox3d && MOTION_KIT.cenas.paineis3d).toBeTruthy();
+  expect(MOTION_KIT.cenas.paineis3d && MOTION_KIT.cenas.aparte).toBeTruthy();
   expect(MOTION_SCENES).toEqual(expect.arrayContaining(Object.keys(MOTION_KIT.cenas)));
   const dir = await mkdtemp(path.join(os.tmpdir(), 'contentlab-3d-test-'));
   try {
-    const project = { aspectRatio: '16:9', media: [], motionInputs: {}, motion: { schema: 'contentlab-motion-v1', narration: false, captions: false, music: null, beats: [{ id: 'n', scene: 'nox3d', at: 0, duration: 2, props: { humor: 'bravo', gesto: 'apontar', texto: 'NOX 3D' }, sfx: [], flash: false }] } };
+    const image = path.join(dir, 'obra.png');
+    execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc2=s=800x450', '-frames:v', '1', image]);
+    const project = { aspectRatio: '16:9', media: [{ id: 'obra', kind: 'image', uri: image }], motionInputs: {}, motion: { schema: 'contentlab-motion-v1', narration: false, captions: false, music: null, beats: [{ id: 'p', scene: 'paineis3d', at: 0, duration: 2, props: { paineis: [{ midia: 'media:obra', rotulo: 'OBRA' }] }, sfx: [], flash: false }] } };
     const { files } = await new MotionRenderer(dir).stills(project, { seconds: [1.5], directory: dir, scale: 0.25 });
     const png = await readFile(files[0]);
     expect(png.readUInt32BE(16)).toBe(480);
     expect(png.length).toBeGreaterThan(20_000); // cena desenhada, não um quadro vazio
   } finally { await rm(dir, { recursive: true, force: true }); }
 }, 180_000);
+
+test('plano automático: pergunta sobre a cena vira aparte do Nox com ícone, e o Nox de corpo inteiro é raro', () => {
+  const w = (id, text, start, length) => ({ scene: { id, label: id, text }, start, length });
+  const plan = planMotion({ windows: [
+    w('hook-1', 'Esse herói nunca perdeu. E esse é o problema.', 0, 5),
+    w('development-1', 'Olha esse escudo. Aguenta qualquer coisa. Pra que torcer se ele sempre vence? A muralha cai. O raio não ajuda. Ele pode morrer agora.', 5, 16),
+    w('payoff-1', 'Fraqueza cria a história. Qual herói te ensinou isso?', 21, 6),
+  ], media: [{ id: 'm_escudo', name: 'escudo.png', kind: 'image' }, { id: 'm_muralha', name: 'muralha.png', kind: 'image' }], end: 28 });
+  expect(motionPlanSchema.safeParse(plan).success).toBe(true);
+  const aparte = plan.beats.find(beat => beat.scene === 'aparte');
+  expect(aparte.props.midia).toMatch(/^media:m_/);
+  expect(MOTION_KIT.cenas.aparte.icones).toContain(aparte.props.falas[0].icone);
+  expect(plan.beats.some(beat => beat.scene === 'aparte' && beat.props.falas.some(fala => fala.icone === 'caveira'))).toBe(true); // "pode morrer"
+  expect(plan.beats.filter(beat => beat.scene === 'nox').length).toBeLessThanOrEqual(1);
+});

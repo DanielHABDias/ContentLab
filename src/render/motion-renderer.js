@@ -12,7 +12,7 @@ const BRAND = path.resolve(here, '../../assets/brand');
 const SIZES = { '16:9': [1920, 1080], '9:16': [1080, 1920], '1:1': [1080, 1080], '4:5': [1080, 1350] };
 const LOUDNESS_TARGET = -14;
 /** Cenas 3D (Three.js) precisam de WebGL no Chrome headless: ANGLE sobre SwiftShader funciona sem GPU. */
-const SCENES_3D = new Set(['nox3d', 'paineis3d']);
+const SCENES_3D = new Set(['paineis3d']);
 const chromium = plan => (plan.beats.some(beat => SCENES_3D.has(beat.scene)) ? { gl: 'swangle' } : {});
 
 /**

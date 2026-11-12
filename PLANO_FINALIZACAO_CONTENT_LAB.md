@@ -487,3 +487,12 @@ Objetivo: produzir pelo MCP vídeos no nível do demo (ritmo do RunnyIA, estéti
 - [x] `@remotion/three`, `three` e `@react-three/fiber` como dependências; cenas `nox3d` e `paineis3d` no contrato.
 - [x] Render com `gl: "swangle"` (WebGL por software) só quando o plano tem cena 3D: prévias e vídeo.
 - [x] Teste real: still do Nox 3D; vídeo de 14,5 s com 4 gestos do Nox e voo por 3 painéis conferido em frames (~62 s de render).
+
+## F33 — Shorts 9:16, aparte do Nox e thumbnail limpa
+
+- [x] Kit diagramado para 9:16 em todas as cenas; legenda acima da interface do Shorts; textos dimensionados pela palavra mais longa.
+- [x] Cena `aparte`: cena da obra desfocada, Nox da cintura para cima mudando de pose e expressão, balão com 16 ícones HQ ou texto.
+- [x] Plano automático: perguntas e comentários viram aparte sobre a última cena; Nox de corpo inteiro raro; reação no canto mostra só rosto e tronco.
+- [x] Nox 3D retirado (a pedido); `paineis3d` mantido.
+- [x] Thumbnail limpa (fundo preto ou branco e o personagem) como padrão; `background` no MCP.
+- [x] QA real: Short 9:16 narrado pelo MCP, 32,6 s, 16 beats (média 2,0 s), 3 apartes, −14,2 LUFS.

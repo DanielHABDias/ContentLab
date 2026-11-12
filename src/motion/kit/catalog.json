@@ -7,7 +7,9 @@
     "Cada troca tem som: whoosh/swish na troca, impact nas palavras gigantes, pop no Nox, tick em números, camera em painéis, riser antes do payoff.",
     "Beats em segundos, contíguos e em ordem (at do próximo = at + duration do anterior). Com narração, alinhe o at ao início da frase dita.",
     "Números inventados para explicar uma ideia levam fonte 'simulação'; dados reais levam a fonte.",
-    "Cenas 3D (nox3d, paineis3d) são destaque: no máximo 1 a cada ~30 s, para não pesar no render nem cansar."
+    "Cena 3D (paineis3d) é destaque: no máximo 1 a cada ~30 s.",
+    "O Nox não aparece o tempo todo: a cena da obra é a base; o Nox entra por aparte (cintura para cima, fundo desfocado) em piadas, perguntas e explicações, e de corpo inteiro (cena nox) só em poucos momentos.",
+    "Shorts 9:16: todas as cenas são diagramadas para vertical; o conteúdo fica entre 12% e 72% da altura e a legenda acima da interface do Shorts."
   ],
   "humores": [
     "bravo",
@@ -96,10 +98,11 @@
         "midia": "media:<id> (obrigatório)",
         "rotulo": "etiqueta amarela (nome, edição)",
         "legenda": "frase curta embaixo",
-        "humor": "Nox reagindo ao lado",
+        "humor": "reação do Nox no canto (só rosto e tronco); usar pouco",
         "movimento": "entrar, sair ou panoramica",
         "fundo": "fundo (padrão papel)",
-        "tela": "true para moldura de TV"
+        "tela": "true para moldura de TV",
+        "cheia": "true = a mídia ocupa a tela inteira (sem painel)"
       },
       "exemplo": {
         "midia": "media:<id>",
@@ -260,27 +263,6 @@
         "pergunta": "qual fraqueza deixa o seu herói favorito interessante?"
       }
     },
-    "nox3d": {
-      "uso": "Nox em 3D (releitura procedural do canônico): cai em cena, a câmera gira em volta e ele faz um gesto; abertura, apresentação, reação marcante ou virada. Usar com moderação (1 a cada ~30 s)",
-      "props": {
-        "humor": "humor (olhos)",
-        "gesto": "parado | acenar | apontar | pular | pensar",
-        "texto": "texto curto ao lado",
-        "subtexto": "texto menor",
-        "fundo": "estrelas | explosao | meio-tom | papel | escuro | branco",
-        "tom": "cor do fundo",
-        "lado": "direita ou esquerda (onde fica o texto)"
-      },
-      "exemplo": {
-        "humor": "bravo",
-        "gesto": "apontar",
-        "texto": "ISSO TÁ ERRADO",
-        "fundo": "explosao",
-        "tom": "vermelho",
-        "lado": "esquerda"
-      },
-      "render": "precisa de WebGL (o editor usa gl swangle); ~4 s de render por segundo de vídeo"
-    },
     "paineis3d": {
       "uso": "Voo de câmera por painéis HQ no espaço: cada painel é uma imagem da obra; linha do tempo, sequência de casos ou abertura de capítulo",
       "props": {
@@ -303,6 +285,46 @@
         "conclusao": "TUDO MUDOU."
       },
       "render": "precisa de WebGL; só imagens (vídeo não vira textura); 2–3 s por painel"
+    },
+    "aparte": {
+      "uso": "Aparte do Nox sobre a cena da obra: o fundo desfoca, o Nox sobe pelo meio da cintura para cima, comenta em 1–4 tempos mudando de posição e expressão, com um balão de ícone ou texto acima dele; depois desce e o fundo volta nítido. Para piada, pergunta, ironia ou explicação rápida sobre o que está na tela",
+      "props": {
+        "midia": "media:<id> — a cena que continua atrás (desfocada)",
+        "falas": "lista de 1–4 { humor, icone, texto } — cada uma é um tempo do aparte",
+        "fundo": "fundo quando não há mídia",
+        "tom": "cor do fundo"
+      },
+      "icones": [
+        "lampada",
+        "interrogacao",
+        "exclamacao",
+        "coracao",
+        "caveira",
+        "dinheiro",
+        "relogio",
+        "raio",
+        "certo",
+        "errado",
+        "fogo",
+        "coroa",
+        "escudo",
+        "olho",
+        "cerebro",
+        "trofeu"
+      ],
+      "exemplo": {
+        "midia": "media:superman-1938",
+        "falas": [
+          {
+            "humor": "surpreso",
+            "icone": "interrogacao"
+          },
+          {
+            "humor": "piscada",
+            "texto": "SPOILER: NÃO DEU"
+          }
+        ]
+      }
     }
   },
   "thumbnail": {
@@ -316,20 +338,21 @@
       "humor": "expressão do Nox (omitir = sem Nox)",
       "lado": "esquerda | direita — lado do texto",
       "tom": "amarelo | vermelho | azul",
-      "selo": "selo curto (até 18 caracteres)"
+      "selo": "selo curto (até 18 caracteres)",
+      "fundo": "preto (padrão) | branco | cena — limpo: fundo liso e o personagem em destaque; cena: mídia na imagem toda"
     },
     "regras": [
+      "limpa: fundo preto ou branco e o personagem grande (PNG transparente vira recorte)",
       "um assunto dominante",
-      "texto complementa o título, não repete",
+      "até 4 palavras; texto complementa o título, não repete",
       "A e B com ângulos diferentes",
       "conferir no tamanho do celular (320 px)"
     ],
     "exemplo": {
       "midia": "media:batman-1986",
       "texto": "O HERÓI\n*QUEBRADO*",
-      "humor": "surpreso",
-      "lado": "esquerda",
-      "tom": "amarelo"
+      "fundo": "preto",
+      "lado": "esquerda"
     }
   }
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AbsoluteFill, continueRender, delayRender, interpolate, random, staticFile, useCurrentFrame, Easing } from 'remotion';
+import { AbsoluteFill, continueRender, delayRender, interpolate, random, staticFile, useCurrentFrame, useVideoConfig, Easing } from 'remotion';
 
 /** Paleta do padrão visual Diazverso. */
 export const C = { ink: '#0B0B10', paper: '#F2E8D5', yellow: '#F5C518', red: '#E63946', blue: '#2676E8', eye: '#FCDF43', white: '#FFFFFF' };
@@ -44,12 +44,12 @@ export const Film: React.FC = () => {
 
 /** Campo de estrelas em deriva lenta (fundo dos textos "pensados", inspirado no RunnyIA). */
 export const Stars: React.FC<{ speed?: number }> = ({ speed = 1 }) => {
-  const frame = useCurrentFrame();
+  const frame = useCurrentFrame(); const { width, height } = useVideoConfig();
   return (
     <AbsoluteFill style={{ background: C.ink }}>
       {Array.from({ length: 90 }, (_, i) => {
-        const x = random(`x${i}`) * 1920; const y = random(`y${i}`) * 1080; const z = 0.3 + random(`z${i}`) * 1.4;
-        const drift = ((x + frame * speed * z * 1.4) % 1960) - 20;
+        const x = random(`x${i}`) * width; const y = random(`y${i}`) * height; const z = 0.3 + random(`z${i}`) * 1.4;
+        const drift = ((x + frame * speed * z * 1.4) % (width + 40)) - 20;
         return <div key={i} style={{ position: 'absolute', left: drift, top: y, width: z * 2.2, height: z * 2.2, borderRadius: 9, background: '#fff', opacity: 0.25 + 0.6 * Math.abs(Math.sin(frame / 20 + i)) * (z / 1.7) }} />;
       })}
     </AbsoluteFill>
@@ -61,7 +61,7 @@ export const SpeedBurst: React.FC<{ color?: string; bg?: string; rays?: number }
   const frame = useCurrentFrame();
   return (
     <AbsoluteFill style={{ background: bg, overflow: 'hidden' }}>
-      <svg viewBox="-960 -540 1920 1080" width="100%" height="100%" style={{ transform: `rotate(${frame * 0.4}deg) scale(1.6)` }}>
+      <svg viewBox="-960 -540 1920 1080" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" style={{ transform: `rotate(${frame * 0.4}deg) scale(1.6)` }}>
         {Array.from({ length: rays }, (_, i) => { const a = (i / rays) * Math.PI * 2; const w = 0.025 + random(`r${i}`) * 0.05; return <polygon key={i} fill={color} points={`0,0 ${Math.cos(a - w) * 1500},${Math.sin(a - w) * 1500} ${Math.cos(a + w) * 1500},${Math.sin(a + w) * 1500}`} />; })}
       </svg>
       <AbsoluteFill style={{ background: `radial-gradient(circle at center, ${bg} 0%, ${bg} 22%, transparent 45%)` }} />

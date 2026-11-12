@@ -126,7 +126,7 @@ export const timelineSchema = z.object({
  * Tempos em segundos; props das cenas são JSON e citam mídia como `media:<id>`.
  */
 const motionValue = z.lazy(() => z.union([z.string().max(2000), z.number().finite(), z.boolean(), z.null(), z.array(motionValue).max(40), z.record(z.string().max(64), motionValue)]));
-export const MOTION_SCENES = ['titulo', 'frase', 'nox', 'evidencia', 'pagina', 'numero', 'ficha', 'formula', 'lista', 'comparacao', 'cta', 'nox3d', 'paineis3d'];
+export const MOTION_SCENES = ['titulo', 'frase', 'nox', 'evidencia', 'pagina', 'numero', 'ficha', 'formula', 'lista', 'comparacao', 'cta', 'aparte', 'paineis3d'];
 export const MOTION_SFX = ['pop', 'tick', 'type', 'whoosh', 'swish', 'impact', 'sub', 'glitch', 'riser', 'ding', 'error', 'camera'];
 export const motionBeatSchema = z.object({
   id: z.string().regex(/^[a-z0-9_-]{1,40}$/i),
