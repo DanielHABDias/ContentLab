@@ -22,6 +22,7 @@ Para atualizar as cenas depois de mudar o plugin, rode o comando de novo.
 | Legenda palavra a palavra com tempos reais | `narration_transcribe` (Whisper local) gera os tempos de cada palavra; a legenda sai em blocos de até 3 palavras. Sem transcrição, cai para legenda por frase |
 | Trilha licenciada | A trilha de `audio_library` é só **rascunho**. A verificação fica pendente até você importar uma faixa licenciada (YouTube Audio Library ou biblioteca sua) com papel *música* |
 | SFX com função | Whoosh nas trocas de trecho e ding no payoff, originais |
+| Legenda fora da cena no Short | A cena ocupa os 64% de cima; embaixo, uma faixa gerada (meio-tom e linha amarela) recebe a legenda |
 | Short de 60 s ou mais | Aparece na verificação como decisão sua, sem bloquear |
 
 ## Cenas disponíveis

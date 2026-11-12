@@ -59,7 +59,7 @@ export const SHORTS_SAFE_AREA = { top: 0.125, right: 0.148, bottom: 0.224, left:
 const YEAR = /\b(1[0-9]{3}|20[0-9]{2})\b/;
 const fxId = () => `fx_${randomUUID().replaceAll('-', '').slice(0, 10)}`;
 /** Imagens que mostram o assunto (não slides de texto nem thumbnails), com direitos resolvidos, na ordem de importação. */
-export const evidenceImages = project => project.media.filter(item => item.kind === 'image' && !['slide', 'thumbnail'].includes(item.role) && item.rights !== 'pending');
+export const evidenceImages = project => project.media.filter(item => item.kind === 'image' && !['slide', 'thumbnail', 'background'].includes(item.role) && item.rights !== 'pending');
 
 /** Duração máxima de um beat visual (padrão Diazverso: troca a cada 2–5 s em Shorts, 4–8 s no longo). */
 export const MAX_BEAT_SECONDS = { vertical: 4.5, horizontal: 7 };
@@ -82,7 +82,7 @@ export function planBeats(windows, { vertical = false } = {}) {
   return beats;
 }
 
-const STOP = new Set('a o as os um uma uns umas de do da dos das em no na nos nas por para com sem que e é ou se mas mais muito como ao aos à às seu sua seus suas ele ela eles elas isso esse essa este esta foi era são ser ter tem tinha já não nem só também quando onde porque então depois antes até sobre entre estava estavam está estão ficou fica vai vão eram foram sendo havia pode podem faz fez coisa quer querem parece cada quem todo toda todos todas sempre nunca aqui agora assim dele dela você voce nada tudo algo alguém ninguém mesmo outro outra apenas ainda precisa precisava veio começa justamente direito prática'.split(' '));
+const STOP = new Set('a o as os um uma uns umas de do da dos das em no na nos nas por para com sem que e é ou se mas mais muito como ao aos à às seu sua seus suas ele ela eles elas isso esse essa este esta foi era são ser ter tem tinha já não nem só também quando onde porque então depois antes até sobre entre estava estavam está estão ficou fica vai vão eram foram sendo havia pode podem faz fez coisa quer querem parece cada quem todo toda todos todas sempre nunca aqui agora assim dele dela você voce nada tudo algo alguém ninguém mesmo outro outra apenas ainda precisa precisava veio começa justamente direito prática alguma algum alguns algumas sua seu suas seus'.split(' '));
 /** Até 3 palavras de impacto de uma frase (nomes próprios, números e palavras fortes), na ordem da fala. */
 export function impactWords(text, limit = 3) {
   const words = String(text).replace(/[“”"()«»]/g, '').split(/\s+/).map(word => word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '')).filter(Boolean);
@@ -217,7 +217,7 @@ export class ProductionOperations {
     const list = (variants?.length ? variants : [{ label: 'A', title: packaging.titleA }, { label: 'B', title: packaging.titleB || packaging.titleA }]).slice(0, 2);
     if (list.some(item => !String(item.title || '').trim())) throw new Error('Escreva os títulos A/B (ou informe o texto de cada thumbnail)');
     const [width, height] = THUMB_SIZES[project.aspectRatio] || THUMB_SIZES['16:9'];
-    const content = project.media.filter(item => ['video', 'image'].includes(item.kind) && !['thumbnail'].includes(item.role));
+    const content = project.media.filter(item => ['video', 'image'].includes(item.kind) && !['thumbnail', 'background'].includes(item.role));
     const staging = await mkdtemp(path.join(os.tmpdir(), 'contentlab-thumbs-'));
     const result = {};
     try {
@@ -324,7 +324,7 @@ export class ProductionOperations {
     if (!(total > 0)) throw new Error('Duração da narração desconhecida');
     const fps = project.timeline.fps; const totalFrames = Math.round(total * fps);
     const windows = this.#windows(project, session, total);
-    const all = project.media.filter(item => ['video', 'image'].includes(item.kind) && item.role !== 'thumbnail');
+    const all = project.media.filter(item => ['video', 'image'].includes(item.kind) && !['thumbnail', 'background'].includes(item.role));
     const evidence = evidenceImages(project);
     if ((scenes === 'auto' || scenes === true) && !evidence.length) throw Object.assign(new Error('O estilo HQ precisa de imagens do assunto: importe imagens dos personagens/obra com direitos confirmados (slides de texto não contam)'), { code: 'VISUAL_EVIDENCE_MISSING' });
     const plan = scenes === 'auto' || scenes === true ? planScenes(windows, { title: project.creative?.packaging?.titleA || project.title, images: evidence.map(item => ({ id: item.id, name: item.name })), vertical: project.aspectRatio === '9:16' }) : Array.isArray(scenes) ? scenes : [];
@@ -342,6 +342,10 @@ export class ProductionOperations {
     commands.push({ op: 'clip.add', trackId: 'audio_main', clip: { ...base, id: clipId(), type: 'media', sourceId: narration.id, name: 'Narração', startFrame: 0, durationInFrames: totalFrames, effects: [], volume: 1 } });
     // Short com cenas: a cena ocupa a parte de cima e o terço de baixo fica livre para a legenda (padrão Diazverso).
     const sceneLayout = project.aspectRatio === '9:16' && plan.length ? { '9:16': SHORTS_SCENE_BOX } : undefined;
+    if (sceneLayout) {
+      const band = await this.#captionBand(directory, project);
+      commands.push({ op: 'clip.add', trackId: 'visual_main', clip: { ...base, id: clipId(), type: 'media', sourceId: band, name: 'Faixa da legenda', startFrame: 0, durationInFrames: totalFrames, effects: [], volume: 0 } });
+    }
     if (visuals.length && !sceneLayout) {
       const slot = Math.max(fps * 3, Math.round(totalFrames / visuals.length));
       let cursor = 0; let index = 0;
@@ -358,14 +362,17 @@ export class ProductionOperations {
     if (plan.length) {
       if (!project.timeline.tracks.some(track => track.id === SCENES_TRACK)) commands.push({ op: 'track.add', track: scenesTrack() });
       const manifests = new Map((await this.app.components.list()).map(item => [item.id, item]));
+      let sceneEnd = 0;
       for (const [position, item] of plan.entries()) {
         const window = Number.isFinite(item.start) && Number.isFinite(item.length) ? { start: item.start, length: item.length } : windows.find(entry => entry.scene.id === item.sceneId) || (Number.isInteger(item.index) ? windows[item.index] : windows[position]);
         const manifest = manifests.get(item.componentId);
         if (!window || !manifest) throw Object.assign(new Error(`Cena inválida: ${item.sceneId || position} → ${item.componentId}`), { code: 'SCENE_INVALID' });
         const missing = mediaRefs(item.props || {}).filter(id => !project.media.some(media => media.id === id));
         if (missing.length) throw Object.assign(new Error(`Cena ${item.sceneId || position} usa mídia que não está no projeto: ${missing.join(', ')}`), { code: 'SCENE_INVALID' });
-        const startFrame = Math.round(window.start * fps); const end = position === plan.length - 1 ? totalFrames : Math.min(totalFrames, Math.round((window.start + window.length) * fps));
+        // Tempos arredondados (ex.: vindos de scene_list) não podem sobrepor a cena anterior.
+        const startFrame = Math.max(sceneEnd, Math.round(window.start * fps)); const end = position === plan.length - 1 ? totalFrames : Math.min(totalFrames, Math.round((window.start + window.length) * fps));
         if (end - startFrame < 1) continue;
+        sceneEnd = end;
         commands.push({ op: 'clip.add', trackId: SCENES_TRACK, clip: { ...base, id: clipId(), type: 'component', componentId: item.componentId, componentProps: sanitizeProps(manifest.propsSchema, item.props || {}), name: manifest.label, startFrame, durationInFrames: end - startFrame, fit: 'stretch', ...(sceneLayout ? { layout: sceneLayout, anchor: 'top' } : {}), effects: [], volume: 1 } });
         sceneClips += 1;
       }
@@ -386,7 +393,9 @@ export class ProductionOperations {
         if (ding && windows.length > 1) { const at = Math.round((windows.at(-1).start + 0.5) * fps); const length = Math.min(Math.round(1.2 * fps), totalFrames - at); if (length > 0) commands.push({ op: 'clip.add', trackId: 'audio_sfx', clip: { ...base, id: clipId(), type: 'media', sourceId: ding.id, name: 'Ding', startFrame: at, durationInFrames: length, effects: [], volume: 0.2 } }); }
       }
     }
-    let details = await this.app.editOps.edit({ path: directory, baseRevision: project.revision, commands, label: 'Montagem automática' });
+    // A faixa do Short entra como mídia gerada antes da edição: a revisão base é a atual.
+    const baseRevision = sceneLayout ? (await readProjectDirectory(directory)).revision : project.revision;
+    let details = await this.app.editOps.edit({ path: directory, baseRevision, commands, label: 'Montagem automática' });
     const summary = { durationSeconds: total, visualClips: commands.filter(item => item.trackId === 'visual_main').length, sceneClips, images: new Set(plan.flatMap(item => mediaRefs(item.props || {}))).size, music: Boolean(musicMedia), sfx: Boolean(sfx), safeArea: shortsSafeArea && project.aspectRatio === '9:16' ? 'shorts' : 'default' };
     if (!captions) return { revision: details.project.revision, ...summary };
 
@@ -404,6 +413,25 @@ export class ProductionOperations {
       details = await this.app.editOps.captions({ path: directory, baseRevision: details.project.revision, srtText: srt, srtName: 'roteiro.srt', style: captionStyle });
     }
     return { revision: details.project.revision, ...summary, captions: cues.length, captionSync: words.length ? 'words' : 'phrases' };
+  }
+
+  /**
+   * Fundo do Short com cenas: tinta da paleta Diazverso, meio-tom que cresce para baixo e linha amarela
+   * na borda da cena, para a faixa da legenda não ficar lisa. Gerado localmente (direitos próprios), uma vez por projeto.
+   */
+  async #captionBand(directory, project) {
+    const existing = project.media.find(item => item.role === 'background' && item.source?.value === 'Faixa da legenda (gerada)');
+    if (existing) return existing.id;
+    const [width, height] = SIZES['9:16']; const edge = Math.round(height * SHORTS_SCENE_BOX.height);
+    const staging = await mkdtemp(path.join(os.tmpdir(), 'contentlab-band-'));
+    try {
+      const file = path.join(staging, 'faixa-legenda.png');
+      const dots = `if(lt(hypot(mod(X+12*mod(floor(Y/24),2),24)-12,mod(Y,24)-12),1.5+4*clip((Y-${edge})/${height - edge},0,1)),58,14)`;
+      await run(this.ffmpeg, ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi', '-i', `nullsrc=s=${width}x${height},format=gray`, '-vf', `geq=lum='${dots}',format=rgb24,colorchannelmixer=rr=0.9:gg=0.9:bb=1.2,drawbox=x=0:y=${edge}:w=iw:h=10:color=0xF5C518:t=fill,drawbox=x=0:y=${edge + 10}:w=iw:h=6:color=0x0B0B10:t=fill`, '-frames:v', '1', file], { timeout: 60_000 });
+      const imported = await this.app.media.importFile(file);
+      const result = await this.app.mediaOps.attach(directory, imported, { rights: 'owned', source: { type: 'generated', value: 'Faixa da legenda (gerada)' }, name: 'Faixa da legenda', role: 'background' });
+      return result.mediaId;
+    } finally { await rm(staging, { recursive: true, force: true }); }
   }
 
   /** Palavras com tempo da transcrição da narração montada (só se a transcrição é deste arquivo). */
