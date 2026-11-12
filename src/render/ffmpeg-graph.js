@@ -73,16 +73,25 @@ export async function buildFfmpegArgs(plan, { from = 0, to = plan.duration, scal
     filters.push(`${video}null[vout]`);
     return [...args, '-filter_complex', filters.join(';'), '-map', '[vout]', '-frames:v', '1', '-update', '1', '-y', output];
   }
-  const mixes = audio.map((item, position) => {
+  // Trilha com `duck` abaixa sozinha enquanto há fala (sidechain na mistura das outras faixas).
+  const chains = audio.map((item, position) => {
     const delay = Math.round(item.localStart * 1000);
     const chain = ['aresample=48000', 'aformat=channel_layouts=stereo', 'asetpts=PTS-STARTPTS', `volume=${item.layer.volume}`];
     if (item.layer.fadeIn > item.offset) chain.push(`afade=t=in:st=0:d=${(item.layer.fadeIn - item.offset).toFixed(4)}`);
     if (item.layer.fadeOut) chain.push(`afade=t=out:st=${Math.max(0, item.duration - item.layer.fadeOut).toFixed(4)}:d=${item.layer.fadeOut}`);
     if (delay) chain.push(`adelay=${delay}|${delay}`);
     filters.push(`[${item.index}:a]${chain.join(',')}[a${position}]`);
-    return `[a${position}]`;
+    return { label: `[a${position}]`, duck: item.layer.duck, level: item.layer.duckLevel };
   });
-  if (mixes.length) filters.push(`${mixes.join('')}amix=inputs=${mixes.length}:normalize=0:dropout_transition=0,alimiter=limit=0.95,apad,atrim=0:${window.toFixed(4)}[aout]`);
+  const voices = chains.filter(item => !item.duck); const beds = chains.filter(item => item.duck);
+  const mixes = chains.map(item => item.label);
+  if (voices.length && beds.length) {
+    const ratio = Math.min(20, Math.max(2, 1 / Math.max(0.05, beds[0].level)));
+    filters.push(`${voices.map(item => item.label).join('')}amix=inputs=${voices.length}:normalize=0:dropout_transition=0,apad,asplit=2[voice][key]`);
+    filters.push(`${beds.map(item => item.label).join('')}amix=inputs=${beds.length}:normalize=0:dropout_transition=0[bed]`);
+    filters.push(`[bed][key]sidechaincompress=threshold=0.02:ratio=${ratio.toFixed(1)}:attack=15:release=450:makeup=1[ducked]`);
+    filters.push(`[voice][ducked]amix=inputs=2:normalize=0:dropout_transition=0:duration=longest,alimiter=limit=0.95,apad,atrim=0:${window.toFixed(4)}[aout]`);
+  } else if (mixes.length) filters.push(`${mixes.join('')}amix=inputs=${mixes.length}:normalize=0:dropout_transition=0,alimiter=limit=0.95,apad,atrim=0:${window.toFixed(4)}[aout]`);
   else { inputs.push(['-f', 'lavfi', '-t', window.toFixed(4), '-i', 'anullsrc=r=48000:cl=stereo']); }
   filters.push(`${video}null[vout]`);
   const audioMap = mixes.length ? '[aout]' : `${inputs.length - 1}:a`;

@@ -55,7 +55,7 @@ function validatePropsSchema(schema) {
   for (const [key, descriptor] of Object.entries(schema)) {
     if (!/^[A-Za-z_$][\w$]*$/.test(key)) throw new Error(`Propriedade inválida: ${key}`);
     const type = typeof descriptor === 'string' ? descriptor : descriptor?.type;
-    if (!['string', 'number', 'boolean', 'color'].includes(type)) throw new Error(`Tipo de propriedade não permitido: ${key}`);
+    if (!['string', 'text', 'number', 'boolean', 'color'].includes(type)) throw new Error(`Tipo de propriedade não permitido: ${key}`);
   }
 }
 async function exists(target) { return Boolean(await stat(target).catch(() => null)); }

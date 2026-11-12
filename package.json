@@ -24,6 +24,7 @@
     "app": "node scripts/start.mjs",
     "app:stop": "node scripts/start.mjs stop",
     "app:status": "node scripts/start.mjs status",
+    "qa:hq": "node scripts/qa-hq.mjs",
     "qa:mcp": "node scripts/qa-mcp.mjs"
   },
   "dependencies": {

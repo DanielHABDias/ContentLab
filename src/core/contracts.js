@@ -56,7 +56,7 @@ export const mediaRefSchema = z.object({
   rights: z.enum(['owned', 'licensed', 'authorized', 'pending']),
   name: z.string().max(255).optional(),
   source: z.object({ type: z.enum(['file', 'url', 'upload', 'generated']), value: z.string().max(4096) }).optional(),
-  role: z.enum(['content', 'thumbnail', 'slide', 'narration']).optional(),
+  role: z.enum(['content', 'thumbnail', 'slide', 'narration', 'music', 'sfx']).optional(),
   importedAt: z.string().optional(),
   metadata: z.object({
     durationSeconds: z.number().nonnegative().nullable(),

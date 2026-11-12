@@ -25,8 +25,9 @@ import { ComponentRegistry } from '../timeline/component-registry.js';
 import { RemotionComponentRuntime } from '../render/remotion-component-runtime.js';
 import { fileURLToPath } from 'node:url';
 import { RenderQueue } from '../render/render-queue.js';
+import { BUNDLED_COMPONENTS } from '../timeline/components/catalog.js';
 
-const bundledComponent = import.meta.url.startsWith('file:') ? path.join(path.dirname(fileURLToPath(import.meta.url)), '../timeline/components/KineticEmphasis.tsx') : path.join(process.cwd(), 'src/timeline/components/KineticEmphasis.tsx');
+const bundledDirectory = import.meta.url.startsWith('file:') ? path.join(path.dirname(fileURLToPath(import.meta.url)), '../timeline/components') : path.join(process.cwd(), 'src/timeline/components');
 
 export class LocalApplicationService {
   constructor({ dataDirectory, dialog = new NativeDialog(), packages = new PackageService(), media = null, renderer = null, trash = new SystemTrash(), opener = new SystemOpener(), activities = new ActivityTracker(), setup = null, toolsDirectory = null, projectsDirectory = null, renderCacheDirectory = null, transcriber = null, voice = null, updater = null }) {
@@ -62,12 +63,15 @@ export class LocalApplicationService {
   /** Carrega as configurações uma vez e aplica as raízes aos serviços. */
   ready() { this.readyPromise ||= this.settingsStore.read().then(async settings => { this.#apply(settings); await this.#prepareComponents(); await this.renderQueue.restore(); return this.settings; }); return this.readyPromise; }
 
+  /** Registra (ou atualiza, se a fonte mudou) as cenas embutidas do catálogo. */
   async #prepareComponents() {
-    const source = await readFile(bundledComponent, 'utf8');
-    const expected = { id: 'kinetic_emphasis', label: 'Ênfase cinética', exportName: 'KineticEmphasis', propsSchema: { text: { type: 'string', label: 'Texto', default: 'Texto em destaque' }, color: { type: 'color', label: 'Cor', default: '#d8ff48' } } };
-    const current = await this.components.inspect(expected.id).catch(() => null);
-    const { createHash } = await import('node:crypto'); const hash = createHash('sha256').update(source).digest('hex');
-    if (!current || current.hash !== hash) await this.components.register({ ...expected, source, replace: Boolean(current) });
+    const { createHash } = await import('node:crypto');
+    for (const { file, use, ...expected } of BUNDLED_COMPONENTS) {
+      const source = await readFile(path.join(bundledDirectory, file), 'utf8');
+      const current = await this.components.inspect(expected.id).catch(() => null);
+      const hash = createHash('sha256').update(source).digest('hex');
+      if (!current || current.hash !== hash || JSON.stringify(current.propsSchema) !== JSON.stringify(expected.propsSchema) || current.label !== expected.label) await this.components.register({ ...expected, source, replace: Boolean(current) });
+    }
   }
 
   #apply(settings) {
@@ -409,6 +413,9 @@ export class LocalApplicationService {
   productionSummary(input) { return this.productionOps.summary(input); }
   productionWait(input) { return this.productionOps.waitForDecision(input); }
   productionDeliverable(input) { return this.productionOps.deliverable(input); }
+  productionAudio(input) { return this.productionOps.audioLibrary(input); }
+  productionScenes(input) { return this.productionOps.sceneSuggestions(input); }
+  productionChapters(input) { return this.productionOps.chapters(input); }
   voicePlan() { return this.narrationOps.voicePlan(); }
 
   /** Capacidades para as telas de etapa, derivadas do mesmo catálogo do setup. */

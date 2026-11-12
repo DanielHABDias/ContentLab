@@ -46,6 +46,7 @@ async function findJob(path, jobId) {
 export function createMcpServer() {
   const server = new McpServer({ name: 'content-lab', version: '2.1.0' }, { instructions: [
     'Content Lab produz vídeos localmente (ideia → roteiro → embalagem → mídia → narração → edição → render). Nunca publica nada.',
+    'Estilo HQ (cenas animadas): depois da narração, scene_list mostra as cenas e um plano sugerido; audio_library gera trilha e SFX originais; timeline_auto_assemble com scenes ("auto" ou lista), music e sfx monta tudo. Não invente falas de personagens reais em hq_dialogo.',
     'Fluxo típico: contentlab_start → project_create → creative_write (brief) → aprovar/aguardar → creative_write (script) → … → media_generate_slides ou media_import_files → narration_generate + job_wait → narration_assemble + job_wait → timeline_auto_assemble → thumbnails_generate → render_start + job_wait → deliverable_build → project_export.',
     'Em cada etapa: preencha o que project_get indica como `missing`. Se o projeto está em modo `review`, chame stage_wait_decision e espere a pessoa aprovar no app; só use stage_approve com userApproved=true quando a pessoa aprovar no chat. Em modo `autonomous` (a pessoa pediu para não aprovar), use stage_approve direto.',
     'Trabalhos longos devolvem jobId: chame job_wait repetidamente (cada chamada espera até timeoutSeconds) e avise a pessoa do progresso. A voz clonada é lenta (~30 s por segundo de fala em CPU); a narração padrão é rápida.',
@@ -141,7 +142,27 @@ export function createMcpServer() {
     return { jobId: job.id, scenes: takeIds.length, hint: 'Use job_wait; depois timeline_auto_assemble.' };
   });
 
-  tool(server, 'timeline_auto_assemble', 'Monta a timeline: narração montada no áudio, mídias visuais (ou slides) cobrindo a duração e legendas do roteiro sincronizadas por cena. Pode desfazer no app.', { path: projectPath, captions: z.boolean().default(true), captionStyle: z.enum(['legenda', 'destaque', 'titulo']).default('legenda') }, async ({ path, captions, captionStyle }) => api('/production/assemble', { path, captions, captionStyle }));
+  tool(server, 'scene_list', 'Cenas HQ animadas (Remotion) disponíveis e um plano sugerido de uma cena por trecho do roteiro. Use para decidir o visual antes de timeline_auto_assemble.', { path: projectPath.optional() }, async ({ path }) => {
+    const { components } = await api('/edit/components', {});
+    const catalog = components.map(item => ({ id: item.id, label: item.label, use: item.use, props: Object.fromEntries(Object.entries(item.propsSchema).map(([key, spec]) => [key, `${spec.type}${spec.type === 'text' ? ' (uma linha por item)' : ''}`])) }));
+    return path ? { components: catalog, suggestion: (await api('/production/scenes', { path })).scenes } : { components: catalog };
+  });
+
+  tool(server, 'scene_add', 'Adiciona uma cena HQ (componente) na trilha de cenas, num intervalo em segundos. Para montar todas de uma vez prefira timeline_auto_assemble com scenes.', { path: projectPath, componentId: z.string(), props: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).default({}), startSeconds: z.number().min(0), durationSeconds: z.number().positive().max(600) }, async ({ path, componentId, props, startSeconds, durationSeconds }) => {
+    const { project } = await openProject(path); const fps = project.timeline.fps;
+    const result = await api('/edit/add-component', { path, baseRevision: project.revision, trackId: 'visual_scenes', componentId, componentProps: props, startFrame: Math.round(startSeconds * fps), durationInFrames: Math.max(1, Math.round(durationSeconds * fps)) });
+    return { revision: result.project?.revision ?? result.revision };
+  });
+
+  tool(server, 'audio_library', 'Gera trilha musical e efeitos sonoros ORIGINAIS (sintetizados localmente, direitos próprios): trilha com a duração da narração e SFX whoosh, ding, boom, riser.', { path: projectPath, music: z.boolean().default(true), sfx: z.boolean().default(true), seconds: z.number().int().min(5).max(3600).optional().describe('Duração da trilha; padrão: a da narração montada') }, async args => api('/production/audio', args));
+
+  tool(server, 'timeline_auto_assemble', 'Monta a timeline: narração no áudio, mídias/slides, cenas HQ por trecho do roteiro (scenes "auto" ou lista), trilha com ducking sob a voz, SFX nas trocas de cena e legendas sincronizadas. Em 9:16 aplica as áreas seguras de Shorts. Pode desfazer no app.', {
+    path: projectPath, captions: z.boolean().default(true), captionStyle: z.enum(['legenda', 'destaque', 'titulo']).default('legenda'),
+    scenes: z.union([z.literal('auto'), z.array(z.object({ sceneId: z.string().describe('id do trecho (ex.: hook-1, development-2) — veja scene_list'), componentId: z.string(), props: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).default({}) }))]).optional().describe('Cenas HQ: "auto" usa o plano sugerido; uma lista define cada trecho. Omitido: sem cenas.'),
+    music: z.boolean().default(false).describe('Usa a trilha (gere com audio_library ou importe com papel music)'), musicVolume: z.number().min(0).max(1).default(0.35), sfx: z.boolean().default(false),
+  }, async args => api('/production/assemble', args));
+
+  tool(server, 'chapters_get', 'Capítulos do vídeo longo a partir dos tempos reais da narração montada (um por trecho do roteiro).', { path: projectPath }, async ({ path }) => api('/production/chapters', { path }));
 
   tool(server, 'thumbnails_generate', 'Gera as thumbnails A e B (título sobre frame do vídeo, dois estilos) e grava na embalagem. Sem variants usa os títulos A/B.', { path: projectPath, variants: z.array(z.object({ label: z.enum(['A', 'B']), title: z.string().min(1), text: z.string().optional().describe('Texto curto na imagem; padrão = título'), mediaId: z.string().optional(), frameSeconds: z.number().nonnegative().optional() })).max(2).optional() }, async ({ path, variants }) => api('/production/thumbnails', { path, variants }));
 
@@ -160,7 +181,7 @@ export function createMcpServer() {
     return { ...last, waiting: true, message: 'Ainda em andamento; chame job_wait de novo.' };
   });
 
-  tool(server, 'deliverable_build', 'Monta output/entrega/ no projeto: roteiro.md, embalagem.md (títulos A/B, descrição, tags), thumbnails A/B e o vídeo final.', { path: projectPath }, async ({ path }) => api('/production/deliverable', { path }));
+  tool(server, 'deliverable_build', 'Monta output/entrega/ no projeto: roteiro.md, embalagem.md (títulos A/B, descrição, capítulos, tags), thumbnails A/B, o vídeo final e verificacao.md (o que foi conferido e o que falta). Devolve checks.', { path: projectPath }, async ({ path }) => api('/production/deliverable', { path }));
 
   tool(server, 'project_export', 'Exporta o projeto como .contentlab ou ZIP (opcionalmente com o vídeo renderizado).', { path: projectPath, format: z.enum(['zip', 'contentlab']).default('zip'), outputDirectory: z.string(), includeRenders: z.boolean().default(true) }, async ({ path, format, outputDirectory, includeRenders }) => api('/projects/export', { path, format, outputDirectory, includeRenders }));
 

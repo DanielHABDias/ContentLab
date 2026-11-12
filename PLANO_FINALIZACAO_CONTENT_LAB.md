@@ -430,3 +430,16 @@ Objetivo: um chat (Claude/Codex) opera o app real via MCP — abre o Content Lab
 - [x] QA real `npm run qa:mcp`: vídeo longo 16:9 com espera de aprovação e pedido de mudança + 5 Shorts autônomos; tudo persiste após desligar e reabrir.
 - [ ] Escuta da narração padrão pelo dono (`.tools/qa-f26/`).
 
+## F27 — Estilo HQ (paridade com o Diazverso) por MCP e interface
+
+Objetivo: produzir o tipo de vídeo que o plugin Diazverso planeja — cenas HQ animadas, trilha sob a voz, SFX, Shorts 1080×1920 com áreas seguras, capítulos e verificação — com recursos originais e o mesmo núcleo para interface, CLI e MCP.
+
+- [x] Sete cenas HQ originais (Remotion, arquivo único, só React/Remotion) registradas no catálogo; propriedade `text` de várias linhas; campo de várias linhas no editor.
+- [x] Plano automático de cenas por trecho do roteiro (tempos reais da narração) e lista definida pelo agente; trilha **Cenas**; legendas sempre por cima.
+- [x] Trilha e SFX sintetizados localmente (direitos próprios); trilha com ducking por sidechain; whoosh nas trocas e ding no encerramento.
+- [x] Áreas seguras de Shorts na montagem 9:16; render Full HD 1080×1920 a 30 fps.
+- [x] Capítulos dos tempos da narração em `embalagem.md`; `verificacao.md` com o que foi conferido (ffprobe, direitos, aprovações).
+- [x] MCP: `scene_list`, `scene_add`, `audio_library`, `chapters_get`, `timeline_auto_assemble` ampliado; interface: Produção assistida.
+- [x] QA real `npm run qa:hq` (longo 16:9 + Short 9:16 via MCP), frames inspecionados.
+- [ ] Escuta da trilha/SFX e avaliação visual pelo dono.
+

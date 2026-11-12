@@ -1,4 +1,8 @@
 import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
+import { BUNDLED_COMPONENTS } from '../timeline/components/catalog.js';
+/** Trilha das cenas HQ: acima do visual principal; legendas continuam por cima de tudo. */
+export const SCENES_TRACK = 'visual_scenes';
+export const scenesTrack = () => ({ id: SCENES_TRACK, kind: 'visual', name: 'Cenas', muted: false, locked: false, clips: [] });
 import { createHash, randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { CANVASES } from '../render/render-plan.js';
@@ -34,7 +38,7 @@ export class EditOperations {
   async #state(directory, details) {
     const history = await this.#history(directory);
     const current = hash(details.project.timeline);
-    return { ...details, components: await this.app.components.list(), edit: { canUndo: history.undo.at(-1)?.after === current, canRedo: history.redo.at(-1)?.after === current, undoLabel: history.undo.at(-1)?.label || null, redoLabel: history.redo.at(-1)?.label || null } };
+    return { ...details, components: (await this.components()).components, edit: { canUndo: history.undo.at(-1)?.after === current, canRedo: history.redo.at(-1)?.after === current, undoLabel: history.undo.at(-1)?.label || null, redoLabel: history.redo.at(-1)?.label || null } };
   }
 
   async state({ path: directory }) { return await this.#state(directory, await this.app.inspectProject(directory)); }
@@ -81,13 +85,19 @@ export class EditOperations {
     return await this.edit({ path: directory, baseRevision, commands: [{ op: 'clip.add', trackId, clip }], label: `Adicionar ${clip.name}` });
   }
 
-  async components() { await this.app.ready(); return { components: await this.app.components.list() }; }
+  async components() {
+    await this.app.ready();
+    const uses = new Map(BUNDLED_COMPONENTS.map(item => [item.id, item.use]));
+    return { components: (await this.app.components.list()).map(item => ({ ...item, use: uses.get(item.id) || null })) };
+  }
 
   async addComponent({ path: directory, baseRevision, trackId = 'visual_main', componentId, componentProps = {}, startFrame = 0, durationInFrames }) {
     const project = await readProjectDirectory(directory); const manifest = await this.app.components.inspect(componentId);
     const props = sanitizeProps(manifest.propsSchema, componentProps); const duration = durationInFrames || project.timeline.fps * 3;
     const clip = { id: `component_${randomUUID().replaceAll('-', '').slice(0, 10)}`, type: 'component', componentId, componentProps: props, name: manifest.label, startFrame, durationInFrames: duration, fit: 'stretch', anchor: 'center', keyframes: {}, effects: [], sourceInFrame: 0, volume: 1, style: 'legenda' };
-    return await this.edit({ path: directory, baseRevision, commands: [{ op: 'clip.add', trackId, clip }], label: `Adicionar ${manifest.label}` });
+    const commands = [{ op: 'clip.add', trackId, clip }];
+    if (trackId === SCENES_TRACK && !project.timeline.tracks.some(track => track.id === SCENES_TRACK)) commands.unshift({ op: 'track.add', track: scenesTrack() });
+    return await this.edit({ path: directory, baseRevision, commands, label: `Adicionar ${manifest.label}` });
   }
 
   /** Legendas editáveis a partir da transcrição revisada de uma mídia ou de um SRT. */
