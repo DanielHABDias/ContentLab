@@ -4,6 +4,8 @@ export const idSchema = z.string().regex(/^[a-z][a-z0-9_-]{2,63}$/);
 export const aspectRatioSchema = z.enum(['16:9', '9:16', '1:1', '4:5']);
 export const stageStateSchema = z.enum(['pending', 'active', 'changes_requested', 'approved', 'invalidated']);
 
+export const FLOW_STAGES = ['brief', 'script', 'packaging', 'media', 'narration', 'edit', 'review'];
+
 export const workflowStageSchema = z.object({
   id: idSchema,
   state: stageStateSchema,
@@ -160,6 +162,9 @@ export const projectSchema = z.object({
   type: z.enum(['long', 'short', 'custom']),
   aspectRatio: aspectRatioSchema,
   mode: z.enum(['review', 'autonomous']),
+  // Fluxo combinado com a pessoa: etapas em que o agente para mesmo no modo autônomo, e quem grava a narração.
+  pauseAt: z.array(z.enum(FLOW_STAGES)).default([]),
+  narrationBy: z.enum(['ai', 'creator']).default('ai'),
   revision: z.number().int().positive(),
   stages: z.array(workflowStageSchema),
   changeRequests: z.array(changeRequestSchema).default([]),
@@ -192,7 +197,7 @@ export const operationSchema = z.object({
     z.object({ type: z.literal('stage.reopen'), stageId: idSchema, reason: z.string().min(1), author: z.string().min(1).max(120).default('usuário'), requestId: idSchema.optional() }),
     z.object({ type: z.literal('stage.request_changes'), stageId: idSchema, reason: z.string().min(1), author: z.string().min(1).max(120).default('usuário'), requestId: idSchema.optional() }),
     z.object({ type: z.literal('workflow.run'), stageId: idSchema.optional(), jobId: idSchema, author: z.string().min(1).max(120).default('Content Lab') }),
-    z.object({ type: z.literal('project.update'), title: z.string().min(1).optional(), projectType: z.enum(['long', 'short', 'custom']).optional(), aspectRatio: aspectRatioSchema.optional(), mode: z.enum(['review', 'autonomous']).optional() }),
+    z.object({ type: z.literal('project.update'), title: z.string().min(1).optional(), projectType: z.enum(['long', 'short', 'custom']).optional(), aspectRatio: aspectRatioSchema.optional(), mode: z.enum(['review', 'autonomous']).optional(), pauseAt: z.array(z.enum(FLOW_STAGES)).optional(), narrationBy: z.enum(['ai', 'creator']).optional() }),
     z.object({ type: z.literal('creative.update'), creative: projectSchema.shape.creative }),
     z.object({ type: z.literal('motion.set'), motion: motionPlanSchema.nullable() }),
     z.object({ type: z.literal('media.add'), media: mediaRefSchema }),

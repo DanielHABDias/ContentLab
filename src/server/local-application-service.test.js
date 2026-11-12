@@ -17,6 +17,15 @@ test('cria projeto real e o registra nos recentes', async () => {
   expect(await service.listProjects()).toMatchObject([{ id: 'meu_video_real', path: path.join(root, 'workspace', 'meu_video_real') }]);
 });
 
+test('guarda o fluxo combinado: pausas e quem grava a narração', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'contentlab-flow-')); roots.push(root);
+  const service = new LocalApplicationService({ dataDirectory: path.join(root, 'data') });
+  const created = await service.createProject({ title: 'Fluxo', type: 'long', aspectRatio: '16:9', mode: 'autonomous', pauseAt: ['script', 'narration', 'script'], narrationBy: 'creator', parentDirectory: path.join(root, 'w') });
+  expect(created.project).toMatchObject({ mode: 'autonomous', pauseAt: ['script', 'narration'], narrationBy: 'creator' });
+  const plain = await service.createProject({ title: 'Padrão', type: 'short', aspectRatio: '9:16', parentDirectory: path.join(root, 'w') });
+  expect(plain.project).toMatchObject({ mode: 'review', pauseAt: [], narrationBy: 'ai' });
+});
+
 test('cancelamento do seletor retorna null sem fingir sucesso', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'contentlab-dialog-')); roots.push(root);
   const dialog = { chooseDirectory: async () => null, choosePackage: async () => null };

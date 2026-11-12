@@ -31,7 +31,8 @@ const failure = error => ({ isError: true, content: [{ type: 'text', text: JSON.
 const tool = (server, name, description, inputSchema, handler) => server.registerTool(name, { description, inputSchema }, async (args, extra) => { try { return text(await handler(args, extra)); } catch (error) { return failure(error); } });
 
 const projectPath = z.string().describe('Caminho da pasta do projeto (campo `path` de project_create/project_list).');
-const stageId = z.enum(['brief', 'script', 'packaging', 'media', 'narration', 'edit', 'review']);
+const FLOW_STAGES = ['brief', 'script', 'packaging', 'media', 'narration', 'edit', 'review'];
+const stageId = z.enum(FLOW_STAGES);
 
 async function summary(path) { return api('/production/summary', { path }); }
 async function currentStage(path, wanted) { const value = await summary(path); const stage = wanted ? value.stages.find(item => item.id === wanted) : value.currentStage; if (!stage) throw new AppError('Não há etapa ativa: o projeto está concluído', 'NO_ACTIVE_STAGE'); return { value, stageId: stage.id }; }
@@ -48,6 +49,7 @@ export function createMcpServer() {
     'Content Lab produz vídeos localmente (ideia → roteiro → embalagem → mídia → narração → edição → render). Nunca publica nada.',
     'Modo composição (padrão do canal): o vídeo inteiro é uma composição Remotion do kit de motion Diazverso, no ritmo do RunnyIA (troca a cada 1,5–3 s, câmera sempre em movimento, Nox com expressões, palavras gigantes, cenas da obra em painéis HQ, som em cada troca). Leia motion_kit. Fluxo: importe CENAS DAS OBRAS citadas (imagens/vídeos com direitos confirmados, nomes de arquivo descritivos como batman-1940.jpg ajudam a casar com a fala) e uma trilha licenciada (media_import_files com role music); narração + narration_transcribe; motion_plan_auto; motion_preview e abra os PNG; ajuste com motion_plan_set (mais evidência da obra onde a fala cita algo, menos texto genérico); render_start. Vídeo sem narração: escreva os beats direto em motion_plan_set com narration=false. Não invente falas canônicas de personagens.',
     'Fluxo típico: contentlab_start → project_create → creative_write (brief) → aprovar/aguardar → creative_write (script) → … → media_import_files (imagens do assunto; trilha licenciada com role music) → narration_generate + job_wait → narration_assemble + job_wait → narration_transcribe + job_wait → motion_plan_auto → motion_preview → motion_plan_set (ajustes) → thumbnails_generate → render_start + job_wait → deliverable_build → project_export.',
+    'Antes de project_create, combine o fluxo com a pessoa (uma pergunta só): tudo automático (mode autonomous), parar em etapas para revisar no app (autonomous + pauseAt, por exemplo ["script", "narration", "review"]) ou aprovar cada etapa (review); e se a narração é voz de IA ou a pessoa grava a própria voz (narrationBy creator). Nas pausas, avise no chat o que revisar e espere com stage_wait_decision. Com narrationBy creator, não gere voz: peça para gravar e montar no app, espere e rode narration_transcribe.',
     'Em cada etapa: preencha o que project_get indica como `missing`. Se o projeto está em modo `review`, chame stage_wait_decision e espere a pessoa aprovar no app; só use stage_approve com userApproved=true quando a pessoa aprovar no chat. Em modo `autonomous` (a pessoa pediu para não aprovar), use stage_approve direto.',
     'Trabalhos longos devolvem jobId: chame job_wait repetidamente (cada chamada espera até timeoutSeconds) e avise a pessoa do progresso. A voz clonada é lenta (~30 s por segundo de fala em CPU); a narração padrão é rápida.',
   ].join('\n') });
@@ -73,9 +75,23 @@ export function createMcpServer() {
 
   tool(server, 'project_list', 'Lista os projetos dos Recentes (título, tipo, etapa, caminho).', {}, async () => ({ projects: (await api('/projects')).projects.map(item => ({ id: item.id, title: item.title, type: item.type, aspectRatio: item.aspectRatio, stage: item.stage, status: item.status, path: item.path })) }));
 
-  tool(server, 'project_create', 'Cria um projeto real (aparece nos Recentes do app). mode "review" espera aprovação humana a cada etapa; "autonomous" deixa o agente aprovar.', {
-    title: z.string().min(1).max(120), type: z.enum(['long', 'short']), aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:5']).optional(), mode: z.enum(['review', 'autonomous']).default('review'),
-  }, async ({ title, type, aspectRatio, mode }) => { const created = await api('/projects/create', { title, type, aspectRatio: aspectRatio || (type === 'short' ? '9:16' : '16:9'), mode }); return { path: created.path, id: created.project.id, revision: created.project.revision, mode: created.project.mode, aspectRatio: created.project.aspectRatio }; });
+  const flowFields = {
+    mode: z.enum(['review', 'autonomous']).describe('"review": a pessoa aprova cada etapa; "autonomous": o agente aprova, exceto nas etapas de pauseAt'),
+    pauseAt: z.array(z.enum(FLOW_STAGES)).describe('Etapas em que o agente para e espera a pessoa revisar no app, mesmo no modo autônomo'),
+    narrationBy: z.enum(['ai', 'creator']).describe('"creator": a pessoa grava a própria voz no app (Narração → Gravar e Montar narração); o agente não gera voz'),
+  };
+  const flowOf = project => ({ mode: project.mode, pauseAt: project.pauseAt || [], narrationBy: project.narrationBy || 'ai' });
+
+  tool(server, 'project_create', 'Cria um projeto real (aparece nos Recentes do app) com o fluxo combinado com a pessoa: tudo automático, parar em etapas escolhidas (pauseAt) ou aprovar cada etapa; e quem grava a narração.', {
+    title: z.string().min(1).max(120), type: z.enum(['long', 'short']), aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:5']).optional(),
+    mode: flowFields.mode.default('review'), pauseAt: flowFields.pauseAt.default([]), narrationBy: flowFields.narrationBy.default('ai'),
+  }, async ({ title, type, aspectRatio, mode, pauseAt, narrationBy }) => { const created = await api('/projects/create', { title, type, aspectRatio: aspectRatio || (type === 'short' ? '9:16' : '16:9'), mode, pauseAt, narrationBy }); return { path: created.path, id: created.project.id, revision: created.project.revision, ...flowOf(created.project), aspectRatio: created.project.aspectRatio }; });
+
+  tool(server, 'project_flow_set', 'Muda o fluxo combinado de um projeto: modo, etapas de pausa e quem grava a narração. Use quando a pessoa mudar de ideia no meio.', { path: projectPath, mode: flowFields.mode.optional(), pauseAt: flowFields.pauseAt.optional(), narrationBy: flowFields.narrationBy.optional() }, async ({ path, ...changes }) => {
+    const { project } = await openProject(path);
+    const updated = await api('/projects/action', { path, baseRevision: project.revision, action: { type: 'project.update', ...Object.fromEntries(Object.entries(changes).filter(([, value]) => value !== undefined)) } });
+    return { revision: updated.project.revision, ...flowOf(updated.project) };
+  });
 
   tool(server, 'project_get', 'Resumo do projeto: etapa atual e o que falta, estados das etapas, pedidos de mudança, textos, mídias e timeline.', { path: projectPath }, async ({ path }) => summary(path));
 
@@ -98,6 +114,7 @@ export function createMcpServer() {
     const { project } = await openProject(path);
     if (project.mode !== 'autonomous' && !userApproved) throw new AppError('Projeto em modo revisão: espere a pessoa aprovar no app (stage_wait_decision) ou peça a aprovação no chat', 'APPROVAL_REQUIRED');
     const { stageId: target } = await currentStage(path, wanted);
+    if (!userApproved && (project.pauseAt || []).includes(target)) throw new AppError(`A pessoa pediu para revisar a etapa "${target}": avise no chat e espere com stage_wait_decision`, 'PAUSE_POINT');
     const stage = project.stages.find(item => item.id === target);
     const updated = await api('/projects/action', { path, baseRevision: project.revision, action: { type: 'stage.approve', stageId: target, expectedRevision: stage.revision, author: project.mode === 'autonomous' ? 'agente (modo autônomo, MCP)' : 'usuário (aprovado no chat, MCP)' } });
     const next = updated.project.stages.find(item => ['active', 'changes_requested', 'invalidated'].includes(item.state));
@@ -128,6 +145,8 @@ export function createMcpServer() {
     path: projectPath, engine: z.enum(['standard', 'cloned']).default('standard'), voice: z.enum(['pm_alex', 'pf_dora', 'pm_santa']).default('pm_alex'), speed: z.number().min(0.5).max(2).default(1), profileId: z.string().optional(),
   }, async ({ path, engine, voice, speed, profileId }) => {
     if (engine === 'cloned' && !profileId) throw new AppError('Informe profileId (veja voice_options)', 'PROFILE_REQUIRED');
+    const { project } = await openProject(path);
+    if (project.narrationBy === 'creator') throw new AppError('A pessoa vai gravar a própria voz: peça para gravar e montar a narração no app (Narração) e espere com stage_wait_decision; depois rode narration_transcribe', 'CREATOR_RECORDS');
     const job = await api('/narration/generate', engine === 'cloned' ? { path, engine, profileId } : { path, engine, voice, speed });
     return { jobId: job.id, label: job.label, hint: 'Use job_wait; depois narration_assemble.' };
   });

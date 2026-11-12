@@ -29,6 +29,17 @@ env: CONTENTLAB_INSTALLED=1
 
 O agente não precisa que o app esteja aberto: `contentlab_start` o abre em segundo plano.
 
+## Combinar o fluxo
+
+Antes de criar o projeto, o agente pergunta como você quer trabalhar e grava a resposta no projeto:
+
+- **Tudo automático:** `mode: "autonomous"`. O agente aprova cada etapa e só avisa no fim.
+- **Parar em pontos escolhidos:** `mode: "autonomous"` com `pauseAt`, por exemplo `["script", "narration", "review"]`. Nessas etapas ele avisa no chat o que revisar e espera você aprovar no app. `stage_approve` recusa a etapa de pausa sem a sua aprovação.
+- **Aprovar tudo:** `mode: "review"`.
+- **Sua própria voz:** `narrationBy: "creator"`. O agente não gera voz (`narration_generate` recusa). Você grava e monta a narração no app (Narração → Gravar → Montar narração), e ele continua com `narration_transcribe`.
+
+Para mudar no meio do caminho, o agente usa `project_flow_set`.
+
 ## Como o agente "espera do lado de fora"
 
 Trabalhos longos devolvem um `jobId` **na hora**: narração, importação e render. O agente avisa você ("comecei a narração"), e então chama `job_wait`. Cada chamada espera até `timeoutSeconds` e responde com o progresso. Enquanto o job não termina, ela devolve `waiting: true`, e o agente chama de novo.

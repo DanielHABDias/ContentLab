@@ -4,6 +4,7 @@
 // dos exemplos do plugin, e os assets de marca (Anton, Nox, página HQ, ícones) são copiados.
 //   node scripts/build-diazverso-scenes.mjs [caminho-do-plugin]
 import { build } from 'esbuild';
+import { existsSync } from 'node:fs';
 import { copyFile, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -54,9 +55,12 @@ function signatureProps(source, name) {
   }).filter(item => /^[A-Za-z_$][\w$]*$/.test(item.key));
 }
 
-await rm(outDir, { recursive: true, force: true }); await mkdir(outDir, { recursive: true });
+// As cenas TSX avulsas foram aposentadas no plugin (o kit de motion as substitui). Sem elas, as cópias
+// atuais do modo antigo de clips ficam como estão.
+const legacy = existsSync(scenesDir);
 const catalog = [];
-for (const file of (await readdir(scenesDir)).filter(name => name.endsWith('.tsx')).sort()) {
+if (legacy) { await rm(outDir, { recursive: true, force: true }); await mkdir(outDir, { recursive: true }); }
+for (const file of legacy ?  (await readdir(scenesDir)).filter(name => name.endsWith('.tsx')).sort() : []) {
   const name = path.basename(file, '.tsx');
   if (!USES[name]) continue; // utilitários (HQMotion, fundo, página) entram embutidos nas cenas
   const result = await build({ entryPoints: [path.join(scenesDir, file)], bundle: true, format: 'esm', jsx: 'automatic', write: false, logLevel: 'error', external: ['react', 'react/jsx-runtime', 'remotion'], target: 'es2020' });
@@ -79,7 +83,7 @@ for (const file of (await readdir(scenesDir)).filter(name => name.endsWith('.tsx
   const propsSchema = Object.fromEntries(schemaEntries.slice(0, 32));
   catalog.push({ id: `dv_${name.replace(/([a-z])([A-Z])/g, '$1_$2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1_$2').toLowerCase()}`, file: `diazverso/${name}.tsx`, exportName: `${name}Cena`, label: `Diazverso · ${name}`, use: USES[name], propsSchema });
 }
-await writeFile(path.join(outDir, 'catalog.json'), `${JSON.stringify({ plugin: version, components: catalog }, null, 2)}\n`);
+if (legacy) await writeFile(path.join(outDir, 'catalog.json'), `${JSON.stringify({ plugin: version, components: catalog }, null, 2)}\n`);
 
 for (const [from, to] of [['assets/brand/fonts/anton/Anton-Regular.ttf', 'fonts/Anton-Regular.ttf'], ['assets/brand/fonts/anton/OFL.txt', 'fonts/OFL.txt'], ['assets/brand/nox/Nox.png', 'nox/Nox.png'], ['assets/brand/backgrounds/comic-page.png', 'backgrounds/comic-page.png'], ...(await readdir(path.join(plugin, 'assets/graphics'))).map(file => [`assets/graphics/${file}`, `graphics/${file}`])]) {
   await mkdir(path.dirname(path.join(brandOut, to)), { recursive: true }); await copyFile(path.join(plugin, from), path.join(brandOut, to));
@@ -92,4 +96,4 @@ await copyFile(path.join(plugin, 'assets/brand/nox/nox-sem-olhos.png'), path.joi
 await mkdir(path.join(brandOut, 'sfx'), { recursive: true });
 for (const file of (await readdir(path.join(plugin, 'assets/sfx/motion'))).filter(name => name.endsWith('.wav'))) await copyFile(path.join(plugin, 'assets/sfx/motion', file), path.join(brandOut, 'sfx', file));
 await writeFile(path.join(kitOut, 'VERSION'), `${version}\n`);
-console.log(`${catalog.length} cenas do plugin ${version} em ${path.relative(root, outDir)}; marca em ${path.relative(root, brandOut)}`);
+console.log(`${legacy ? `${catalog.length} cenas avulsas e ` : ''}kit de motion do plugin ${version} em ${path.relative(root, kitOut)}; marca em ${path.relative(root, brandOut)}`);

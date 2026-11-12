@@ -468,3 +468,10 @@ Objetivo: produzir pelo MCP vídeos no nível do demo (ritmo do RunnyIA, estéti
 - [x] QA real `npm run qa:motion`: vídeo narrado automático e o demo refeito pelo Content Lab, frames conferidos.
 - [ ] Vídeo real com cenas das obras e trilha licenciada escolhidas pelo dono; diagramação vertical (Shorts) no kit.
 
+## F30 — Fluxo combinado com a pessoa (pausas e voz própria)
+
+- [x] `pauseAt` e `narrationBy` no projeto (contrato, criação, `project.update`, resumo).
+- [x] MCP: `project_create` e `project_flow_set` com o fluxo; `stage_approve` recusa etapa de pausa sem aprovação da pessoa; `narration_generate` recusa quando a pessoa grava a voz.
+- [x] Instruções do MCP pedem para combinar o fluxo numa pergunta antes de criar o projeto.
+- [x] Cenas TSX avulsas aposentadas no plugin; `scenes:diazverso` copia só o kit de motion e mantém as cópias do modo antigo.
+

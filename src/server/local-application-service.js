@@ -190,13 +190,13 @@ export class LocalApplicationService {
   async choosePackage(options) { return { path: await this.dialog.choosePackage(options) }; }
   async chooseMedia(options) { const value = await this.dialog.chooseMedia(options); return options?.multiple ? { paths: value ? value.split('\n').filter(Boolean) : [] } : { path: value }; }
 
-  async createProject({ title, type, aspectRatio, mode = 'review', parentDirectory }) {
+  async createProject({ title, type, aspectRatio, mode = 'review', pauseAt = [], narrationBy = 'ai', parentDirectory }) {
     if (!title?.trim()) throw new Error('Informe o título do projeto');
     await this.ready();
     const id = await this.#availableId(parentDirectory || this.projectsDirectory, slug(title));
     const root = path.resolve(parentDirectory || this.projectsDirectory);
     const project = {
-      schema: 'contentlab-project-v1', id, title: title.trim(), type, aspectRatio, mode, revision: 1,
+      schema: 'contentlab-project-v1', id, title: title.trim(), type, aspectRatio, mode, pauseAt: [...new Set(pauseAt)], narrationBy, revision: 1,
       stages: createWorkflow(), media: [],
       timeline: { schema: 'contentlab-timeline-v1', fps: 30, durationInFrames: 300, aspectRatio, safeArea: { top: .05, right: .05, bottom: aspectRatio === '9:16' ? .15 : .08, left: .05 }, tracks: [
         { id: 'visual_main', kind: 'visual', name: 'Principal', muted: false, locked: false, clips: [] },

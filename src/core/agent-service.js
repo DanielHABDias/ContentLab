@@ -45,6 +45,8 @@ function applyActions(project, actions, operationId) {
       if (action.projectType !== undefined) draft.type = action.projectType;
       if (action.aspectRatio !== undefined) { draft.aspectRatio = action.aspectRatio; draft.timeline.aspectRatio = action.aspectRatio; }
       if (action.mode !== undefined) draft.mode = action.mode;
+      if (action.pauseAt !== undefined) draft.pauseAt = [...new Set(action.pauseAt)];
+      if (action.narrationBy !== undefined) draft.narrationBy = action.narrationBy;
     }
     else if (action.type === 'creative.update') draft.creative = structuredClone(action.creative);
     else if (action.type === 'motion.set') draft.motion = action.motion ? structuredClone(action.motion) : null;

@@ -475,7 +475,7 @@ export class ProductionOperations {
     const active = project.stages.find(stage => ['active', 'changes_requested', 'invalidated'].includes(stage.state)) || null;
     const openRequests = (project.changeRequests || []).filter(item => item.status === 'open');
     return {
-      id: project.id, title: project.title, type: project.type, aspectRatio: project.aspectRatio, mode: project.mode, revision: project.revision,
+      id: project.id, title: project.title, type: project.type, aspectRatio: project.aspectRatio, mode: project.mode, pauseAt: project.pauseAt || [], narrationBy: project.narrationBy || 'ai', revision: project.revision,
       currentStage: active ? { id: active.id, state: active.state, revision: active.revision, missing: missingStageArtifacts(project, active.id) } : null,
       stages: project.stages.map(stage => ({ id: stage.id, state: stage.state })),
       changeRequests: openRequests.map(item => ({ stageId: item.stageId, reason: item.reason, author: item.author })),
