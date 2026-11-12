@@ -503,5 +503,5 @@ Objetivo: produzir pelo MCP vídeos no nível do demo (ritmo do RunnyIA, estéti
 - [x] Aparte com o Nox inteiro subindo pela borda de baixo (pernas fora do quadro).
 - [x] `extras` no beat (contrato e MCP): caixinhas HQ de lembrete (inscrição, like, sininho, opinião, spoiler, fonte, comenta) e recortes PNG.
 - [x] Plano automático: evidência sozinha em tela cheia em metade dos beats, fundos sem repetição, poses pelo tom da frase, caixinhas em 20%/55% e nas opiniões, recortes citados.
-- [x] Poses combináveis: PNG do corpo sem olhos × 8 humores desenhados pelo kit, olhos posicionados por `poses.json`, variantes sorteadas; o validador do plugin confere os arquivos.
+- [x] Poses por PNG pronto com variantes sorteadas (`pose-2.png`); opcional PNG sem olhos + `poses.json` com o humor desenhado pelo kit; o validador do plugin confere os arquivos.
 - [ ] PNGs das poses do Nox (dependem de desenho a partir do canônico; guia e pedido no plugin).

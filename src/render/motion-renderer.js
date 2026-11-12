@@ -25,7 +25,8 @@ const point = value => Array.isArray(value) && value.length === 2 && value.every
 
 /**
  * Poses do Nox: `poses.json` (formato 1) liga cada pose ao PNG sem olhos e à posição dos olhos, que o kit
- * redesenha com o humor pedido. PNG sem entrada no JSON entra no formato antigo (olhos já desenhados).
+ * redesenha com o humor pedido (opcional). PNG solto, sem entrada no JSON, já traz os olhos desenhados e vale como está;
+ * o sufixo `-2`, `-3`… (ou `-b`) faz dele variante da mesma pose, sorteada a cada fala.
  */
 export async function loadNoxPoses(dir, prefix) {
   const names = (await readdir(dir).catch(() => [])).filter(name => /^[a-z0-9-]+\.png$/.test(name));
@@ -38,7 +39,14 @@ export async function loadNoxPoses(dir, prefix) {
     poses[name] = { src: `${prefix}${file}`, ...size, pose: typeof entry.pose === 'string' ? entry.pose : name, olhos: eyes, cobre: ['esquerdo', 'direito', 'ambos'].includes(entry.cobre) ? entry.cobre : 'nenhum' };
     files.add(file);
   }
-  for (const file of names) if (!files.has(file) && !Object.values(manifest.poses || {}).some(entry => entry?.arquivo === file)) { poses[file.slice(0, -4)] = `${prefix}${file}`; files.add(file); }
+  // PNG solto (sem entrada no JSON) já vem com os olhos desenhados; `pensando-2.png` é variante de `pensando`.
+  for (const file of names) {
+    if (files.has(file) || Object.values(manifest.poses || {}).some(entry => entry?.arquivo === file)) continue;
+    const size = await pngSize(path.join(dir, file)); if (!size) continue;
+    const name = file.slice(0, -4);
+    poses[name] = { src: `${prefix}${file}`, ...size, pose: name.replace(/-(\d+|[a-z])$/, ''), olhos: null, cobre: 'nenhum' };
+    files.add(file);
+  }
   return { poses, files: [...files] };
 }
 

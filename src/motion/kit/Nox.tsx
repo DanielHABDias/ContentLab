@@ -62,11 +62,9 @@ export const Nox: React.FC<{ mood: Mood; height: number; x: number; y: number; f
 
 
 /**
- * Poses do Nox (stop motion), combináveis com qualquer humor: cada pose é um PNG do corpo inteiro com o gesto
- * dos braços e o rosto SEM olhos; o kit desenha os olhos do humor pedido nas posições gravadas em
- * `assets/brand/nox/poses/poses.json`. Assim 1 pose × 8 humores = 8 combinações. Uma pose pode ter
- * variantes (`pensando-b` com `"pose": "pensando"`); o kit sorteia uma por fala.
- * Também aceita o formato antigo (nome → caminho, olhos já desenhados no PNG).
+ * Poses do Nox (stop motion): PNGs prontos do Nox inteiro (gesto e olhos desenhados) em
+ * `assets/brand/nox/poses/<pose>.png`; `<pose>-2.png`, `-3`… são variantes sorteadas a cada fala.
+ * Opcional: um PNG sem olhos com entrada no `poses.json` recebe os olhos do humor pedido, desenhados pelo kit.
  */
 export type PoseInfo = {
   src: string; w: number; h: number; pose?: string;

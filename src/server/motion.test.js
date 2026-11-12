@@ -122,14 +122,14 @@ test('plano automático: poses no aparte, fundos variados, cena sozinha, caixinh
   expect(mediaRefs(plan)).toContain('m_moeda');
 });
 
-test('poses do Nox: poses.json liga a pose ao PNG sem olhos e às posições dos olhos; PNG solto vale no formato antigo', async () => {
+test('poses do Nox: poses.json liga a pose ao PNG sem olhos e às posições dos olhos; PNG solto vale com os olhos do desenho e o sufixo vira variante', async () => {
   const { mkdtemp, rm, writeFile } = await import('node:fs/promises');
   const { execFileSync } = await import('node:child_process');
   const os = await import('node:os'); const path = await import('node:path');
   const { loadNoxPoses } = await import('../render/motion-renderer.js');
   const dir = await mkdtemp(path.join(os.tmpdir(), 'contentlab-poses-test-'));
   try {
-    for (const name of ['pensando.png', 'pensando-b.png', 'antiga.png']) execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'color=c=black@0:s=400x640', '-frames:v', '1', path.join(dir, name)]);
+    for (const name of ['pensando.png', 'pensando-b.png', 'antiga.png', 'arminha-2.png']) execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'color=c=black@0:s=400x640', '-frames:v', '1', path.join(dir, name)]);
     await writeFile(path.join(dir, 'poses.json'), JSON.stringify({ versao: 1, poses: {
       pensando: { arquivo: 'pensando.png', olhos: { esquerdo: [176, 199], direito: [280, 189], largura: 80 }, cobre: 'direito' },
       'pensando-b': { arquivo: 'pensando-b.png', pose: 'pensando', olhos: null },
@@ -138,8 +138,9 @@ test('poses do Nox: poses.json liga a pose ao PNG sem olhos e às posições dos
     const { poses, files } = await loadNoxPoses(dir, 'public:brand/poses/');
     expect(poses.pensando).toMatchObject({ src: 'public:brand/poses/pensando.png', w: 400, h: 640, pose: 'pensando', cobre: 'direito', olhos: { esquerdo: [176, 199], largura: 80 } });
     expect(poses['pensando-b']).toMatchObject({ pose: 'pensando', olhos: null });
-    expect(poses.antiga).toBe('public:brand/poses/antiga.png');
-    expect(Object.keys(poses).sort()).toEqual(['antiga', 'pensando', 'pensando-b']);
-    expect(files.sort()).toEqual(['antiga.png', 'pensando-b.png', 'pensando.png']);
+    expect(poses.antiga).toMatchObject({ src: 'public:brand/poses/antiga.png', pose: 'antiga', olhos: null }); // olhos já no desenho
+    expect(poses['arminha-2']).toMatchObject({ pose: 'arminha', olhos: null, w: 400, h: 640 }); // variante solta
+    expect(Object.keys(poses).sort()).toEqual(['antiga', 'arminha-2', 'pensando', 'pensando-b']);
+    expect(files.sort()).toEqual(['antiga.png', 'arminha-2.png', 'pensando-b.png', 'pensando.png']);
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
