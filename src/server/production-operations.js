@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { execFile } from 'node:child_process';
-import { copyFile, link, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { copyFile, link, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { readProjectDirectory } from './project-registry.js';
 import { NarrationStore, scenesFromScript } from '../audio/narration-service.js';
@@ -17,6 +18,10 @@ import { mediaRefs, sanitizeProps } from '../render/remotion-component-runtime.j
 import { missingStageArtifacts } from '../core/workflow.js';
 import { SCENES_TRACK, scenesTrack } from './edit-operations.js';
 import { BUNDLED_COMPONENTS } from '../timeline/components/catalog.js';
+
+/** Catálogo de poses do Nox (do plugin, copiado por `npm run scenes:diazverso`): nome → { arquivos, gesto, olhos, tons }. */
+const POSE_CATALOG = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../assets/brand/nox/poses/catalogo.json');
+export const loadPoseCatalog = (file = POSE_CATALOG) => readFile(file, 'utf8').then(text => JSON.parse(text).poses || null).catch(() => null);
 
 const run = promisify(execFile);
 const FONTS = ['/usr/share/fonts/truetype/inter-zorin-os/Inter-Bold.ttf', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', '/usr/share/fonts/TTF/DejaVuSans-Bold.ttf', '/Library/Fonts/Arial Bold.ttf', '/System/Library/Fonts/Supplemental/Arial Bold.ttf', 'C:\\Windows\\Fonts\\arialbd.ttf'];
@@ -624,7 +629,8 @@ export class ProductionOperations {
     if (narration?.metadata?.durationSeconds) { windows = this.#windows(project, session, narration.metadata.durationSeconds); words = await this.#narrationWords(directory, narration); }
     else { let cursor = 0; windows = scenes.map(scene => { const window = { scene, start: cursor, length: Math.max(2, scene.text.length / 15) }; cursor += window.length; return window; }); }
     const media = project.media.filter(item => ['image', 'video'].includes(item.kind) && !['slide', 'thumbnail', 'background'].includes(item.role) && item.rights !== 'pending').map(item => ({ id: item.id, name: item.name, kind: item.kind }));
-    const plan = planMotion({ windows, words, media, title: project.creative?.packaging?.titleA || project.title, end: narration?.metadata?.durationSeconds ? narration.metadata.durationSeconds + 0.8 : null });
+    const poses = await loadPoseCatalog(); const report = {};
+    const plan = planMotion({ windows, words, media, title: project.creative?.packaging?.titleA || project.title, end: narration?.metadata?.durationSeconds ? narration.metadata.durationSeconds + 0.8 : null, vertical: project.aspectRatio === '9:16', poses, report });
     plan.narration = Boolean(narration);
     plan.music = music && project.media.some(item => item.role === 'music') ? { volume: 0.5, duck: 0.25 } : null;
     const warnings = [
@@ -632,10 +638,11 @@ export class ProductionOperations {
       ...(narration && !words.length ? ['Narração sem transcrição: rode narration_transcribe para sincronizar beats e legenda por palavra.'] : []),
       ...(!media.length ? ['Sem imagens/vídeos da obra: o plano usa Nox e texto. Importe cenas das obras citadas (direitos confirmados).'] : []),
       ...(!plan.music ? ['Sem trilha: importe uma faixa licenciada com papel music.'] : []),
+      ...(project.aspectRatio !== '9:16' && report.posesFaltando?.length ? [`Poses do Nox que não apareceram: ${report.posesFaltando.join(', ')}. Encaixe-as em apartes de tom compatível (motion_plan_set).`] : []),
     ];
-    if (!apply) return { plan, warnings };
+    if (!apply) return { plan, warnings, poses: report };
     const saved = await this.motionPlanSet({ path: directory, plan, source: 'auto' });
-    return { ...saved, warnings };
+    return { ...saved, warnings, poses: report };
   }
 
   /** Prévia de frames do plano atual (PNG em output/previas/): o agente confere o visual antes do render. */

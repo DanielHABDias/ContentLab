@@ -44,9 +44,31 @@ const ICON_RULES = [[/dinheiro|grana|pag[ao]|preço|caro|rico/, 'dinheiro'], [/t
 const iconFor = text => { const folded = fold(text); const hit = ICON_RULES.find(([rule]) => rule.test(folded)); return hit ? hit[1] : /\?$/.test(text) ? 'interrogacao' : 'exclamacao'; };
 /** Pose do Nox (stop motion) pelo tom da frase: pergunta pensa, opinião aponta, ironia/erro é facepalm. */
 const OPINION = /\b(pra mim|eu acho|acho que|na real|sinceramente|opinião|convenhamos|vamos combinar)\b/i;
-const posesFor = text => rotate(String(text).length, (/\?$/.test(text) ? ['pensando', 'ombros'] : OPINION.test(text) ? ['apontando', 'arminha', 'maos-na-cintura'] : NEGATIVE.test(text) ? ['facepalm', 'rindo'] : SURPRISE.test(text) ? ['assustado', 'explicando'] : ['explicando', 'joinha', 'cochichando']));
-/** Gira a lista para variar a primeira pose entre frases parecidas. */
-function rotate(n, list) { const k = n % list.length; return [...list.slice(k), ...list.slice(0, k)]; }
+/** Tom da frase, na mesma língua do catálogo de poses (assets/brand/nox/poses/catalogo.json). */
+const TONE_RULES = [
+  [/\?$/, 'pergunta'], [OPINION, 'opiniao'], [/\b(kkk|haha|piada|ironia|zoeira|engraçad|ridícul|hilári)/i, 'piada'],
+  [/\b(morr|morte|perd|triste|decep|chor|luto)/i, 'tristeza'], [/\b(venc|ganh|vitória|sucesso|conseguiu|campe)/i, 'vitoria'],
+  [/\b(segredo|bastidor|curiosidade|pouca gente sabe|sabia que)/i, 'bastidor'], [/\b(discord|não concordo|exager|forçad)/i, 'discordancia'],
+  [NEGATIVE, 'erro'], [/\b(ideia|percebe|entend|aí que está|lição|aprend|descobr|resumindo)/i, 'descoberta'],
+  [/\b(mas|porém|calma|espera|só que|cuidado)\b/i, 'ressalva'], [/\b(certo|acert|funciona|genial|perfeito|bom demais)/i, 'aprovacao'],
+  [/!$|\b(incrível|absurdo|sério|imagina)\b/i, 'surpresa'], [/\b(olha|repara|vê|presta atenção)\b/i, 'enfase'],
+];
+const EMOTIVE = new Set(['piada', 'erro', 'tristeza', 'vitoria', 'discordancia', 'surpresa', 'opiniao']);
+const toneOf = text => TONE_RULES.find(([rule]) => rule.test(String(text).trim()))?.[1] || 'explicacao';
+/** Tons vizinhos: as poses que podem seguir a primeira na mesma fala sem mudar o sentido. */
+const NEAR = {
+  pergunta: ['pergunta', 'surpresa', 'ressalva', 'explicacao'], opiniao: ['opiniao', 'enfase', 'aprovacao', 'discordancia', 'explicacao'],
+  piada: ['piada', 'aprovacao', 'vitoria', 'enfase'], tristeza: ['tristeza', 'erro', 'ressalva'], vitoria: ['vitoria', 'aprovacao', 'piada', 'abertura'],
+  bastidor: ['bastidor', 'descoberta', 'explicacao', 'enfase'], discordancia: ['discordancia', 'opiniao', 'erro', 'ressalva', 'pergunta'],
+  erro: ['erro', 'piada', 'discordancia', 'tristeza'], descoberta: ['descoberta', 'explicacao', 'enfase', 'bastidor'],
+  ressalva: ['ressalva', 'explicacao', 'pergunta', 'base'], aprovacao: ['aprovacao', 'vitoria', 'opiniao', 'piada'],
+  surpresa: ['surpresa', 'pergunta', 'enfase', 'piada'], enfase: ['enfase', 'opiniao', 'explicacao', 'descoberta'],
+  explicacao: ['explicacao', 'base', 'enfase', 'descoberta', 'bastidor'], abertura: ['abertura', 'aprovacao', 'explicacao', 'base'], base: ['base', 'explicacao'],
+};
+/** Catálogo mínimo, usado quando o projeto não tem o catálogo do plugin. */
+const DEFAULT_POSES = { pensando: ['pergunta'], ombros: ['pergunta'], apontando: ['opiniao', 'enfase'], arminha: ['piada', 'opiniao'], 'maos-na-cintura': ['opiniao'], facepalm: ['erro'], rindo: ['piada'], assustado: ['surpresa'], explicando: ['explicacao'], joinha: ['aprovacao'], cochichando: ['bastidor'], 'bracos-cruzados': ['discordancia'], acenando: ['abertura'], comemorando: ['vitoria'], parado: ['base'] };
+/** Uma pose nova a cada ~0,85 s de fala, de 1 a 5 por beat. */
+const posesIn = len => Math.max(1, Math.min(5, Math.round(len / 0.85)));
 const NUMBER = /(\d+(?:[.,]\d+)?)\s*(%|mil|milhões|bilhões|anos)?/gi;
 /** Primeiro número que não é um ano (anos viram contexto, não contador). */
 const numberIn = text => [...String(text).matchAll(NUMBER)].find(match => !/^(1[0-9]{3}|20[0-9]{2})$/.test(match[1]) || match[2] === '%') || null;
@@ -77,8 +99,20 @@ export function timeSentences(windows, words = []) {
  * Regras: gancho em palavras gigantes; pergunta com o Nox; número vira contador; imagem citada pelo nome entra
  * quando é citada; frases longas viram dois beats; o mesmo tipo de cena não se repete 3 vezes seguidas.
  */
-export function planMotion({ windows, words = [], media = [], title = '', question = '', end = null }) {
+export function planMotion({ windows, words = [], media = [], title = '', question = '', end = null, vertical = false, poses = null, report = {} }) {
   const timed = timeSentences(windows, words);
+  // Poses do Nox: todas do catálogo aparecem ao longo do vídeo; dentro do tom, a que ainda não apareceu vem primeiro.
+  const catalog = Object.fromEntries(Object.entries(poses && Object.keys(poses).length ? poses : DEFAULT_POSES).map(([name, entry]) => [name, Array.isArray(entry) ? entry : entry?.tons || []]));
+  const used = new Map(Object.keys(catalog).map(name => [name, 0])); let lastPose = ''; let noxSeen = false; let poseTurn = 0;
+  const choosePose = tones => {
+    const fits = Object.keys(catalog).filter(name => name !== lastPose && catalog[name].some(tone => tones.includes(tone)));
+    const options = fits.length ? fits : Object.keys(catalog).filter(name => name !== lastPose);
+    const least = Math.min(...options.map(name => used.get(name)));
+    const best = options.filter(name => used.get(name) === least);
+    const name = best[poseTurn++ % best.length]; used.set(name, used.get(name) + 1); lastPose = name; return name;
+  };
+  /** Sequência de poses de uma fala: a primeira no tom exato, as seguintes nos tons vizinhos. */
+  const poseRun = (text, count) => { const tone = !noxSeen ? 'abertura' : toneOf(text); noxSeen = true; return Array.from({ length: count }, (_, i) => choosePose(i === 0 ? [tone] : NEAR[tone] || NEAR.explicacao)); };
   const all = media.map(item => ({ ...item, key: fold(String(item.name || '').replace(/\.[a-z0-9]+$/i, '')) }));
   // Recortes PNG (nome com "recorte" ou "png-"): entram por cima da cena quando citados, não como cena.
   const isCut = item => /(^|[^a-z])(recorte|png)([^a-z]|$)/.test(item.key);
@@ -124,12 +158,15 @@ export function planMotion({ windows, words = [], media = [], title = '', questi
       }
       // Pergunta ou piada sobre o que está na tela: aparte do Nox sobre a cena desfocada (da cintura para cima).
       if (question_ && p === pieces - 1 && lastMedia && recentScenes().at(-1) !== 'aparte') {
-        const falas = len >= 2.6 ? [{ humor: 'surpreso', icone: iconFor(text) }, { humor: mood(text) === 'surpreso' ? 'confuso' : mood(text), texto: short(text, 22).toUpperCase() }] : [{ humor: 'surpreso', icone: iconFor(text) }];
-        push('aparte', at, len, { midia: `media:${lastMedia}`, falas: falas.map((fala, i) => ({ pose: posesFor(text)[i % 2], ...fala })) }, { sfx: [{ name: 'swish', at: 0, volume: 0.45 }, { name: 'pop', at: 0.45, volume: 0.6 }], flash: false });
+        const run = poseRun(text, posesIn(len)); const say = Math.floor(run.length / 2);
+        const falas = run.map((pose, i) => ({ pose, humor: i ? (mood(text) === 'surpreso' ? 'confuso' : mood(text)) : 'surpreso', ...(i === 0 ? { icone: iconFor(text) } : {}), ...(i === say && i > 0 && len >= 2.2 ? { texto: short(text, 22).toUpperCase() } : {}) }));
+        push('aparte', at, len, { midia: `media:${lastMedia}`, falas }, { sfx: [{ name: 'swish', at: 0, volume: 0.45 }, { name: 'pop', at: 0.45, volume: 0.6 }], flash: false });
         continue;
       }
       if (question_ && p === pieces - 1) { const scene = avoid('nox', 'frase'); push(scene, at, len, scene === 'nox' ? { humor: 'surpreso', texto: short(text, 26).toUpperCase(), fundo: 'explosao' } : { linhas: twoLines(short(text, 64)), humor: 'surpreso', ...nextBg() }, { sfx: [{ name: 'pop', at: 0.1, volume: 0.6 }] }); if (scene === 'frase') beats.at(-1).legenda = false; continue; }
       if (item.role === 'payoff' && p === 0) { push('frase', at, len, { linhas: twoLines(short(text, 70)), destaque: ending(text), ...nextBg() }, { sfx: [{ name: 'swish', at: 0, volume: 0.4 }, { name: 'impact', at: len * 0.55, volume: 0.7 }] }); beats.at(-1).legenda = false; continue; }
+      // Frase de emoção (piada, erro, vitória, tristeza, discordância, surpresa, opinião): o Nox reage por cima da cena.
+      if (EMOTIVE.has(toneOf(text)) && lastMedia && !named(text) && !beats.slice(-2).some(beat => beat.scene === 'aparte')) { const run = poseRun(text, posesIn(len)); push('aparte', at, len, { midia: `media:${lastMedia}`, falas: run.map((pose, i) => ({ pose, humor: mood(text), ...(i === 0 ? { icone: iconFor(text) } : {}), ...(i === Math.floor(run.length / 2) && i > 0 && len >= 2.2 ? { texto: short(text, 22).toUpperCase() } : {}) })) }, { sfx: [{ name: 'swish', at: 0, volume: 0.45 }, { name: 'pop', at: 0.45, volume: 0.6 }], flash: false }); continue; }
       const asset = pool.length && (named(text) || (p + index) % 3 !== 2) ? pick(text) : null;
       if (asset) {
         const scene = avoid('evidencia', 'nox');
@@ -148,9 +185,9 @@ export function planMotion({ windows, words = [], media = [], title = '', questi
       // Sem mídia para esta frase: o Nox comenta por cima da última cena (aparte) ou a frase vira texto pensado;
       // o Nox de corpo inteiro fica para poucos momentos.
       const turn = (index + p) % 3;
-      if ((turn === 1 || OPINION.test(text)) && lastMedia && recentScenes().at(-1) !== 'aparte') { const [first, second] = posesFor(text); push('aparte', at, len, { midia: `media:${lastMedia}`, falas: [{ pose: first, humor: mood(text), icone: iconFor(text) }, ...(len >= 2.6 ? [{ pose: second, humor: mood(text) === 'feliz' ? 'piscada' : 'determinado', texto: short(text, 22).toUpperCase() }] : [])] }, { sfx: [{ name: 'swish', at: 0, volume: 0.45 }, { name: 'pop', at: 0.45, volume: 0.6 }], flash: false }); continue; }
+      if ((turn === 1 || OPINION.test(text)) && lastMedia && recentScenes().at(-1) !== 'aparte') { const run = poseRun(text, posesIn(len)); const say = Math.floor(run.length / 2); push('aparte', at, len, { midia: `media:${lastMedia}`, falas: run.map((pose, i) => ({ pose, humor: i ? (mood(text) === 'feliz' ? 'piscada' : 'determinado') : mood(text), ...(i === 0 ? { icone: iconFor(text) } : {}), ...(i === say && i > 0 && len >= 2.2 ? { texto: short(text, 22).toUpperCase() } : {}) })) }, { sfx: [{ name: 'swish', at: 0, volume: 0.45 }, { name: 'pop', at: 0.45, volume: 0.6 }], flash: false }); continue; }
       const scene = avoid(turn === 2 && !beats.slice(-6).some(beat => beat.scene === 'nox') ? 'nox' : 'frase', 'frase');
-      if (scene === 'nox') push('nox', at, len, { humor: mood(text), texto: short(text, 26).toUpperCase(), ...nextBg([['explosao', 'amarelo'], ['meio-tom', 'azul'], ['explosao', 'vermelho'], ['estrelas'], ['meio-tom', 'vermelho']]), lado: (index + p) % 2 ? 'direita' : 'esquerda', poses: posesFor(text).map(pose => ({ pose, humor: mood(text) })) }, { sfx: [{ name: 'pop', at: 0.05, volume: 0.55 }] });
+      if (scene === 'nox') push('nox', at, len, { humor: mood(text), texto: short(text, 26).toUpperCase(), ...nextBg([['explosao', 'amarelo'], ['meio-tom', 'azul'], ['explosao', 'vermelho'], ['estrelas'], ['meio-tom', 'vermelho']]), lado: (index + p) % 2 ? 'direita' : 'esquerda', poses: poseRun(text, posesIn(len)).map(pose => ({ pose, humor: mood(text) })) }, { sfx: [{ name: 'pop', at: 0.05, volume: 0.55 }] });
       else { push('frase', at, len, { linhas: twoLines(short(text, 64)), ...nextBg() }); beats.at(-1).legenda = false; }
     }
   });
@@ -162,5 +199,19 @@ export function planMotion({ windows, words = [], media = [], title = '', questi
   const host = time => beats.find(b => time >= b.at && time < b.at + b.duration && !['titulo', 'cta', 'aparte'].includes(b.scene) && b.duration >= 1.6);
   if (total >= 25) for (const [share, preset] of [[0.2, 'inscricao'], [0.55, 'like']]) { const beat = host(total * share) || beats.find(b => b.at >= total * share && !['titulo', 'cta', 'aparte'].includes(b.scene)); if (beat) (beat.extras ||= []).push({ tipo: 'caixinha', preset, at: 0.2, duracao: Math.min(3, Math.max(1.4, beat.duration - 0.3)) }); }
   for (const item of timed) if (OPINION.test(item.text)) { const beat = beats.find(b => item.start >= b.at - 0.05 && item.start < b.at + b.duration && !['titulo', 'cta'].includes(b.scene) && b.duration >= 1.2); if (beat && !beat.extras?.some(extra => extra.tipo === 'caixinha')) (beat.extras ||= []).push({ tipo: 'caixinha', preset: 'opiniao', canto: 'superior-esquerdo', at: 0.1, duracao: Math.min(2.5, beat.duration - 0.2) }); }
+  // Poses que ainda não apareceram entram no lugar de repetidas, nas falas seguintes de um tom vizinho.
+  for (const strict of [true, false]) for (const name of Object.keys(catalog).filter(item => !used.get(item))) {
+    for (const beat of beats) {
+      const list = beat.scene === 'aparte' ? beat.props.falas : beat.scene === 'nox' ? beat.props.poses : null; if (!list) continue;
+      const tone = toneOf(timed.find(item => beat.at >= item.start - 0.05 && beat.at < item.end)?.text || '');
+      const slot = list.findIndex((item, i) => i > 0 && used.get(item.pose) > 1 && (!strict || catalog[name].some(t => (NEAR[tone] || NEAR.explicacao).includes(t))) && list[i - 1]?.pose !== name && list[i + 1]?.pose !== name);
+      if (slot < 0) continue;
+      used.set(list[slot].pose, used.get(list[slot].pose) - 1); list[slot].pose = name; used.set(name, 1); break;
+    }
+  }
+  report.posesUsadas = [...used].filter(([, count]) => count > 0).map(([name]) => name);
+  report.posesFaltando = [...used].filter(([, count]) => count === 0).map(([name]) => name);
+  // Legenda: nos Shorts o tempo todo; no vídeo longo só no gancho (primeiros 6 s) e nos apartes do Nox.
+  if (!vertical) for (const beat of beats) if (beat.at >= 6 && beat.scene !== 'aparte') beat.legenda = false;
   return { schema: 'contentlab-motion-v1', beats, narration: true, captions: true, music: { volume: 0.5, duck: 0.25 }, source: 'auto' };
 }

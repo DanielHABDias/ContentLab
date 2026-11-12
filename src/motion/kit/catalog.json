@@ -12,7 +12,8 @@
     "A base do vídeo é a cena da obra; em muitos beats ela fica sozinha, em tela cheia (evidencia com cheia=true), sem motion design por cima.",
     "O Nox entra em opinião e humor: aparte (inteiro, subindo pela borda, pernas fora do quadro) com poses em stop motion; corpo inteiro em cena própria só às vezes.",
     "Variar sempre: fundo, cor, tipo de cena e movimento nunca se repetem de um beat para o outro.",
-    "Caixinhas HQ de lembrete (inscreva-se, like, opinião, spoiler) e recortes PNG do que está sendo falado entram como extras ao longo do vídeo."
+    "Caixinhas HQ de lembrete (inscreva-se, like, opinião, spoiler) e recortes PNG do que está sendo falado entram como extras ao longo do vídeo.",
+    "Legenda palavra a palavra: nos Shorts (9:16) o tempo todo; no vídeo longo (16:9) só em trechos — o gancho dos primeiros segundos e os apartes do Nox — com legenda: false nos outros beats."
   ],
   "humores": [
     "bravo",
@@ -296,7 +297,7 @@
       "uso": "Aparte do Nox (momentos cômicos, opinião): a cena da obra desfoca e o Nox aparece INTEIRO subindo pela borda de baixo (pernas fora do quadro); cada fala é uma pose nova em stop motion (troca seca, sem animação entre poses), com balão de ícone ou texto; depois ele sai de uma vez e o fundo volta nítido",
       "props": {
         "midia": "media:<id> — a cena que continua atrás (desfocada)",
-        "falas": "lista de 1–5 { pose, humor, icone, texto } — cada fala troca a pose de uma vez",
+        "falas": "lista de 2–5 { pose, humor, icone, texto }: a pose troca de uma vez a cada fala, a cada 0,7–1 s; o balão continua até a próxima fala com ícone ou texto",
         "fundo": "fundo quando não há mídia",
         "tom": "cor do fundo"
       },
@@ -363,23 +364,30 @@
   },
   "poses": {
     "lista": [
-      "parado",
-      "pensando",
-      "arminha",
-      "apontando",
-      "ombros",
-      "joinha",
-      "facepalm",
-      "bracos-cruzados",
       "acenando",
-      "rindo",
+      "apontando",
+      "arminha",
       "assustado",
+      "bracos-cruzados",
+      "calma",
+      "cochichando",
       "comemorando",
       "explicando",
+      "explicando-centro",
+      "facepalm",
+      "high-five",
+      "ideia",
+      "joinha",
+      "mao-na-cabeca",
       "maos-na-cintura",
-      "cochichando"
+      "ombros",
+      "parado",
+      "pensando",
+      "rindo",
+      "triste"
     ],
-    "uso": "stop motion: cada fala do Nox troca a pose de uma vez (sem animação entre poses). Pose = PNG pronto do Nox (gesto e olhos desenhados) em assets/brand/nox/poses/<pose>.png; <pose>-2, -3… são variantes sorteadas a cada fala. Pose ausente usa o Nox canônico com o humor",
+    "uso": "stop motion: enquanto o Nox fala, a pose troca de uma vez a cada 0,7–1 s (um aparte de 3 s tem 3 ou 4 poses), sem animação entre poses. Todas as poses da lista precisam aparecer ao longo do vídeo, cada uma no tom certo. Pose = PNG pronto (gesto e olhos desenhados); <pose>-b, -2… são variantes sorteadas. Pose ausente usa o Nox canônico com o humor",
+    "catalogo": "assets/brand/nox/poses/catalogo.json",
     "guia": "skills/diazverso-nox/references/poses.md"
   },
   "extras": {

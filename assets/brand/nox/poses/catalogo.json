@@ -1,0 +1,243 @@
+{
+  "versao": 1,
+  "tons": {
+    "abertura": "primeira aparição, \"oi\"",
+    "base": "neutro, transição",
+    "explicacao": "explica um fato ou mostra algo",
+    "enfase": "\"olha isso\", destaque",
+    "opiniao": "opinião do canal",
+    "piada": "ironia, piada, \"te peguei\"",
+    "pergunta": "pergunta, dúvida",
+    "surpresa": "revelação, \"sério?\"",
+    "discordancia": "discorda, critica",
+    "ressalva": "\"mas calma\", contraponto",
+    "bastidor": "curiosidade, bastidor, segredo",
+    "erro": "erro, decisão ruim, vergonha alheia",
+    "tristeza": "perda, morte, decepção",
+    "descoberta": "conclusão, \"aí que está\"",
+    "aprovacao": "acerto, elogio",
+    "vitoria": "vitória, sucesso"
+  },
+  "poses": {
+    "acenando": {
+      "arquivos": [
+        "acenando.png"
+      ],
+      "gesto": "Uma mão erguida acenando",
+      "olhos": "Arcos felizes",
+      "tons": [
+        "abertura"
+      ]
+    },
+    "apontando": {
+      "arquivos": [
+        "apontando-b.png",
+        "apontando.png"
+      ],
+      "gesto": "Braço esticado apontando para o lado; variante -b aponta para quem assiste",
+      "olhos": "Determinados; na -b, cúmplices",
+      "tons": [
+        "opiniao",
+        "enfase"
+      ]
+    },
+    "arminha": {
+      "arquivos": [
+        "arminha.png"
+      ],
+      "gesto": "Mão em arminha para a câmera, a outra na cintura",
+      "olhos": "Piscando",
+      "tons": [
+        "piada",
+        "opiniao"
+      ]
+    },
+    "assustado": {
+      "arquivos": [
+        "assustado.png"
+      ],
+      "gesto": "Mãos para cima perto do rosto, corpo recuando",
+      "olhos": "Grandes e redondos",
+      "tons": [
+        "surpresa"
+      ]
+    },
+    "bracos-cruzados": {
+      "arquivos": [
+        "bracos-cruzados.png"
+      ],
+      "gesto": "Braços cruzados no peito",
+      "olhos": "Estreitos, céticos",
+      "tons": [
+        "discordancia"
+      ]
+    },
+    "calma": {
+      "arquivos": [
+        "calma.png"
+      ],
+      "gesto": "Palma à frente do peito, cotovelo baixo",
+      "olhos": "Curvas serenas, fechadas",
+      "tons": [
+        "ressalva"
+      ]
+    },
+    "cochichando": {
+      "arquivos": [
+        "cochichando.png"
+      ],
+      "gesto": "Mão do lado do rosto, como quem conta segredo",
+      "olhos": "Um aberto, outro piscando",
+      "tons": [
+        "bastidor"
+      ]
+    },
+    "comemorando": {
+      "arquivos": [
+        "comemorando.png"
+      ],
+      "gesto": "Os dois punhos para cima",
+      "olhos": "Arcos felizes",
+      "tons": [
+        "vitoria"
+      ]
+    },
+    "explicando": {
+      "arquivos": [
+        "explicando-b.png",
+        "explicando.png"
+      ],
+      "gesto": "Mão aberta à frente, mostrando algo; variante -b delimita uma caixa invisível",
+      "olhos": "Determinados; na -b, ovais atentos",
+      "tons": [
+        "explicacao"
+      ]
+    },
+    "explicando-centro": {
+      "arquivos": [
+        "explicando-centro.png"
+      ],
+      "gesto": "Mãos abertas ao centro, em alturas diferentes",
+      "olhos": "Ovais amigáveis",
+      "tons": [
+        "explicacao"
+      ]
+    },
+    "facepalm": {
+      "arquivos": [
+        "facepalm.png"
+      ],
+      "gesto": "Mão cobrindo o rosto, cabeça baixa",
+      "olhos": "Um olho entre os dedos",
+      "tons": [
+        "erro"
+      ]
+    },
+    "high-five": {
+      "arquivos": [
+        "high-five.png"
+      ],
+      "gesto": "Palma aberta para o público, a outra mão na cintura",
+      "olhos": "Arcos felizes",
+      "tons": [
+        "vitoria",
+        "aprovacao"
+      ]
+    },
+    "ideia": {
+      "arquivos": [
+        "ideia.png"
+      ],
+      "gesto": "Indicador erguido junto à cabeça",
+      "olhos": "Abertos, de descoberta",
+      "tons": [
+        "descoberta"
+      ]
+    },
+    "joinha": {
+      "arquivos": [
+        "joinha.png"
+      ],
+      "gesto": "Polegar para cima na frente do corpo",
+      "olhos": "Piscada feliz",
+      "tons": [
+        "aprovacao"
+      ]
+    },
+    "mao-na-cabeca": {
+      "arquivos": [
+        "mao-na-cabeca.png"
+      ],
+      "gesto": "Uma mão apoiada no capuz",
+      "olhos": "Fendas baixas, sem graça",
+      "tons": [
+        "erro",
+        "ressalva"
+      ]
+    },
+    "maos-na-cintura": {
+      "arquivos": [
+        "maos-na-cintura.png"
+      ],
+      "gesto": "As duas mãos na cintura, peito para frente",
+      "olhos": "Determinados",
+      "tons": [
+        "opiniao",
+        "enfase"
+      ]
+    },
+    "ombros": {
+      "arquivos": [
+        "ombros.png"
+      ],
+      "gesto": "Braços abertos, palmas para cima, ombros erguidos",
+      "olhos": "Meio fechados, de tédio",
+      "tons": [
+        "pergunta",
+        "discordancia"
+      ]
+    },
+    "parado": {
+      "arquivos": [
+        "parado.png"
+      ],
+      "gesto": "Em pé, braços relaxados",
+      "olhos": "Neutros e arredondados",
+      "tons": [
+        "base",
+        "explicacao"
+      ]
+    },
+    "pensando": {
+      "arquivos": [
+        "pensando-b.png",
+        "pensando.png"
+      ],
+      "gesto": "Mão no queixo; variante -b com a mão fechada junto ao rosto",
+      "olhos": "Um mais fechado, desconfiado",
+      "tons": [
+        "pergunta"
+      ]
+    },
+    "rindo": {
+      "arquivos": [
+        "rindo.png"
+      ],
+      "gesto": "Mãos na barriga, corpo inclinado para trás",
+      "olhos": "Apertados em > <",
+      "tons": [
+        "piada"
+      ]
+    },
+    "triste": {
+      "arquivos": [
+        "triste.png"
+      ],
+      "gesto": "Mãos unidas baixas, ombros caídos",
+      "olhos": "Meias-luas descendentes",
+      "tons": [
+        "tristeza"
+      ]
+    }
+  }
+}

@@ -48,7 +48,10 @@ Para voltar à timeline de clips, use `motion_plan_set` com `plan: null`. Na int
   - a cena desfoca e o Nox aparece inteiro, subindo pela borda de baixo, com as pernas fora do quadro;
   - cada fala (`falas: [{ pose, humor, icone, texto }]`) troca a pose de uma vez, em stop motion, com balão de ícone ou texto;
   - cada pose é um PNG pronto do Nox (gesto e olhos desenhados) em `assets/brand/nox/poses/<pose>.png`; `<pose>-2`, `-3`… são variantes sorteadas a cada fala. Opcional: PNG sem olhos com `poses.json` recebe os olhos do humor pedido. Lista e pedido para gerar em `skills/diazverso-nox/references/poses.md` do plugin. Sem o PNG, entra o Nox canônico com o humor;
-  - o plano escolhe a pose pelo tom da frase: pergunta → `pensando`, opinião → `apontando`, erro → `facepalm`.
+  - o catálogo `assets/brand/nox/poses/catalogo.json` (do plugin) lista as 21 poses com gesto, olhos e tons;
+  - enquanto o Nox fala, a pose troca a cada ~0,85 s (até 5 por beat): a primeira no tom da frase (pergunta → `pensando`/`ombros`, piada → `rindo`/`arminha`, erro → `facepalm`), as seguintes em tons vizinhos, sem repetir em seguida; o balão fica até a próxima fala com ícone ou texto;
+  - frases de emoção (piada, erro, tristeza, vitória, discordância, surpresa, opinião) chamam o aparte por cima da cena;
+  - todas as poses do catálogo aparecem ao longo do vídeo: o plano prefere a que ainda não apareceu e, no fim, troca repetidas pelas que faltam. `motion_plan_auto` devolve `poses.posesFaltando` e avisa no vídeo longo.
 - **Extras por cima da cena** (`extras` no beat):
   - **caixinhas HQ** que não precisam ser faladas: inscrição perto de 20%, like perto de 55% e "minha opinião, tá?" nas frases opinativas;
   - **recortes PNG:** uma mídia com `recorte` no nome (ex.: `recorte-moeda.png`) entra por cima do beat em que é citada, em vez de virar cena.
@@ -90,7 +93,7 @@ Sem variantes, as palavras de impacto dos títulos A e B viram o texto. Versões
 - **Humores do Nox:** `bravo`, `feliz`, `surpreso`, `tedio`, `confuso`, `piscada`, `determinado` e `triste`.
 - **SFX:** `pop`, `tick`, `type`, `whoosh`, `swish`, `impact`, `sub`, `glitch`, `riser`, `ding`, `error` e `camera`.
 - **Mídia:** referência `media:<id>`. Imagem ou vídeo (vídeo entra sem áudio); mídia com direitos pendentes é recusada.
-- **Legenda:** `legenda: false` esconde a legenda naquele beat. Em `titulo` e `cta` ela já fica escondida.
+- **Legenda:** nos Shorts (9:16) ela fica o tempo todo; no vídeo longo (16:9) o plano automático deixa só no gancho (primeiros 6 s) e nos apartes do Nox, com `legenda: false` nos outros beats. `legenda: false` esconde a legenda num beat; em `titulo` e `cta` ela já fica escondida.
 
 ## Verificação da entrega
 

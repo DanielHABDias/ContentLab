@@ -122,6 +122,30 @@ test('plano automático: poses no aparte, fundos variados, cena sozinha, caixinh
   expect(mediaRefs(plan)).toContain('m_moeda');
 });
 
+test('plano automático: o Nox troca de pose enquanto fala, passa por todas as poses do catálogo e a legenda segue o formato', async () => {
+  const { loadPoseCatalog } = await import('./production-operations.js');
+  const poses = await loadPoseCatalog();
+  expect(Object.keys(poses).length).toBeGreaterThanOrEqual(20);
+  const w = (id, text, start, length) => ({ scene: { id, label: id, text }, start, length });
+  const lines = ['Pra mim, esse é o melhor vilão.', 'Ele perdeu tudo e ninguém ligou?', 'Sério, que absurdo!', 'Mas calma, tem um detalhe.', 'Pouca gente sabe desse bastidor.', 'E aí que está a lição.', 'Ele venceu no fim, campeão.', 'Isso foi um erro enorme.', 'Funciona perfeito, genial.', 'Eu não concordo, é forçado.', 'Ele morreu e foi triste.', 'Olha esse detalhe aqui.'];
+  const windows = [w('hook-1', 'O vilão mais odiado tinha razão.', 0, 4), ...Array.from({ length: 36 }, (_, i) => w(`development-${i}`, lines[i % lines.length], 4 + i * 3, 3)), w('payoff-1', 'Qual vilão te convenceu?', 112, 4)];
+  const media = [{ id: 'm_a', name: 'cena-a.png', kind: 'image' }, { id: 'm_b', name: 'cena-b.png', kind: 'image' }];
+  const report = {};
+  const plan = planMotion({ windows, media, end: 117, poses, report });
+  expect(motionPlanSchema.safeParse(plan).success).toBe(true);
+  const apartes = plan.beats.filter(beat => beat.scene === 'aparte');
+  expect(apartes.some(beat => beat.props.falas.length >= 3)).toBe(true); // várias poses dentro da mesma fala
+  for (const beat of apartes) for (let i = 1; i < beat.props.falas.length; i += 1) expect(beat.props.falas[i].pose).not.toBe(beat.props.falas[i - 1].pose);
+  const shown = new Set(plan.beats.flatMap(beat => [...(beat.props.falas || []), ...(beat.props.poses || [])].map(item => item.pose)));
+  expect(report.posesFaltando).toEqual([]);
+  for (const name of Object.keys(poses)) expect(shown.has(name)).toBe(true);
+  // 16:9: legenda só no gancho e nos apartes; 9:16: o tempo todo (fora das cenas que já são o texto).
+  for (const beat of plan.beats) if (beat.at >= 6 && beat.scene !== 'aparte') expect(beat.legenda).toBe(false);
+  expect(apartes.every(beat => beat.legenda !== false)).toBe(true);
+  const short = planMotion({ windows: windows.slice(0, 12), media, end: 40, poses, vertical: true });
+  expect(short.beats.filter(beat => beat.scene === 'evidencia').every(beat => beat.legenda !== false)).toBe(true);
+});
+
 test('poses do Nox: poses.json liga a pose ao PNG sem olhos e às posições dos olhos; PNG solto vale com os olhos do desenho e o sufixo vira variante', async () => {
   const { mkdtemp, rm, writeFile } = await import('node:fs/promises');
   const { execFileSync } = await import('node:child_process');

@@ -167,8 +167,11 @@ export const Aparte: React.FC<Base & { midia?: string; falas: Array<{ pose?: str
   const nh = V ? H * 0.56 : H * 0.95;
   const bottom = H + nh * 0.28 + (1 - shown) * nh * 0.75;
   const top = bottom - nh;
-  const pop_ = local < 1 ? 1.25 : 1; // balão "estala" num quadro
-  const bubbleOn = shown === 1 && local >= 2 && (fala.icone || fala.texto);
+  // O balão é o da última fala com ícone ou texto: continua na tela enquanto as poses trocam e só estala quando muda.
+  let b = k; while (b > 0 && !(falas[b]?.icone || falas[b]?.texto)) b -= 1;
+  const said = falas[b] || {}; const bubbleLocal = f - (inAt + b * step);
+  const pop_ = bubbleLocal < 1 ? 1.25 : 1;
+  const bubbleOn = shown === 1 && bubbleLocal >= 2 && (said.icone || said.texto);
   return (
     <AbsoluteFill>
       <AbsoluteFill style={{ filter: blur > 0.3 ? `blur(${blur}px) brightness(${1 - blur / 45})` : undefined, transform: `scale(${1.04 + blur / 300})` }}>
@@ -176,10 +179,10 @@ export const Aparte: React.FC<Base & { midia?: string; falas: Array<{ pose?: str
       </AbsoluteFill>
       {shown > 0 && <NoxPose pose={fala.pose} mood={(fala.humor as Mood) || 'feliz'} height={nh} cx={cx} bottom={bottom} flip={flip} seed={`aparte${k}`} />}
       {bubbleOn && (
-        <div style={{ position: 'absolute', left: cx, top: top - (V ? 30 : 20), transform: `translate(-50%, -100%) scale(${pop_}) rotate(${(k % 2 ? 3 : -3)}deg)`, transformOrigin: '50% 100%' }}>
+        <div style={{ position: 'absolute', left: cx, top: top - (V ? 30 : 20), transform: `translate(-50%, -100%) scale(${pop_}) rotate(${(b % 2 ? 3 : -3)}deg)`, transformOrigin: '50% 100%' }}>
           <div style={{ background: '#fff', border: `8px solid ${C.ink}`, borderRadius: 46, boxShadow: `12px 12px 0 ${C.ink}`, padding: '22px 34px', display: 'flex', alignItems: 'center', gap: 22, maxWidth: V ? W - 120 : 900 }}>
-            {fala.icone && <IconArt name={fala.icone} size={fala.texto ? (V ? 170 : 150) : (V ? 260 : 210)} />}
-            {fala.texto && <span style={{ fontFamily: ANTON, fontSize: fit(fala.texto, V ? W - 360 : 640, V ? 96 : 92, 2), color: C.ink, textTransform: 'uppercase', lineHeight: 1 }}>{fala.texto}</span>}
+            {said.icone && <IconArt name={said.icone} size={said.texto ? (V ? 170 : 150) : (V ? 260 : 210)} />}
+            {said.texto && <span style={{ fontFamily: ANTON, fontSize: fit(said.texto, V ? W - 360 : 640, V ? 96 : 92, 2), color: C.ink, textTransform: 'uppercase', lineHeight: 1 }}>{said.texto}</span>}
           </div>
           <div style={{ width: 0, height: 0, margin: '0 auto', borderLeft: '26px solid transparent', borderRight: '26px solid transparent', borderTop: `42px solid ${C.ink}` }} />
         </div>
