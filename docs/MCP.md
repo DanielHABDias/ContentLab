@@ -47,6 +47,7 @@ Um servidor MCP não consegue iniciar uma mensagem no chat por conta própria; q
 | `stage_wait_decision`, `stage_approve`, `stage_request_changes` | Aprovação humana ou do agente. Ver as regras abaixo |
 | `media_import_files`, `media_import_url`, `media_generate_slides` | Mídias próprias ou licenciadas, ou um slide por cena do roteiro quando não há filmagem |
 | `voice_options`, `narration_generate`, `narration_assemble` | Narração **padrão** (Kokoro: Alex, Dora, Santa; rápida) ou **clonada** (seu perfil de voz; lenta em CPU) e a montagem tratada da narração |
+| `motion_kit`, `motion_plan_auto`, `motion_plan_get`, `motion_plan_set`, `motion_preview` | **Modo composição** (principal): o vídeo inteiro como motion design do kit Diazverso, em beats; plano automático, ajuste pelo agente e prévia em PNG. Ver [MOTION.md](MOTION.md) |
 | `narration_transcribe` | Transcreve a narração montada (Whisper local) para legenda palavra a palavra |
 | `scene_list`, `scene_add` | Cenas HQ do plugin Diazverso, com plano sugerido (um beat visual por frase, cada um com imagem do assunto); adicionar uma cena num intervalo |
 | `audio_library` | Efeitos sonoros **originais** (whoosh, ding, boom, riser) e uma trilha sintetizada que é só rascunho |
@@ -79,7 +80,9 @@ Um servidor MCP não consegue iniciar uma mensagem no chat por conta própria; q
 11. `render_start` → `job_wait` → espera a decisão
 12. `deliverable_build` e `project_export` (ZIP)
 
-Para o **estilo Diazverso** ([ESTILO_HQ.md](ESTILO_HQ.md)): no passo 6 importe imagens do assunto com direitos (`media_import_files`), uma faixa licenciada com papel música e chame `audio_library` para os SFX; depois do passo 8 rode `narration_transcribe` + `job_wait`; no passo 9 use `scene_list` e `timeline_auto_assemble` com `scenes: "auto"` (ou a sua lista), `music: true` e `sfx: true`; renderize Shorts em `full-hd` para sair em 1080×1920.
+**Jeito principal (modo composição, [MOTION.md](MOTION.md)):** depois do passo 8, rode `narration_transcribe` + `job_wait`, `motion_plan_auto`, `motion_preview` (abra os PNG), ajuste com `motion_plan_set` e siga para o passo 10; o passo 9 não é usado.
+
+Modo antigo, de clips na timeline ([ESTILO_HQ.md](ESTILO_HQ.md)): no passo 6 importe imagens do assunto com direitos (`media_import_files`), uma faixa licenciada com papel música e chame `audio_library` para os SFX; depois do passo 8 rode `narration_transcribe` + `job_wait`; no passo 9 use `scene_list` e `timeline_auto_assemble` com `scenes: "auto"` (ou a sua lista), `music: true` e `sfx: true`; renderize Shorts em `full-hd` para sair em 1080×1920.
 
 Para 5 Shorts: repetir o fluxo com `type: short`, `mode: autonomous` e `stage_approve` no lugar das esperas.
 

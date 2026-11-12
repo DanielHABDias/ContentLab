@@ -1,4 +1,4 @@
-// Cena PersonagemEspiralLegenda do plugin Diazverso 1.2.0, compilada por scripts/build-diazverso-scenes.mjs. Não editar à mão.
+// Cena PersonagemEspiralLegenda do plugin Diazverso 1.3.0, compilada por scripts/build-diazverso-scenes.mjs. Não editar à mão.
 // ../DiazVerso-Plugin/skills/diazverso-decupagem/references/scenes/HQMotion.tsx
 var boundsCache = /* @__PURE__ */ new Map();
 function imageBoundsHQ(src) {

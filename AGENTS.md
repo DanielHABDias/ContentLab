@@ -11,7 +11,7 @@ Para continuidade do produto, use `PLANO_FINALIZACAO_CONTENT_LAB.md` como backlo
 - Interface, CLI e MCP devem chamar o mesmo núcleo; não edite manifestos diretamente.
 - Mantenha contratos versionados, operações idempotentes, dry-run e revisões otimistas.
 - Não implemente publicação automática nem banco de mídia social.
-- Plugin Diazverso (mesmo dono) é a fonte das cenas HQ e dos assets de marca: altere no repositório do plugin e recompile com `npm run scenes:diazverso`; não edite à mão `src/timeline/components/diazverso/` nem `assets/brand/`. Siga o padrão visual do plugin (`docs/ESTILO_HQ.md`).
+- Plugin Diazverso (mesmo dono) é a fonte das cenas HQ e dos assets de marca: altere no repositório do plugin e recompile com `npm run scenes:diazverso`; não edite à mão `src/timeline/components/diazverso/` nem `assets/brand/`. Siga o padrão visual do plugin; a montagem principal é o modo composição (`docs/MOTION.md`).
 
 ## Qualidade
 

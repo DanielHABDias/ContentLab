@@ -47,6 +47,7 @@ function applyActions(project, actions, operationId) {
       if (action.mode !== undefined) draft.mode = action.mode;
     }
     else if (action.type === 'creative.update') draft.creative = structuredClone(action.creative);
+    else if (action.type === 'motion.set') draft.motion = action.motion ? structuredClone(action.motion) : null;
     else if (action.type === 'media.add') {
       const existing = draft.media.findIndex(item => item.id === action.media.id);
       if (existing >= 0) draft.media[existing] = action.media;

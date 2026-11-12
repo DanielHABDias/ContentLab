@@ -455,3 +455,16 @@ Objetivo: corrigir a F27, que não seguia o plugin (vídeo só com texto, sem No
 - [x] MCP e interface atualizados; importação com papel `music`.
 - [x] QA real `npm run qa:hq` com imagens próprias (Nox e ícones), frames inspecionados.
 - [ ] Vídeo real com imagens dos personagens e trilha licenciada escolhidas pelo dono, e avaliação dele.
+
+## F29 — Modo composição: o vídeo como motion design (kit Diazverso)
+
+Objetivo: produzir pelo MCP vídeos no nível do demo (ritmo do RunnyIA, estética HQ, Nox expressivo, som em cada troca) com cenas das obras. A timeline de clips deixa de ser o caminho principal.
+
+- [x] Plugin 1.3.0: skill `diazverso-motion` com kit (efeitos, Nox com 8 expressões, 11 cenas parametrizadas com mídia), catálogo, contrato em beats, SFX e linguagem das referências.
+- [x] Contrato `contentlab-motion-v1` no projeto (`motion`), ação `motion.set`, etapas de edição satisfeitas pelo plano.
+- [x] Render da composição única (Remotion) com narração, legenda palavra a palavra, trilha com ducking, SFX e −14 LUFS com limitador; fila e entrega de sempre.
+- [x] Plano automático por frase nos tempos do Whisper, mídia citada pelo nome entra quando é dita, sem repetir cena 3×.
+- [x] MCP: `motion_kit`, `motion_plan_auto`, `motion_plan_get`, `motion_plan_set`, `motion_preview`; interface: Montar em motion.
+- [x] QA real `npm run qa:motion`: vídeo narrado automático e o demo refeito pelo Content Lab, frames conferidos.
+- [ ] Vídeo real com cenas das obras e trilha licenciada escolhidas pelo dono; diagramação vertical (Shorts) no kit.
+

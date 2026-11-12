@@ -417,6 +417,11 @@ export class LocalApplicationService {
   productionScenes(input) { return this.productionOps.sceneSuggestions(input); }
   productionChapters(input) { return this.productionOps.chapters(input); }
   productionTranscribeNarration(input) { return this.productionOps.transcribeNarration(input); }
+  productionMotionKit() { return this.productionOps.motionKit(); }
+  productionMotionPlan(input) { return this.productionOps.motionPlan(input); }
+  productionMotionAuto(input) { return this.productionOps.motionPlanAuto(input); }
+  productionMotionSet(input) { return this.productionOps.motionPlanSet(input); }
+  productionMotionPreview(input) { return this.productionOps.motionPreview(input); }
   voicePlan() { return this.narrationOps.voicePlan(); }
 
   /** Capacidades para as telas de etapa, derivadas do mesmo catálogo do setup. */
@@ -498,6 +503,8 @@ export class LocalApplicationService {
     await this.ready();
     const stored = await readProjectDirectory(directory);
     const project = { ...stored, media: await Promise.all(stored.media.map(async item => ({ ...item, uri: (await this.resolveMediaPath(item)) || item.uri }))) };
+    // Modo composição: narração, tempos das palavras e trilha vão junto no pedido (o render roda fora do projeto).
+    if (project.motion?.beats?.length) project.motionInputs = await this.productionOps.motionInputs(directory, project);
     const targetDirectory = outputDirectory ? path.resolve(outputDirectory) : this.settings.roots.renderOutput || path.join(path.resolve(directory), 'output');
     await mkdir(targetDirectory, { recursive: true });
     const output = path.join(targetDirectory, `${project.id}-r${project.revision}.mp4`);
@@ -516,6 +523,8 @@ export class LocalApplicationService {
     if (aspectRatio && aspectRatio !== stored.aspectRatio) throw new LifecycleError('INVALID_RENDER_PRESET', `O projeto está em ${stored.aspectRatio}; altere a proporção na timeline antes de renderizar em ${aspectRatio}`);
     const preset = presets.presets.find(item => item.id === presetId); if (!preset) throw new LifecycleError('INVALID_RENDER_PRESET', 'Preset de render inválido');
     const project = { ...stored, media: await Promise.all(stored.media.map(async item => ({ ...item, uri: (await this.resolveMediaPath(item)) || item.uri }))) };
+    // Modo composição: narração, tempos das palavras e trilha vão junto no pedido (o render roda fora do projeto).
+    if (project.motion?.beats?.length) project.motionInputs = await this.productionOps.motionInputs(directory, project);
     const targetDirectory = outputDirectory ? path.resolve(outputDirectory) : this.settings.roots.renderOutput || path.join(path.resolve(directory), 'output'); await mkdir(targetDirectory, { recursive: true });
     const output = await availableFile(path.join(targetDirectory, `${project.id}-r${project.revision}-${preset.id}.mp4`));
     return await this.renderQueue.enqueue(project, { output, scale: preset.scale }, { projectPath: directory, presetId });

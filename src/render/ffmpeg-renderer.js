@@ -6,6 +6,7 @@ import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { compileRenderPlan, missingSources } from './render-plan.js';
 import { buildFfmpegArgs } from './ffmpeg-graph.js';
+import { MotionRenderer } from './motion-renderer.js';
 
 const run = promisify(execFile);
 const ANTON = import.meta.url.startsWith('file:') ? path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../assets/brand/fonts/Anton-Regular.ttf') : path.join(process.cwd(), 'assets/brand/fonts/Anton-Regular.ttf');
@@ -47,6 +48,8 @@ export class FfmpegRenderer {
   }
 
   async render(project, { output, signal, onProgress = () => {}, scale = 1 }) {
+    // Modo composição: o plano de motion é renderizado inteiro pelo kit Remotion (a timeline de clips fica de fora).
+    if (project.motion?.beats?.length) { this.motion ||= new MotionRenderer(this.root, { ffmpeg: this.ffmpeg, ffprobe: this.ffprobe }); await mkdir(path.dirname(output), { recursive: true }); return this.motion.render(project, { output, signal, onProgress, scale }); }
     await mkdir(this.root, { recursive: true });
     const plan = this.#plan(project);
     if (!(scale > 0 && scale <= 1)) throw new Error('Escala de render inválida');

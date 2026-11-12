@@ -59,9 +59,11 @@ export function missingStageArtifacts(project, stageId) {
   if (stageId === 'script') return [['abertura', creative.script?.hook], ['desenvolvimento', creative.script?.development], ['payoff', creative.script?.payoff]].filter(([, value]) => !filled(value)).map(([label]) => label);
   if (stageId === 'packaging') return [['título A', creative.packaging?.titleA], ['descrição', creative.packaging?.description]].filter(([, value]) => !filled(value)).map(([label]) => label);
   if (stageId === 'media') return [...(!project.media.length ? ['mídia'] : []), ...(project.media.some(item => item.rights === 'pending') ? ['direitos das mídias'] : [])];
-  if (stageId === 'narration') return audioClips.length ? [] : ['narração na timeline'];
-  if (stageId === 'edit') return visualClips.length ? [] : ['conteúdo visual na timeline'];
-  if (stageId === 'review') return [...(!visualClips.length ? ['conteúdo visual'] : []), ...(!audioClips.length ? ['áudio'] : [])];
+  // Modo composição (plano de motion): o vídeo é o plano; narração é opcional (vídeo só com som e texto).
+  const motion = project.motion?.beats?.length ? project.motion : null;
+  if (stageId === 'narration') return audioClips.length || motion ? [] : ['narração na timeline'];
+  if (stageId === 'edit') return visualClips.length || motion ? [] : ['conteúdo visual na timeline'];
+  if (stageId === 'review') return motion ? [] : [...(!visualClips.length ? ['conteúdo visual'] : []), ...(!audioClips.length ? ['áudio'] : [])];
   return ['etapa desconhecida'];
 }
 

@@ -8,6 +8,10 @@ import { promisify } from 'node:util';
 import { readProjectDirectory } from './project-registry.js';
 import { NarrationStore, scenesFromScript } from '../audio/narration-service.js';
 import { TranscriptStore } from '../media/transcript-store.js';
+import { planMotion } from './motion-planner.js';
+import { MotionRenderer, mediaRefs as mediaRefsPlan } from '../render/motion-renderer.js';
+import { motionPlanSchema } from '../core/contracts.js';
+import { MOTION_KIT } from '../motion/kit-catalog.js';
 import { wrap } from '../render/ffmpeg-graph.js';
 import { mediaRefs, sanitizeProps } from '../render/remotion-component-runtime.js';
 import { missingStageArtifacts } from '../core/workflow.js';
@@ -18,6 +22,7 @@ const run = promisify(execFile);
 const FONTS = ['/usr/share/fonts/truetype/inter-zorin-os/Inter-Bold.ttf', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', '/usr/share/fonts/TTF/DejaVuSans-Bold.ttf', '/Library/Fonts/Arial Bold.ttf', '/System/Library/Fonts/Supplemental/Arial Bold.ttf', 'C:\\Windows\\Fonts\\arialbd.ttf'];
 const SIZES = { '16:9': [1920, 1080], '9:16': [1080, 1920], '1:1': [1080, 1080], '4:5': [1080, 1350] };
 const THUMB_SIZES = { '16:9': [1280, 720], '9:16': [1080, 1920], '1:1': [1080, 1080], '4:5': [1080, 1350] };
+const round2 = value => Math.round(value * 100) / 100;
 const fold = text => String(text).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const PALETTE = ['#15151d', '#0f2a3d', '#2a1420', '#1d2a10', '#22182e'];
 /** Chamada curta: a primeira frase, cortada em palavra inteira (com reticências) se passar do limite. */
@@ -477,6 +482,7 @@ export class ProductionOperations {
       creative: project.creative,
       media: project.media.map(item => ({ id: item.id, kind: item.kind, role: item.role || 'content', name: item.name, rights: item.rights, durationSeconds: item.metadata?.durationSeconds ?? null })),
       timeline: project.timeline.tracks.map(track => ({ id: track.id, kind: track.kind, clips: track.clips.length })),
+      motion: project.motion ? { beats: project.motion.beats.length, durationSeconds: round2(Math.max(...project.motion.beats.map(beat => beat.at + beat.duration))), narration: project.motion.narration, source: project.motion.source } : null,
       done: project.stages.every(stage => stage.state === 'approved'),
     };
   }
@@ -541,8 +547,89 @@ export class ProductionOperations {
     } catch { return null; }
   }
 
+  // ---- Modo composição (kit de motion Diazverso) ----
+
+  /** Narração, tempos das palavras e trilha para o render da composição (caminhos já resolvidos). */
+  async motionInputs(directory, project) {
+    const session = await new NarrationStore(directory).read().catch(() => ({}));
+    const narration = session.assembled?.mediaId && project.media.find(item => item.id === session.assembled.mediaId);
+    const words = narration ? await this.#narrationWords(directory, narration) : [];
+    const music = project.motion?.music ? project.media.filter(item => item.role === 'music').at(-1) : null;
+    return { narration: narration ? (await this.app.resolveMediaPath(narration)) || narration.uri : null, narrationSeconds: narration?.metadata?.durationSeconds || 0, words, music: music ? (await this.app.resolveMediaPath(music)) || music.uri : null };
+  }
+
+  /** Catálogo do kit para o agente: cenas, props, humores do Nox e SFX. */
+  motionKit() { return MOTION_KIT; }
+
+  async motionPlan({ path: directory }) { const project = await readProjectDirectory(directory); return { plan: project.motion, revision: project.revision }; }
+
+  /**
+   * Plano automático: frases do roteiro nos tempos reais da narração (palavras do Whisper), imagens/vídeos do
+   * assunto na ordem de importação (citados pelo nome entram quando são citados). Sem narração montada,
+   * estima 15 caracteres por segundo e gera um vídeo sem narração. Grava no projeto (apply=false só devolve).
+   */
+  async motionPlanAuto({ path: directory, apply = true, music = true }) {
+    const project = await readProjectDirectory(directory);
+    const scenes = scenesFromScript(project.creative?.script);
+    if (!scenes.length) throw new Error('Escreva o roteiro antes de planejar o vídeo');
+    const session = await new NarrationStore(directory).read().catch(() => ({}));
+    const narration = session.assembled?.mediaId && project.media.find(item => item.id === session.assembled.mediaId);
+    let windows; let words = [];
+    if (narration?.metadata?.durationSeconds) { windows = this.#windows(project, session, narration.metadata.durationSeconds); words = await this.#narrationWords(directory, narration); }
+    else { let cursor = 0; windows = scenes.map(scene => { const window = { scene, start: cursor, length: Math.max(2, scene.text.length / 15) }; cursor += window.length; return window; }); }
+    const media = project.media.filter(item => ['image', 'video'].includes(item.kind) && !['slide', 'thumbnail', 'background'].includes(item.role) && item.rights !== 'pending').map(item => ({ id: item.id, name: item.name, kind: item.kind }));
+    const plan = planMotion({ windows, words, media, title: project.creative?.packaging?.titleA || project.title, end: narration?.metadata?.durationSeconds ? narration.metadata.durationSeconds + 0.8 : null });
+    plan.narration = Boolean(narration);
+    plan.music = music && project.media.some(item => item.role === 'music') ? { volume: 0.5, duck: 0.25 } : null;
+    const warnings = [
+      ...(!narration ? ['Sem narração montada: tempos estimados e vídeo sem narração.'] : []),
+      ...(narration && !words.length ? ['Narração sem transcrição: rode narration_transcribe para sincronizar beats e legenda por palavra.'] : []),
+      ...(!media.length ? ['Sem imagens/vídeos da obra: o plano usa Nox e texto. Importe cenas das obras citadas (direitos confirmados).'] : []),
+      ...(!plan.music ? ['Sem trilha: importe uma faixa licenciada com papel music.'] : []),
+    ];
+    if (!apply) return { plan, warnings };
+    const saved = await this.motionPlanSet({ path: directory, plan, source: 'auto' });
+    return { ...saved, warnings };
+  }
+
+  /** Prévia de frames do plano atual (PNG em output/previas/): o agente confere o visual antes do render. */
+  async motionPreview({ path: directory, seconds }) {
+    const stored = await readProjectDirectory(directory);
+    if (!stored.motion?.beats?.length) throw Object.assign(new Error('Sem plano de motion: use motion_plan_auto ou motion_plan_set'), { code: 'MOTION_MISSING' });
+    const project = { ...stored, media: await Promise.all(stored.media.map(async item => ({ ...item, uri: (await this.app.resolveMediaPath(item)) || item.uri }))) };
+    project.motionInputs = await this.motionInputs(directory, project);
+    const times = (seconds?.length ? seconds : stored.motion.beats.map(beat => beat.at + Math.min(beat.duration * 0.6, beat.duration - 0.1))).slice(0, 24);
+    const renderer = new MotionRenderer(path.join(this.app.dataDirectory, 'render'), { ffmpeg: this.ffmpeg });
+    const result = await renderer.stills(project, { seconds: times, directory: path.join(path.resolve(directory), 'output', 'previas') });
+    return { files: result.files, seconds: times };
+  }
+
+  /** Grava o plano (validado pelo contrato) depois de conferir mídias citadas e direitos. */
+  async motionPlanSet({ path: directory, plan, baseRevision, source = 'agent' }) {
+    const project = await readProjectDirectory(directory);
+    if (baseRevision !== undefined && baseRevision !== project.revision) throw Object.assign(new Error(`O projeto mudou (revisão ${project.revision}); leia o plano de novo`), { code: 'REVISION_CONFLICT' });
+    if (plan === null) { const result = await this.app.runProjectAction({ path: directory, baseRevision: project.revision, action: { type: 'motion.set', motion: null } }); return { plan: null, revision: result.project.revision }; }
+    const parsed = motionPlanSchema.safeParse({ ...plan, schema: 'contentlab-motion-v1', source: plan.source || source });
+    if (!parsed.success) throw Object.assign(new Error(`Plano inválido: ${parsed.error.issues.slice(0, 5).map(issue => `${issue.path.join('.')}: ${issue.message}`).join('; ')}`), { code: 'MOTION_INVALID' });
+    const refs = mediaRefsPlan(parsed.data);
+    const missing = refs.filter(id => !project.media.some(item => item.id === id));
+    if (missing.length) throw Object.assign(new Error(`Mídia citada não está no projeto: ${missing.join(', ')}`), { code: 'MOTION_INVALID' });
+    const pending = refs.filter(id => project.media.find(item => item.id === id)?.rights === 'pending');
+    if (pending.length) throw Object.assign(new Error(`Confirme os direitos antes de usar: ${pending.join(', ')}`), { code: 'RIGHTS_PENDING' });
+    const result = await this.app.runProjectAction({ path: directory, baseRevision: project.revision, action: { type: 'motion.set', motion: parsed.data } });
+    const beats = parsed.data.beats; const end = Math.max(...beats.map(beat => beat.at + beat.duration));
+    return { revision: result.project.revision, beats: beats.length, durationSeconds: round2(end), averageBeat: round2(beats.reduce((sum, beat) => sum + beat.duration, 0) / beats.length), scenes: Object.fromEntries([...new Set(beats.map(beat => beat.scene))].map(scene => [scene, beats.filter(beat => beat.scene === scene).length])), media: refs.length, plan: parsed.data };
+  }
+
   /** Padrão Diazverso: toda cena HQ mostra uma imagem do assunto (imagem do projeto ou Nox), não só texto. */
   #visualCheck(project) {
+    if (project.motion?.beats?.length) {
+      const beats = project.motion.beats; const SUBJECT = new Set(['evidencia', 'pagina', 'nox', 'ficha', 'comparacao', 'cta', 'numero', 'lista', 'formula']);
+      const withSubject = beats.filter(beat => SUBJECT.has(beat.scene) || /"media:/.test(JSON.stringify(beat.props || {})) || beat.props?.humor);
+      const distinct = new Set(beats.flatMap(beat => mediaRefs(beat.props || {}))).size;
+      const longest = Math.max(...beats.map(beat => beat.duration)); const average = beats.reduce((sum, beat) => sum + beat.duration, 0) / beats.length;
+      return { id: 'visual', label: 'Ritmo e imagem do assunto', ok: withSubject.length >= beats.length * 0.6 && longest <= 10 && average <= 6, detail: `${beats.length} beats (média ${average.toFixed(1)} s, maior ${longest.toFixed(1)} s); ${withSubject.length} com assunto ou Nox; ${distinct} mídia(s) da obra` };
+    }
     const scenes = project.timeline.tracks.find(track => track.id === SCENES_TRACK)?.clips || [];
     if (!scenes.length) return { id: 'visual', label: 'Imagem do assunto em cada cena', ok: false, detail: 'sem cenas HQ na timeline' };
     const withImage = scenes.filter(clip => /"(media|brand):(?!anton|comic-page)[\w.-]+"/.test(JSON.stringify(clip.componentProps || {})));
@@ -553,7 +640,7 @@ export class ProductionOperations {
   /** Trilha final precisa de licença registrada; a trilha sintetizada serve só de rascunho. */
   #musicCheck(project) {
     const ids = new Set(project.timeline.tracks.flatMap(track => track.clips).map(clip => clip.sourceId));
-    const music = project.media.filter(item => item.role === 'music' && ids.has(item.id));
+    const music = project.motion?.beats?.length ? (project.motion.music ? project.media.filter(item => item.role === 'music').slice(-1) : []) : project.media.filter(item => item.role === 'music' && ids.has(item.id));
     if (!music.length) return { id: 'music', label: 'Trilha licenciada', ok: false, detail: 'sem trilha: importe uma faixa licenciada (ex.: YouTube Audio Library) com papel música' };
     const generated = music.filter(item => item.source?.type === 'generated');
     return { id: 'music', label: 'Trilha licenciada', ok: !generated.length, detail: generated.length ? 'trilha sintetizada é rascunho: troque por faixa licenciada antes de publicar' : `${music.length} faixa(s) com licença registrada` };
@@ -562,7 +649,8 @@ export class ProductionOperations {
   #checks(project, inspection, latest, files, chapters, byWord = false) {
     const stage = id => project.stages.find(item => item.id === id)?.state === 'approved';
     const pending = project.media.filter(item => item.rights === 'pending');
-    const captions = project.timeline.tracks.filter(track => track.kind === 'caption').reduce((sum, track) => sum + track.clips.length, 0);
+    const motion = project.motion?.beats?.length ? project.motion : null;
+    const captions = motion ? (motion.captions !== false && byWord ? 1 : 0) : project.timeline.tracks.filter(track => track.kind === 'caption').reduce((sum, track) => sum + track.clips.length, 0);
     return [
       { id: 'script', label: 'Roteiro', ok: stage('script'), detail: stage('script') ? 'aprovado' : 'etapa ainda não aprovada' },
       { id: 'packaging', label: 'Títulos e thumbnails A/B', ok: stage('packaging') && files.includes('thumbnail-A.png') && files.includes('thumbnail-B.png'), detail: `${files.filter(name => name.startsWith('thumbnail-')).length}/2 thumbnails${stage('packaging') ? ', embalagem aprovada' : ', embalagem não aprovada'}` },
@@ -571,8 +659,8 @@ export class ProductionOperations {
       this.#visualCheck(project),
       this.#musicCheck(project),
       ...(project.type === 'short' ? [{ id: 'duration', label: 'Duração do Short', advisory: true, ok: Number(inspection?.duration || 0) >= 60, detail: `${Number(inspection?.duration || 0).toFixed(1)} s; o canal prefere 60 s ou mais quando o conteúdo sustenta` }] : []),
-      { id: 'captions', label: 'Legendas', ok: captions > 0, detail: captions ? `${captions} legenda(s) na timeline, sincronizadas ${byWord ? 'palavra a palavra (Whisper)' : 'por frase'}` : 'sem legendas' },
-      ...(project.type === 'long' ? [{ id: 'chapters', label: 'Capítulos', ok: chapters.length >= 3, detail: chapters.length >= 3 ? `${chapters.length} capítulos dos tempos da narração` : 'menos de 3 trechos: sem capítulos' }] : []),
+      { id: 'captions', label: 'Legendas', ok: captions > 0, detail: motion ? (captions ? 'palavra a palavra na composição (tempos do Whisper)' : motion.narration === false ? 'vídeo sem narração: texto na tela faz o papel da legenda' : 'transcreva a narração (narration_transcribe) para a legenda por palavra') : captions ? `${captions} legenda(s) na timeline, sincronizadas ${byWord ? 'palavra a palavra (Whisper)' : 'por frase'}` : 'sem legendas', ...(motion?.narration === false ? { ok: true } : {}) },
+      ...(project.type === 'long' ? [{ id: 'chapters', label: 'Capítulos', advisory: Number(inspection?.duration || 0) < 180, ok: chapters.length >= 3, detail: chapters.length >= 3 ? `${chapters.length} capítulos dos tempos da narração` : 'menos de 3 trechos: sem capítulos' }] : []),
       { id: 'review', label: 'Aprovação final', ok: stage('review'), detail: stage('review') ? 'aprovada' : 'aguardando sua aprovação' },
     ];
   }

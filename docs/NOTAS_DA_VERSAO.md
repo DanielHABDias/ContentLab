@@ -17,6 +17,7 @@ Primeira versão candidata completa. Ela vai da ideia ao vídeo final, roda loca
 - **Acessibilidade:** diálogos acessíveis, uso por teclado, contraste AA, aviso quando o servidor fica offline, seletor nativo no Linux, Windows e macOS, e a tela "Sobre e diagnóstico" (F21).
 - **Segurança:** a API local recusa outros sites e DNS rebinding; os pacotes têm limites contra ZIP bomb; as fontes são locais e não existe telemetria (F22).
 - **Estilo Diazverso (F27–F28):** cenas HQ do plugin Diazverso com imagem do assunto em cada beat, Anton e Nox embutidos, legenda palavra a palavra (Whisper), SFX originais, trilha licenciada com ducking sob a voz, áreas seguras de Shorts, capítulos e `verificacao.md` na entrega. Disponível pela interface e pelo MCP.
+- **Modo composição (F29):** o vídeo inteiro como motion design do kit Diazverso, em beats: ritmo de troca a cada 1,5–3 s, Nox com 8 expressões, cenas das obras em painéis HQ, legenda palavra a palavra, som em cada troca, plano automático e prévia em PNG pelo MCP.
 - **Instalação Linux sem npm:** atualização assinada com volta de versão, e desinstalação que pergunta antes de cada parte (F23).
 
 ## Correções da F24

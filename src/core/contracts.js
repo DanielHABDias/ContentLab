@@ -119,6 +119,40 @@ export const timelineSchema = z.object({
   tracks: z.array(trackSchema),
 });
 
+/**
+ * Plano de motion (roteiro em beats do kit Diazverso): o vídeo inteiro vira uma composição Remotion única.
+ * Tempos em segundos; props das cenas são JSON e citam mídia como `media:<id>`.
+ */
+const motionValue = z.lazy(() => z.union([z.string().max(2000), z.number().finite(), z.boolean(), z.null(), z.array(motionValue).max(40), z.record(z.string().max(64), motionValue)]));
+export const MOTION_SCENES = ['titulo', 'frase', 'nox', 'evidencia', 'pagina', 'numero', 'ficha', 'formula', 'lista', 'comparacao', 'cta'];
+export const MOTION_SFX = ['pop', 'tick', 'type', 'whoosh', 'swish', 'impact', 'sub', 'glitch', 'riser', 'ding', 'error', 'camera'];
+export const motionBeatSchema = z.object({
+  id: z.string().regex(/^[a-z0-9_-]{1,40}$/i),
+  scene: z.enum(MOTION_SCENES),
+  at: z.number().min(0).max(7200),
+  duration: z.number().min(0.2).max(120),
+  props: z.record(z.string().max(64), motionValue).default({}),
+  sfx: z.array(z.object({ name: z.enum(MOTION_SFX), at: z.number().min(-2).max(120).default(0), volume: z.number().min(0).max(1).default(0.5) })).max(16).default([]),
+  flash: z.boolean().default(true),
+  legenda: z.boolean().optional(),
+});
+export const motionPlanSchema = z.object({
+  schema: z.literal('contentlab-motion-v1'),
+  beats: z.array(motionBeatSchema).min(1).max(600),
+  narration: z.boolean().default(true),
+  captions: z.boolean().default(true),
+  music: z.object({ volume: z.number().min(0).max(1).default(0.5), duck: z.number().min(0).max(1).default(0.25) }).nullable().default({ volume: 0.5, duck: 0.25 }),
+  source: z.enum(['auto', 'agent', 'user']).default('agent'),
+}).superRefine((plan, ctx) => {
+  const ids = new Set();
+  for (const [index, beat] of plan.beats.entries()) {
+    if (ids.has(beat.id)) ctx.addIssue({ code: 'custom', path: ['beats', index, 'id'], message: `id repetido: ${beat.id}` });
+    ids.add(beat.id);
+    const previous = plan.beats[index - 1];
+    if (previous && beat.at < previous.at + previous.duration - 0.05) ctx.addIssue({ code: 'custom', path: ['beats', index, 'at'], message: `beat ${beat.id} começa antes do fim de ${previous.id}` });
+  }
+});
+
 export const projectSchema = z.object({
   schema: z.literal('contentlab-project-v1'),
   id: idSchema,
@@ -132,6 +166,7 @@ export const projectSchema = z.object({
   workflowJobs: z.array(workflowJobSchema).default([]),
   media: z.array(mediaRefSchema),
   timeline: timelineSchema,
+  motion: motionPlanSchema.nullable().default(null),
   creative: z.object({
     brief: z.object({ thesis: z.string(), audience: z.string(), promise: z.string(), notes: z.string() }),
     script: z.object({ hook: z.string(), development: z.string(), payoff: z.string(), visual: z.string(), sources: z.string() }),
@@ -159,6 +194,7 @@ export const operationSchema = z.object({
     z.object({ type: z.literal('workflow.run'), stageId: idSchema.optional(), jobId: idSchema, author: z.string().min(1).max(120).default('Content Lab') }),
     z.object({ type: z.literal('project.update'), title: z.string().min(1).optional(), projectType: z.enum(['long', 'short', 'custom']).optional(), aspectRatio: aspectRatioSchema.optional(), mode: z.enum(['review', 'autonomous']).optional() }),
     z.object({ type: z.literal('creative.update'), creative: projectSchema.shape.creative }),
+    z.object({ type: z.literal('motion.set'), motion: motionPlanSchema.nullable() }),
     z.object({ type: z.literal('media.add'), media: mediaRefSchema }),
     z.object({ type: z.literal('media.remove'), mediaId: idSchema, detachUsages: z.boolean().default(false) }),
     z.object({ type: z.literal('media.cut.add'), mediaId: idSchema, cut: mediaCutSchema }),

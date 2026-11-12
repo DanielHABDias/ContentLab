@@ -84,4 +84,12 @@ await writeFile(path.join(outDir, 'catalog.json'), `${JSON.stringify({ plugin: v
 for (const [from, to] of [['assets/brand/fonts/anton/Anton-Regular.ttf', 'fonts/Anton-Regular.ttf'], ['assets/brand/fonts/anton/OFL.txt', 'fonts/OFL.txt'], ['assets/brand/nox/Nox.png', 'nox/Nox.png'], ['assets/brand/backgrounds/comic-page.png', 'backgrounds/comic-page.png'], ...(await readdir(path.join(plugin, 'assets/graphics'))).map(file => [`assets/graphics/${file}`, `graphics/${file}`])]) {
   await mkdir(path.dirname(path.join(brandOut, to)), { recursive: true }); await copyFile(path.join(plugin, from), path.join(brandOut, to));
 }
+// Kit de motion (composição única): copiado como está, com os assets que ele usa.
+const kitSource = path.join(plugin, 'skills/diazverso-motion/kit'); const kitOut = path.join(root, 'src/motion/kit');
+await rm(kitOut, { recursive: true, force: true }); await mkdir(kitOut, { recursive: true });
+for (const file of await readdir(kitSource)) await copyFile(path.join(kitSource, file), path.join(kitOut, file));
+await copyFile(path.join(plugin, 'assets/brand/nox/nox-sem-olhos.png'), path.join(brandOut, 'nox/nox-sem-olhos.png'));
+await mkdir(path.join(brandOut, 'sfx'), { recursive: true });
+for (const file of (await readdir(path.join(plugin, 'assets/sfx/motion'))).filter(name => name.endsWith('.wav'))) await copyFile(path.join(plugin, 'assets/sfx/motion', file), path.join(brandOut, 'sfx', file));
+await writeFile(path.join(kitOut, 'VERSION'), `${version}\n`);
 console.log(`${catalog.length} cenas do plugin ${version} em ${path.relative(root, outDir)}; marca em ${path.relative(root, brandOut)}`);

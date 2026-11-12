@@ -30,6 +30,8 @@ export const localApi = {
   productionAudio: input => post('/production/audio', input),
   productionScenes: input => post('/production/scenes', input),
   productionChapters: input => post('/production/chapters', input),
+  productionMotionAuto: input => post('/production/motion-auto', input),
+  productionTranscribeNarration: input => post('/production/transcribe-narration', input),
   productionSummary: input => post('/production/summary', input),
   productionDeliverable: input => post('/production/deliverable', input),
   shutdown: (force = false) => post('/server/shutdown', { force }),
