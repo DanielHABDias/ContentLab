@@ -91,7 +91,7 @@ Sem variantes, as palavras de impacto dos títulos A e B viram o texto. Versões
   - `aparte` (o Nox comentando sobre a cena) e `paineis3d` (3D).
   - Props, exemplos e regras: `motion_kit`.
 - **Humores do Nox:** `bravo`, `feliz`, `surpreso`, `tedio`, `confuso`, `piscada`, `determinado` e `triste`.
-- **SFX:** `pop`, `tick`, `type`, `whoosh`, `swish`, `impact`, `sub`, `glitch`, `riser`, `ding`, `error` e `camera`.
+- **SFX:** os nomes vêm da lista `sfx` do catálogo do kit (hoje `pop`, `tick`, `type`, `whoosh`, `swish`, `impact`, `sub`, `glitch`, `riser`, `ding`, `error` e `camera`). Cada som cai no quadro do evento da tela; som novo (sintetizado ou do Openverse com licença comercial) entra pelo plugin e passa a valer no plano depois de `npm run scenes:diazverso`. Guia: `skills/diazverso-motion/references/som.md` do plugin.
 - **Mídia:** referência `media:<id>`. Imagem ou vídeo (vídeo entra sem áudio); mídia com direitos pendentes é recusada.
 - **Legenda:** nos Shorts (9:16) ela fica o tempo todo; no vídeo longo (16:9) o plano automático deixa só no gancho (primeiros 6 s) e nos apartes do Nox, com `legenda: false` nos outros beats. `legenda: false` esconde a legenda num beat; em `titulo` e `cta` ela já fica escondida.
 

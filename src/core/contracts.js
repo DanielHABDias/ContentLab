@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import kitCatalog from '../motion/kit/catalog.json' with { type: 'json' };
 
 export const idSchema = z.string().regex(/^[a-z][a-z0-9_-]{2,63}$/);
 export const aspectRatioSchema = z.enum(['16:9', '9:16', '1:1', '4:5']);
@@ -127,7 +128,8 @@ export const timelineSchema = z.object({
  */
 const motionValue = z.lazy(() => z.union([z.string().max(2000), z.number().finite(), z.boolean(), z.null(), z.array(motionValue).max(40), z.record(z.string().max(64), motionValue)]));
 export const MOTION_SCENES = ['titulo', 'frase', 'nox', 'evidencia', 'pagina', 'numero', 'ficha', 'formula', 'lista', 'comparacao', 'cta', 'aparte', 'paineis3d'];
-export const MOTION_SFX = ['pop', 'tick', 'type', 'whoosh', 'swish', 'impact', 'sub', 'glitch', 'riser', 'ding', 'error', 'camera'];
+/** Nomes de SFX do kit (lista `sfx` do catálogo do plugin; som novo entra pelo plugin e `npm run scenes:diazverso`). */
+export const MOTION_SFX = kitCatalog.sfx;
 export const motionBeatSchema = z.object({
   id: z.string().regex(/^[a-z0-9_-]{1,40}$/i),
   scene: z.enum(MOTION_SCENES),
