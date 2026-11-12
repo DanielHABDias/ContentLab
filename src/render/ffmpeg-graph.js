@@ -28,13 +28,14 @@ export async function buildFfmpegArgs(plan, { from = 0, to = plan.duration, scal
     const offset = Math.max(0, from - layer.start);
     const duration = Math.min(layer.start + layer.duration, to) - Math.max(layer.start, from);
     const end = localStart + duration;
-    if (layer.type === 'media' && layer.source) {
+    if ((layer.type === 'media' || layer.type === 'component') && layer.source) {
       const index = inputs.length;
       if (layer.mediaKind === 'image') inputs.push(['-loop', '1', '-framerate', String(plan.fps), '-t', duration.toFixed(4), '-i', layer.source]);
+      else if (layer.mediaKind === 'component-sequence') inputs.push(['-framerate', String(plan.fps), '-start_number', String(Math.round(offset * plan.fps)), '-t', duration.toFixed(4), '-i', layer.source]);
       else inputs.push(['-ss', (layer.sourceIn + offset).toFixed(4), '-t', duration.toFixed(4), '-i', layer.source]);
       if (layer.trackKind === 'visual' && layer.mediaKind !== 'audio') {
         const box = layer.box; const w = even(box.width); const h = even(box.height);
-        const fit = layer.fit === 'stretch' ? `scale=${w}:${h}` : layer.fit === 'contain' ? `scale=${w}:${h}:force_original_aspect_ratio=decrease` : `scale=${w}:${h}:force_original_aspect_ratio=increase,crop=${w}:${h}`;
+        const fit = layer.type === 'component' || layer.fit === 'stretch' ? `scale=${w}:${h}` : layer.fit === 'contain' ? `scale=${w}:${h}:force_original_aspect_ratio=decrease` : `scale=${w}:${h}:force_original_aspect_ratio=increase,crop=${w}:${h}`;
         const chain = [`fps=${plan.fps}`, fit, 'setsar=1', 'format=yuva420p'];
         if (layer.opacity.length) chain.push(`geq=lum='lum(X,Y)':cb='cb(X,Y)':cr='cr(X,Y)':a='alpha(X,Y)*(${opacityExpression(layer.opacity, -offset)})'`);
         if (layer.fadeIn > offset) chain.push(`fade=t=in:st=0:d=${(layer.fadeIn - offset).toFixed(4)}:alpha=1`);
@@ -48,7 +49,7 @@ export async function buildFfmpegArgs(plan, { from = 0, to = plan.duration, scal
         filters.push(`${video}${scaled}overlay=x=${x}:y=${y}:eof_action=pass:enable='between(t,${localStart.toFixed(4)},${(end - 0.0001).toFixed(4)})'${out}`);
         video = out;
       }
-      if (!still && layer.hasAudio && layer.volume > 0) audio.push({ index, localStart, duration, layer, offset });
+      if (!still && layer.type === 'media' && layer.hasAudio && layer.volume > 0) audio.push({ index, localStart, duration, layer, offset });
     } else if ((layer.type === 'caption' || layer.type === 'text') && layer.text?.trim()) {
       if (!fontFile) throw new Error('Nenhuma fonte encontrada para desenhar textos');
       const style = STYLES[layer.style] || STYLES.legenda;

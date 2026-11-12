@@ -56,6 +56,7 @@ export const clipSchema = z.object({
   durationInFrames: z.number().int().positive(),
   sourceId: idSchema.optional(),
   componentId: idSchema.optional(),
+  componentProps: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).default({}),
   fit: z.enum(['cover', 'contain', 'stretch']).default('cover'),
   anchor: z.enum(['center', 'top', 'bottom', 'left', 'right']).default('center'),
   layout: z.partialRecord(aspectRatioSchema, z.object({ x: z.number(), y: z.number(), width: z.number().positive(), height: z.number().positive() })).optional(),

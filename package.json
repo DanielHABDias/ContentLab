@@ -22,10 +22,13 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
+    "@remotion/bundler": "4.0.543",
+    "@remotion/renderer": "4.0.543",
     "@vitejs/plugin-react": "latest",
     "lucide-react": "latest",
     "react": "latest",
     "react-dom": "latest",
+    "remotion": "4.0.543",
     "vite": "latest",
     "yauzl": "^3.4.0",
     "yazl": "^3.3.1",

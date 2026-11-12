@@ -15,7 +15,7 @@ const FONT_CANDIDATES = ['/usr/share/fonts/truetype/inter-zorin-os/Inter-Bold.tt
  * trecho) usa exatamente o mesmo grafo, só com janela e escala diferentes.
  */
 export class FfmpegRenderer {
-  constructor(root, { ffmpeg = 'ffmpeg', ffprobe = 'ffprobe', fontFile = null } = {}) { this.root = path.resolve(root); this.ffmpeg = ffmpeg; this.ffprobe = ffprobe; this.fontFile = fontFile; }
+  constructor(root, { ffmpeg = 'ffmpeg', ffprobe = 'ffprobe', fontFile = null, componentRuntime = null } = {}) { this.root = path.resolve(root); this.ffmpeg = ffmpeg; this.ffprobe = ffprobe; this.fontFile = fontFile; this.componentRuntime = componentRuntime; }
 
   async #font() {
     if (this.fontFile) return this.fontFile;
@@ -35,6 +35,10 @@ export class FfmpegRenderer {
   async #run(plan, options, { signal, onProgress = () => {}, total }) {
     const textDirectory = await mkdtemp(path.join(this.root, 'text-'));
     try {
+      if (plan.layers.some(layer => layer.type === 'component')) {
+        if (!this.componentRuntime) throw Object.assign(new Error('Runtime Remotion não configurado'), { code: 'COMPONENT_RENDER_FAILED' });
+        await this.componentRuntime.prepare(plan, { signal, onProgress });
+      }
       const args = await buildFfmpegArgs(plan, { ...options, fontFile: await this.#font(), textDirectory });
       await runFfmpeg(this.ffmpeg, args, { signal, onTime: seconds => onProgress({ phase: 'rendering', progress: total ? Math.min(0.99, seconds / total) : null }) });
     } finally { await rm(textDirectory, { recursive: true, force: true }); }

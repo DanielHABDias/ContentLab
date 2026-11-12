@@ -1,4 +1,4 @@
-import { lstat, mkdir, rm, stat } from 'node:fs/promises';
+import { lstat, mkdir, readFile, rm, stat } from 'node:fs/promises';
 import { MIGRATABLE, ROOT_KINDS, SettingsStore, StorageService, sizeOf, validateFolder } from './storage-service.js';
 import os from 'node:os';
 import path from 'node:path';
@@ -19,6 +19,11 @@ import { AgentService } from '../core/agent-service.js';
 import { randomUUID } from 'node:crypto';
 import { MediaService } from '../media/media-service.js';
 import { FfmpegRenderer } from '../render/ffmpeg-renderer.js';
+import { ComponentRegistry } from '../timeline/component-registry.js';
+import { RemotionComponentRuntime } from '../render/remotion-component-runtime.js';
+import { fileURLToPath } from 'node:url';
+
+const bundledComponent = import.meta.url.startsWith('file:') ? path.join(path.dirname(fileURLToPath(import.meta.url)), '../timeline/components/KineticEmphasis.tsx') : path.join(process.cwd(), 'src/timeline/components/KineticEmphasis.tsx');
 
 export class LocalApplicationService {
   constructor({ dataDirectory, dialog = new NativeDialog(), packages = new PackageService(), media = null, renderer = null, trash = new SystemTrash(), opener = new SystemOpener(), activities = new ActivityTracker(), setup = null, toolsDirectory = null, transcriber = null, voice = null }) {
@@ -39,7 +44,9 @@ export class LocalApplicationService {
     this.dialog = dialog;
     this.packages = packages;
     this.media = media || new MediaService(path.join(this.dataDirectory, 'media'));
-    this.renderer = renderer || new FfmpegRenderer(path.join(this.dataDirectory, 'render'));
+    this.components = new ComponentRegistry(path.join(this.dataDirectory, 'components'));
+    this.componentRuntime = new RemotionComponentRuntime(path.join(this.dataDirectory, 'render'), this.components);
+    this.renderer = renderer || new FfmpegRenderer(path.join(this.dataDirectory, 'render'), { componentRuntime: this.componentRuntime });
     this.trash = trash;
     this.opener = opener;
     this.activities = activities;
@@ -47,14 +54,22 @@ export class LocalApplicationService {
   }
 
   /** Carrega as configurações uma vez e aplica as raízes aos serviços. */
-  ready() { this.readyPromise ||= this.settingsStore.read().then(settings => this.#apply(settings)); return this.readyPromise; }
+  ready() { this.readyPromise ||= this.settingsStore.read().then(async settings => { this.#apply(settings); await this.#prepareComponents(); return this.settings; }); return this.readyPromise; }
+
+  async #prepareComponents() {
+    const source = await readFile(bundledComponent, 'utf8');
+    const expected = { id: 'kinetic_emphasis', label: 'Ênfase cinética', exportName: 'KineticEmphasis', propsSchema: { text: { type: 'string', label: 'Texto', default: 'Texto em destaque' }, color: { type: 'color', label: 'Cor', default: '#d8ff48' } } };
+    const current = await this.components.inspect(expected.id).catch(() => null);
+    const { createHash } = await import('node:crypto'); const hash = createHash('sha256').update(source).digest('hex');
+    if (!current || current.hash !== hash) await this.components.register({ ...expected, source, replace: Boolean(current) });
+  }
 
   #apply(settings) {
     this.settings = { revision: settings.revision, roots: settings.roots, limits: settings.limits };
     this.settingsRecovered = settings.recoveredFrom || null;
     this.projectsDirectory = settings.roots.projects;
     if (!this.injected.media) this.media = new MediaService(settings.roots.media);
-    if (!this.injected.renderer) this.renderer = new FfmpegRenderer(settings.roots.renderCache);
+    if (!this.injected.renderer) { this.componentRuntime = new RemotionComponentRuntime(settings.roots.renderCache, this.components); this.renderer = new FfmpegRenderer(settings.roots.renderCache, { componentRuntime: this.componentRuntime }); }
     if (!this.injected.setup && this.setup.toolsDirectory !== settings.roots.tools) this.setup = new SetupService({ toolsDirectory: settings.roots.tools });
     return this.settings;
   }
@@ -357,6 +372,8 @@ export class LocalApplicationService {
   editRedo(input) { return this.editOps.redo(input); }
   editAddMedia(input) { return this.editOps.addMediaClip(input); }
   editCaptions(input) { return this.editOps.captions(input); }
+  editComponents(input) { return this.editOps.components(input); }
+  editAddComponent(input) { return this.editOps.addComponent(input); }
   editAspect(input) { return this.editOps.setAspectRatio(input); }
   editFrame(input) { return this.editOps.frame(input); }
   editClip(input) { return this.editOps.clip(input); }

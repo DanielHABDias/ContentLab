@@ -19,6 +19,7 @@ export function compileRenderPlan(timeline, media = [], { aspectRatio = timeline
       id: clip.id, type: clip.type, name: clip.name || null, trackId: track.id, trackKind: track.kind, zIndex: trackIndex * 1000 + clipIndex,
       startFrame: clip.startFrame, durationInFrames: clip.durationInFrames, start: clip.startFrame / fps, duration: clip.durationInFrames / fps, sourceIn: (clip.sourceInFrame || 0) / fps,
       source: item?.uri, sha256: item?.sha256, mediaKind: item?.kind, hasAudio: item ? item.kind === 'audio' || (item.kind === 'video' && item.metadata?.audioCodec != null) : false,
+      componentId: clip.componentId || null, componentProps: clip.componentProps || {},
       box: track.kind === 'visual' ? resolveLayout(clip, aspectRatio, canvas) : undefined, fit: clip.fit, anchor: clip.anchor,
       text: clip.text ?? null, style: clip.style || 'legenda', volume: clip.volume ?? 1,
       fadeIn: Number(effects['fade-in']?.seconds) || 0, fadeOut: Number(effects['fade-out']?.seconds) || 0,

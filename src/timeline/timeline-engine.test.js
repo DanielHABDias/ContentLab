@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, expect, test } from 'vitest';
@@ -28,6 +28,9 @@ test('registro TSX compila allowlist e bloqueia acesso ao sistema', async () => 
   const root = await mkdtemp(path.join(os.tmpdir(), 'contentlab-components-')); roots.push(root); const registry = new ComponentRegistry(root);
   const manifest = await registry.register({ id: 'kinetic_title', source: "import React from 'react'; export const Title=({text}:{text:string})=><div>{text}</div>;", propsSchema: { text: 'string' } }); expect(manifest.hash).toHaveLength(64);
   await expect(registry.register({ id: 'unsafe_component', source: "import fs from 'node:fs'; export default ()=>null;" })).rejects.toThrow(/não permitido/);
+  await expect(registry.register({ id: 'dynamic_component', source: "export default async()=>import('node:fs');" })).rejects.toThrow(/não permitida/);
+  await writeFile(path.join(root, 'kinetic_title', 'index.tsx'), 'export default () => null;');
+  await expect(registry.inspect('kinetic_title')).rejects.toThrow(/adulterado ou corrompido/);
 });
 
 test('enquadramento próprio vale só para a proporção indicada', async () => {

@@ -3,7 +3,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { TimelineEditor } from './TimelineEditor.jsx';
 import { localApi } from './local-api.js';
 
-vi.mock('./local-api.js', () => ({ localApi: { editState: vi.fn(), editApply: vi.fn(), editUndo: vi.fn(), editRedo: vi.fn(), editAddMedia: vi.fn(), editCaptions: vi.fn(), editAspect: vi.fn(), editFrame: vi.fn(), editClip: vi.fn(), jobs: vi.fn() } }));
+vi.mock('./local-api.js', () => ({ localApi: { editState: vi.fn(), editApply: vi.fn(), editUndo: vi.fn(), editRedo: vi.fn(), editAddMedia: vi.fn(), editAddComponent: vi.fn(), editCaptions: vi.fn(), editAspect: vi.fn(), editFrame: vi.fn(), editClip: vi.fn(), jobs: vi.fn() } }));
 
 const clip = (id, extra) => ({ id, type: 'media', sourceId: 'media_a', name: id, startFrame: 0, durationInFrames: 60, fit: 'cover', anchor: 'center', keyframes: {}, effects: [], sourceInFrame: 0, volume: 1, style: 'legenda', ...extra });
 function details(overrides = {}) {
@@ -77,4 +77,19 @@ test('track bloqueada não aceita arrastar e silenciar usa comando de track', as
   const item = screen.getByRole('button', { name: /clip_a, 0:00/i });
   fireEvent.pointerDown(item, { clientX: 10 });
   expect(item.querySelector('.trim-handle')).toBeNull();
+});
+
+test('importa SRT do computador e adiciona componente configurado no playhead', async () => {
+  const component = { id: 'kinetic_emphasis', label: 'Ênfase cinética', propsSchema: { text: { type: 'string', label: 'Texto do componente', default: 'Texto em destaque' }, color: { type: 'color', label: 'Cor do componente', default: '#d8ff48' } } };
+  localApi.editState.mockResolvedValue({ ...details(), components: [component] });
+  localApi.editCaptions.mockResolvedValue(details()); localApi.editAddComponent.mockResolvedValue(details());
+  render(<TimelineEditor details={{ ...details(), components: [component] }} onUpdated={vi.fn()}/>);
+  const file = new File(['1\n00:00:00,000 --> 00:00:01,000\nOi\n'], 'legendas.srt', { type: 'application/x-subrip' });
+  Object.defineProperty(file, 'text', { value: async () => '1\n00:00:00,000 --> 00:00:01,000\nOi\n' });
+  fireEvent.change(screen.getByLabelText('Importar arquivo SRT'), { target: { files: [file] } });
+  await waitFor(() => expect(localApi.editCaptions).toHaveBeenCalledWith(expect.objectContaining({ srtName: 'legendas.srt', srtText: expect.stringContaining('Oi'), style: 'legenda' })));
+  fireEvent.change(screen.getByLabelText('Componente'), { target: { value: 'kinetic_emphasis' } });
+  fireEvent.change(screen.getByLabelText('Texto do componente'), { target: { value: 'Título real' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Adicionar componente' }));
+  await waitFor(() => expect(localApi.editAddComponent).toHaveBeenCalledWith(expect.objectContaining({ componentId: 'kinetic_emphasis', componentProps: { text: 'Título real', color: '#d8ff48' } })));
 });

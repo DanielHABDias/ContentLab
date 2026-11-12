@@ -5,6 +5,7 @@ import { CANVASES } from '../render/render-plan.js';
 import { TranscriptStore, parseSrt } from '../media/transcript-store.js';
 import { LifecycleError } from './project-lifecycle.js';
 import { readProjectDirectory } from './project-registry.js';
+import { sanitizeProps } from '../render/remotion-component-runtime.js';
 
 const HISTORY_LIMIT = 30;
 const PREVIEW_NAME = /^[a-z0-9_-]{3,64}-[a-f0-9]{16}-[0-9]+-(16x9|9x16|1x1|4x5)\.(png|mp4)$/;
@@ -33,7 +34,7 @@ export class EditOperations {
   async #state(directory, details) {
     const history = await this.#history(directory);
     const current = hash(details.project.timeline);
-    return { ...details, edit: { canUndo: history.undo.at(-1)?.after === current, canRedo: history.redo.at(-1)?.after === current, undoLabel: history.undo.at(-1)?.label || null, redoLabel: history.redo.at(-1)?.label || null } };
+    return { ...details, components: await this.app.components.list(), edit: { canUndo: history.undo.at(-1)?.after === current, canRedo: history.redo.at(-1)?.after === current, undoLabel: history.undo.at(-1)?.label || null, redoLabel: history.redo.at(-1)?.label || null } };
   }
 
   async state({ path: directory }) { return await this.#state(directory, await this.app.inspectProject(directory)); }
@@ -80,8 +81,17 @@ export class EditOperations {
     return await this.edit({ path: directory, baseRevision, commands: [{ op: 'clip.add', trackId, clip }], label: `Adicionar ${clip.name}` });
   }
 
+  async components() { await this.app.ready(); return { components: await this.app.components.list() }; }
+
+  async addComponent({ path: directory, baseRevision, trackId = 'visual_main', componentId, componentProps = {}, startFrame = 0, durationInFrames }) {
+    const project = await readProjectDirectory(directory); const manifest = await this.app.components.inspect(componentId);
+    const props = sanitizeProps(manifest.propsSchema, componentProps); const duration = durationInFrames || project.timeline.fps * 3;
+    const clip = { id: `component_${randomUUID().replaceAll('-', '').slice(0, 10)}`, type: 'component', componentId, componentProps: props, name: manifest.label, startFrame, durationInFrames: duration, fit: 'stretch', anchor: 'center', keyframes: {}, effects: [], sourceInFrame: 0, volume: 1, style: 'legenda' };
+    return await this.edit({ path: directory, baseRevision, commands: [{ op: 'clip.add', trackId, clip }], label: `Adicionar ${manifest.label}` });
+  }
+
   /** Legendas editáveis a partir da transcrição revisada de uma mídia ou de um SRT. */
-  async captions({ path: directory, baseRevision, mediaId, srtPath, startFrame = 0, style = 'legenda', trackId = 'captions_main' }) {
+  async captions({ path: directory, baseRevision, mediaId, srtPath, srtText, srtName = 'legendas.srt', startFrame = 0, style = 'legenda', trackId = 'captions_main' }) {
     const project = await readProjectDirectory(directory);
     let segments; let prefix;
     if (mediaId) {
@@ -92,6 +102,9 @@ export class EditOperations {
       const info = await stat(srtPath).catch(() => null);
       if (!info?.isFile() || info.size > 5 * 1024 * 1024) throw new Error('Escolha um arquivo SRT de até 5 MB');
       segments = parseSrt(await readFile(srtPath, 'utf8')); prefix = `cap_srt_${createHash('sha256').update(srtPath).digest('hex').slice(0, 6)}`;
+    } else if (typeof srtText === 'string') {
+      if (Buffer.byteLength(srtText) > 900 * 1024) throw new Error('Escolha um arquivo SRT de até 900 KB');
+      segments = parseSrt(srtText); prefix = `cap_srt_${createHash('sha256').update(`${srtName}\0${srtText}`).digest('hex').slice(0, 6)}`;
     } else throw new Error('Escolha a mídia transcrita ou um arquivo SRT');
     const fps = project.timeline.fps;
     const track = project.timeline.tracks.find(item => item.id === trackId && item.kind === 'caption');

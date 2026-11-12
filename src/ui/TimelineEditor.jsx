@@ -14,12 +14,12 @@ const newId = prefix => `${prefix}_${Math.random().toString(36).slice(2, 12)}`;
 export function TimelineEditor({ details, onUpdated }) {
   const { project, path } = details;
   const timeline = project.timeline; const fps = timeline.fps;
-  const [edit, setEdit] = useState(details.edit || null); const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
+  const [edit, setEdit] = useState(details.edit || null); const [components, setComponents] = useState(details.components || []); const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
   const [playhead, setPlayhead] = useState(0); const [selected, setSelected] = useState(null); const [zoom, setZoom] = useState(40);
   const [snap, setSnap] = useState(true); const [ripple, setRipple] = useState(false); const [ratio, setRatio] = useState(project.aspectRatio); const [safe, setSafe] = useState(true);
   const [aspectReport, setAspectReport] = useState(null);
-  useEffect(() => { localApi.editState(path).then(state => setEdit(state.edit)).catch(() => {}); }, [path]);
-  const accept = state => { setEdit(state.edit); onUpdated(state); };
+  useEffect(() => { localApi.editState(path).then(state => { setEdit(state.edit); setComponents(state.components || []); }).catch(() => {}); }, [path]);
+  const accept = state => { setEdit(state.edit); if (state.components) setComponents(state.components); onUpdated(state); };
   const call = async (task, { quiet = false } = {}) => { setBusy(true); setError(''); try { const state = await task(); if (state?.project) accept(state); return state; } catch (issue) { if (!quiet) setError(issue.message); throw issue; } finally { setBusy(false); } };
   const apply = (commands, label) => call(() => localApi.editApply({ path, baseRevision: project.revision, commands, label })).catch(() => null);
   const located = useMemo(() => { if (!selected) return null; for (const track of timeline.tracks) { const clip = track.clips.find(item => item.id === selected); if (clip) return { track, clip }; } return null; }, [selected, timeline]);
@@ -65,9 +65,9 @@ export function TimelineEditor({ details, onUpdated }) {
     {error && <div className="notice error" role="alert">{error}</div>}
     <div className="editor-main">
       <Preview path={path} project={project} frame={playhead} ratio={ratio} safe={safe}/>
-      <Inspector key={located?.clip.id || 'none'} located={located} ratio={ratio} fps={fps} playhead={playhead} media={project.media} busy={busy} onApply={apply}/>
+      <Inspector key={located?.clip.id || 'none'} located={located} ratio={ratio} fps={fps} playhead={playhead} media={project.media} components={components} busy={busy} onApply={apply}/>
     </div>
-    <AddPanel path={path} project={project} playhead={playhead} call={call}/>
+    <AddPanel path={path} project={project} playhead={playhead} components={components} call={call}/>
     <Tracks timeline={timeline} zoom={zoom} playhead={playhead} setPlayhead={setPlayhead} selected={selected} setSelected={setSelected} snap={snap} busy={busy} onApply={apply}/>
     {aspectReport && <ConfirmDialog title="Trocar proporção do projeto" message={`De ${aspectReport.from} para ${aspectReport.to}. ${aspectReport.clipsWithoutLayout.length ? `${aspectReport.clipsWithoutLayout.length} clip(s) sem enquadramento próprio para ${aspectReport.to} vão ocupar a tela inteira.` : ''} ${aspectReport.reopens.length ? 'A edição aprovada será reaberta para revisão.' : ''}`} details={aspectReport.clipsWithoutLayout.slice(0, 8)} confirm={`Usar ${aspectReport.to}`} onClose={() => setAspectReport(null)} onConfirm={() => changeRatio(true)}/>}
   </section>;
@@ -104,11 +104,11 @@ function Preview({ path, project, frame, ratio, safe }) {
   </div>;
 }
 
-function Inspector({ located, ratio, fps, playhead, media, busy, onApply }) {
+function Inspector({ located, ratio, fps, playhead, media, components, busy, onApply }) {
   const clip = located?.clip; const track = located?.track;
   const effect = type => Number(clip?.effects?.find(item => item.type === type && item.enabled !== false)?.params?.seconds || 0);
   const box = clip?.layout?.[ratio] || { x: 0, y: 0, width: 1, height: 1 };
-  const [form, setForm] = useState(() => clip ? { name: clip.name || '', start: clip.startFrame / fps, duration: clip.durationInFrames / fps, sourceIn: (clip.sourceInFrame || 0) / fps, fit: clip.fit, anchor: clip.anchor, text: clip.text || '', style: clip.style || 'legenda', volume: clip.volume ?? 1, fadeIn: effect('fade-in'), fadeOut: effect('fade-out'), custom: Boolean(clip.layout?.[ratio]), x: box.x * 100, y: box.y * 100, w: box.width * 100, h: box.height * 100, opacity: 1 } : null);
+  const [form, setForm] = useState(() => clip ? { name: clip.name || '', start: clip.startFrame / fps, duration: clip.durationInFrames / fps, sourceIn: (clip.sourceInFrame || 0) / fps, fit: clip.fit, anchor: clip.anchor, text: clip.text || '', style: clip.style || 'legenda', componentProps: clip.componentProps || {}, volume: clip.volume ?? 1, fadeIn: effect('fade-in'), fadeOut: effect('fade-out'), custom: Boolean(clip.layout?.[ratio]), x: box.x * 100, y: box.y * 100, w: box.width * 100, h: box.height * 100, opacity: 1 } : null);
   if (!clip) return <aside className="inspector"><h3>Propriedades</h3><p className="plan-line">Selecione um clip. Atalhos: S divide, Delete exclui, Alt+setas move, setas andam o playhead, Ctrl+Z desfaz.</p></aside>;
   const set = (key, value) => setForm(previous => ({ ...previous, [key]: value }));
   const item = media.find(entry => entry.id === clip.sourceId);
@@ -117,7 +117,7 @@ function Inspector({ located, ratio, fps, playhead, media, busy, onApply }) {
     const effects = [...(clip.effects || []).filter(entry => !['fade-in', 'fade-out'].includes(entry.type)), ...(form.fadeIn > 0 ? [{ id: 'fx_fade_in', type: 'fade-in', enabled: true, params: { seconds: Number(form.fadeIn) } }] : []), ...(form.fadeOut > 0 ? [{ id: 'fx_fade_out', type: 'fade-out', enabled: true, params: { seconds: Number(form.fadeOut) } }] : [])];
     const layout = { ...(clip.layout || {}) };
     if (form.custom) layout[ratio] = { x: Number(form.x) / 100, y: Number(form.y) / 100, width: Math.max(0.01, Number(form.w) / 100), height: Math.max(0.01, Number(form.h) / 100) }; else delete layout[ratio];
-    const patch = { name: form.name, fit: form.fit, anchor: form.anchor, effects, layout, volume: Number(form.volume), ...(clip.type !== 'media' ? { text: form.text, style: form.style } : {}) };
+    const patch = { name: form.name, fit: form.fit, anchor: form.anchor, effects, layout, volume: Number(form.volume), ...(['text', 'caption', 'shape'].includes(clip.type) ? { text: form.text, style: form.style } : {}), ...(clip.type === 'component' ? { componentProps: form.componentProps } : {}) };
     onApply([
       { op: 'clip.trim', trackId: track.id, clipId: clip.id, startFrame: Math.max(0, Math.round(form.start * fps)), durationInFrames: Math.max(1, Math.round(form.duration * fps)), sourceInFrame: Math.max(0, Math.round(form.sourceIn * fps)) },
       { op: 'clip.update', trackId: track.id, clipId: clip.id, patch },
@@ -137,16 +137,17 @@ function Inspector({ located, ratio, fps, playhead, media, busy, onApply }) {
       <div className="layout-grid"><label>Opacidade<input type="number" min="0" max="1" step="0.05" value={form.opacity} onChange={event => set('opacity', event.target.value)}/></label><button type="button" className="mini-button" onClick={addKeyframe} disabled={busy}>Keyframe no playhead</button></div>
       {clip.keyframes?.opacity?.length > 0 && <small className="plan-line">{clip.keyframes.opacity.length} keyframe(s) de opacidade</small>}
     </>}
-    {clip.type !== 'media' && <><label>Texto<textarea rows="3" value={form.text} onChange={event => set('text', event.target.value)}/></label><label>Estilo<select value={form.style} onChange={event => set('style', event.target.value)}>{Object.entries(STYLES).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label></>}
+    {['text', 'caption', 'shape'].includes(clip.type) && <><label>Texto<textarea rows="3" value={form.text} onChange={event => set('text', event.target.value)}/></label><label>Estilo<select value={form.style} onChange={event => set('style', event.target.value)}>{Object.entries(STYLES).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label></>}
+    {clip.type === 'component' && <ComponentFields manifest={components.find(item => item.id === clip.componentId)} values={form.componentProps} onChange={(key, value) => setForm(previous => ({ ...previous, componentProps: { ...previous.componentProps, [key]: value } }))}/>}
     {clip.type === 'media' && (track.kind === 'audio' || item?.metadata?.audioCodec) && <label>Volume<input type="number" min="0" max="4" step="0.05" value={form.volume} onChange={event => set('volume', event.target.value)}/></label>}
     <div className="layout-grid">{number('fadeIn', 'Fade in (s)')}{number('fadeOut', 'Fade out (s)')}</div>
     <button className="button primary" disabled={busy}>Aplicar</button>
   </form></aside>;
 }
 
-function AddPanel({ path, project, playhead, call }) {
+function AddPanel({ path, project, playhead, components, call }) {
   const visual = project.media.filter(item => ['video', 'image'].includes(item.kind)); const audio = project.media.filter(item => ['audio', 'video'].includes(item.kind)); const transcribed = project.media.filter(item => item.transcript);
-  const [mediaId, setMediaId] = useState(''); const [trackId, setTrackId] = useState('visual_main'); const [source, setSource] = useState('');
+  const [mediaId, setMediaId] = useState(''); const [trackId, setTrackId] = useState('visual_main'); const [source, setSource] = useState(''); const [componentId, setComponentId] = useState(''); const [componentProps, setComponentProps] = useState({}); const [captionStyle, setCaptionStyle] = useState('legenda');
   const tracks = project.timeline.tracks.filter(track => track.kind !== 'caption');
   const options = (project.timeline.tracks.find(track => track.id === trackId)?.kind === 'audio' ? audio : visual);
   return <div className="add-panel">
@@ -155,7 +156,17 @@ function AddPanel({ path, project, playhead, call }) {
     <button className="mini-button" disabled={!mediaId} onClick={() => call(() => localApi.editAddMedia({ path, baseRevision: project.revision, trackId, mediaId, startFrame: playhead })).catch(() => null)}>Adicionar no playhead</button>
     <label>Legendas de<select value={source} onChange={event => setSource(event.target.value)}><option value="">Transcrição…</option>{transcribed.map(item => <option key={item.id} value={item.id}>{item.name || item.id}</option>)}</select></label>
     <button className="mini-button" disabled={!source} onClick={() => call(() => localApi.editCaptions({ path, baseRevision: project.revision, mediaId: source })).catch(() => null)}>Gerar legendas</button>
+    <label className="mini-button file-button">Importar SRT<input type="file" accept=".srt,application/x-subrip" aria-label="Importar arquivo SRT" onChange={async event => { const file = event.target.files?.[0]; if (!file) return; if (file.size > 900 * 1024) { event.target.value = ''; return call(() => Promise.reject(new Error('Escolha um arquivo SRT de até 900 KB'))).catch(() => null); } const srtText = await file.text(); await call(() => localApi.editCaptions({ path, baseRevision: project.revision, srtText, srtName: file.name, startFrame: playhead, style: captionStyle })).catch(() => null); event.target.value = ''; }}/></label>
+    <label>Estilo<select value={captionStyle} onChange={event => setCaptionStyle(event.target.value)}>{Object.entries(STYLES).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>
+    <label>Componente<select value={componentId} onChange={event => { const id = event.target.value; setComponentId(id); const manifest = components.find(item => item.id === id); setComponentProps(defaultProps(manifest)); }}><option value="">Escolha…</option>{components.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
+    {componentId && <ComponentFields manifest={components.find(item => item.id === componentId)} values={componentProps} onChange={(key, value) => setComponentProps(previous => ({ ...previous, [key]: value }))}/>}
+    <button className="mini-button" disabled={!componentId} onClick={() => call(() => localApi.editAddComponent({ path, baseRevision: project.revision, componentId, componentProps, startFrame: playhead })).catch(() => null)}>Adicionar componente</button>
   </div>;
+}
+
+function defaultProps(manifest) { return Object.fromEntries(Object.entries(manifest?.propsSchema || {}).flatMap(([key, value]) => { const descriptor = typeof value === 'string' ? { type: value } : value; return descriptor.default === undefined ? [] : [[key, descriptor.default]]; })); }
+function ComponentFields({ manifest, values, onChange }) {
+  return Object.entries(manifest?.propsSchema || {}).map(([key, value]) => { const spec = typeof value === 'string' ? { type: value, label: key } : value; const label = spec.label || key; if (spec.type === 'boolean') return <label className="check" key={key}><input type="checkbox" checked={Boolean(values[key])} onChange={event => onChange(key, event.target.checked)}/>{label}</label>; return <label key={key}>{label}<input aria-label={label} type={spec.type === 'color' ? 'color' : spec.type === 'number' ? 'number' : 'text'} value={values[key] ?? spec.default ?? ''} onChange={event => onChange(key, spec.type === 'number' ? Number(event.target.value) : event.target.value)}/></label>; });
 }
 
 function Tracks({ timeline, zoom, playhead, setPlayhead, selected, setSelected, snap, busy, onApply }) {

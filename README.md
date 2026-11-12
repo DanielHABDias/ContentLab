@@ -59,7 +59,7 @@ O menu “⋯” de cada cartão oferece abrir, revelar pasta, renomear, duplica
 - **Duplicar** cria novo ID, revisão 1 e histórico com a origem; mídias continuam referenciadas pelo hash, sem copiar objetos.
 - **Excluir** mostra nome, ID e caminho exatos, exige digitar o ID e move a pasta para a lixeira do sistema (`gio trash`), com “Desfazer”. Sem lixeira, oferece backup e exige digitar `EXCLUIR <id>` antes da exclusão permanente. Exclusão e mudança de ID ficam bloqueadas durante escrita, exportação ou render; o render pode ser cancelado no próprio diálogo.
 
-O editor de roteiro separa fala, direção visual e fontes; packaging mantém títulos A/B, descrição, tags e thumbnails. A timeline usa camadas genéricas, keyframes, undo/redo e layouts próprios para 16:9 e 9:16. Preview e render compartilham o mesmo plano.
+O editor de roteiro separa fala, direção visual e fontes; packaging mantém títulos A/B, descrição, tags e thumbnails. A timeline usa camadas genéricas, keyframes, undo/redo e layouts próprios para 16:9 e 9:16. SRT pode ser importado no editor; componentes TSX/Remotion permitidos aparecem como camadas configuráveis e são renderizados em processo isolado. Preview e render compartilham o mesmo plano.
 
 ## CLI e MCP
 

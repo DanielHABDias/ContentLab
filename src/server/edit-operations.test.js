@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdtemp, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, expect, test } from 'vitest';
@@ -73,6 +73,23 @@ test('legendas a partir da transcrição e de SRT viram clips editáveis sem sob
   state = await app.editCaptions({ path: project.path, baseRevision: state.project.revision, srtPath: srt });
   expect((await clips(app, project, 'captions_main')).at(-1)).toMatchObject({ text: 'Depois', startFrame: 300, durationInFrames: 30 });
 });
+
+test('SRT enviado pela interface e componente Remotion entram na timeline e no preview real', async () => {
+  const { app, project } = await setup();
+  let state = await app.editCaptions({ path: project.path, baseRevision: await revision(app, project), srtName: 'ui.srt', srtText: '1\n00:00:00,000 --> 00:00:01,000\nLegenda da interface\n', startFrame: 30, style: 'titulo' });
+  expect((await clips(app, project, 'captions_main'))[0]).toMatchObject({ text: 'Legenda da interface', startFrame: 30, style: 'titulo' });
+  expect(state.components).toEqual([expect.objectContaining({ id: 'kinetic_emphasis', exportName: 'KineticEmphasis' })]);
+  state = await app.editAddComponent({ path: project.path, baseRevision: state.project.revision, componentId: 'kinetic_emphasis', componentProps: { text: 'FUNCIONA', color: '#ff0000' }, startFrame: 0, durationInFrames: 30 });
+  const component = state.project.timeline.tracks[0].clips.find(item => item.type === 'component');
+  expect(component).toMatchObject({ componentId: 'kinetic_emphasis', componentProps: { text: 'FUNCIONA', color: '#ff0000' } });
+  const frame = await app.editFrame({ path: project.path, frame: 10 });
+  const preview = await app.editPreviewFile({ name: frame.name });
+  expect((await stat(preview.file)).size).toBeGreaterThan(1000);
+  const [cache] = await readdir(path.join(app.renderer.root, 'components'));
+  const frames = (await readdir(path.join(app.renderer.root, 'components', cache))).filter(name => name.endsWith('.png')).sort();
+  const corner = execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-i', path.join(app.renderer.root, 'components', cache, frames[10]), '-vf', 'crop=1:1:0:0,format=rgba', '-frames:v', '1', '-f', 'rawvideo', 'pipe:1']);
+  expect(corner[3]).toBe(0);
+}, 180_000);
 
 test('troca de proporção pede confirmação com relatório e reabre edição aprovada', async () => {
   const { app, project, media } = await setup();
