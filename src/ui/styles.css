@@ -77,3 +77,42 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-vi
 .nav-item.shutdown { margin-top: auto; color: #ff8797; }.nav-item.shutdown:hover { background: #2a1820; color: #ffc0c9; }
 .shutdown-screen { min-height: 100vh; display: grid; place-content: center; justify-items: center; gap: 12px; padding: 24px; text-align: center; }.shutdown-screen p { color: var(--muted); margin: 0; max-width: 520px; }
 .nav-item.shutdown + .credit, .nav-item.shutdown ~ .credit { margin-top: 12px; }
+/* Documentação */
+.docs .workflow-card h3 { margin: 22px 0 8px; font-size: 14px; }
+.docs-index { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.docs-index a { color: var(--ink); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; font-size: 13px; text-decoration: none; }
+.docs-index a:hover { border-color: var(--lime); }
+.sfx-grid, .pose-grid, .docs-rules { list-style: none; margin: 16px 0 0; padding: 0; }
+.sfx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 12px; }
+.sfx-grid li { display: grid; gap: 6px; align-content: start; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel-2); min-width: 0; }
+.sfx-grid small { color: var(--muted); font-size: 12px; line-height: 1.4; }
+.sfx-grid .origin { font-size: 11px; opacity: .8; }
+.sfx-button { display: inline-flex; align-items: center; gap: 8px; justify-self: start; min-height: 40px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--ink); font-weight: 600; cursor: pointer; }
+.sfx-button:hover:not(:disabled), .sfx-button.playing { border-color: var(--lime); color: var(--lime); }
+.sfx-button:disabled { opacity: .5; cursor: not-allowed; }
+.pose-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 12px; }
+.pose-grid li { display: grid; gap: 6px; align-content: start; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel-2); min-width: 0; }
+.pose-grid small { color: var(--muted); font-size: 12px; line-height: 1.4; }
+.pose-images { display: flex; gap: 6px; justify-content: center; min-height: 142px; padding: 6px; border-radius: 8px; background: radial-gradient(circle at 50% 40%, #2d2d3a, #15151d); }
+.pose-images img { width: auto; max-width: 48%; height: 142px; object-fit: contain; }
+.tone-list { display: flex; flex-wrap: wrap; gap: 5px; margin: 0; }
+.tone { padding: 2px 8px; border-radius: 999px; background: #1f2b3a; color: #a9d8ff; font-size: 11px; }
+.docs-list { display: grid; gap: 10px; margin: 16px 0 0; }
+.docs-list div { display: grid; grid-template-columns: minmax(90px, 140px) 1fr; gap: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.docs-list dt { font-weight: 700; color: var(--lime); }
+.docs-list dd { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.docs-rules { display: grid; gap: 8px; }
+.docs-rules li { padding-left: 14px; border-left: 2px solid var(--blue); font-size: 13px; line-height: 1.5; }
+.docs details { margin-top: 18px; }
+.docs details summary { cursor: pointer; color: var(--muted); }
+@media (max-width: 640px) { .docs-list div { grid-template-columns: 1fr; gap: 4px; } }
+/* Fluxo no diálogo de projeto */
+.dialog fieldset .option-hint { display: block; color: var(--muted); font-size: 12px; margin-left: 24px; }
+.dialog .pause-stages { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 4px 0 0 24px; }
+.dialog .pause-stages label { font-size: 12px; }
+.field-hint { display: block; color: var(--muted); font-size: 12px; font-weight: 400; margin-top: 2px; }
+.notice.info { border-color: #6a5a2a; background: #2a2416; color: #f2dc9b; }
+.flow-summary { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; border: 1px solid #474754; border-radius: 999px; padding: 6px 8px 6px 12px; font-size: 12px; color: #d9d8df; }
+.flow-summary svg { color: var(--lime); }
+.empty-state .button { justify-self: start; margin-top: 10px; }
+@media (max-width: 760px) { .sidebar { flex-wrap: wrap; gap: 8px; min-width: 0; } .sidebar nav { flex-wrap: wrap; gap: 4px; min-width: 0; } .sidebar .nav-item { min-width: 44px; min-height: 44px; justify-content: center; } }

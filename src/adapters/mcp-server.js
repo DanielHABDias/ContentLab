@@ -162,6 +162,7 @@ export function createMcpServer() {
   });
 
   tool(server, 'motion_kit', 'Kit de motion Diazverso (modo composição, o jeito principal de montar vídeos): regras de ritmo, cenas com props e exemplos, humores do Nox, SFX e fundos. Leia antes de escrever ou ajustar beats.', {}, async () => api('/production/motion-kit', {}));
+  tool(server, 'kit_docs', 'Documentação do padrão do canal (a mesma da aba Documentação): cenas, humores, regras de legenda e som, onde cada SFX entra e as poses do Nox com gesto e tons.', {}, async () => api('/brand/docs'));
 
   tool(server, 'motion_plan_auto', 'Gera o roteiro em beats do vídeo inteiro: frases do roteiro nos tempos reais da narração (rode narration_transcribe antes), cenas da obra citadas pelo nome quando são ditas, Nox reagindo, números contando, palavras gigantes no gancho, CTA no fim e SFX em cada troca. Grava no projeto e devolve o plano e avisos. Depois revise com motion_preview e ajuste com motion_plan_set.', { path: projectPath, music: z.boolean().default(true).describe('Usa a trilha importada (papel music) com ducking') }, async args => api('/production/motion-auto', args));
 

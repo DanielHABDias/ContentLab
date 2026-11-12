@@ -10,6 +10,7 @@ import { MediaOperations } from './media-operations.js';
 import { NarrationOperations } from './narration-operations.js';
 import { EditOperations } from './edit-operations.js';
 import { ProductionOperations } from './production-operations.js';
+import { BrandDocs } from './brand-docs.js';
 import { ActivityTracker, LifecycleError, SystemOpener, SystemTrash } from './project-lifecycle.js';
 import { ProjectRegistry, readProjectDirectory } from './project-registry.js';
 import { ProjectStore } from '../core/project-store.js';
@@ -418,6 +419,8 @@ export class LocalApplicationService {
   productionChapters(input) { return this.productionOps.chapters(input); }
   productionTranscribeNarration(input) { return this.productionOps.transcribeNarration(input); }
   productionMotionKit() { return this.productionOps.motionKit(); }
+  brandDocs() { return (this.brand ||= new BrandDocs()).docs(); }
+  brandFile(input) { return (this.brand ||= new BrandDocs()).file(input); }
   productionMotionPlan(input) { return this.productionOps.motionPlan(input); }
   productionMotionAuto(input) { return this.productionOps.motionPlanAuto(input); }
   productionMotionSet(input) { return this.productionOps.motionPlanSet(input); }

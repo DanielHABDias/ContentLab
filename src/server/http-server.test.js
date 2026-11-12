@@ -55,3 +55,21 @@ test('desligar recusa sem confirmação quando há trabalho e encerra quando con
   await new Promise(resolve => setTimeout(resolve, 100));
   expect(prepared).toBe(1); expect(stopped).toBe(1); expect(server.listening).toBe(false);
 });
+
+test('documentação do kit: lista sons e poses e só serve arquivos do catálogo', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'contentlab-http-')); resources.push(root);
+  const server = createContentLabServer({ dataDirectory: root, staticDirectory: path.join(root, 'dist') }); resources.unshift(server);
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const docs = await fetch(`${base}/api/v1/brand/docs`).then(response => response.json());
+  expect(docs.sfx.map(item => item.name)).toEqual(expect.arrayContaining(['whoosh', 'sino', 'tapa-eco']));
+  expect(docs.sfx.every(item => item.available && item.use)).toBe(true);
+  expect(docs.poses).toHaveLength(21); expect(docs.poses.find(pose => pose.id === 'apontando').files).toContain('apontando-b.png');
+  expect(docs.captions.join(' ')).toMatch(/Short.*o tempo todo/);
+  const sound = await fetch(`${base}/api/v1/brand/file?kind=sfx&name=sino`);
+  expect(sound.status).toBe(200); expect(sound.headers.get('content-type')).toBe('audio/wav'); expect(Buffer.from(await sound.arrayBuffer()).subarray(0, 4).toString()).toBe('RIFF');
+  const pose = await fetch(`${base}/api/v1/brand/file?kind=pose&name=apontando-b`);
+  expect(pose.status).toBe(200); expect(pose.headers.get('content-type')).toBe('image/png'); await pose.arrayBuffer();
+  for (const query of ['kind=sfx&name=../../package', 'kind=sfx&name=nao-existe', 'kind=pose&name=catalogo', 'kind=fonts&name=Anton-Regular']) expect((await fetch(`${base}/api/v1/brand/file?${query}`)).status).toBe(400);
+  expect((await fetch(`${base}/api/v1/brand/docs`, { headers: { 'sec-fetch-site': 'cross-site' } })).status).toBe(403);
+});

@@ -60,7 +60,11 @@ Em **Configurações**: pastas de projetos, cache de mídia, cache de render, fe
 
 ## Uso
 
-A tela inicial cria, abre, importa e retoma projetos locais reais. Não são inseridos exemplos. “Abrir projeto” espera uma pasta cujo nome corresponda ao `id` de um `project.json` válido; “Importar pacote” aceita `.contentlab` e ZIP seguro. Dentro do projeto, escolha revisão por etapa ou modo autônomo até a revisão final. Reabrir uma etapa preserva o histórico e invalida dependências posteriores.
+A tela inicial cria, abre, importa e retoma projetos locais reais. Não são inseridos exemplos. “Abrir projeto” espera uma pasta cujo nome corresponda ao `id` de um `project.json` válido; “Importar pacote” aceita `.contentlab` e ZIP seguro. Ao criar o projeto, você já escolhe como produzir (aprovar cada etapa, automático com pausas nas etapas marcadas ou tudo automático) e quem faz a narração (voz de IA ou você grava). Dá para mudar depois em **Configurar**. Reabrir uma etapa preserva o histórico e invalida dependências posteriores.
+
+### Documentação
+
+A aba **Documentação**, na barra lateral, mostra o que todo projeto traz do kit Diazverso. Nela você ouve cada SFX com um clique, vê as 21 poses do Nox (com gesto, olhos e tons) e consulta as cenas, os humores, os fundos e as regras de legenda e de som. Os arquivos vêm de `GET /api/v1/brand/docs` e `GET /api/v1/brand/file?kind=sfx|pose&name=…`, que só servem nomes do catálogo. Pelo MCP, use `kit_docs`.
 
 ### Gerenciar projetos
 
@@ -116,6 +120,7 @@ npm audit --omit=dev
 
 - [Arquitetura](docs/ARCHITECTURE.md)
 - [Design system](docs/DESIGN_SYSTEM.md)
+- [Checklist de interface](docs/UX_INTERFACE.md)
 - [Mídia e transcrição](docs/MIDIA_E_TRANSCRICAO.md)
 - [Narração e voz](docs/NARRACAO_E_VOZ.md)
 - [Timeline e componentes](docs/TIMELINE_E_COMPONENTES.md)

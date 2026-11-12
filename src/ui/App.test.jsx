@@ -3,7 +3,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { App } from './App.jsx';
 import { localApi } from './local-api.js';
 
-vi.mock('./local-api.js', () => ({ OFFLINE_EVENT: 'contentlab:connection', localApi: { listProjects: vi.fn(), openProject: vi.fn(), createProject: vi.fn(), chooseDirectory: vi.fn(), choosePackage: vi.fn(), chooseMedia: vi.fn(), inspectPackage: vi.fn(), importPackage: vi.fn(), importMedia: vi.fn(), runProjectAction: vi.fn(), renderPresets: vi.fn(), renderJobs: vi.fn(), enqueueRender: vi.fn(), cancelRender: vi.fn(), retryRender: vi.fn(), revealRender: vi.fn(), renderLog: vi.fn(), forgetProject: vi.fn(), revealProject: vi.fn(), renameProject: vi.fn(), changeProjectId: vi.fn(), duplicateProject: vi.fn(), exportProject: vi.fn(), deleteProject: vi.fn(), restoreProject: vi.fn(), projectActivities: vi.fn(), cancelProjectActivities: vi.fn(), setupStatus: vi.fn(), setupJobs: vi.fn(), setupInstall: vi.fn(), setupPause: vi.fn(), setupResume: vi.fn(), setupCancel: vi.fn(), setupOnboarding: vi.fn(), relocateProject: vi.fn(), getSettings: vi.fn(), about: vi.fn(), serverWork: vi.fn(), productionSlides: vi.fn(), productionAssemble: vi.fn(), productionThumbnails: vi.fn(), productionDeliverable: vi.fn(), shutdown: vi.fn(), updateStatus: vi.fn(), updateCheck: vi.fn(), updateApply: vi.fn(), updateRollback: vi.fn(), updateConfigure: vi.fn(), validateFolder: vi.fn(), updateSettings: vi.fn(), storageUsage: vi.fn(), storageOrphans: vi.fn(), storageCleanup: vi.fn(), planMigration: vi.fn(), startMigration: vi.fn(), storageJobs: vi.fn(), cancelMigration: vi.fn(), backupRegistry: vi.fn(), registryBackups: vi.fn(), restoreRegistry: vi.fn(), importFiles: vi.fn(), importUrl: vi.fn(), mediaUsage: vi.fn(), removeMedia: vi.fn(), createCut: vi.fn(), removeCut: vi.fn(), transcribe: vi.fn(), transcript: vi.fn(), saveTranscript: vi.fn(), searchTranscripts: vi.fn(), jobs: vi.fn(), cancelJob: vi.fn(), upload: vi.fn() } }));
+vi.mock('./local-api.js', () => ({ OFFLINE_EVENT: 'contentlab:connection', localApi: { listProjects: vi.fn(), openProject: vi.fn(), createProject: vi.fn(), chooseDirectory: vi.fn(), choosePackage: vi.fn(), chooseMedia: vi.fn(), inspectPackage: vi.fn(), importPackage: vi.fn(), importMedia: vi.fn(), runProjectAction: vi.fn(), renderPresets: vi.fn(), renderJobs: vi.fn(), enqueueRender: vi.fn(), cancelRender: vi.fn(), retryRender: vi.fn(), revealRender: vi.fn(), renderLog: vi.fn(), forgetProject: vi.fn(), revealProject: vi.fn(), renameProject: vi.fn(), changeProjectId: vi.fn(), duplicateProject: vi.fn(), exportProject: vi.fn(), deleteProject: vi.fn(), restoreProject: vi.fn(), projectActivities: vi.fn(), cancelProjectActivities: vi.fn(), setupStatus: vi.fn(), setupJobs: vi.fn(), setupInstall: vi.fn(), setupPause: vi.fn(), setupResume: vi.fn(), setupCancel: vi.fn(), setupOnboarding: vi.fn(), relocateProject: vi.fn(), getSettings: vi.fn(), about: vi.fn(), serverWork: vi.fn(), productionSlides: vi.fn(), productionAssemble: vi.fn(), productionThumbnails: vi.fn(), productionDeliverable: vi.fn(), shutdown: vi.fn(), updateStatus: vi.fn(), updateCheck: vi.fn(), updateApply: vi.fn(), updateRollback: vi.fn(), updateConfigure: vi.fn(), validateFolder: vi.fn(), updateSettings: vi.fn(), storageUsage: vi.fn(), storageOrphans: vi.fn(), storageCleanup: vi.fn(), planMigration: vi.fn(), startMigration: vi.fn(), storageJobs: vi.fn(), cancelMigration: vi.fn(), backupRegistry: vi.fn(), registryBackups: vi.fn(), restoreRegistry: vi.fn(), importFiles: vi.fn(), importUrl: vi.fn(), mediaUsage: vi.fn(), removeMedia: vi.fn(), createCut: vi.fn(), removeCut: vi.fn(), transcribe: vi.fn(), transcript: vi.fn(), saveTranscript: vi.fn(), searchTranscripts: vi.fn(), jobs: vi.fn(), cancelJob: vi.fn(), upload: vi.fn(), brandDocs: vi.fn(), brandFileUrl: (kind, name) => `/api/v1/brand/file?kind=${kind}&name=${name}` } }));
 
 function setupStatus(overrides = {}) {
   const items = [
@@ -28,7 +28,7 @@ test('primeira execução fica vazia e não injeta exemplos', async () => {
 });
 
 test('cria projeto real pela API e abre o workflow', async () => {
-  localApi.createProject.mockResolvedValue(realDetails()); render(<App/>); await screen.findByText(/nenhum projeto recente/i); fireEvent.click(screen.getByRole('button', { name: /novo projeto/i })); fireEvent.change(screen.getByPlaceholderText(/nome do projeto/i), { target: { value: 'Meu projeto' } }); fireEvent.click(screen.getByRole('button', { name: /criar projeto/i })); expect(await screen.findByRole('heading', { name: 'Meu projeto' })).toBeInTheDocument(); expect(localApi.createProject).toHaveBeenCalledWith(expect.objectContaining({ title: 'Meu projeto', type: 'long' }));
+  localApi.createProject.mockResolvedValue(realDetails()); render(<App/>); await screen.findByText(/nenhum projeto recente/i); fireEvent.click(screen.getByRole('button', { name: /novo projeto/i })); fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Meu projeto' } }); fireEvent.click(screen.getByRole('button', { name: /criar projeto/i })); expect(await screen.findByRole('heading', { name: 'Meu projeto' })).toBeInTheDocument(); expect(localApi.createProject).toHaveBeenCalledWith(expect.objectContaining({ title: 'Meu projeto', type: 'long', mode: 'review', pauseAt: [], narrationBy: 'ai' }));
 });
 
 test('configurar persiste e continuar abre a etapa real', async () => {
@@ -418,4 +418,36 @@ test('edição oferece montar a timeline automaticamente e recarrega o projeto',
   fireEvent.click(within(panel).getByRole('button', { name: 'Executar: Montar no estilo HQ' }));
   await waitFor(() => expect(localApi.productionAssemble).toHaveBeenLastCalledWith({ path: '/tmp/meu_projeto', scenes: 'auto', music: false, sfx: false }));
   expect(await within(panel).findByText(/6 cena\(s\) com 4 imagem\(ns\), 18 legenda\(s\)/)).toBeInTheDocument();
+});
+
+test('novo projeto: combina fluxo e narração, Esc fecha e título vazio avisa', async () => {
+  localApi.createProject.mockResolvedValue(realDetails()); render(<App/>); await screen.findByText(/nenhum projeto recente/i);
+  fireEvent.click(screen.getByRole('button', { name: /novo projeto/i })); expect(screen.getByRole('dialog', { name: 'Novo vídeo' })).toBeInTheDocument();
+  fireEvent.keyDown(document, { key: 'Escape' }); expect(screen.queryByRole('dialog', { name: 'Novo vídeo' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /novo projeto/i })); fireEvent.click(screen.getByRole('button', { name: /criar projeto/i }));
+  expect(await screen.findByText(/dê um título ao vídeo/i)).toBeInTheDocument(); expect(localApi.createProject).not.toHaveBeenCalled();
+  fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Short do Nox' } }); fireEvent.click(screen.getByLabelText(/short · 9:16/i));
+  fireEvent.click(screen.getByLabelText(/automático com pausas/i)); fireEvent.click(screen.getByLabelText('Edição')); fireEvent.click(screen.getByLabelText(/eu gravo/i));
+  fireEvent.click(screen.getByRole('button', { name: /criar projeto/i }));
+  await waitFor(() => expect(localApi.createProject).toHaveBeenCalledWith(expect.objectContaining({ title: 'Short do Nox', type: 'short', aspectRatio: '9:16', mode: 'autonomous', pauseAt: ['script', 'narration', 'review', 'edit'], narrationBy: 'creator' })));
+});
+
+test('abas do editor andam com as setas', async () => {
+  const details = realDetails(); localApi.listProjects.mockResolvedValue({ projects: [details.card] }); localApi.openProject.mockResolvedValue(details);
+  render(<App/>); fireEvent.click(await screen.findByRole('button', { name: /abrir meu projeto/i })); fireEvent.click(await screen.findByRole('button', { name: /continuar/i }));
+  const brief = screen.getByRole('tab', { name: /brief/i }); fireEvent.keyDown(brief, { key: 'ArrowRight' });
+  expect(screen.getByRole('tab', { name: /roteiro/i })).toHaveAttribute('aria-selected', 'true'); expect(screen.getByRole('tabpanel')).toBeInTheDocument();
+});
+
+test('documentação toca os sons do kit e mostra as poses do Nox', async () => {
+  const play = vi.fn().mockResolvedValue(); const pause = vi.fn(); const created = [];
+  vi.stubGlobal('Audio', vi.fn(function Audio(src) { this.src = src; this.play = play; this.pause = pause; created.push(this); }));
+  localApi.brandDocs.mockResolvedValue({ scenes: [{ id: 'titulo', use: 'Gancho' }], moods: ['feliz'], backgrounds: ['estrelas'], rules: ['Regra'], captions: ['Short (9:16): legenda o tempo todo.'], sound: ['Um som por evento.'], tones: { abertura: 'oi' }, sfx: [{ name: 'whoosh', use: 'Corte', origin: 'Original (procedural)', available: true }, { name: 'sino', use: 'Sininho', origin: 'CC0', available: true }], poses: [{ id: 'acenando', files: ['acenando.png'], gesture: 'Acena', eyes: 'Felizes', tones: ['abertura'] }] });
+  render(<App/>); fireEvent.click(screen.getByRole('button', { name: /documentação/i }));
+  fireEvent.click(await screen.findByRole('button', { name: 'sino' }));
+  expect(created[0].src).toBe('/api/v1/brand/file?kind=sfx&name=sino'); expect(play).toHaveBeenCalled();
+  expect(screen.getByRole('button', { name: 'sino' })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('img', { name: /nox, pose acenando/i })).toHaveAttribute('src', '/api/v1/brand/file?kind=pose&name=acenando');
+  expect(screen.getByText(/legenda o tempo todo/i)).toBeInTheDocument();
+  vi.unstubAllGlobals();
 });

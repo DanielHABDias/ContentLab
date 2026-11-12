@@ -24,6 +24,8 @@ export const localApi = {
   diagnostics: () => request('/diagnostics'),
   about: () => request('/about'),
   serverWork: () => request('/server/work'),
+  brandDocs: () => request('/brand/docs'),
+  brandFileUrl: (kind, name) => `/api/v1/brand/file?kind=${encodeURIComponent(kind)}&name=${encodeURIComponent(name)}`,
   productionSlides: input => post('/production/slides', input),
   productionThumbnails: input => post('/production/thumbnails', input),
   productionAssemble: input => post('/production/assemble', input),
