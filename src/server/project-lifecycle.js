@@ -117,6 +117,8 @@ export class ActivityTracker {
   }
 
   any() { return this.#active.size > 0; }
+  all() { return [...this.#active.entries()].flatMap(([directory, entries]) => entries.map(({ id, kind, startedAt }) => ({ id, kind, startedAt, projectPath: directory }))); }
+  cancelAll() { for (const entries of this.#active.values()) for (const entry of entries) if (entry.controller && !entry.controller.signal.aborted) entry.controller.abort(); }
 
   assertIdle(directory, action) {
     const activities = this.list(directory);

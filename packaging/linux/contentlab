@@ -13,5 +13,12 @@ PORT="${CONTENTLAB_PORT:-4173}"
 URL="http://127.0.0.1:$PORT/"
 open_browser() { xdg-open "$URL" >/dev/null 2>&1 || echo "Abra $URL no navegador."; }
 if "$NODE" -e "fetch('${URL}api/v1/health').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"; then open_browser; exit 0; fi
-if [ "${1:-}" != "--no-browser" ]; then ( sleep 1.5; open_browser ) & fi
-exec "$NODE" "$HERE/app/src/server/http-server.js"
+# Sobe em segundo plano, em sessão própria: fechar o terminal não derruba o app.
+LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/contentlab"; mkdir -p "$LOG_DIR"
+export CONTENTLAB_PID_FILE="$LOG_DIR/contentlab.pid"
+setsid "$NODE" "$HERE/app/src/server/http-server.js" >> "$LOG_DIR/server.log" 2>&1 < /dev/null &
+i=0; until "$NODE" -e "fetch('${URL}api/v1/health').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"; do
+  i=$((i + 1)); if [ "$i" -gt 40 ]; then echo "O Content Lab não abriu. Veja $LOG_DIR/server.log"; exit 1; fi; sleep 0.25
+done
+echo "Content Lab aberto em $URL — pode fechar este terminal. Para desligar, use o botão Desligar no app."
+if [ "${1:-}" != "--no-browser" ]; then open_browser; fi

@@ -29,6 +29,16 @@ Na primeira execução abre o assistente **Prepare seu computador** (também dis
 
 Pelo terminal: `npm run doctor` (JSON), `npm run doctor -- --text` (legível) e `npm run doctor -- --install whisper-large-v3 --accept` (sem `--accept`, apenas mostra origem, licença e tamanho).
 
+**Abrir com um comando (recomendado):**
+
+```bash
+npm run app
+```
+
+Compila a interface se algo mudou, sobe a interface e a API (um único processo) em segundo plano, abre o navegador e libera o terminal; pode fechá-lo. Para desligar tudo (servidor, renders, importações, voz, downloads), use o botão **Desligar** na barra lateral do app ou `npm run app:stop` (`-- --force` interrompe trabalho em andamento; renders interrompidos continuam ao abrir de novo). `npm run app:status` diz se está aberto. Log em `.contentlab/logs/server.log`.
+
+O MCP não fica rodando: o cliente (Claude, Codex) inicia `npm run mcp` sob demanda via stdio e o encerra sozinho.
+
 Abra o endereço local mostrado. O comando inicia a interface e a API local juntas. Para uso sem recarga de desenvolvimento, `npm start` compila e serve o aplicativo em `http://127.0.0.1:4173`.
 
 Os dados padrão ficam em `.contentlab/`: projetos criados sem pasta escolhida ficam em `.contentlab/projects`, mídias deduplicadas em `.contentlab/media` e o registro de recentes em `.contentlab/recent-projects.json`. Defina `CONTENTLAB_DATA_DIR` para usar outra raiz. O registro de recentes guarda caminho, ID e título; um caminho ausente ou inválido continua listado com aviso até ser removido dos Recentes.

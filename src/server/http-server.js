@@ -11,13 +11,23 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(here, '../..');
 const roots = serverRoots({ repositoryRoot });
 
-export function createContentLabServer({ dataDirectory = roots.dataDirectory, staticDirectory = path.join(repositoryRoot, 'dist'), toolsDirectory = roots.toolsDirectory, application = new LocalApplicationService({ dataDirectory, toolsDirectory, projectsDirectory: roots.projectsDirectory, renderCacheDirectory: roots.renderCacheDirectory, updater: UpdateService.fromEnvironment({ repositoryRoot }) }) } = {}) {
-  return createServer(async (request, response) => {
+export function createContentLabServer({ dataDirectory = roots.dataDirectory, staticDirectory = path.join(repositoryRoot, 'dist'), toolsDirectory = roots.toolsDirectory, application = new LocalApplicationService({ dataDirectory, toolsDirectory, projectsDirectory: roots.projectsDirectory, renderCacheDirectory: roots.renderCacheDirectory, updater: UpdateService.fromEnvironment({ repositoryRoot }) }), onShutdown = () => {} } = {}) {
+  let closing = false;
+  const server = createServer(async (request, response) => {
     try {
       const url = new URL(request.url, 'http://127.0.0.1');
       applySecurityHeaders(response, url.pathname);
       const refusal = refuseRequest(request, url);
       if (refusal) return json(response, 403, { error: refusal, code: 'FORBIDDEN_ORIGIN' });
+      if (request.method === 'GET' && url.pathname === '/api/v1/server/work') return json(response, 200, await application.activeWork());
+      if (request.method === 'POST' && url.pathname === '/api/v1/server/shutdown') {
+        const { force = false } = await readJson(request);
+        const { work } = await application.activeWork();
+        if (work.length && !force) return json(response, 409, { error: 'Há trabalho em andamento; confirme para interromper', code: 'WORK_IN_PROGRESS', details: { work } });
+        json(response, 202, { shuttingDown: true, interrupted: work });
+        if (!closing) { closing = true; setImmediate(() => shutdown(server, application, onShutdown)); }
+        return;
+      }
       if (request.method === 'GET' && url.pathname === '/api/v1/health') return json(response, 200, await application.health());
       if (request.method === 'GET' && url.pathname === '/api/v1/projects') return json(response, 200, { projects: await application.listProjects() });
       if (request.method === 'GET' && url.pathname === '/api/v1/about') return json(response, 200, await application.about());
@@ -71,10 +81,12 @@ export function createContentLabServer({ dataDirectory = roots.dataDirectory, st
       if (url.pathname.startsWith('/api/')) return json(response, 404, { error: 'Rota local desconhecida' });
       return await serveStatic(response, staticDirectory, url.pathname);
     } catch (error) {
-      const status = ['PROJECT_BUSY', 'PROJECT_LOCKED', 'SETTINGS_CONFLICT', 'MIGRATION_RUNNING', 'NARRATION_CONFLICT', 'TRANSCRIPT_CONFLICT', 'VOICE_BUSY', 'HISTORY_STALE', 'REVISION_CONFLICT'].includes(error.code) || /Conflito de revisão/.test(error.message) ? 409 : 400;
+      const status = ['PROJECT_BUSY', 'PROJECT_LOCKED', 'SETTINGS_CONFLICT', 'MIGRATION_RUNNING', 'NARRATION_CONFLICT', 'TRANSCRIPT_CONFLICT', 'VOICE_BUSY', 'HISTORY_STALE', 'REVISION_CONFLICT', 'WORK_IN_PROGRESS'].includes(error.code) || /Conflito de revisão/.test(error.message) ? 409 : 400;
       return json(response, status, { error: error.message, ...(typeof error.code === 'string' && /^[A-Z_]+$/.test(error.code) ? { code: error.code } : {}), ...(error.details ? { details: error.details } : {}) });
     }
   });
+  server.application = application;
+  return server;
 }
 
 /** Envia mídia com suporte a Range (necessário para avançar no player). */
@@ -132,6 +144,13 @@ function applySecurityHeaders(response, pathname) {
   if (!pathname.startsWith('/api/')) response.setHeader('content-security-policy', "default-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'");
 }
 
+/** Cancela/suspende o trabalho (processos filhos terminam junto), fecha conexões e avisa quem iniciou. */
+export async function shutdown(server, application, onShutdown) {
+  try { await application.prepareShutdown?.(); } catch (error) { console.error(`Erro ao preparar desligamento: ${error.message}`); }
+  await new Promise(resolve => { server.close(() => resolve()); server.closeAllConnections?.(); });
+  await onShutdown();
+}
+
 function json(response, status, value) {
   const body = `${JSON.stringify(value)}\n`;
   response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'content-length': Buffer.byteLength(body), 'cache-control': 'no-store' });
@@ -155,5 +174,12 @@ async function serveStatic(response, directory, pathname) {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const port = Number(process.env.CONTENTLAB_PORT || 4173);
-  createContentLabServer().listen(port, '127.0.0.1', () => console.log(`Content Lab: http://127.0.0.1:${port}`));
+  const { rm, writeFile, mkdir } = await import('node:fs/promises');
+  const pidFile = process.env.CONTENTLAB_PID_FILE;
+  const exit = async () => { if (pidFile) await rm(pidFile, { force: true }); console.log('Content Lab desligado.'); process.exit(0); };
+  const server = createContentLabServer({ onShutdown: exit });
+  server.on('error', error => { console.error(error.code === 'EADDRINUSE' ? `A porta ${port} já está em uso. O Content Lab já está aberto? Acesse http://127.0.0.1:${port}` : error.message); process.exit(1); });
+  server.listen(port, '127.0.0.1', async () => { if (pidFile) { await mkdir(path.dirname(pidFile), { recursive: true }); await writeFile(pidFile, `${process.pid}\n`); } console.log(`Content Lab: http://127.0.0.1:${port}`); });
+  let stopping = false;
+  for (const signal of ['SIGTERM', 'SIGINT']) process.on(signal, () => { if (stopping) process.exit(1); stopping = true; void shutdown(server, server.application, exit); });
 }

@@ -23,6 +23,8 @@ export const localApi = {
   listProjects: () => request('/projects'),
   diagnostics: () => request('/diagnostics'),
   about: () => request('/about'),
+  serverWork: () => request('/server/work'),
+  shutdown: (force = false) => post('/server/shutdown', { force }),
   updateStatus: () => request('/update/status'),
   updateCheck: () => post('/update/check', {}),
   updateApply: () => post('/update/apply', {}),

@@ -437,6 +437,30 @@ export class LocalApplicationService {
   async updateRollback() { return this.#updater().rollback(); }
   async updateConfigure(input) { return this.#updater().configure(input || {}); }
 
+  /** Trabalho em andamento que seria interrompido ao desligar. */
+  async activeWork() {
+    await this.ready();
+    const running = state => ['running', 'queued', 'paused', 'downloading'].includes(state);
+    const items = [
+      ...this.mediaOps.jobs.list().filter(job => running(job.state)).map(job => ({ kind: job.kind, label: job.label })),
+      ...this.renderQueue.list().filter(job => ['running', 'queued'].includes(job.state)).map(job => ({ kind: 'render', label: `Render ${job.projectId}`, resumes: true })),
+      ...this.setup.jobs().filter(job => running(job.state)).map(job => ({ kind: 'setup', label: job.label || job.id })),
+      ...this.storage.jobs().filter(job => running(job.state)).map(job => ({ kind: 'storage', label: job.phase || 'Migração de pasta' })),
+      ...this.activities.all().map(item => ({ kind: item.kind, label: item.kind })),
+    ];
+    const seen = new Set();
+    return { work: items.filter(item => { const key = `${item.kind}:${item.label}`; if (seen.has(key)) return false; seen.add(key); return true; }) };
+  }
+
+  /** Cancela o que está rodando para que os processos filhos (FFmpeg, voz, downloads) terminem junto. */
+  async prepareShutdown() {
+    for (const job of this.mediaOps.jobs.list()) if (job.state === 'running') { try { this.mediaOps.jobs.cancel(job.id); } catch { /* já terminou */ } }
+    for (const job of this.setup.jobs()) if (['running', 'downloading'].includes(job.state)) { try { this.setup.cancel(job.id); } catch { /* já terminou */ } }
+    for (const job of this.storage.jobs()) if (job.state === 'running') { try { this.storage.cancel(job.id); } catch { /* já terminou */ } }
+    this.activities.cancelAll();
+    await this.renderQueue.suspend();
+  }
+
   /** Recusa a operação quando faltam dependências, indicando quais instalar. */
   async requireFeature(featureId) {
     await this.ready();

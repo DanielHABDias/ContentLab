@@ -26,6 +26,14 @@ export class RenderQueue {
   }
 
   list({ projectPath } = {}) { const filter = projectPath ? path.resolve(projectPath) : null; return this.jobs.filter(job => !filter || job.projectPath === filter).map(publicJob).reverse(); }
+  /** Desligar: interrompe o render em andamento (encerrando o FFmpeg) e o mantém na fila para retomar. */
+  async suspend() {
+    this.suspending = true;
+    for (const controller of this.controllers.values()) controller.abort();
+    const until = Date.now() + 8000;
+    while (this.running && Date.now() < until) await new Promise(resolve => setTimeout(resolve, 50));
+    await this.saving;
+  }
   get(id) { const job = this.jobs.find(item => item.id === id); if (!job) throw unknown(); return publicJob(job); }
 
   async cancel(id) {
@@ -47,6 +55,7 @@ export class RenderQueue {
     if (this.running) return; this.running = true;
     try {
       for (const job of this.jobs) {
+        if (this.suspending) break;
         if (job.state !== 'queued') continue;
         if (!job.payload?.project || !job.payload?.options?.output) { job.state = 'failed'; job.error = 'Payload do render não está disponível'; job.code = 'RENDER_PAYLOAD_MISSING'; job.finishedAt = new Date().toISOString(); await this.#save(); continue; }
         const controller = new AbortController(); this.controllers.set(job.id, controller); job.state = 'running'; job.phase = 'Preparando'; job.updatedAt = new Date().toISOString(); this.#log(job, `Tentativa ${job.attempt} iniciada`); await this.#save();
@@ -54,7 +63,7 @@ export class RenderQueue {
           const result = await this.renderer.render(job.payload.project, { ...job.payload.options, signal: controller.signal, onProgress: value => { job.progress = value.progress; job.phase = value.phase; job.updatedAt = new Date().toISOString(); void this.#save(); } });
           job.state = job.cancelRequested ? 'cancelled' : result.status; job.output = job.state === 'completed' ? result.output : null; job.progress = job.state === 'completed' ? 1 : job.progress; job.phase = job.state === 'completed' ? 'Concluído e validado' : 'Cancelado'; this.#log(job, job.phase);
         } catch (error) { job.state = controller.signal.aborted ? 'cancelled' : 'failed'; job.error = controller.signal.aborted ? null : error.message; job.code = error.code || null; job.phase = controller.signal.aborted ? 'Cancelado' : 'Falhou'; this.#log(job, job.error || job.phase); }
-        finally { job.finishedAt = new Date().toISOString(); job.updatedAt = job.finishedAt; this.controllers.delete(job.id); await this.#save(); }
+        finally { if (this.suspending && !job.cancelRequested) { job.state = 'queued'; job.phase = 'Continua ao abrir o Content Lab'; job.progress = 0; job.error = null; job.finishedAt = null; this.#log(job, 'Interrompido ao desligar; volta para a fila'); } else job.finishedAt = new Date().toISOString(); job.updatedAt = new Date().toISOString(); this.controllers.delete(job.id); await this.#save(); }
       }
     } finally { this.running = false; }
   }
