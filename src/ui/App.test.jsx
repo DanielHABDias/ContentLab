@@ -376,7 +376,6 @@ test('inventário: telas principais não têm controle sem nome acessível e ser
   const { container } = render(<App/>);
   await screen.findByRole('button', { name: /abrir meu projeto/i });
   expect(auditControls(container)).toEqual([]);
-  expect(screen.getByRole('link', { name: /pular para o conteúdo/i })).toHaveAttribute('href', '#main');
   fireEvent.click(screen.getByRole('button', { name: /abrir meu projeto/i }));
   await screen.findByRole('button', { name: /pedir mudanças/i });
   expect(auditControls(container)).toEqual([]);

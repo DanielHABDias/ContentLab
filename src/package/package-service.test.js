@@ -16,3 +16,24 @@ test('exporta ZIP padrão com nível configurável', async () => { const { root,
 test('rejeita pacote sem manifesto antes de escrever qualquer arquivo', async () => { const { root } = await fixture(); const malicious = path.join(root, 'bad.contentlab'); await new Promise((resolve, reject) => { const output = createWriteStream(malicious); const archive = new ZipFile(); output.on('close', resolve); output.on('error', reject); archive.outputStream.pipe(output); archive.addBuffer(Buffer.from('{}'), 'unexpected.json'); archive.end(); }); const target = path.join(root, 'target'); const service = new PackageService(); await expect(service.restore(malicious, target)).rejects.toThrow(/manifesto/i); await expect(stat(path.join(root, 'escape.json'))).rejects.toMatchObject({ code: 'ENOENT' }); });
 
 test('não sobrescreve arquivos existentes na restauração', async () => { const { root, source } = await fixture(); const service = new PackageService(); const output = path.join(root, 'demo.contentlab'); await service.exportContentLab(source, output); const target = path.join(root, 'target'); await mkdir(target); await writeFile(path.join(target, 'project.json'), 'preservar'); await expect(service.restore(output, target)).rejects.toThrow(); expect(await readFile(path.join(target, 'project.json'), 'utf8')).toBe('preservar'); });
+
+async function zipOf(file, add) { await new Promise((resolve, reject) => { const output = createWriteStream(file); const archive = new ZipFile(); output.on('close', resolve); output.on('error', reject); archive.outputStream.pipe(output); add(archive); archive.end(); }); return file; }
+
+test('pacotes maliciosos são recusados sem escrever fora do destino', async () => {
+  const { root } = await fixture(); const service = new PackageService(); const target = path.join(root, 'target');
+  const manifest = entries => Buffer.from(JSON.stringify({ schema: 'contentlab-package-v1', entries }));
+  const evilPath = await zipOf(path.join(root, 'evil.contentlab'), archive => { archive.addBuffer(manifest([{ path: '../escape.txt', hash: 'a'.repeat(64), size: 1 }]), 'contentlab-manifest.json'); });
+  await expect(service.restore(evilPath, target)).rejects.toThrow(/inseguro/);
+  const link = await zipOf(path.join(root, 'link.zip'), archive => { archive.addBuffer(Buffer.from('{}'), 'project.json'); archive.addBuffer(Buffer.from('/etc/passwd'), 'atalho', { mode: 0o120777 }); });
+  await expect(service.restoreZip(link, target)).rejects.toThrow(/symlink/i);
+  const tampered = await zipOf(path.join(root, 'tampered.contentlab'), archive => { archive.addBuffer(manifest([{ path: 'project.json', hash: 'b'.repeat(64), size: 2 }]), 'contentlab-manifest.json'); archive.addBuffer(Buffer.from('{}'), `blobs/${'b'.repeat(64)}`); });
+  await expect(service.restore(tampered, target)).rejects.toThrow();
+  await expect(stat(path.join(root, 'escape.txt'))).rejects.toMatchObject({ code: 'ENOENT' });
+  await expect(stat(path.join(target, 'project.json'))).rejects.toMatchObject({ code: 'ENOENT' });
+});
+
+test('ZIP bomb é recusado pela taxa de compressão antes de descompactar', async () => {
+  const { root } = await fixture(); const service = new PackageService();
+  const bomb = await zipOf(path.join(root, 'bomb.zip'), archive => { archive.addBuffer(Buffer.from('{}'), 'project.json'); archive.addBuffer(Buffer.alloc(80 * 1024 * 1024), 'zeros.bin', { compress: true }); });
+  await expect(service.restoreZip(bomb, path.join(root, 'target'))).rejects.toThrow(/ZIP bomb/);
+});

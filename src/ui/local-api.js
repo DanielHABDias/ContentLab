@@ -4,7 +4,7 @@ const signal = online => { if (typeof window !== 'undefined') window.dispatchEve
 async function request(pathname, options = {}) {
   let response;
   try {
-    response = await fetch(`/api/v1${pathname}`, { ...options, headers: { 'content-type': 'application/json', ...options.headers } });
+    response = await fetch(`/api/v1${pathname}`, { ...options, headers: { 'content-type': 'application/json', 'x-contentlab-client': '1', ...options.headers } });
   } catch (error) {
     if (error?.name === 'AbortError') throw error;
     signal(false);
@@ -108,7 +108,7 @@ export const localApi = {
   voicePlan: () => post('/narration/voice-plan', {}),
   /** Gravação do microfone (Blob) enviada como corpo bruto. */
   uploadTake: async ({ path, blob, name, origin = 'recording' }) => {
-    const response = await fetch(`/api/v1/narration/upload?path=${encodeURIComponent(path)}&name=${encodeURIComponent(name)}&origin=${origin}`, { method: 'POST', body: blob, headers: { 'content-type': 'application/octet-stream' } });
+    const response = await fetch(`/api/v1/narration/upload?path=${encodeURIComponent(path)}&name=${encodeURIComponent(name)}&origin=${origin}`, { method: 'POST', body: blob, headers: { 'x-contentlab-client': '1', 'content-type': 'application/octet-stream' } });
     const value = await response.json().catch(() => ({}));
     if (!response.ok) throw Object.assign(new Error(value.error || `Falha no envio (${response.status})`), { code: value.code, details: value.details });
     return value;
@@ -117,6 +117,7 @@ export const localApi = {
   upload: ({ path, file, rights, onProgress = () => {} }) => new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `/api/v1/media/upload?path=${encodeURIComponent(path)}&name=${encodeURIComponent(file.name)}&rights=${encodeURIComponent(rights)}`);
+    xhr.setRequestHeader('x-contentlab-client', '1');
     xhr.upload.onprogress = event => onProgress(event.loaded, event.total);
     xhr.onload = () => { let value = {}; try { value = JSON.parse(xhr.responseText); } catch { /* resposta vazia */ } xhr.status < 300 ? resolve(value) : reject(Object.assign(new Error(value.error || `Falha no envio (${xhr.status})`), { code: value.code, details: value.details })); };
     xhr.onerror = () => reject(new Error('Servidor local indisponível'));

@@ -106,9 +106,9 @@ test('upload via HTTP e preview com Range servem só mídia do projeto', async (
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   try {
     const base = `http://127.0.0.1:${server.address().port}/api/v1`;
-    const created = await (await fetch(`${base}/projects/create`, { method: 'POST', body: JSON.stringify({ title: 'Upload', type: 'long', aspectRatio: '16:9' }) })).json();
+    const created = await (await fetch(`${base}/projects/create`, { method: 'POST', headers: { 'x-contentlab-client': '1' }, body: JSON.stringify({ title: 'Upload', type: 'long', aspectRatio: '16:9' }) })).json();
     const body = await readFile(tone(root, 'arrastado.wav'));
-    const upload = await fetch(`${base}/media/upload?path=${encodeURIComponent(created.path)}&name=arrastado.wav&rights=owned`, { method: 'POST', body, headers: { 'content-type': 'application/octet-stream' } });
+    const upload = await fetch(`${base}/media/upload?path=${encodeURIComponent(created.path)}&name=arrastado.wav&rights=owned`, { method: 'POST', body, headers: { 'x-contentlab-client': '1', 'content-type': 'application/octet-stream' } });
     expect(upload.status).toBe(201);
     const result = await upload.json();
     expect(result).toMatchObject({ status: 'imported', name: 'arrastado.wav' });
@@ -121,7 +121,7 @@ test('upload via HTTP e preview com Range servem só mídia do projeto', async (
     expect(full.headers.get('content-type')).toBe('audio/wav');
     expect((await full.arrayBuffer()).byteLength).toBe(body.length);
     expect((await fetch(`${base}/media/file?path=${encodeURIComponent(created.path)}&media=media_inexistente`)).status).toBe(400);
-    const bad = await fetch(`${base}/media/upload?path=${encodeURIComponent(created.path)}&name=script.sh`, { method: 'POST', body: 'echo' });
+    const bad = await fetch(`${base}/media/upload?path=${encodeURIComponent(created.path)}&name=script.sh`, { method: 'POST', headers: { 'x-contentlab-client': '1' }, body: 'echo' });
     expect((await bad.json()).error).toMatch(/Formato não suportado/);
   } finally { server.close(); }
 });

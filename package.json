@@ -21,6 +21,8 @@
     "prepare:local": "node scripts/bootstrap.mjs --prepare"
   },
   "dependencies": {
+    "@fontsource/barlow-condensed": "^5.3.0",
+    "@fontsource/inter": "^5.3.0",
     "@modelcontextprotocol/sdk": "^1.32.2",
     "@remotion/bundler": "4.0.543",
     "@remotion/renderer": "4.0.543",

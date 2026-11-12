@@ -212,13 +212,13 @@ Aceite: todos os fluxos principais funcionam por teclado e cada indisponibilidad
 
 Objetivo: revisar operações destrutivas, pacotes, processos externos e dados de voz antes da distribuição.
 
-- [ ] Modelar ameaças para caminhos, ZIP, URLs, TSX, processos FFmpeg/yt-dlp, modelos e perfis de voz.
-- [ ] Manter proteção contra path traversal, symlink, ZIP bomb, duplicatas e arquivos gigantes.
-- [ ] Aplicar timeouts, limites de buffer, cancelamento e limpeza de temporários aos processos externos.
-- [ ] Não incluir projetos, mídia, logs privados ou perfis de voz em telemetria/relatórios por padrão.
-- [ ] Criar política clara de exclusão e retenção local.
-- [ ] Verificar licenças e redistribuição de FFmpeg, whisper.cpp, pesos `large-v3`, VoxCPM2/PyTorch e `yt-dlp` antes de empacotar.
-- [ ] Adicionar testes de pacote malicioso, caminhos externos e consentimento ausente.
+- [x] Modelar ameaças para caminhos, ZIP, URLs, TSX, processos FFmpeg/yt-dlp, modelos e perfis de voz.
+- [x] Manter proteção contra path traversal, symlink, ZIP bomb, duplicatas e arquivos gigantes.
+- [x] Aplicar timeouts, limites de buffer, cancelamento e limpeza de temporários aos processos externos.
+- [x] Não incluir projetos, mídia, logs privados ou perfis de voz em telemetria/relatórios por padrão.
+- [x] Criar política clara de exclusão e retenção local.
+- [x] Verificar licenças e redistribuição de FFmpeg, whisper.cpp, pesos `large-v3`, VoxCPM2/PyTorch e `yt-dlp` antes de empacotar.
+- [x] Adicionar testes de pacote malicioso, caminhos externos e consentimento ausente.
 
 Aceite: a revisão não encontra escrita fora das raízes autorizadas nem execução arbitrária no processo principal.
 
@@ -381,3 +381,14 @@ Não iniciar empacotamento desktop antes de estabilizar armazenamento, setup e o
 - Contraste AA calculado (WCAG): menor par de texto usado 5,28:1.
 - Validado: 175 testes, build, audit 0; navegador real em desktop e 375 px sem rolagem horizontal.
 - Próxima ação: F22 — segurança, privacidade e integridade.
+
+### F22 concluída (2026-11-12)
+
+- API local: Host só local (DNS rebinding), recusa `Sec-Fetch-Site` cross-site e Origin diferente, escrita exige `x-contentlab-client`; CSP, nosniff, no-referrer, frame DENY.
+- Fontes locais (`@fontsource`, OFL): a interface não faz requisição externa.
+- Pacotes: limites antes de descompactar (50 000 entradas, 6 GB, taxa 200:1 >64 MB, entrada não passa do declarado); testes de traversal, symlink, blob adulterado e ZIP bomb.
+- Render FFmpeg com timeout (6 h) e SIGTERM→SIGKILL; ffprobe/concat com timeout e buffer.
+- `docs/SEGURANCA_E_PRIVACIDADE.md`: modelo de ameaças, retenção/exclusão e licenças/redistribuição.
+- Validado: 178 testes, build, audit 0; app real carregou sem erros de CSP e com fontes locais.
+- Próxima ação: F23 — instalação distribuível e atualização (incluir `licenses/`).
+

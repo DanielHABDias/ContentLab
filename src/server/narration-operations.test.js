@@ -98,7 +98,7 @@ test('gravação enviada pelo navegador vira take; perfil exige consentimento, t
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   try {
     const body = await readFile(tone(root, 'mic.wav', { duration: 5 }));
-    const response = await fetch(`http://127.0.0.1:${server.address().port}/api/v1/narration/upload?path=${encodeURIComponent(project.path)}&name=mic.wav&origin=recording`, { method: 'POST', body });
+    const response = await fetch(`http://127.0.0.1:${server.address().port}/api/v1/narration/upload?path=${encodeURIComponent(project.path)}&name=mic.wav&origin=recording`, { method: 'POST', headers: { 'x-contentlab-client': '1' }, body });
     expect(response.status).toBe(201);
     const { take } = await response.json();
     expect(take).toMatchObject({ origin: 'recording', name: expect.stringMatching(/^Gravação/) });

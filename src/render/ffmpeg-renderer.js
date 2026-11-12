@@ -71,7 +71,7 @@ export class FfmpegRenderer {
         await this.#run(plan, { from, to, scale, output: part }, { signal, total: to - from, onProgress: update => onProgress({ phase: `rendering segment ${index + 1}/${Math.ceil(plan.duration / 60)}`, progress: update.progress == null ? null : Math.min(.98, (from + update.progress * (to - from)) / plan.duration) }) });
       }
       const list = path.join(directory, 'concat.txt'); await writeFile(list, parts.map(file => `file '${file.replaceAll("'", "'\\''")}'`).join('\n'));
-      await run(this.ffmpeg, ['-hide_banner', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list, '-c', 'copy', '-movflags', '+faststart', '-y', output], { signal });
+      await run(this.ffmpeg, ['-hide_banner', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list, '-c', 'copy', '-movflags', '+faststart', '-y', output], { signal, timeout: 60 * 60_000, maxBuffer: 4 * 1024 * 1024 });
     } finally { await rm(directory, { recursive: true, force: true }); }
   }
 
@@ -99,7 +99,7 @@ export class FfmpegRenderer {
   }
 
   async inspect(file, plan, { scale = 1 } = {}) {
-    const { stdout } = await run(this.ffprobe, ['-v', 'error', '-show_entries', 'format=duration,size:stream=codec_type,codec_name,width,height', '-of', 'json', path.resolve(file)]);
+    const { stdout } = await run(this.ffprobe, ['-v', 'error', '-show_entries', 'format=duration,size:stream=codec_type,codec_name,width,height', '-of', 'json', path.resolve(file)], { timeout: 60_000, maxBuffer: 4 * 1024 * 1024 });
     const data = JSON.parse(stdout); const video = data.streams.find(stream => stream.codec_type === 'video'); const audio = data.streams.find(stream => stream.codec_type === 'audio');
     if (!video || !audio) throw new Error('Render sem vídeo ou áudio');
     if (video.width !== Math.round(plan.canvas.width * scale) || video.height !== Math.round(plan.canvas.height * scale)) throw new Error('Dimensões divergentes');
@@ -110,19 +110,24 @@ export class FfmpegRenderer {
 }
 
 /** Executa o FFmpeg com cancelamento e progresso (`-progress pipe:1`). */
-function runFfmpeg(command, args, { signal, onTime = () => {} }) {
+function runFfmpeg(command, args, { signal, onTime = () => {}, timeout = Number(process.env.CONTENTLAB_RENDER_TIMEOUT_MS) || 6 * 60 * 60_000 }) {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) { reject(new DOMException('Cancelado', 'AbortError')); return; }
     const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'] });
     let stderr = ''; let buffer = '';
     child.stdout.on('data', chunk => { buffer += chunk; const lines = buffer.split('\n'); buffer = lines.pop(); for (const line of lines) { const match = line.match(/^out_time_us=(\d+)/); if (match) onTime(Number(match[1]) / 1e6); } });
     child.stderr.on('data', chunk => { stderr = (stderr + chunk).slice(-16_000); });
-    const abort = () => { child.kill('SIGTERM'); };
+    let timedOut = false; let killer = null;
+    const stop = () => { child.kill('SIGTERM'); killer = setTimeout(() => child.kill('SIGKILL'), 5000); killer.unref?.(); };
+    const abort = () => stop();
+    const timer = setTimeout(() => { timedOut = true; stop(); }, timeout); timer.unref?.();
+    const cleanup = () => { clearTimeout(timer); clearTimeout(killer); signal?.removeEventListener('abort', abort); };
     signal?.addEventListener('abort', abort, { once: true });
-    child.on('error', error => { signal?.removeEventListener('abort', abort); reject(error); });
+    child.on('error', error => { cleanup(); reject(error); });
     child.on('close', code => {
-      signal?.removeEventListener('abort', abort);
-      if (signal?.aborted) reject(new DOMException('Cancelado', 'AbortError'));
+      cleanup();
+      if (timedOut) reject(Object.assign(new Error('FFmpeg excedeu o tempo limite do render'), { code: 'TIMEOUT', stderr }));
+      else if (signal?.aborted) reject(new DOMException('Cancelado', 'AbortError'));
       else if (code === 0) resolve();
       else reject(Object.assign(new Error(`FFmpeg saiu com código ${code}`), { stderr }));
     });

@@ -13,6 +13,9 @@ export function createContentLabServer({ dataDirectory = process.env.CONTENTLAB_
   return createServer(async (request, response) => {
     try {
       const url = new URL(request.url, 'http://127.0.0.1');
+      applySecurityHeaders(response, url.pathname);
+      const refusal = refuseRequest(request, url);
+      if (refusal) return json(response, 403, { error: refusal, code: 'FORBIDDEN_ORIGIN' });
       if (request.method === 'GET' && url.pathname === '/api/v1/health') return json(response, 200, await application.health());
       if (request.method === 'GET' && url.pathname === '/api/v1/projects') return json(response, 200, { projects: await application.listProjects() });
       if (request.method === 'GET' && url.pathname === '/api/v1/about') return json(response, 200, await application.about());
@@ -96,6 +99,35 @@ async function readJson(request) {
   }
   try { return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'); }
   catch { throw new Error('JSON inválido'); }
+}
+
+const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]']);
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
+/**
+ * A API só atende a própria interface: Host local (bloqueia DNS rebinding),
+ * nenhuma requisição de outro site (Sec-Fetch-Site) e Origin igual ao do servidor
+ * em operações que alteram dados (bloqueia CSRF). CLI/MCP chamam o núcleo direto.
+ */
+export function refuseRequest(request, url) {
+  const host = String(request.headers.host || '');
+  const hostname = host.startsWith('[') ? host.slice(0, host.indexOf(']') + 1) : host.split(':')[0];
+  if (!LOCAL_HOSTS.has(hostname.toLowerCase())) return 'Host não permitido: o Content Lab só atende endereços locais';
+  if (!url.pathname.startsWith('/api/')) return null;
+  const site = request.headers['sec-fetch-site'];
+  if (site && !['same-origin', 'none'].includes(site)) return 'Requisição de outro site recusada';
+  const origin = request.headers.origin;
+  if (origin && origin !== `http://${host}`) return 'Origem não permitida';
+  if (!SAFE_METHODS.has(request.method) && !origin && site !== 'same-origin' && request.headers['x-contentlab-client'] !== '1') return 'Cliente local não identificado';
+  return null;
+}
+
+function applySecurityHeaders(response, pathname) {
+  response.setHeader('x-content-type-options', 'nosniff');
+  response.setHeader('referrer-policy', 'no-referrer');
+  response.setHeader('x-frame-options', 'DENY');
+  response.setHeader('cross-origin-resource-policy', 'same-origin');
+  if (!pathname.startsWith('/api/')) response.setHeader('content-security-policy', "default-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'");
 }
 
 function json(response, status, value) {
