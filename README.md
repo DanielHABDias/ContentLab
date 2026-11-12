@@ -6,6 +6,8 @@ Ferramenta audiovisual local para organizar um vídeo da ideia ao pacote final. 
 
 ## Requisitos e instalação
 
+**Para usar (Linux x64, sem npm):** baixe `contentlab-<versão>-linux-x64.tar.gz`, extraia e rode `./install.sh`. Atualizar, voltar versão e desinstalar sem perder projetos: [docs/DISTRIBUICAO.md](docs/DISTRIBUICAO.md). As instruções abaixo são para desenvolvimento.
+
 - Node.js 22 ou superior
 - FFmpeg/FFprobe 6 ou superior e, no Linux, `zenity` (seletores nativos)
 - Opcional: `yt-dlp` para URLs, whisper.cpp + `large-v3` para transcrição, VoxCPM2 para voz clonada (recomendado: 16 GB de RAM ou GPU NVIDIA com 8 GB)
@@ -84,6 +86,8 @@ npm run contentlab -- package.restore pedido-restauracao.json
 ```
 
 ## Segurança e privacidade
+
+Modelo de ameaças, retenção e licenças: [docs/SEGURANCA_E_PRIVACIDADE.md](docs/SEGURANCA_E_PRIVACIDADE.md).
 
 Tudo funciona localmente. A aplicação não publica em redes sociais nem exige hospedagem ou API paga. URLs e mídias dependem dos direitos do usuário. Clonagem de voz exige consentimento registrado. Componentes TSX passam por validação e devem renderizar em processo isolado.
 

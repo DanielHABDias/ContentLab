@@ -28,12 +28,13 @@ import { RenderQueue } from '../render/render-queue.js';
 const bundledComponent = import.meta.url.startsWith('file:') ? path.join(path.dirname(fileURLToPath(import.meta.url)), '../timeline/components/KineticEmphasis.tsx') : path.join(process.cwd(), 'src/timeline/components/KineticEmphasis.tsx');
 
 export class LocalApplicationService {
-  constructor({ dataDirectory, dialog = new NativeDialog(), packages = new PackageService(), media = null, renderer = null, trash = new SystemTrash(), opener = new SystemOpener(), activities = new ActivityTracker(), setup = null, toolsDirectory = null, transcriber = null, voice = null }) {
+  constructor({ dataDirectory, dialog = new NativeDialog(), packages = new PackageService(), media = null, renderer = null, trash = new SystemTrash(), opener = new SystemOpener(), activities = new ActivityTracker(), setup = null, toolsDirectory = null, projectsDirectory = null, renderCacheDirectory = null, transcriber = null, voice = null, updater = null }) {
     this.dataDirectory = path.resolve(dataDirectory);
-    this.projectsDirectory = path.join(this.dataDirectory, 'projects');
+    this.projectsDirectory = path.resolve(projectsDirectory || path.join(this.dataDirectory, 'projects'));
+    this.updater = updater;
     this.registry = new ProjectRegistry(this.dataDirectory, { scanRoots: () => [this.projectsDirectory] });
     this.injected = { media: Boolean(media), renderer: Boolean(renderer), setup: Boolean(setup) };
-    this.defaults = { roots: { projects: this.projectsDirectory, media: path.join(this.dataDirectory, 'media'), renderCache: path.join(this.dataDirectory, 'render'), tools: path.resolve(toolsDirectory || path.join(this.dataDirectory, 'tools')), renderOutput: null }, limits: { cacheMaxBytes: null, minFreeBytes: 2 * 1024 ** 3 } };
+    this.defaults = { roots: { projects: this.projectsDirectory, media: path.join(this.dataDirectory, 'media'), renderCache: path.resolve(renderCacheDirectory || path.join(this.dataDirectory, 'render')), tools: path.resolve(toolsDirectory || path.join(this.dataDirectory, 'tools')), renderOutput: null }, limits: { cacheMaxBytes: null, minFreeBytes: 2 * 1024 ** 3 } };
     this.mediaOps = new MediaOperations(this, { transcriber });
     this.narrationOps = new NarrationOperations(this, { voice });
     this.editOps = new EditOperations(this);
@@ -428,6 +429,13 @@ export class LocalApplicationService {
       generatedAt: new Date().toISOString(),
     };
   }
+
+  #updater() { if (!this.updater) throw new LifecycleError('NOT_INSTALLED', 'Atualização só existe no app instalado; no modo desenvolvimento use git pull'); return this.updater; }
+  async updateStatus() { return this.updater ? this.updater.status() : { installed: false, reason: 'Modo desenvolvimento: atualize com git pull.' }; }
+  async updateCheck() { const { manifest, ...result } = await this.#updater().check(); return result; }
+  async updateApply() { return this.#updater().apply(); }
+  async updateRollback() { return this.#updater().rollback(); }
+  async updateConfigure(input) { return this.#updater().configure(input || {}); }
 
   /** Recusa a operação quando faltam dependências, indicando quais instalar. */
   async requireFeature(featureId) {

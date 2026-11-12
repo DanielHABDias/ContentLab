@@ -31,6 +31,7 @@
     "react": "latest",
     "react-dom": "latest",
     "remotion": "4.0.543",
+    "typescript": "^5.9.3",
     "vite": "latest",
     "yauzl": "^3.4.0",
     "yazl": "^3.3.1",
@@ -40,7 +41,6 @@
     "@testing-library/jest-dom": "latest",
     "@testing-library/react": "latest",
     "jsdom": "latest",
-    "typescript": "^5.9.3",
     "vitest": "latest"
   }
 }

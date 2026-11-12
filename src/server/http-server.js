@@ -4,12 +4,14 @@ import { createServer } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { LocalApplicationService } from './local-application-service.js';
+import { serverRoots } from './app-paths.js';
+import { UpdateService } from '../update/update-service.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(here, '../..');
-const defaultDataDirectory = path.join(repositoryRoot, '.contentlab');
+const roots = serverRoots({ repositoryRoot });
 
-export function createContentLabServer({ dataDirectory = process.env.CONTENTLAB_DATA_DIR || defaultDataDirectory, staticDirectory = path.join(repositoryRoot, 'dist'), toolsDirectory = process.env.CONTENTLAB_TOOLS_DIR || path.join(repositoryRoot, '.tools'), application = new LocalApplicationService({ dataDirectory, toolsDirectory }) } = {}) {
+export function createContentLabServer({ dataDirectory = roots.dataDirectory, staticDirectory = path.join(repositoryRoot, 'dist'), toolsDirectory = roots.toolsDirectory, application = new LocalApplicationService({ dataDirectory, toolsDirectory, projectsDirectory: roots.projectsDirectory, renderCacheDirectory: roots.renderCacheDirectory, updater: UpdateService.fromEnvironment({ repositoryRoot }) }) } = {}) {
   return createServer(async (request, response) => {
     try {
       const url = new URL(request.url, 'http://127.0.0.1');
@@ -47,9 +49,9 @@ export function createContentLabServer({ dataDirectory = process.env.CONTENTLAB_
       const narrationMatch = request.method === 'POST' && url.pathname.match(/^\/api\/v1\/narration\/([a-z-]+)$/);
       if (narrationMatch && narrationRoutes[narrationMatch[1]]) return json(response, 200, await application[narrationRoutes[narrationMatch[1]]](await readJson(request)));
       if (request.method === 'POST' && url.pathname === '/api/v1/jobs/cancel') return json(response, 200, application.cancelJob(await readJson(request)));
-      const getRoutes = { '/api/v1/settings': 'getSettings', '/api/v1/storage/usage': 'storageUsage', '/api/v1/storage/orphans': 'storageOrphans', '/api/v1/storage/jobs': 'storageJobs', '/api/v1/registry/backups': 'listRegistryBackups' };
+      const getRoutes = { '/api/v1/settings': 'getSettings', '/api/v1/storage/usage': 'storageUsage', '/api/v1/storage/orphans': 'storageOrphans', '/api/v1/storage/jobs': 'storageJobs', '/api/v1/registry/backups': 'listRegistryBackups', '/api/v1/update/status': 'updateStatus' };
       if (request.method === 'GET' && getRoutes[url.pathname]) return json(response, 200, await application[getRoutes[url.pathname]]());
-      const postRoutes = { '/api/v1/settings/validate': 'validateFolder', '/api/v1/settings/update': 'updateSettings', '/api/v1/storage/cleanup': 'storageCleanup', '/api/v1/storage/plan': 'planMigration', '/api/v1/storage/migrate': 'startMigration', '/api/v1/storage/cancel': 'cancelMigration', '/api/v1/registry/backup': 'backupRegistry', '/api/v1/registry/restore': 'restoreRegistry' };
+      const postRoutes = { '/api/v1/settings/validate': 'validateFolder', '/api/v1/settings/update': 'updateSettings', '/api/v1/storage/cleanup': 'storageCleanup', '/api/v1/storage/plan': 'planMigration', '/api/v1/storage/migrate': 'startMigration', '/api/v1/storage/cancel': 'cancelMigration', '/api/v1/registry/backup': 'backupRegistry', '/api/v1/registry/restore': 'restoreRegistry', '/api/v1/update/check': 'updateCheck', '/api/v1/update/apply': 'updateApply', '/api/v1/update/rollback': 'updateRollback', '/api/v1/update/configure': 'updateConfigure' };
       if (request.method === 'POST' && postRoutes[url.pathname]) return json(response, 200, await application[postRoutes[url.pathname]](await readJson(request)));
       const lifecycle = { relocate: 'relocateProject', forget: 'forgetProject', reveal: 'revealProject', rename: 'renameProject', 'change-id': 'changeProjectId', duplicate: 'duplicateProject', export: 'exportProject', delete: 'deleteProject', restore: 'restoreProject', activities: 'listActivities', cancel: 'cancelActivities' };
       const lifecycleMatch = request.method === 'POST' && url.pathname.match(/^\/api\/v1\/projects\/([a-z-]+)$/);

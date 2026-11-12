@@ -226,13 +226,13 @@ Aceite: a revisão não encontra escrita fora das raízes autorizadas nem execu�
 
 Objetivo: permitir que uma pessoa não desenvolvedora instale, execute, atualize e desinstale o Content Lab.
 
-- [ ] Escolher shell desktop/empacotamento depois de um spike curto (por exemplo Tauri ou Electron), preservando o núcleo Node e contratos.
+- [x] Escolher shell desktop/empacotamento depois de um spike curto (por exemplo Tauri ou Electron), preservando o núcleo Node e contratos.
 - [ ] Produzir instalador assinado para o primeiro sistema oficialmente suportado.
-- [ ] Separar aplicativo, dados do usuário, cache e modelos para atualizações sem perda.
-- [ ] Implementar atualização com canal, versão, notas, checksum, rollback e opção manual.
-- [ ] Desinstalação deve perguntar separadamente sobre aplicativo, cache/modelos e projetos.
+- [x] Separar aplicativo, dados do usuário, cache e modelos para atualizações sem perda.
+- [x] Implementar atualização com canal, versão, notas, checksum, rollback e opção manual.
+- [x] Desinstalação deve perguntar separadamente sobre aplicativo, cache/modelos e projetos.
 - [ ] Criar instalação limpa em VM/máquina sem toolchain de desenvolvimento.
-- [ ] Documentar requisitos mínimos de CPU, RAM, disco e GPU quando medidos.
+- [x] Documentar requisitos mínimos de CPU, RAM, disco e GPU quando medidos.
 
 Aceite: instalar e abrir não exige `npm`; atualizar preserva projetos; desinstalar nunca apaga projetos sem escolha explícita.
 
@@ -391,4 +391,15 @@ Não iniciar empacotamento desktop antes de estabilizar armazenamento, setup e o
 - `docs/SEGURANCA_E_PRIVACIDADE.md`: modelo de ameaças, retenção/exclusão e licenças/redistribuição.
 - Validado: 178 testes, build, audit 0; app real carregou sem erros de CSP e com fontes locais.
 - Próxima ação: F23 — instalação distribuível e atualização (incluir `licenses/`).
+
+### F23 parcial (2026-11-12)
+
+- Shell: Node embutido + navegador do sistema (decisão em `docs/DISTRIBUICAO.md`); primeiro alvo Linux x64 por usuário.
+- `scripts/package-linux.mjs` gera tar.gz (~126 MB) com Node, deps de produção, launcher, `install.sh`, `licenses/`, SHA-256 e manifesto do canal; `scripts/release-keys.mjs` gera a chave Ed25519 fora do repo.
+- Pastas separadas (`app-paths.js`): app/versions + current/previous, dados, modelos, cache e projetos.
+- `UpdateService`: canal, notas, manifesto assinado, SHA-256, troca atômica, rollback, atualização manual; UI em Sobre e diagnóstico; CLI `contentlab --update|--rollback|--install-archive`.
+- Desinstalação pergunta separadamente sobre app, cache/modelos, dados e projetos (frase `APAGAR PROJETOS`).
+- Instalação limpa real: HOME vazio, PATH sem npm/node; instalou, abriu, criou projeto, desinstalou mantendo projeto. Corrigido `typescript` como dependência de runtime.
+- Falta: chave de release gerada/guardada por quem publica (instalador ainda não assinado), VM com outra distribuição, instaladores Windows/macOS.
+- Próxima ação: gerar chave de release (decisão do dono) ou seguir para F24.
 

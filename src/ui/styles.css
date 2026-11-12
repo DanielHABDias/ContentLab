@@ -70,3 +70,4 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-vi
 
 @media (max-width: 640px) { .dialog { width: calc(100vw - 24px); max-height: calc(100vh - 24px); overflow: auto; } .section-title { flex-wrap: wrap; gap: 10px; } }
 .connection-banner { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 40; width: min(720px, calc(100vw - 32px)); box-shadow: 0 18px 50px #000; }
+.update-box { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }.update-box h3 { margin: 0 0 10px; }
