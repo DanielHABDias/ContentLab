@@ -54,8 +54,14 @@ export function createContentLabServer({ dataDirectory = process.env.CONTENTLAB_
       if (request.method === 'POST' && url.pathname === '/api/v1/dialog/package') return json(response, 200, await application.choosePackage(await readJson(request)));
       if (request.method === 'POST' && url.pathname === '/api/v1/dialog/media') return json(response, 200, await application.chooseMedia(await readJson(request)));
       if (request.method === 'POST' && url.pathname === '/api/v1/packages/import') return json(response, 201, await application.importPackage(await readJson(request)));
+      if (request.method === 'POST' && url.pathname === '/api/v1/packages/inspect') return json(response, 200, await application.inspectPackage(await readJson(request)));
       if (request.method === 'POST' && url.pathname === '/api/v1/media/import') return json(response, 201, await application.importMedia(await readJson(request)));
       if (request.method === 'POST' && url.pathname === '/api/v1/render') return json(response, 201, await application.renderProject(await readJson(request)));
+      if (request.method === 'POST' && url.pathname === '/api/v1/render/presets') return json(response, 200, await application.renderPresets(await readJson(request)));
+      if (request.method === 'POST' && url.pathname === '/api/v1/render/jobs') return json(response, 200, await application.listRenderJobs(await readJson(request)));
+      const renderRoutes = { start: 'enqueueRender', cancel: 'cancelRenderJob', retry: 'retryRenderJob', reveal: 'revealRenderJob', log: 'renderJobLog' };
+      const renderMatch = request.method === 'POST' && url.pathname.match(/^\/api\/v1\/render\/([a-z]+)$/);
+      if (renderMatch && renderRoutes[renderMatch[1]]) return json(response, renderMatch[1] === 'start' ? 201 : 200, await application[renderRoutes[renderMatch[1]]](await readJson(request)));
       if (url.pathname.startsWith('/api/')) return json(response, 404, { error: 'Rota local desconhecida' });
       return await serveStatic(response, staticDirectory, url.pathname);
     } catch (error) {

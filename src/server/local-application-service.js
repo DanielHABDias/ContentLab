@@ -1,4 +1,4 @@
-import { lstat, mkdir, readFile, rm, stat } from 'node:fs/promises';
+import { lstat, mkdir, readFile, rename, rm, stat } from 'node:fs/promises';
 import { MIGRATABLE, ROOT_KINDS, SettingsStore, StorageService, sizeOf, validateFolder } from './storage-service.js';
 import os from 'node:os';
 import path from 'node:path';
@@ -22,6 +22,7 @@ import { FfmpegRenderer } from '../render/ffmpeg-renderer.js';
 import { ComponentRegistry } from '../timeline/component-registry.js';
 import { RemotionComponentRuntime } from '../render/remotion-component-runtime.js';
 import { fileURLToPath } from 'node:url';
+import { RenderQueue } from '../render/render-queue.js';
 
 const bundledComponent = import.meta.url.startsWith('file:') ? path.join(path.dirname(fileURLToPath(import.meta.url)), '../timeline/components/KineticEmphasis.tsx') : path.join(process.cwd(), 'src/timeline/components/KineticEmphasis.tsx');
 
@@ -51,10 +52,11 @@ export class LocalApplicationService {
     this.opener = opener;
     this.activities = activities;
     this.setup = setup || new SetupService({ toolsDirectory: toolsDirectory || path.join(this.dataDirectory, 'tools') });
+    this.renderQueue = new RenderQueue(path.join(this.dataDirectory, 'render-jobs.json'), { render: (...args) => this.renderer.render(...args) });
   }
 
   /** Carrega as configurações uma vez e aplica as raízes aos serviços. */
-  ready() { this.readyPromise ||= this.settingsStore.read().then(async settings => { this.#apply(settings); await this.#prepareComponents(); return this.settings; }); return this.readyPromise; }
+  ready() { this.readyPromise ||= this.settingsStore.read().then(async settings => { this.#apply(settings); await this.#prepareComponents(); await this.renderQueue.restore(); return this.settings; }); return this.readyPromise; }
 
   async #prepareComponents() {
     const source = await readFile(bundledComponent, 'utf8');
@@ -198,29 +200,34 @@ export class LocalApplicationService {
     return await this.registerProject(path.join(root, id));
   }
 
-  async importPackage({ packagePath, parentDirectory }) {
+  async inspectPackage({ packagePath, parentDirectory }) {
     if (!packagePath) throw new Error('Nenhum pacote foi escolhido');
     await this.ready();
     const root = path.resolve(parentDirectory || this.projectsDirectory);
     const extension = path.extname(packagePath).toLowerCase();
+    if (!['.contentlab', '.zip'].includes(extension)) throw new Error('Use um pacote .contentlab ou .zip');
     const inspection = extension === '.contentlab' ? await this.packages.inspect(packagePath) : await this.packages.inspectZip(packagePath);
-    const rawProject = extension === '.contentlab'
-      ? inspection.manifest.entries.find(entry => entry.path === 'project.json') && null
-      : inspection.project;
-    let id = rawProject?.id;
-    if (!id) {
-      const { mkdtemp, rm, readFile } = await import('node:fs/promises');
-      const os = await import('node:os');
-      const temporary = await mkdtemp(path.join(os.tmpdir(), 'contentlab-inspect-'));
-      try { await this.packages.restore(packagePath, temporary); id = JSON.parse(await readFile(path.join(temporary, 'project.json'), 'utf8')).id; }
-      finally { await rm(temporary, { recursive: true, force: true }); }
-    }
-    const available = await this.#availableId(root, id);
-    if (available !== id) throw new Error(`Já existe um projeto chamado ${id} no destino`);
-    const destination = path.join(root, id);
-    if (extension === '.contentlab') await this.packages.restore(packagePath, destination);
-    else await this.packages.restoreZip(packagePath, destination);
-    return await this.registerProject(destination);
+    const project = inspection.project;
+    if (!idSchema.safeParse(project?.id).success) throw new Error('O pacote contém um ID de projeto inválido');
+    const destination = path.join(root, project.id);
+    let conflict = false; try { await stat(destination); conflict = true; } catch (error) { if (error.code !== 'ENOENT') throw error; }
+    return { packagePath: path.resolve(packagePath), format: extension.slice(1), project: { id: project.id, title: project.title, revision: project.revision }, archiveSize: inspection.archiveSize, logicalSize: inspection.logicalSize, files: extension === '.contentlab' ? inspection.manifest.entries.length : inspection.archiveEntries, parentDirectory: root, destination, conflict };
+  }
+
+  async importPackage({ packagePath, parentDirectory }) {
+    const preview = await this.inspectPackage({ packagePath, parentDirectory });
+    if (preview.conflict) throw Object.assign(new Error(`Já existe um projeto chamado ${preview.project.id} no destino. Escolha outra pasta; nada foi sobrescrito.`), { code: 'IMPORT_CONFLICT' });
+    const stagingRoot = path.join(preview.parentDirectory, `.contentlab-import-${randomUUID()}`);
+    const staging = path.join(stagingRoot, preview.project.id);
+    try {
+      if (preview.format === 'contentlab') await this.packages.restore(packagePath, staging);
+      else await this.packages.restoreZip(packagePath, staging);
+      const restored = await readProjectDirectory(staging);
+      if (restored.id !== preview.project.id) throw new Error('O projeto restaurado não corresponde ao manifesto');
+      await rename(staging, preview.destination);
+      await rm(stagingRoot, { recursive: true, force: true });
+    } catch (error) { await rm(stagingRoot, { recursive: true, force: true }); throw error; }
+    return await this.registerProject(preview.destination);
   }
 
   async runProjectAction({ path: directory, baseRevision, action, actions }) {
@@ -283,7 +290,7 @@ export class LocalApplicationService {
     return await this.registerProject(path.join(parent, id));
   }
 
-  async exportProject({ path: directory, outputDirectory, format = 'contentlab', includeRenders = false }) {
+  async exportProject({ path: directory, outputDirectory, format = 'contentlab', includeRenders = false, includeCache = false }) {
     const absolute = path.resolve(directory);
     if (!outputDirectory) throw new Error('Escolha a pasta de destino da exportação');
     if (!['contentlab', 'zip'].includes(format)) throw new Error('Formato de exportação inválido');
@@ -292,7 +299,7 @@ export class LocalApplicationService {
     if (target === absolute || target.startsWith(`${absolute}${path.sep}`)) throw new Error('Escolha um destino fora da pasta do projeto');
     const extension = format === 'zip' ? 'zip' : 'contentlab';
     const output = await availableFile(path.join(target, `${project.id}-r${project.revision}.${extension}`));
-    const include = relative => relative !== LOCK_FILE && (includeRenders || !(relative === 'output' || relative.startsWith('output/')));
+    const include = relative => relative !== LOCK_FILE && (includeRenders || !(relative === 'output' || relative.startsWith('output/'))) && (includeCache || !['cache/', 'narration/previews/', 'narration/staging/'].some(prefix => relative.startsWith(prefix)));
     return await this.activities.track(absolute, 'exportação', async () => {
       const result = format === 'zip' ? await this.packages.exportZip(absolute, output, { include }) : await this.packages.exportContentLab(absolute, output, { include });
       return { path: result.path, size: result.size, files: result.files, format };
@@ -425,6 +432,29 @@ export class LocalApplicationService {
     const output = path.join(targetDirectory, `${project.id}-r${project.revision}.mp4`);
     return await this.activities.track(directory, 'render', signal => this.renderer.render(project, { output, signal }), { cancellable: true });
   }
+
+  async renderPresets({ path: directory }) {
+    const project = await readProjectDirectory(directory); const ratio = project.aspectRatio;
+    const dimensions = ratio === '16:9' ? [[1920, 1080], [1280, 720]] : ratio === '9:16' ? [[1080, 1920], [720, 1280]] : ratio === '1:1' ? [[1080, 1080], [720, 720]] : [[1080, 1350], [720, 900]];
+    return { aspectRatio: ratio, presets: [{ id: 'full-hd', label: 'Qualidade alta', width: dimensions[0][0], height: dimensions[0][1], scale: 1 }, { id: 'hd', label: 'Arquivo menor', width: dimensions[1][0], height: dimensions[1][1], scale: 2 / 3 }] };
+  }
+
+  async enqueueRender({ path: directory, outputDirectory, presetId = 'full-hd', aspectRatio }) {
+    await this.requireFeature('render'); await this.ready();
+    const stored = await readProjectDirectory(directory); const presets = await this.renderPresets({ path: directory });
+    if (aspectRatio && aspectRatio !== stored.aspectRatio) throw new LifecycleError('INVALID_RENDER_PRESET', `O projeto está em ${stored.aspectRatio}; altere a proporção na timeline antes de renderizar em ${aspectRatio}`);
+    const preset = presets.presets.find(item => item.id === presetId); if (!preset) throw new LifecycleError('INVALID_RENDER_PRESET', 'Preset de render inválido');
+    const project = { ...stored, media: await Promise.all(stored.media.map(async item => ({ ...item, uri: (await this.resolveMediaPath(item)) || item.uri }))) };
+    const targetDirectory = outputDirectory ? path.resolve(outputDirectory) : this.settings.roots.renderOutput || path.join(path.resolve(directory), 'output'); await mkdir(targetDirectory, { recursive: true });
+    const output = await availableFile(path.join(targetDirectory, `${project.id}-r${project.revision}-${preset.id}.mp4`));
+    return await this.renderQueue.enqueue(project, { output, scale: preset.scale }, { projectPath: directory, presetId });
+  }
+
+  async listRenderJobs({ path: directory }) { await this.ready(); return { jobs: this.renderQueue.list({ projectPath: directory }) }; }
+  async cancelRenderJob({ jobId }) { return await this.renderQueue.cancel(jobId); }
+  async retryRenderJob({ jobId }) { return await this.renderQueue.retry(jobId); }
+  async renderJobLog({ jobId }) { return this.renderQueue.get(jobId); }
+  async revealRenderJob({ jobId }) { const job = this.renderQueue.get(jobId); if (!job.output) throw new Error('Este job ainda não tem arquivo de saída'); await this.opener.reveal(path.dirname(job.output)); return { revealed: job.output }; }
 
   async #availableId(root, preferred) {
     const { stat } = await import('node:fs/promises');

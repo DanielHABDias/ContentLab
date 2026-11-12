@@ -168,14 +168,14 @@ Aceite: o usuário consegue montar e revisar um vídeo pela interface, e preview
 
 Objetivo: tornar entregas longas observáveis, retomáveis e confiáveis.
 
-- [ ] Expor fila persistente com queued/running/completed/failed/cancelled, progresso e fase.
-- [ ] Permitir cancelar, repetir, revelar arquivo e abrir log resumido/diagnóstico.
-- [ ] Restaurar jobs interrompidos para queued sem corromper o estado.
-- [ ] Oferecer presets coerentes para proporção/resolução e impedir combinações inválidas.
-- [ ] Validar toda saída com FFprobe: vídeo, áudio, dimensões, duração e tamanho mínimo.
-- [ ] Integrar exportação `.contentlab` e ZIP pela interface, com escolha de incluir/excluir renders e cache.
-- [ ] Implementar importação com preview do manifesto, tamanho e conflitos antes da restauração.
-- [ ] Criar backup antes de sobrescrever qualquer destino restaurado.
+- [x] Expor fila persistente com queued/running/completed/failed/cancelled, progresso e fase.
+- [x] Permitir cancelar, repetir, revelar arquivo e abrir log resumido/diagnóstico.
+- [x] Restaurar jobs interrompidos para queued sem corromper o estado.
+- [x] Oferecer presets coerentes para proporção/resolução e impedir combinações inválidas.
+- [x] Validar toda saída com FFprobe: vídeo, áudio, dimensões, duração e tamanho mínimo.
+- [x] Integrar exportação `.contentlab` e ZIP pela interface, com escolha de incluir/excluir renders e cache.
+- [x] Implementar importação com preview do manifesto, tamanho e conflitos antes da restauração.
+- [x] Criar backup antes de sobrescrever qualquer destino restaurado. Decisão mais segura: a restauração nunca sobrescreve; conflito bloqueia a confirmação e exige outro destino, portanto não há estado anterior a preservar.
 
 Aceite: um render longo sobrevive a reinício e informa resultado real; um pacote exportado pode ser inspecionado e restaurado em ambiente limpo.
 
@@ -283,6 +283,13 @@ Aceite: em qualquer computador, a instalação baixa a variante certa, a geraç�
 Não iniciar empacotamento desktop antes de estabilizar armazenamento, setup e operações destrutivas. Não baixar modelos grandes antes de implementar consentimento, checksum, retomada e espaço em disco.
 
 ## Checkpoint de retomada
+
+### F19 concluída (2026-11-11)
+
+- Concluído: fila de render persistente com cinco estados, fase/progresso, cancelamento, repetição, log e revelação do arquivo; jobs interrompidos retornam à fila. Presets Full HD/HD respeitam a proporção e entram no fingerprint; projetos longos com muitas camadas são renderizados em segmentos e concatenados. Toda saída continua condicionada à validação FFprobe.
+- Interface: a etapa Revisão agora mostra a fila real. Exportação `.contentlab`/ZIP escolhe renders e caches. Importação mostra formato, projeto, revisão, quantidade e tamanhos antes de gravar, permite trocar o destino e bloqueia conflitos sem sobrescrever.
+- Integridade: restauração acontece em pasta temporária irmã, valida `project.json` e só então faz rename atômico. Destinos existentes nunca são sobrescritos; por isso backup pré-sobrescrita não se aplica.
+- Testes: fila persistida/restaurada, falha/repetição/cancelamento, presets 16:9 e 9:16, render H.264/AAC real, inspeção/importação/conflito de pacote e fluxos da interface. QA no navegador exibiu a fila e um render real concluído/validado; o watcher de desenvolvimento passou a ignorar `.tools`/`.contentlab` para não esgotar os watchers do sistema ao existir um ambiente PyTorch grande. Próxima tarefa: F20.
 
 ### F18 concluída (2026-11-11)
 

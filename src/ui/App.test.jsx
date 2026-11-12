@@ -3,7 +3,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { App } from './App.jsx';
 import { localApi } from './local-api.js';
 
-vi.mock('./local-api.js', () => ({ localApi: { listProjects: vi.fn(), openProject: vi.fn(), createProject: vi.fn(), chooseDirectory: vi.fn(), choosePackage: vi.fn(), chooseMedia: vi.fn(), importPackage: vi.fn(), importMedia: vi.fn(), runProjectAction: vi.fn(), forgetProject: vi.fn(), revealProject: vi.fn(), renameProject: vi.fn(), changeProjectId: vi.fn(), duplicateProject: vi.fn(), exportProject: vi.fn(), deleteProject: vi.fn(), restoreProject: vi.fn(), projectActivities: vi.fn(), cancelProjectActivities: vi.fn(), setupStatus: vi.fn(), setupJobs: vi.fn(), setupInstall: vi.fn(), setupPause: vi.fn(), setupResume: vi.fn(), setupCancel: vi.fn(), setupOnboarding: vi.fn(), relocateProject: vi.fn(), getSettings: vi.fn(), validateFolder: vi.fn(), updateSettings: vi.fn(), storageUsage: vi.fn(), storageOrphans: vi.fn(), storageCleanup: vi.fn(), planMigration: vi.fn(), startMigration: vi.fn(), storageJobs: vi.fn(), cancelMigration: vi.fn(), backupRegistry: vi.fn(), registryBackups: vi.fn(), restoreRegistry: vi.fn(), importFiles: vi.fn(), importUrl: vi.fn(), mediaUsage: vi.fn(), removeMedia: vi.fn(), createCut: vi.fn(), removeCut: vi.fn(), transcribe: vi.fn(), transcript: vi.fn(), saveTranscript: vi.fn(), searchTranscripts: vi.fn(), jobs: vi.fn(), cancelJob: vi.fn(), upload: vi.fn() } }));
+vi.mock('./local-api.js', () => ({ localApi: { listProjects: vi.fn(), openProject: vi.fn(), createProject: vi.fn(), chooseDirectory: vi.fn(), choosePackage: vi.fn(), chooseMedia: vi.fn(), inspectPackage: vi.fn(), importPackage: vi.fn(), importMedia: vi.fn(), runProjectAction: vi.fn(), renderPresets: vi.fn(), renderJobs: vi.fn(), enqueueRender: vi.fn(), cancelRender: vi.fn(), retryRender: vi.fn(), revealRender: vi.fn(), renderLog: vi.fn(), forgetProject: vi.fn(), revealProject: vi.fn(), renameProject: vi.fn(), changeProjectId: vi.fn(), duplicateProject: vi.fn(), exportProject: vi.fn(), deleteProject: vi.fn(), restoreProject: vi.fn(), projectActivities: vi.fn(), cancelProjectActivities: vi.fn(), setupStatus: vi.fn(), setupJobs: vi.fn(), setupInstall: vi.fn(), setupPause: vi.fn(), setupResume: vi.fn(), setupCancel: vi.fn(), setupOnboarding: vi.fn(), relocateProject: vi.fn(), getSettings: vi.fn(), validateFolder: vi.fn(), updateSettings: vi.fn(), storageUsage: vi.fn(), storageOrphans: vi.fn(), storageCleanup: vi.fn(), planMigration: vi.fn(), startMigration: vi.fn(), storageJobs: vi.fn(), cancelMigration: vi.fn(), backupRegistry: vi.fn(), registryBackups: vi.fn(), restoreRegistry: vi.fn(), importFiles: vi.fn(), importUrl: vi.fn(), mediaUsage: vi.fn(), removeMedia: vi.fn(), createCut: vi.fn(), removeCut: vi.fn(), transcribe: vi.fn(), transcript: vi.fn(), saveTranscript: vi.fn(), searchTranscripts: vi.fn(), jobs: vi.fn(), cancelJob: vi.fn(), upload: vi.fn() } }));
 
 function setupStatus(overrides = {}) {
   const items = [
@@ -21,7 +21,7 @@ function realDetails(overrides = {}) {
   return { project, path: '/tmp/meu_projeto', history: [{ id: 'one', type: 'project.created', revision: 1 }], card: { id: project.id, title: project.title, type: project.type, aspectRatio: project.aspectRatio, revision: project.revision, stage: 'brief', progress: 0, path: '/tmp/meu_projeto' } };
 }
 
-beforeEach(() => { vi.clearAllMocks(); localApi.setupStatus.mockResolvedValue(setupStatus({ onboarding: { completedAt: '2026-11-11T00:00:00Z', dismissedAt: null } })); localApi.listProjects.mockResolvedValue({ projects: [] }); localApi.chooseDirectory.mockResolvedValue({ path: null }); localApi.choosePackage.mockResolvedValue({ path: null }); });
+beforeEach(() => { vi.clearAllMocks(); localApi.setupStatus.mockResolvedValue(setupStatus({ onboarding: { completedAt: '2026-11-11T00:00:00Z', dismissedAt: null } })); localApi.listProjects.mockResolvedValue({ projects: [] }); localApi.chooseDirectory.mockResolvedValue({ path: null }); localApi.choosePackage.mockResolvedValue({ path: null }); localApi.renderPresets.mockResolvedValue({ presets: [{ id: 'full-hd', label: 'Full HD', width: 1920, height: 1080 }] }); localApi.renderJobs.mockResolvedValue({ jobs: [] }); });
 
 test('primeira execução fica vazia e não injeta exemplos', async () => {
   render(<App/>); expect(await screen.findByText(/nenhum projeto recente/i)).toBeInTheDocument(); expect(screen.queryByText(/batman|omnitrix|heróis falham/i)).not.toBeInTheDocument();
@@ -121,10 +121,10 @@ test('renomear muda só o título sem trocar o ID', async () => {
 test('exportar usa a pasta escolhida e cancelar o seletor não exporta', async () => {
   localApi.listProjects.mockResolvedValue({ projects: [cardWith()] }); localApi.exportProject.mockResolvedValue({ path: '/backups/meu_projeto-r1.zip' });
   render(<App/>); await openMenu(/exportar zip/i);
-  await waitFor(() => expect(localApi.chooseDirectory).toHaveBeenCalled()); expect(localApi.exportProject).not.toHaveBeenCalled();
-  localApi.chooseDirectory.mockResolvedValue({ path: '/backups' }); await openMenu(/exportar zip/i);
+  fireEvent.click(screen.getByRole('button', { name: /^escolher$/i })); await waitFor(() => expect(localApi.chooseDirectory).toHaveBeenCalled()); expect(localApi.exportProject).not.toHaveBeenCalled();
+  localApi.chooseDirectory.mockResolvedValue({ path: '/backups' }); fireEvent.click(screen.getByRole('button', { name: /^escolher$/i })); await screen.findByText('/backups'); fireEvent.click(screen.getByRole('button', { name: /^exportar$/i }));
   expect(await screen.findByText('Exportado: /backups/meu_projeto-r1.zip')).toBeInTheDocument();
-  expect(localApi.exportProject).toHaveBeenCalledWith({ path: '/tmp/meu_projeto', outputDirectory: '/backups', format: 'zip' });
+  expect(localApi.exportProject).toHaveBeenCalledWith({ path: '/tmp/meu_projeto', outputDirectory: '/backups', format: 'zip', includeRenders: false, includeCache: false });
 });
 
 test('primeira execução abre o assistente; “Agora não” é salvo e volta aos projetos', async () => {
@@ -214,14 +214,12 @@ test('recurso bloqueado dentro da etapa abre dependências com o item já marcad
   expect(screen.getByLabelText(/pesos whisper large-v3/i)).not.toBeChecked();
 });
 
-test('erro DEPENDENCY_MISSING do servidor oferece instalar as dependências', async () => {
+test('render bloqueado oferece configurar as dependências', async () => {
   const details = realDetails({ stages: stageAt('review') });
-  localApi.setupStatus.mockResolvedValue(gatedSetup(['ffmpeg', 'ffprobe', 'zenity'])); localApi.listProjects.mockResolvedValue({ projects: [details.card] }); localApi.openProject.mockResolvedValue(details);
-  localApi.chooseDirectory.mockResolvedValue({ path: '/saida' }); localApi.render = vi.fn().mockRejectedValue(Object.assign(new Error('Para renderizar, instale: FFmpeg'), { code: 'DEPENDENCY_MISSING', details: { missing: ['ffmpeg'] } }));
+  localApi.setupStatus.mockResolvedValue(gatedSetup(['ffprobe', 'zenity'])); localApi.listProjects.mockResolvedValue({ projects: [details.card] }); localApi.openProject.mockResolvedValue(details);
   render(<App/>); fireEvent.click(await screen.findByRole('button', { name: /abrir meu projeto/i }));
   fireEvent.click(await screen.findByRole('button', { name: /continuar/i }));
-  fireEvent.click(await screen.findByRole('button', { name: /renderizar vídeo/i }));
-  expect(await screen.findByText(/para renderizar, instale/i)).toBeInTheDocument();
+  expect(await screen.findByText(/precisa de ffmpeg/i)).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /instalar dependências/i }));
   expect(await screen.findByRole('heading', { name: /prepare seu computador/i })).toBeInTheDocument();
 });

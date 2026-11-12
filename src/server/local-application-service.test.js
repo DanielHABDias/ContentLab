@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
@@ -32,9 +32,14 @@ test('importa pacote contentlab para um projeto real', async () => {
   const packagePath = path.join(root, 'project.contentlab');
   await new PackageService().exportContentLab(source.path, packagePath);
   const targetService = new LocalApplicationService({ dataDirectory: path.join(root, 'target-data') });
+  const preview = await targetService.inspectPackage({ packagePath });
+  expect(preview).toMatchObject({ format: 'contentlab', conflict: false, project: { id: 'projeto_empacotado' } });
+  expect(preview.archiveSize).toBeGreaterThan(0); expect(preview.logicalSize).toBeGreaterThan(0);
   const imported = await targetService.importPackage({ packagePath });
   expect(imported.project).toMatchObject({ id: 'projeto_empacotado', title: 'Projeto empacotado' });
   expect(await targetService.listProjects()).toHaveLength(1);
+  await expect(targetService.inspectPackage({ packagePath })).resolves.toMatchObject({ conflict: true });
+  await expect(targetService.importPackage({ packagePath })).rejects.toMatchObject({ code: 'IMPORT_CONFLICT' });
 });
 
 test('persiste configuração, conteúdo criativo e workflow no mesmo núcleo', async () => {
@@ -70,4 +75,15 @@ test('operações recusam com DEPENDENCY_MISSING quando faltam dependências', a
   await expect(service.importMedia({ path: created.path, baseRevision: 1, source: '/qualquer.wav' })).rejects.toMatchObject({ code: 'DEPENDENCY_MISSING', details: { feature: 'media.import', missing: ['ffmpeg'] } });
   await expect(service.renderProject({ path: created.path, outputDirectory: path.join(root, 'out') })).rejects.toMatchObject({ code: 'DEPENDENCY_MISSING', message: expect.stringMatching(/FFmpeg/) });
   expect((await service.inspectProject(created.path)).project.media).toEqual([]);
+});
+
+test('enfileira render com preset válido, persiste e recusa proporção divergente', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'contentlab-render-queue-app-')); roots.push(root); const dataDirectory = path.join(root, 'data');
+  const setup = { status: async () => ({ items: [{ id: 'ffmpeg', label: 'FFmpeg', ready: true }, { id: 'ffprobe', label: 'FFprobe', ready: true }] }) };
+  const renderer = { root: path.join(root, 'cache'), render: async (_project, { output, onProgress }) => { onProgress({ phase: 'rendering', progress: .5 }); await mkdir(path.dirname(output), { recursive: true }); await writeFile(output, 'video-validado'); return { status: 'completed', output }; } };
+  const service = new LocalApplicationService({ dataDirectory, setup, renderer }); const created = await service.createProject({ title: 'Fila real', type: 'short', aspectRatio: '9:16' });
+  const presets = await service.renderPresets({ path: created.path }); expect(presets.presets).toMatchObject([{ id: 'full-hd', width: 1080, height: 1920 }, { id: 'hd', width: 720, height: 1280 }]);
+  await expect(service.enqueueRender({ path: created.path, outputDirectory: path.join(root, 'out'), aspectRatio: '16:9' })).rejects.toMatchObject({ code: 'INVALID_RENDER_PRESET' });
+  const job = await service.enqueueRender({ path: created.path, outputDirectory: path.join(root, 'out'), presetId: 'hd' }); expect(await service.renderQueue.wait(job.id)).toMatchObject({ state: 'completed', presetId: 'hd', output: expect.stringMatching(/-hd\.mp4$/) });
+  const restarted = new LocalApplicationService({ dataDirectory, setup, renderer }); expect((await restarted.listRenderJobs({ path: created.path })).jobs[0]).toMatchObject({ id: job.id, state: 'completed' });
 });

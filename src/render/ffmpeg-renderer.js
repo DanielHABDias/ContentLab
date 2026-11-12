@@ -1,4 +1,4 @@
-import { copyFile, mkdir, mkdtemp, rename, rm, stat } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { execFile, spawn } from 'node:child_process';
@@ -44,17 +44,35 @@ export class FfmpegRenderer {
     } finally { await rm(textDirectory, { recursive: true, force: true }); }
   }
 
-  async render(project, { output, signal, onProgress = () => {} }) {
+  async render(project, { output, signal, onProgress = () => {}, scale = 1 }) {
     await mkdir(this.root, { recursive: true });
     const plan = this.#plan(project);
-    const cache = path.join(this.root, 'cache', `${plan.fingerprint}.mp4`); await mkdir(path.dirname(cache), { recursive: true });
-    if (await exists(cache)) { await copy(cache, output); return { status: 'completed', output: path.resolve(output), cached: true, plan, inspection: await this.inspect(output, plan) }; }
+    if (!(scale > 0 && scale <= 1)) throw new Error('Escala de render inválida');
+    const cache = path.join(this.root, 'cache', `${plan.fingerprint}-${String(scale).replace('.', '_')}.mp4`); await mkdir(path.dirname(cache), { recursive: true });
+    if (await exists(cache)) { await copy(cache, output); return { status: 'completed', output: path.resolve(output), cached: true, plan, inspection: await this.inspect(output, plan, { scale }) }; }
     const temporary = `${cache}.partial.mp4`;
     onProgress({ phase: 'rendering', progress: 0 });
-    try { await this.#run(plan, { output: temporary }, { signal, onProgress, total: plan.duration }); await rename(temporary, cache); await copy(cache, output); }
+    try {
+      const manyClips = plan.layers.filter(layer => ['media', 'component'].includes(layer.type)).length > 32;
+      if (manyClips && plan.duration > 60) await this.#renderSegments(plan, { output: temporary, scale, signal, onProgress });
+      else await this.#run(plan, { output: temporary, scale }, { signal, onProgress, total: plan.duration });
+      await rename(temporary, cache); await copy(cache, output);
+    }
     catch (error) { await rm(temporary, { force: true }); if (error.name === 'AbortError') return { status: 'cancelled', output: null, plan }; throw error.code ? error : new Error(`Render falhou: ${lastLines(error.stderr || error.message)}`); }
-    onProgress({ phase: 'validating', progress: 0.99 }); const inspection = await this.inspect(output, plan); onProgress({ phase: 'completed', progress: 1 });
+    onProgress({ phase: 'validating', progress: 0.99 }); const inspection = await this.inspect(output, plan, { scale }); onProgress({ phase: 'completed', progress: 1 });
     return { status: 'completed', output: path.resolve(output), cached: false, plan, inspection };
+  }
+
+  async #renderSegments(plan, { output, scale, signal, onProgress }) {
+    const directory = await mkdtemp(path.join(this.root, 'segments-')); const parts = [];
+    try {
+      for (let from = 0, index = 0; from < plan.duration; from += 60, index += 1) {
+        const to = Math.min(plan.duration, from + 60); const part = path.join(directory, `part-${String(index).padStart(4, '0')}.mp4`); parts.push(part);
+        await this.#run(plan, { from, to, scale, output: part }, { signal, total: to - from, onProgress: update => onProgress({ phase: `rendering segment ${index + 1}/${Math.ceil(plan.duration / 60)}`, progress: update.progress == null ? null : Math.min(.98, (from + update.progress * (to - from)) / plan.duration) }) });
+      }
+      const list = path.join(directory, 'concat.txt'); await writeFile(list, parts.map(file => `file '${file.replaceAll("'", "'\\''")}'`).join('\n'));
+      await run(this.ffmpeg, ['-hide_banner', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list, '-c', 'copy', '-movflags', '+faststart', '-y', output], { signal });
+    } finally { await rm(directory, { recursive: true, force: true }); }
   }
 
   /** PNG de um frame pelo mesmo grafo do render (opcionalmente em outra proporção). */

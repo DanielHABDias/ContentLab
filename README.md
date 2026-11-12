@@ -52,14 +52,14 @@ A tela inicial cria, abre, importa e retoma projetos locais reais. Não são ins
 
 ### Gerenciar projetos
 
-O menu “⋯” de cada cartão oferece abrir, revelar pasta, renomear, duplicar, exportar (`.contentlab` ou ZIP, sem renders), remover de Recentes e excluir. Cada cartão mostra tamanho, última modificação e última abertura.
+O menu “⋯” de cada cartão oferece abrir, revelar pasta, renomear, duplicar, exportar (`.contentlab` ou ZIP, escolhendo incluir renders e caches), remover de Recentes e excluir. A importação sempre mostra uma prévia de conteúdo, tamanho e destino; conflitos são bloqueados e nada é sobrescrito. Cada cartão mostra tamanho, última modificação e última abertura.
 
 - **Remover de Recentes** altera só o registro; a pasta fica intacta.
 - **Renomear** muda o título sem alterar ID e pasta. Mudar pasta/ID é opção avançada separada: valida o novo ID, recusa conflitos e desfaz o rename se a gravação falhar.
 - **Duplicar** cria novo ID, revisão 1 e histórico com a origem; mídias continuam referenciadas pelo hash, sem copiar objetos.
 - **Excluir** mostra nome, ID e caminho exatos, exige digitar o ID e move a pasta para a lixeira do sistema (`gio trash`), com “Desfazer”. Sem lixeira, oferece backup e exige digitar `EXCLUIR <id>` antes da exclusão permanente. Exclusão e mudança de ID ficam bloqueadas durante escrita, exportação ou render; o render pode ser cancelado no próprio diálogo.
 
-O editor de roteiro separa fala, direção visual e fontes; packaging mantém títulos A/B, descrição, tags e thumbnails. A timeline usa camadas genéricas, keyframes, undo/redo e layouts próprios para 16:9 e 9:16. SRT pode ser importado no editor; componentes TSX/Remotion permitidos aparecem como camadas configuráveis e são renderizados em processo isolado. Preview e render compartilham o mesmo plano.
+O editor de roteiro separa fala, direção visual e fontes; packaging mantém títulos A/B, descrição, tags e thumbnails. A timeline usa camadas genéricas, keyframes, undo/redo e layouts próprios para 16:9 e 9:16. SRT pode ser importado no editor; componentes TSX/Remotion permitidos aparecem como camadas configuráveis e são renderizados em processo isolado. Preview e render compartilham o mesmo plano. A etapa Revisão mantém uma fila persistente com progresso, cancelamento, repetição, log e presets coerentes com a proporção.
 
 ## CLI e MCP
 

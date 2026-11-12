@@ -13,6 +13,8 @@ O manifesto `contentlab-package-v1` mapeia cada caminho lógico do projeto para 
 
 Um pacote completo inclui `project.json`, versões/histórico, roteiro e metadados, thumbnails, legendas, timeline, componentes e recursos referenciados. Cache e render final entram apenas quando o perfil de exportação os inclui. A exportação enxuta seleciona vídeo final, metadados e arte aprovada. ZIP padrão mantém os arquivos em seus caminhos comuns e serve para interoperabilidade.
 
+Antes da importação, a interface apresenta ID, título, revisão, formato, arquivos, tamanho lógico, tamanho compactado e destino. A extração ocorre numa pasta temporária, é validada e promovida por rename atômico. Um destino existente é tratado como conflito e nunca é sobrescrito.
+
 ## Extração e restauração
 
 Antes de escrever, o Content Lab valida schema, caminhos, duplicatas, hashes, tamanhos e presença de todos os blobs. Caminhos absolutos, segmentos `..`, NUL, symlinks e entradas duplicadas são rejeitados. Arquivos existentes não são sobrescritos. A restauração cria uma pasta escolhida pelo usuário e só então pode ser aberta como projeto.
