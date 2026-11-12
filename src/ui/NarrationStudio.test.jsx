@@ -87,3 +87,10 @@ test('excluir perfil mostra o que será apagado antes de confirmar', async () =>
   fireEvent.click(within(dialog).getByRole('button', { name: /excluir perfil e áudios/i }));
   await waitFor(() => expect(localApi.deleteVoiceProfile).toHaveBeenCalledWith('voice_abc123'));
 });
+
+test('inventário: estúdio de narração sem controles anônimos', async () => {
+  const { auditControls } = await import('./a11y-audit.js');
+  const { container } = render(<NarrationStudio projectPath="/p" setup={setup(true)} onOpenSetup={vi.fn()}/>);
+  expect(await screen.findByText('Abertura')).toBeInTheDocument();
+  expect(auditControls(container)).toEqual([]);
+});

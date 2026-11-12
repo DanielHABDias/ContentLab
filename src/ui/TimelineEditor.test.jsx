@@ -93,3 +93,14 @@ test('importa SRT do computador e adiciona componente configurado no playhead', 
   fireEvent.click(screen.getByRole('button', { name: 'Adicionar componente' }));
   await waitFor(() => expect(localApi.editAddComponent).toHaveBeenCalledWith(expect.objectContaining({ componentId: 'kinetic_emphasis', componentProps: { text: 'Título real', color: '#d8ff48' } })));
 });
+
+test('inventário: editor sem controles anônimos e clip operável só pelo teclado', async () => {
+  const { auditControls } = await import('./a11y-audit.js');
+  const { container } = render(<TimelineEditor details={details()} onUpdated={vi.fn()}/>);
+  await screen.findByRole('img', { name: /frame 0/i });
+  expect(auditControls(container)).toEqual([]);
+  const item = screen.getByRole('button', { name: /clip_b, 0:03/i }); item.focus(); fireEvent.keyDown(item, { key: 'Enter' }); fireEvent.click(item);
+  expect(auditControls(container)).toEqual([]);
+  fireEvent.keyDown(window, { key: 'ArrowRight', altKey: true });
+  await waitFor(() => expect(localApi.editApply).toHaveBeenCalledWith(expect.objectContaining({ commands: [expect.objectContaining({ op: 'clip.move', clipId: 'clip_b' })] })));
+});

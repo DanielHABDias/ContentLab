@@ -1,8 +1,16 @@
+export const OFFLINE_EVENT = 'contentlab:connection';
+const signal = online => { if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(OFFLINE_EVENT, { detail: { online } })); };
+
 async function request(pathname, options = {}) {
-  const response = await fetch(`/api/v1${pathname}`, {
-    ...options,
-    headers: { 'content-type': 'application/json', ...options.headers },
-  });
+  let response;
+  try {
+    response = await fetch(`/api/v1${pathname}`, { ...options, headers: { 'content-type': 'application/json', ...options.headers } });
+  } catch (error) {
+    if (error?.name === 'AbortError') throw error;
+    signal(false);
+    throw Object.assign(new Error('Servidor local fora do ar. Reabra o Content Lab e tente de novo.'), { code: 'OFFLINE' });
+  }
+  signal(true);
   const value = await response.json().catch(() => ({}));
   if (!response.ok) throw Object.assign(new Error(value.error || `Falha local (${response.status})`), { code: value.code, details: value.details });
   return value;
