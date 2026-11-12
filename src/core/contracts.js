@@ -137,6 +137,11 @@ export const motionBeatSchema = z.object({
   sfx: z.array(z.object({ name: z.enum(MOTION_SFX), at: z.number().min(-2).max(120).default(0), volume: z.number().min(0).max(1).default(0.5) })).max(16).default([]),
   flash: z.boolean().default(true),
   legenda: z.boolean().optional(),
+  // Por cima da cena: caixinhas HQ de lembrete e recortes PNG do que está sendo falado (tempos relativos ao beat).
+  extras: z.array(z.discriminatedUnion('tipo', [
+    z.object({ tipo: z.literal('caixinha'), preset: z.enum(['inscricao', 'like', 'sininho', 'opiniao', 'spoiler', 'fonte', 'comenta', 'livre']).default('inscricao'), texto: z.string().max(40).optional(), canto: z.enum(['superior-esquerdo', 'superior-direito', 'inferior-esquerdo', 'inferior-direito']).optional(), at: z.number().min(0).max(120).default(0), duracao: z.number().min(0.5).max(10).default(3) }),
+    z.object({ tipo: z.literal('recorte'), midia: z.string().regex(/^media:[\w.-]+$/), lado: z.enum(['esquerda', 'direita', 'centro']).optional(), tamanho: z.number().min(0.1).max(0.9).optional(), at: z.number().min(0).max(120).default(0), duracao: z.number().min(0.3).max(30).optional(), giro: z.number().min(-45).max(45).optional() }),
+  ])).max(6).optional(),
 });
 export const motionPlanSchema = z.object({
   schema: z.literal('contentlab-motion-v1'),

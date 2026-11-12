@@ -101,3 +101,23 @@ test('plano automático: pergunta sobre a cena vira aparte do Nox com ícone, e 
   expect(plan.beats.some(beat => beat.scene === 'aparte' && beat.props.falas.some(fala => fala.icone === 'caveira'))).toBe(true); // "pode morrer"
   expect(plan.beats.filter(beat => beat.scene === 'nox').length).toBeLessThanOrEqual(1);
 });
+
+test('plano automático: poses no aparte, fundos variados, cena sozinha, caixinhas e recorte citado', () => {
+  const w = (id, text, start, length) => ({ scene: { id, label: id, text }, start, length });
+  const plan = planMotion({ windows: [
+    w('hook-1', 'O Superman nunca perdeu. E esse é o problema.', 0, 5),
+    w('development-1', 'Olha esse escudo enorme. Aguenta tudo. Pra mim, isso mata a história. A muralha cai. O escudo racha. A moeda da sorte não salva ninguém. Ele pode perder tudo agora. O escudo some. A muralha volta.', 5, 26),
+    w('payoff-1', 'Fraqueza cria a história. Qual herói te ensinou isso?', 31, 6),
+  ], media: [{ id: 'm_escudo', name: 'escudo.png', kind: 'image' }, { id: 'm_muralha', name: 'muralha.png', kind: 'image' }, { id: 'm_moeda', name: 'recorte-moeda.png', kind: 'image' }], end: 38 });
+  expect(motionPlanSchema.safeParse(plan).success).toBe(true);
+  const aparte = plan.beats.find(beat => beat.scene === 'aparte');
+  expect(MOTION_KIT.poses.lista).toContain(aparte.props.falas[0].pose);
+  expect(plan.beats.some(beat => beat.scene === 'evidencia' && beat.props.cheia)).toBe(true);
+  expect(plan.beats.some(beat => JSON.stringify(beat.props).includes('m_moeda'))).toBe(false); // recorte não vira cena
+  const extras = plan.beats.flatMap(beat => beat.extras || []);
+  expect(extras.some(extra => extra.tipo === 'recorte' && extra.midia === 'media:m_moeda')).toBe(true);
+  expect(extras.filter(extra => extra.tipo === 'caixinha').map(extra => extra.preset)).toEqual(expect.arrayContaining(['inscricao', 'like', 'opiniao']));
+  const bgs = plan.beats.map(beat => `${beat.props.fundo || ''}${beat.props.tom || ''}`);
+  for (let i = 1; i < bgs.length; i += 1) if (bgs[i]) expect(bgs[i]).not.toBe(bgs[i - 1]);
+  expect(mediaRefs(plan)).toContain('m_moeda');
+});

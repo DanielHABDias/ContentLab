@@ -496,3 +496,11 @@ Objetivo: produzir pelo MCP vídeos no nível do demo (ritmo do RunnyIA, estéti
 - [x] Nox 3D retirado (a pedido); `paineis3d` mantido.
 - [x] Thumbnail limpa (fundo preto ou branco e o personagem) como padrão; `background` no MCP.
 - [x] QA real: Short 9:16 narrado pelo MCP, 32,6 s, 16 beats (média 2,0 s), 3 apartes, −14,2 LUFS.
+
+## F34 — Nox em stop motion, extras e variação
+
+- [x] Poses do Nox em stop motion: `assets/brand/nox/poses/*.png` entram no render; troca seca por fala com "tremidinha"; sem a pose, Nox canônico.
+- [x] Aparte com o Nox inteiro subindo pela borda de baixo (pernas fora do quadro).
+- [x] `extras` no beat (contrato e MCP): caixinhas HQ de lembrete (inscrição, like, sininho, opinião, spoiler, fonte, comenta) e recortes PNG.
+- [x] Plano automático: evidência sozinha em tela cheia em metade dos beats, fundos sem repetição, poses pelo tom da frase, caixinhas em 20%/55% e nas opiniões, recortes citados.
+- [ ] PNGs das 12 poses do Nox (dependem de desenho a partir do canônico; guia no plugin).

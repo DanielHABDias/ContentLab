@@ -1,4 +1,4 @@
-import { copyFile, link, mkdir, mkdtemp, rename, rm, stat } from 'node:fs/promises';
+import { copyFile, link, mkdir, mkdtemp, readdir, rename, rm, stat } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
@@ -74,6 +74,9 @@ export class MotionRenderer {
       onProgress({ phase: 'Preparando mídias', progress: 0.01 });
       await mkdir(path.join(publicDir, 'brand'), { recursive: true }); await mkdir(path.join(publicDir, 'sfx'), { recursive: true }); await mkdir(path.join(publicDir, 'media'), { recursive: true });
       for (const [from, to] of [['fonts/Anton-Regular.ttf', 'brand/Anton-Regular.ttf'], ['nox/nox-sem-olhos.png', 'brand/nox-sem-olhos.png'], ['nox/Nox.png', 'brand/Nox.png']]) await place(path.join(BRAND, from), path.join(publicDir, to));
+      // Poses do Nox (stop motion) que existirem em assets/brand/nox/poses: nome → arquivo.
+      const poses = {};
+      for (const file of (await readdir(path.join(BRAND, 'nox', 'poses')).catch(() => [])).filter(name => name.endsWith('.png'))) { await place(path.join(BRAND, 'nox', 'poses', file), path.join(publicDir, 'brand', 'poses', file)); poses[file.slice(0, -4)] = `public:brand/poses/${file}`; }
       const used = new Set(plan.beats.flatMap(beat => beat.sfx || []).map(cue => cue.name));
       for (const name of used) await place(path.join(BRAND, 'sfx', `${name}.wav`), path.join(publicDir, 'sfx', `${name}.wav`));
       const assets = await this.#stageMedia(project, mediaRefs(plan), publicDir);
@@ -81,7 +84,7 @@ export class MotionRenderer {
       if (plan.narration !== false && inputs.narration) { await place(inputs.narration, path.join(publicDir, 'media', `narracao${path.extname(inputs.narration)}`)); narration = `public:media/narracao${path.extname(inputs.narration)}`; }
       if (plan.music && inputs.music) { await place(inputs.music, path.join(publicDir, 'media', `trilha${path.extname(inputs.music)}`)); music = `public:media/trilha${path.extname(inputs.music)}`; }
       const end = Math.max(...plan.beats.map(beat => beat.at + beat.duration), inputs.narrationSeconds || 0);
-      const props = { plan: { fps, width: even(width * scale), height: even(height * scale), duration: end, beats: plan.beats, captions: plan.captions, musicVolume: plan.music?.volume, duck: plan.music?.duck }, assets, narration, music, words: plan.narration !== false ? inputs.words || [] : [] };
+      const props = { plan: { fps, width: even(width * scale), height: even(height * scale), duration: end, beats: plan.beats, captions: plan.captions, musicVolume: plan.music?.volume, duck: plan.music?.duck }, assets, narration, music, poses, words: plan.narration !== false ? inputs.words || [] : [] };
       const scaled = scale === 1 ? props : { ...props, plan: { ...props.plan, width, height } };
 
       const { bundle } = await import('@remotion/bundler'); const { renderMedia, selectComposition, makeCancelSignal } = await import('@remotion/renderer');
@@ -130,7 +133,7 @@ export class MotionRenderer {
 export function mediaRefs(plan) {
   const found = new Set();
   const walk = value => { if (typeof value === 'string') { const match = /^media:([\w.-]+)$/.exec(value); if (match) found.add(match[1]); } else if (value && typeof value === 'object') Object.values(value).forEach(walk); };
-  for (const beat of plan.beats) walk(beat.props || {});
+  for (const beat of plan.beats) { walk(beat.props || {}); walk(beat.extras || []); }
   return [...found];
 }
 

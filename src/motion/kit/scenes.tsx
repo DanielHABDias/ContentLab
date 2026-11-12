@@ -1,7 +1,7 @@
 import React, { createContext, useContext } from 'react';
 import { AbsoluteFill, Img, OffthreadVideo, interpolate, random, useCurrentFrame, useVideoConfig, Easing } from 'remotion';
 import { ANTON, C, Halftone, Panel, Punch, ROUND, SpeedBurst, Stars, ease, pop, shake, slide } from './fx';
-import { Mood, Nox } from './Nox';
+import { Mood, Nox, NoxPose } from './Nox';
 import { IconArt } from './icons';
 
 /**
@@ -77,19 +77,19 @@ export const Titulo: React.FC<Base & { palavras: string[]; cores?: string[]; fun
 };
 
 /** Frases "pensadas" no campo de estrelas, linha a linha; opcional riscar uma palavra e fechar com destaque gigante. */
-export const Frase: React.FC<Base & { linhas: string[]; riscar?: string; destaque?: string; humor?: Mood }> = ({ len, linhas, riscar, destaque, humor }) => {
+export const Frase: React.FC<Base & { linhas: string[]; riscar?: string; destaque?: string; humor?: Mood; fundo?: Bg; tom?: string }> = ({ len, linhas, riscar, destaque, humor, fundo, tom }) => {
   const f = useCurrentFrame(); const { W, V } = useStage();
   const lineAt = (i: number) => Math.round(i * Math.min(16, (len * 0.45) / Math.max(1, linhas.length)));
   const big = destaque ? Math.round(len * 0.55) : Infinity;
   return (
     <AbsoluteFill style={{ transform: shake(f, Number.isFinite(big) ? [big] : [], 16) }}>
-      <Stars />
+      {fundo ? <Background kind={fundo} tint={tom} /> : <Stars />}
       <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: V ? 70 : 120, paddingBottom: V ? 380 : 120 }}>
         {f < big ? linhas.map((line, i) => f >= lineAt(i) && (
-          <div key={i} style={{ fontFamily: ROUND, fontWeight: 900, fontSize: V ? 96 : 86, lineHeight: 1.15, color: i % 2 ? '#b8b8c4' : '#fff', opacity: slide(f, lineAt(i), 6), transform: `translateY(${(1 - slide(f, lineAt(i), 8)) * 30}px)`, textShadow: '0 6px 0 rgba(0,0,0,.5)' }}>
+          <div key={i} style={{ fontFamily: ANTON, fontSize: fit(line, W - (V ? 200 : 360), V ? 150 : 130, 2), lineHeight: 1.05, maxWidth: W - (V ? 140 : 300), textTransform: 'uppercase', color: i % 2 ? C.yellow : C.white, background: C.ink, padding: '6px 28px', margin: '10px 0', boxShadow: `10px 10px 0 ${i % 2 ? C.red : C.blue}`, transform: `rotate(${i % 2 ? 2 : -2}deg) scale(${f - lineAt(i) < 1 ? 1.25 : 1})` }}>
             {riscar && line.includes(riscar) ? <>{line.split(riscar)[0]}<span style={{ position: 'relative' }}>{riscar}<span style={{ position: 'absolute', left: -10, right: -10, top: '52%', height: 12, background: C.red, transform: `scaleX(${slide(f, lineAt(i) + 18, 8)})`, transformOrigin: 'left' }} /></span>{line.split(riscar).slice(1).join(riscar)}</> : line}
           </div>
-        )) : <div style={{ transform: `scale(${interpolate(f - big, [0, 4, 8, len - big], [1.7, 0.95, 1, 1.08], clamp)})` }}><Punch size={fit(destaque!, W - 140, V ? 220 : 240, V ? 3 : 2)} color={C.yellow} style={{ textAlign: 'center' }}>{destaque}</Punch></div>}
+        )) : <div style={{ transform: `scale(${interpolate(f - big, [0, 4, 8, len - big], [1.7, 0.95, 1, 1.08], clamp)})` }}><div style={{ display: 'inline-block', background: fundo && fundo !== 'estrelas' && fundo !== 'escuro' ? C.ink : 'transparent', padding: '14px 36px', boxShadow: fundo && fundo !== 'estrelas' && fundo !== 'escuro' ? `14px 14px 0 ${C.red}` : 'none' }}><Punch size={fit(destaque!, W - 220, V ? 220 : 240, V ? 3 : 2)} color={C.yellow} style={{ textAlign: 'center' }}>{destaque}</Punch></div></div>}
         {humor && f < big && f >= lineAt(linhas.length) + 6 && <div style={{ marginTop: 30, transform: `scale(${pop(f, lineAt(linhas.length) + 6)})`, position: 'relative', width: noxW(300), height: 300 }}><Nox mood={humor} height={300} x={0} y={0} /></div>}
       </AbsoluteFill>
     </AbsoluteFill>
@@ -97,7 +97,7 @@ export const Frase: React.FC<Base & { linhas: string[]; riscar?: string; destaqu
 };
 
 /** Nox em destaque, de corpo inteiro, reagindo, com texto de impacto ao lado (no vertical, texto em cima). */
-export const NoxCena: React.FC<Base & { humor?: Mood; texto?: string; subtexto?: string; fundo?: Bg; tom?: string; lado?: 'direita' | 'esquerda' }> = ({ len, humor = 'feliz', texto, subtexto, fundo = 'explosao', tom, lado = 'direita' }) => {
+export const NoxCena: React.FC<Base & { humor?: Mood; texto?: string; subtexto?: string; fundo?: Bg; tom?: string; lado?: 'direita' | 'esquerda'; poses?: Array<{ pose?: string; humor?: Mood }> }> = ({ len, humor = 'feliz', texto, subtexto, fundo = 'explosao', tom, lado = 'direita', poses }) => {
   const f = useCurrentFrame(); const { W, H, V } = useStage();
   const right = lado === 'direita';
   const nh = V ? 900 : 880;
@@ -109,7 +109,9 @@ export const NoxCena: React.FC<Base & { humor?: Mood; texto?: string; subtexto?:
   return (
     <Camera>
       <Background kind={fundo} tint={tom} />
-      <Nox mood={humor} height={nh} x={nx} y={ny} flip={V ? !right : false} tilt={Math.sin(f / 6) * 3} squash={interpolate(f, [0, 4, 9], [0.22, -0.07, 0], clamp)} />
+      {poses?.length
+        ? (() => { const k = Math.min(poses.length - 1, Math.floor(f / Math.max(1, len / poses.length))); const p = poses[k]; return <NoxPose pose={p.pose} mood={p.humor || humor} height={nh} cx={nx + noxW(nh) / 2} bottom={ny + nh} flip={(V ? !right : false) !== (k % 2 === 1)} seed={`nox${k}`} />; })()
+        : <Nox mood={humor} height={nh} x={nx} y={ny} flip={V ? !right : false} tilt={Math.sin(f / 6) * 3} squash={interpolate(f, [0, 4, 9], [0.22, -0.07, 0], clamp)} />}
       {texto && <div style={{ position: 'absolute', ...textBox, transform: `scale(${pop(f, 6)}) rotate(${right ? -4 : 4}deg)` }}>
         <div style={{ display: 'inline-block', background: C.ink, padding: '10px 40px', boxShadow: `14px 14px 0 ${C.red}` }}><Punch size={fit(texto, V ? W - 200 : 900, V ? 150 : 190, V ? 3 : 2)} color={C.yellow} split={4}>{texto}</Punch></div>
         {subtexto && f >= Math.min(20, len / 3) && <div style={{ marginTop: 30, transform: `scale(${pop(f, Math.min(20, len / 3))})` }}><Punch size={V ? 100 : 120} color={fundo === 'explosao' ? C.ink : C.white} split={4}>{subtexto}</Punch></div>}
@@ -143,43 +145,41 @@ export const Evidencia: React.FC<Base & { midia: string; rotulo?: string; legend
 };
 
 /**
- * Aparte do Nox: a cena da obra continua atrás, desfoca; o Nox sobe pelo meio, da cintura para cima,
- * e fala em 1–4 tempos, mudando de posição e de expressão, com um balão de ícone ou texto acima dele.
- * No fim ele desce, o balão some e o fundo volta a ficar nítido.
+ * Aparte do Nox (momentos cômicos, opinião): a cena da obra continua atrás e desfoca; o Nox aparece
+ * INTEIRO, subindo pela borda de baixo, com o resto do corpo fora do quadro. Cada fala é uma pose nova
+ * em stop motion: troca seca de desenho e de lugar, sem quadros intermediários, com uma tremidinha.
+ * Um balão com ícone ou texto mostra o que ele diz. No fim ele sai de uma vez e o fundo volta nítido.
  */
-export const Aparte: React.FC<Base & { midia?: string; falas: Array<{ humor?: Mood; icone?: string; texto?: string }>; fundo?: Bg; tom?: string }> = ({ len, midia, falas, fundo = 'escuro', tom }) => {
+export const Aparte: React.FC<Base & { midia?: string; falas: Array<{ pose?: string; humor?: Mood; icone?: string; texto?: string }>; fundo?: Bg; tom?: string }> = ({ len, midia, falas, fundo = 'escuro', tom }) => {
   const f = useCurrentFrame(); const { W, H, V } = useStage();
   const asset = useAsset(midia);
-  const n = Math.max(1, Math.min(4, falas.length));
-  const inAt = 4; const outAt = Math.max(inAt + 12, len - 10);
-  const step = (outAt - (inAt + 8)) / n; const k = Math.min(n - 1, Math.max(0, Math.floor((f - inAt - 8) / step))); const localAt = inAt + 8 + k * step; const local = f - localAt;
+  const n = Math.max(1, Math.min(5, falas.length));
+  const inAt = 3; const outAt = Math.max(inAt + 10, len - 6);
+  const step = (outAt - inAt) / n; const k = Math.min(n - 1, Math.max(0, Math.floor((f - inAt) / step))); const localAt = inAt + k * step; const local = f - localAt;
   const fala = falas[k] || {};
-  const enter = interpolate(f, [inAt, inAt + 9], [0, 1], { ...clamp, easing: Easing.out(Easing.back(1.6)) });
-  const exit = interpolate(f, [outAt, outAt + 8], [0, 1], { ...clamp, easing: Easing.in(Easing.cubic) });
-  const shown = enter * (1 - exit);
-  const blur = 16 * interpolate(f, [inAt - 2, inAt + 8], [0, 1], clamp) * (1 - interpolate(f, [outAt + 2, outAt + 10], [0, 1], clamp));
-  // Poses: só com o PNG canônico, variando lugar, inclinação, lado e escala a cada fala.
-  const poses = [{ x: 0, tilt: 0, flip: false, s: 1 }, { x: -0.13, tilt: -7, flip: false, s: 1.04 }, { x: 0.13, tilt: 6, flip: true, s: 1 }, { x: 0, tilt: -3, flip: true, s: 1.1 }];
-  const pose = poses[k % poses.length]; const prev = poses[Math.max(0, k - 1) % poses.length];
-  const move = k === 0 ? 1 : interpolate(local, [0, 6], [0, 1], { ...clamp, easing: ease });
-  const px = (prev.x + (pose.x - prev.x) * move) * W; const tilt = prev.tilt + (pose.tilt - prev.tilt) * move + Math.sin(f / 7) * 2;
-  const bounce = interpolate(local, [0, 3, 8], [0.12, -0.05, 0], clamp);
-  const nh = (V ? H * 0.62 : H * 1.15) * (prev.s + (pose.s - prev.s) * move); const visible = nh * 0.6;
-  const baseY = V ? H * 0.74 : H;
-  const bubbleAt = localAt + 4; const bubble = pop(f, bubbleAt, 8) * (1 - exit);
+  // Entrada e saída em dois "quadros" de stop motion, não em animação contínua.
+  const shown = f < inAt ? 0 : f < inAt + 2 ? 0.55 : f < outAt ? 1 : f < outAt + 2 ? 0.55 : 0;
+  const blur = 18 * interpolate(f, [0, inAt + 3], [0, 1], clamp) * (1 - interpolate(f, [outAt, outAt + 5], [0, 1], clamp));
+  const spots = V ? [0, -0.17, 0.16, -0.06, 0.1] : [0, -0.2, 0.18, -0.08, 0.12];
+  const cx = W / 2 + spots[k % spots.length] * W;
+  const flip = k % 2 === 1;
+  // Figura inteira; ~28% do corpo (pernas) fica abaixo da borda, para tronco, braços e mãos aparecerem.
+  const nh = V ? H * 0.56 : H * 0.95;
+  const bottom = H + nh * 0.28 + (1 - shown) * nh * 0.75;
+  const top = bottom - nh;
+  const pop_ = local < 1 ? 1.25 : 1; // balão "estala" num quadro
+  const bubbleOn = shown === 1 && local >= 2 && (fala.icone || fala.texto);
   return (
     <AbsoluteFill>
-      <AbsoluteFill style={{ filter: blur > 0.3 ? `blur(${blur}px) brightness(${1 - blur / 40})` : undefined, transform: `scale(${1.04 + blur / 300})` }}>
+      <AbsoluteFill style={{ filter: blur > 0.3 ? `blur(${blur}px) brightness(${1 - blur / 45})` : undefined, transform: `scale(${1.04 + blur / 300})` }}>
         {asset ? <Media asset={asset} len={len} motion="panoramica" /> : <Background kind={fundo} tint={tom} />}
       </AbsoluteFill>
-      <div style={{ position: 'absolute', left: (W - noxW(nh)) / 2 + px, top: baseY - visible * shown, width: noxW(nh), height: visible, overflow: 'hidden', transform: `rotate(${tilt}deg) scale(${1 + bounce}, ${1 - bounce})`, transformOrigin: '50% 100%' }}>
-        <Nox mood={(fala.humor as Mood) || 'feliz'} height={nh} x={0} y={0} flip={pose.flip} look={pose.x < 0 ? 1 : pose.x > 0 ? -1 : 0} />
-      </div>
-      {(fala.icone || fala.texto) && bubble > 0.01 && (
-        <div style={{ position: 'absolute', left: W / 2 + px, top: baseY - visible * shown - (V ? 120 : 70), transform: `translate(-50%, -100%) scale(${bubble}) rotate(${(k % 2 ? 3 : -3)}deg)`, transformOrigin: '50% 100%' }}>
+      {shown > 0 && <NoxPose pose={fala.pose} mood={(fala.humor as Mood) || 'feliz'} height={nh} cx={cx} bottom={bottom} flip={flip} seed={`aparte${k}`} />}
+      {bubbleOn && (
+        <div style={{ position: 'absolute', left: cx, top: top - (V ? 30 : 20), transform: `translate(-50%, -100%) scale(${pop_}) rotate(${(k % 2 ? 3 : -3)}deg)`, transformOrigin: '50% 100%' }}>
           <div style={{ background: '#fff', border: `8px solid ${C.ink}`, borderRadius: 46, boxShadow: `12px 12px 0 ${C.ink}`, padding: '22px 34px', display: 'flex', alignItems: 'center', gap: 22, maxWidth: V ? W - 120 : 900 }}>
             {fala.icone && <IconArt name={fala.icone} size={fala.texto ? (V ? 170 : 150) : (V ? 260 : 210)} />}
-            {fala.texto && <span style={{ fontFamily: ANTON, fontSize: Math.min(V ? 96 : 92, (V ? 1300 : 1500) / Math.max(5, fala.texto.length)), color: C.ink, textTransform: 'uppercase', lineHeight: 1 }}>{fala.texto}</span>}
+            {fala.texto && <span style={{ fontFamily: ANTON, fontSize: fit(fala.texto, V ? W - 360 : 640, V ? 96 : 92, 2), color: C.ink, textTransform: 'uppercase', lineHeight: 1 }}>{fala.texto}</span>}
           </div>
           <div style={{ width: 0, height: 0, margin: '0 auto', borderLeft: '26px solid transparent', borderRight: '26px solid transparent', borderTop: `42px solid ${C.ink}` }} />
         </div>

@@ -40,10 +40,19 @@ O ritmo segue as referências do canal: uma troca de informação a cada 1,5–3
 
 Para voltar à timeline de clips, use `motion_plan_set` com `plan: null`. Na interface, use Produção assistida → *Montar em motion (composição)*.
 
-## O Nox e os Shorts
+## Como o plano monta o vídeo
 
-- **Aparte (`aparte`):** a cena da obra continua atrás e desfoca, e o Nox sobe pelo meio, da cintura para cima. Ele comenta em 1 a 4 tempos (`falas: [{ humor, icone, texto }]`), mudando de posição e de expressão, com um balão de ícone ou texto acima. No fim ele desce e o fundo volta nítido. O plano automático usa o aparte nas perguntas e comentários sobre o que está na tela, e o Nox de corpo inteiro só raramente.
-- **Shorts 9:16:** todas as cenas têm layout próprio para 1080×1920. O conteúdo fica entre 12% e 72% da altura e a legenda acima da interface do Shorts. O teste real está em `npm run qa:motion -- --only=c`.
+- **A cena da obra é a base.** Metade das evidências entra sozinha, em tela cheia (`cheia: true`); a outra metade ganha painel, rótulo e fundo.
+- **Variação:** fundos e cores nunca se repetem de um beat para o outro.
+- **O Nox em opinião e humor (`aparte`):**
+  - a cena desfoca e o Nox aparece inteiro, subindo pela borda de baixo, com as pernas fora do quadro;
+  - cada fala (`falas: [{ pose, humor, icone, texto }]`) troca a pose de uma vez, em stop motion, com balão de ícone ou texto;
+  - as poses são PNGs em `assets/brand/nox/poses/` (lista e pedido para gerar em `skills/diazverso-nox/references/poses.md` do plugin). Sem o PNG, entra o Nox canônico com a expressão;
+  - o plano escolhe a pose pelo tom da frase: pergunta → `pensando`, opinião → `apontando`, erro → `facepalm`.
+- **Extras por cima da cena** (`extras` no beat):
+  - **caixinhas HQ** que não precisam ser faladas: inscrição perto de 20%, like perto de 55% e "minha opinião, tá?" nas frases opinativas;
+  - **recortes PNG:** uma mídia com `recorte` no nome (ex.: `recorte-moeda.png`) entra por cima do beat em que é citada, em vez de virar cena.
+- **Shorts 9:16:** todas as cenas têm layout próprio. O teste real é `npm run qa:motion -- --only=c`.
 
 ## Cena 3D
 

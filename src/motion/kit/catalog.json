@@ -8,8 +8,11 @@
     "Beats em segundos, contíguos e em ordem (at do próximo = at + duration do anterior). Com narração, alinhe o at ao início da frase dita.",
     "Números inventados para explicar uma ideia levam fonte 'simulação'; dados reais levam a fonte.",
     "Cena 3D (paineis3d) é destaque: no máximo 1 a cada ~30 s.",
-    "O Nox não aparece o tempo todo: a cena da obra é a base; o Nox entra por aparte (cintura para cima, fundo desfocado) em piadas, perguntas e explicações, e de corpo inteiro (cena nox) só em poucos momentos.",
-    "Shorts 9:16: todas as cenas são diagramadas para vertical; o conteúdo fica entre 12% e 72% da altura e a legenda acima da interface do Shorts."
+    "Shorts 9:16: todas as cenas são diagramadas para vertical; o conteúdo fica entre 12% e 72% da altura e a legenda acima da interface do Shorts.",
+    "A base do vídeo é a cena da obra; em muitos beats ela fica sozinha, em tela cheia (evidencia com cheia=true), sem motion design por cima.",
+    "O Nox entra em opinião e humor: aparte (inteiro, subindo pela borda, pernas fora do quadro) com poses em stop motion; corpo inteiro em cena própria só às vezes.",
+    "Variar sempre: fundo, cor, tipo de cena e movimento nunca se repetem de um beat para o outro.",
+    "Caixinhas HQ de lembrete (inscreva-se, like, opinião, spoiler) e recortes PNG do que está sendo falado entram como extras ao longo do vídeo."
   ],
   "humores": [
     "bravo",
@@ -60,12 +63,14 @@
       }
     },
     "frase": {
-      "uso": "Respiro: frase 'pensada' nas estrelas, linha a linha; pode riscar uma palavra e fechar com destaque gigante",
+      "uso": "Respiro: frase em caixas Anton que estalam linha a linha sobre um fundo que varia; pode riscar uma palavra e fechar com destaque gigante",
       "props": {
         "linhas": "string[] (obrigatório)",
         "riscar": "palavra a riscar",
         "destaque": "frase final gigante",
-        "humor": "Nox pequeno reagindo"
+        "humor": "Nox pequeno reagindo",
+        "fundo": "estrelas | explosao | meio-tom | branco | papel | escuro (variar a cada uso)",
+        "tom": "cor do fundo: amarelo, vermelho, azul..."
       },
       "exemplo": {
         "linhas": [
@@ -84,7 +89,8 @@
         "subtexto": "texto menor",
         "fundo": "fundo (padrão explosao)",
         "tom": "cor do fundo",
-        "lado": "direita ou esquerda (onde fica o Nox)"
+        "lado": "direita ou esquerda (onde fica o Nox)",
+        "poses": "lista de { pose, humor }: o Nox troca de pose em stop motion ao longo do beat"
       },
       "exemplo": {
         "humor": "piscada",
@@ -287,10 +293,10 @@
       "render": "precisa de WebGL; só imagens (vídeo não vira textura); 2–3 s por painel"
     },
     "aparte": {
-      "uso": "Aparte do Nox sobre a cena da obra: o fundo desfoca, o Nox sobe pelo meio da cintura para cima, comenta em 1–4 tempos mudando de posição e expressão, com um balão de ícone ou texto acima dele; depois desce e o fundo volta nítido. Para piada, pergunta, ironia ou explicação rápida sobre o que está na tela",
+      "uso": "Aparte do Nox (momentos cômicos, opinião): a cena da obra desfoca e o Nox aparece INTEIRO subindo pela borda de baixo (pernas fora do quadro); cada fala é uma pose nova em stop motion (troca seca, sem animação entre poses), com balão de ícone ou texto; depois ele sai de uma vez e o fundo volta nítido",
       "props": {
         "midia": "media:<id> — a cena que continua atrás (desfocada)",
-        "falas": "lista de 1–4 { humor, icone, texto } — cada uma é um tempo do aparte",
+        "falas": "lista de 1–5 { pose, humor, icone, texto } — cada fala troca a pose de uma vez",
         "fundo": "fundo quando não há mídia",
         "tom": "cor do fundo"
       },
@@ -353,6 +359,47 @@
       "texto": "O HERÓI\n*QUEBRADO*",
       "fundo": "preto",
       "lado": "esquerda"
+    }
+  },
+  "poses": {
+    "lista": [
+      "pensando",
+      "arminha",
+      "apontando",
+      "ombros",
+      "joinha",
+      "facepalm",
+      "bracos-cruzados",
+      "acenando",
+      "rindo",
+      "assustado",
+      "comemorando",
+      "explicando"
+    ],
+    "uso": "stop motion: cada fala do Nox troca a pose de uma vez (sem animação entre poses). PNGs em assets/brand/nox/poses; pose ausente usa o Nox canônico com o humor",
+    "guia": "skills/diazverso-nox/references/poses.md"
+  },
+  "extras": {
+    "uso": "por cima de qualquer cena, no campo extras do beat (tempos relativos ao beat)",
+    "caixinha": {
+      "props": {
+        "preset": "inscricao | like | sininho | opiniao | spoiler | fonte | comenta | livre",
+        "texto": "texto próprio (livre, fonte)",
+        "canto": "superior-esquerdo | superior-direito | inferior-esquerdo | inferior-direito",
+        "at": "segundos dentro do beat",
+        "duracao": "segundos"
+      },
+      "regra": "lembretes que não precisam ser falados: inscrição perto de 20% do vídeo, like perto de 55%, opinião nas frases opinativas, spoiler antes de revelar final"
+    },
+    "recorte": {
+      "props": {
+        "midia": "media:<id> de um PNG transparente (nome com recorte-)",
+        "lado": "esquerda | direita | centro",
+        "tamanho": "0.1–0.9 da altura",
+        "at": "segundos",
+        "duracao": "segundos"
+      },
+      "regra": "objeto ou personagem de que se fala estala na tela em stop motion"
     }
   }
 }

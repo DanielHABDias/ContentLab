@@ -3,18 +3,22 @@ import { AbsoluteFill, Audio, Composition, Sequence, staticFile, useCurrentFrame
 import { ANTON, C, Film, Flash, resolvePublic, useAnton } from './fx';
 import { Thumbnail, calculateThumb } from './Thumbnail';
 import { SCENES_3D } from './three';
+import { Extra, Extras } from './overlays';
+import { NoxPoses } from './Nox';
 import { Asset, Assets, SCENES } from './scenes';
 
 /**
  * Composição única do roteiro em beats (contrato `diazverso-motion-v1`).
  * Tempos em segundos; o editor resolve `media:<id>` em `assets` (caminhos da pasta pública).
  */
-export type Beat = { id: string; scene: string; at: number; duration: number; props?: Record<string, unknown>; sfx?: Array<{ name: string; at?: number; volume?: number }>; flash?: boolean; legenda?: boolean };
+export type Beat = { id: string; scene: string; at: number; duration: number; props?: Record<string, unknown>; sfx?: Array<{ name: string; at?: number; volume?: number }>; flash?: boolean; legenda?: boolean; extras?: Extra[] };
 export type Word = { start: number; end: number; text: string };
 export type MotionProps = {
   plan: { fps: number; width: number; height: number; duration: number; beats: Beat[]; captions?: boolean; musicVolume?: number; duck?: number };
   assets: Record<string, Asset>;
   narration?: string | null; music?: string | null; words?: Word[];
+  /** Poses do Nox disponíveis: nome → caminho (public:brand/poses/<pose>.png). */
+  poses?: Record<string, string>;
 };
 
 const NO_CAPTION = new Set(['titulo', 'cta']);
@@ -46,7 +50,7 @@ const Captions: React.FC<{ words: Word[]; fps: number; hidden: (t: number) => bo
 
 export const MotionVideo: React.FC<MotionProps> = (raw) => {
   useAnton();
-  const { plan, assets, narration, music, words = [] } = resolvePublic(raw) as MotionProps;
+  const { plan, assets, narration, music, words = [], poses = {} } = resolvePublic(raw) as MotionProps;
   const { fps, beats } = plan;
   const frames = (s: number) => Math.max(0, Math.round(s * fps));
   const speaking = (t: number) => words.some(w => t >= w.start - 0.15 && t <= w.end + 0.25);
@@ -54,11 +58,12 @@ export const MotionVideo: React.FC<MotionProps> = (raw) => {
   const captionHidden = (t: number) => beats.some(b => b.legenda === false || NO_CAPTION.has(b.scene) ? t >= b.at && t < b.at + b.duration && (b.legenda !== true) : false);
   return (
     <Assets.Provider value={assets}>
+      <NoxPoses.Provider value={poses}>
       <AbsoluteFill style={{ background: '#000' }}>
         {beats.map(beat => {
           const Scene = ALL_SCENES[beat.scene];
           const len = Math.max(1, frames(beat.duration));
-          return Scene ? <Sequence key={beat.id} from={frames(beat.at)} durationInFrames={len}><Scene len={len} {...(beat.props || {})} /></Sequence> : null;
+          return Scene ? <Sequence key={beat.id} from={frames(beat.at)} durationInFrames={len}><Scene len={len} {...(beat.props || {})} />{beat.extras?.length ? <Extras extras={beat.extras} fps={fps} beatLen={len} /> : null}</Sequence> : null;
         })}
         {beats.filter(b => b.flash !== false && b.at > 0).map(b => <Flash key={`f${b.id}`} at={frames(b.at)} length={5} />)}
         <Film />
@@ -69,6 +74,7 @@ export const MotionVideo: React.FC<MotionProps> = (raw) => {
           <Sequence key={`${beat.id}-${i}`} from={frames(beat.at + (cue.at || 0))} durationInFrames={frames(3)}><Audio src={staticFile(`sfx/${cue.name}.wav`)} volume={cue.volume ?? 0.5} /></Sequence>
         )))}
       </AbsoluteFill>
+      </NoxPoses.Provider>
     </Assets.Provider>
   );
 };

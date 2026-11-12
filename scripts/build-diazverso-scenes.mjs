@@ -93,6 +93,9 @@ const kitSource = path.join(plugin, 'skills/diazverso-motion/kit'); const kitOut
 await rm(kitOut, { recursive: true, force: true }); await mkdir(kitOut, { recursive: true });
 for (const file of await readdir(kitSource)) await copyFile(path.join(kitSource, file), path.join(kitOut, file));
 await copyFile(path.join(plugin, 'assets/brand/nox/nox-sem-olhos.png'), path.join(brandOut, 'nox/nox-sem-olhos.png'));
+// Poses do Nox para o stop motion (quando o plugin tiver).
+await rm(path.join(brandOut, 'nox/poses'), { recursive: true, force: true });
+if (existsSync(path.join(plugin, 'assets/brand/nox/poses'))) { await mkdir(path.join(brandOut, 'nox/poses'), { recursive: true }); for (const file of (await readdir(path.join(plugin, 'assets/brand/nox/poses'))).filter(name => name.endsWith('.png'))) await copyFile(path.join(plugin, 'assets/brand/nox/poses', file), path.join(brandOut, 'nox/poses', file)); }
 await mkdir(path.join(brandOut, 'sfx'), { recursive: true });
 for (const file of (await readdir(path.join(plugin, 'assets/sfx/motion'))).filter(name => name.endsWith('.wav'))) await copyFile(path.join(plugin, 'assets/sfx/motion', file), path.join(brandOut, 'sfx', file));
 await writeFile(path.join(kitOut, 'VERSION'), `${version}\n`);

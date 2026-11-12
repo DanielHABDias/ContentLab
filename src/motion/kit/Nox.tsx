@@ -1,5 +1,5 @@
-import React from 'react';
-import { Img, interpolate, staticFile, useCurrentFrame } from 'remotion';
+import React, { createContext, useContext } from 'react';
+import { Img, interpolate, random, staticFile, useCurrentFrame } from 'remotion';
 import { C } from './fx';
 
 /**
@@ -60,3 +60,36 @@ export const Nox: React.FC<{ mood: Mood; height: number; x: number; y: number; f
   );
 };
 
+
+/**
+ * Poses do Nox (stop motion): PNGs desenhados a partir do canônico, cada um com um gesto e a expressão
+ * dos olhos já desenhada (mão na frente do rosto pensando, arminha, apontando, dando de ombros…).
+ * Ficam em `assets/brand/nox/poses/<pose>.png` (fundo transparente, figura inteira recortada rente,
+ * pés na base). O editor entrega o mapa pose → arquivo por este contexto.
+ */
+export const NoxPoses = createContext<Record<string, string>>({});
+export const POSES = ['pensando', 'arminha', 'apontando', 'ombros', 'joinha', 'facepalm', 'bracos-cruzados', 'acenando', 'rindo', 'assustado', 'comemorando', 'explicando'] as const;
+export type Pose = typeof POSES[number] | 'parado';
+
+/** Tremidinha de stop motion: a cada `hold` frames a figura "reassenta" alguns pixels e graus. */
+export const boil = (frame: number, seed: string, hold = 3, amount = 1) => {
+  const k = Math.floor(frame / hold);
+  return { x: (random(`${seed}x${k}`) - 0.5) * 8 * amount, y: (random(`${seed}y${k}`) - 0.5) * 6 * amount, r: (random(`${seed}r${k}`) - 0.5) * 2.4 * amount };
+};
+
+/**
+ * Nox numa pose, ancorado pela base (x = centro, bottom = linha dos pés na tela). Sem o PNG da pose,
+ * usa o Nox canônico com a expressão `mood` e uma inclinação própria da pose, para o vídeo nunca quebrar.
+ */
+export const NoxPose: React.FC<{ pose?: Pose | string; mood?: Mood; height: number; cx: number; bottom: number; flip?: boolean; tilt?: number; seed?: string }> = ({ pose = 'parado', mood = 'feliz', height, cx, bottom, flip = false, tilt = 0, seed = 'nox' }) => {
+  const frame = useCurrentFrame();
+  const poses = useContext(NoxPoses);
+  const b = boil(frame, seed);
+  const src = pose && pose !== 'parado' ? poses[pose] : undefined;
+  const lean: Record<string, number> = { pensando: -6, apontando: 5, ombros: 0, facepalm: -8, assustado: 4, comemorando: -3, acenando: 4, arminha: 6, rindo: -4, joinha: 3, explicando: 2 };
+  const angle = tilt + b.r + (src ? 0 : lean[pose] || 0);
+  const box: React.CSSProperties = { position: 'absolute', left: cx + b.x, top: bottom - height + b.y, height, transform: `translateX(-50%) scaleX(${flip ? -1 : 1}) rotate(${angle}deg)`, transformOrigin: '50% 100%' };
+  if (src) return <Img src={src} style={{ ...box, width: 'auto' }} />;
+  const w = (height * 412) / 669;
+  return <div style={{ ...box, width: w }}><Nox mood={mood} height={height} x={0} y={0} blinkEvery={100000} /></div>;
+};

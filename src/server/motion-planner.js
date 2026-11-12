@@ -42,6 +42,9 @@ const mood = text => (/\?$/.test(text) ? 'surpreso' : NEGATIVE.test(text) ? 'ted
 /** Ícone do balão do Nox pelo assunto da frase (kit: icons.tsx). */
 const ICON_RULES = [[/dinheiro|grana|pag[ao]|preço|caro|rico/, 'dinheiro'], [/tempo|anos?\b|hora|demor|rápido demais/, 'relogio'], [/\bam[oa]r?\b|gosta|coração|paix/, 'coracao'], [/morr|morte|matar|mata\b/, 'caveira'], [/ideia|percebe|entend|lição|aprend/, 'lampada'], [/poder|força|forte|energia/, 'raio'], [/proteg|defend|escudo/, 'escudo'], [/\brei\b|melhor|maior|domina/, 'coroa'], [/incrível|absurd|explod|insano/, 'fogo'], [/errad|erro|nunca|falh|fracass/, 'errado'], [/certo|acert|sempre|funciona/, 'certo'], [/olha|\bvê\b|\bver\b|repara/, 'olho'], [/pensa|mente|cabeça|lógica/, 'cerebro'], [/venc|ganh|vitória|campe/, 'trofeu']];
 const iconFor = text => { const folded = fold(text); const hit = ICON_RULES.find(([rule]) => rule.test(folded)); return hit ? hit[1] : /\?$/.test(text) ? 'interrogacao' : 'exclamacao'; };
+/** Pose do Nox (stop motion) pelo tom da frase: pergunta pensa, opinião aponta, ironia/erro é facepalm. */
+const OPINION = /\b(pra mim|eu acho|acho que|na real|sinceramente|opinião|convenhamos|vamos combinar)\b/i;
+const posesFor = text => (/\?$/.test(text) ? ['pensando', 'ombros'] : OPINION.test(text) ? ['apontando', 'arminha'] : NEGATIVE.test(text) ? ['facepalm', 'rindo'] : SURPRISE.test(text) ? ['assustado', 'explicando'] : ['explicando', 'joinha']);
 const NUMBER = /(\d+(?:[.,]\d+)?)\s*(%|mil|milhões|bilhões|anos)?/gi;
 /** Primeiro número que não é um ano (anos viram contexto, não contador). */
 const numberIn = text => [...String(text).matchAll(NUMBER)].find(match => !/^(1[0-9]{3}|20[0-9]{2})$/.test(match[1]) || match[2] === '%') || null;
@@ -74,7 +77,15 @@ export function timeSentences(windows, words = []) {
  */
 export function planMotion({ windows, words = [], media = [], title = '', question = '', end = null }) {
   const timed = timeSentences(windows, words);
-  const pool = media.map(item => ({ ...item, key: fold(String(item.name || '').replace(/\.[a-z0-9]+$/i, '')) }));
+  const all = media.map(item => ({ ...item, key: fold(String(item.name || '').replace(/\.[a-z0-9]+$/i, '')) }));
+  // Recortes PNG (nome com "recorte" ou "png-"): entram por cima da cena quando citados, não como cena.
+  const isCut = item => /(^|[^a-z])(recorte|png)([^a-z]|$)/.test(item.key);
+  const pool = all.filter(item => !isCut(item)); const cutouts = all.filter(isCut);
+  const cutFor = text => { const said = new Set(fold(text).split(/[^a-z0-9]+/).filter(word => word.length >= 3)); return cutouts.find(item => item.key.split(/[^a-z0-9]+/).some(word => word.length >= 3 && !['recorte', 'png'].includes(word) && said.has(word))); };
+  // Fundos sempre variando: nunca o mesmo de um beat para o outro.
+  const BGS = [['papel'], ['meio-tom', 'azul'], ['escuro'], ['explosao', 'amarelo'], ['meio-tom', 'vermelho'], ['estrelas'], ['explosao', 'vermelho'], ['branco']];
+  let bgTurn = 0; const nextBg = (allowed = BGS) => { const options = allowed.filter(([kind, tone]) => `${kind}${tone || ''}` !== lastBg); const [kind, tone] = options[bgTurn++ % options.length]; lastBg = `${kind}${tone || ''}`; return tone ? { fundo: kind, tom: tone } : { fundo: kind }; };
+  let lastBg = '';
   let next = 0; const recent = []; let lastMedia = null;
   const pick = text => {
     if (!pool.length) return null;
@@ -112,11 +123,11 @@ export function planMotion({ windows, words = [], media = [], title = '', questi
       // Pergunta ou piada sobre o que está na tela: aparte do Nox sobre a cena desfocada (da cintura para cima).
       if (question_ && p === pieces - 1 && lastMedia && recentScenes().at(-1) !== 'aparte') {
         const falas = len >= 2.6 ? [{ humor: 'surpreso', icone: iconFor(text) }, { humor: mood(text) === 'surpreso' ? 'confuso' : mood(text), texto: short(text, 22).toUpperCase() }] : [{ humor: 'surpreso', icone: iconFor(text) }];
-        push('aparte', at, len, { midia: `media:${lastMedia}`, falas }, { sfx: [{ name: 'swish', at: 0, volume: 0.45 }, { name: 'pop', at: 0.45, volume: 0.6 }], flash: false });
+        push('aparte', at, len, { midia: `media:${lastMedia}`, falas: falas.map((fala, i) => ({ pose: posesFor(text)[i % 2], ...fala })) }, { sfx: [{ name: 'swish', at: 0, volume: 0.45 }, { name: 'pop', at: 0.45, volume: 0.6 }], flash: false });
         continue;
       }
-      if (question_ && p === pieces - 1) { const scene = avoid('nox', 'frase'); push(scene, at, len, scene === 'nox' ? { humor: 'surpreso', texto: short(text, 26).toUpperCase(), fundo: 'explosao' } : { linhas: twoLines(short(text, 64)), humor: 'surpreso' }, { sfx: [{ name: 'pop', at: 0.1, volume: 0.6 }] }); if (scene === 'frase') beats.at(-1).legenda = false; continue; }
-      if (item.role === 'payoff' && p === 0) { push('frase', at, len, { linhas: twoLines(short(text, 70)), destaque: ending(text) }, { sfx: [{ name: 'swish', at: 0, volume: 0.4 }, { name: 'impact', at: len * 0.55, volume: 0.7 }] }); beats.at(-1).legenda = false; continue; }
+      if (question_ && p === pieces - 1) { const scene = avoid('nox', 'frase'); push(scene, at, len, scene === 'nox' ? { humor: 'surpreso', texto: short(text, 26).toUpperCase(), fundo: 'explosao' } : { linhas: twoLines(short(text, 64)), humor: 'surpreso', ...nextBg() }, { sfx: [{ name: 'pop', at: 0.1, volume: 0.6 }] }); if (scene === 'frase') beats.at(-1).legenda = false; continue; }
+      if (item.role === 'payoff' && p === 0) { push('frase', at, len, { linhas: twoLines(short(text, 70)), destaque: ending(text), ...nextBg() }, { sfx: [{ name: 'swish', at: 0, volume: 0.4 }, { name: 'impact', at: len * 0.55, volume: 0.7 }] }); beats.at(-1).legenda = false; continue; }
       const asset = pool.length && (named(text) || (p + index) % 3 !== 2) ? pick(text) : null;
       if (asset) {
         const scene = avoid('evidencia', 'nox');
@@ -124,19 +135,30 @@ export function planMotion({ windows, words = [], media = [], title = '', questi
           const two = pool.length >= 2 && len >= 2.4 && (index + p) % 4 === 1;
           const tag = item_ => (item_.cited ? label(item_.name) : undefined);
           if (two) { const other = pick(`${text} outra`); push('pagina', at, len, { paineis: [{ midia: `media:${asset.id}`, rotulo: tag(asset) }, { midia: `media:${other.id}`, rotulo: tag(other) }] }, { sfx: [{ name: 'camera', at: 0, volume: 0.5 }, { name: 'camera', at: len * 0.4, volume: 0.5 }] }); }
-          else push('evidencia', at, len, { midia: `media:${asset.id}`, rotulo: tag(asset), humor: (index + p) % 6 === 0 ? mood(text) : undefined, movimento: ['entrar', 'sair', 'panoramica'][(index + p) % 3] }, { flash: false });
+          else {
+            // Metade das evidências é só a cena, em tela cheia, sem moldura; a outra metade ganha painel e fundo variado.
+            const plain = (index + p) % 2 === 0;
+            push('evidencia', at, len, { midia: `media:${asset.id}`, rotulo: tag(asset), humor: !plain && (index + p) % 6 === 3 ? mood(text) : undefined, movimento: ['entrar', 'sair', 'panoramica'][(index + p) % 3], ...(plain ? { cheia: true } : nextBg([['papel'], ['meio-tom', 'azul'], ['escuro'], ['meio-tom', 'vermelho'], ['branco']])) }, { flash: false });
+          }
           continue;
         }
       }
       // Sem mídia para esta frase: o Nox comenta por cima da última cena (aparte) ou a frase vira texto pensado;
       // o Nox de corpo inteiro fica para poucos momentos.
       const turn = (index + p) % 3;
-      if (turn === 1 && lastMedia && recentScenes().at(-1) !== 'aparte') { push('aparte', at, len, { midia: `media:${lastMedia}`, falas: [{ humor: mood(text), icone: iconFor(text) }, ...(len >= 2.6 ? [{ humor: mood(text) === 'feliz' ? 'piscada' : 'determinado', texto: short(text, 22).toUpperCase() }] : [])] }, { sfx: [{ name: 'swish', at: 0, volume: 0.45 }, { name: 'pop', at: 0.45, volume: 0.6 }], flash: false }); continue; }
+      if ((turn === 1 || OPINION.test(text)) && lastMedia && recentScenes().at(-1) !== 'aparte') { const [first, second] = posesFor(text); push('aparte', at, len, { midia: `media:${lastMedia}`, falas: [{ pose: first, humor: mood(text), icone: iconFor(text) }, ...(len >= 2.6 ? [{ pose: second, humor: mood(text) === 'feliz' ? 'piscada' : 'determinado', texto: short(text, 22).toUpperCase() }] : [])] }, { sfx: [{ name: 'swish', at: 0, volume: 0.45 }, { name: 'pop', at: 0.45, volume: 0.6 }], flash: false }); continue; }
       const scene = avoid(turn === 2 && !beats.slice(-6).some(beat => beat.scene === 'nox') ? 'nox' : 'frase', 'frase');
-      if (scene === 'nox') push('nox', at, len, { humor: mood(text), texto: short(text, 26).toUpperCase(), fundo: ['explosao', 'meio-tom', 'estrelas'][(index + p) % 3], lado: (index + p) % 2 ? 'direita' : 'esquerda' }, { sfx: [{ name: 'pop', at: 0.05, volume: 0.55 }] });
-      else { push('frase', at, len, { linhas: twoLines(short(text, 64)) }); beats.at(-1).legenda = false; }
+      if (scene === 'nox') push('nox', at, len, { humor: mood(text), texto: short(text, 26).toUpperCase(), ...nextBg([['explosao', 'amarelo'], ['meio-tom', 'azul'], ['explosao', 'vermelho'], ['estrelas'], ['meio-tom', 'vermelho']]), lado: (index + p) % 2 ? 'direita' : 'esquerda', poses: posesFor(text).map(pose => ({ pose, humor: mood(text) })) }, { sfx: [{ name: 'pop', at: 0.05, volume: 0.55 }] });
+      else { push('frase', at, len, { linhas: twoLines(short(text, 64)), ...nextBg() }); beats.at(-1).legenda = false; }
     }
   });
   if (end && beats.length) { const last = beats.at(-1); last.duration = round(Math.max(last.duration, end - last.at)); }
+  // Recortes PNG citados na fala entram por cima do beat em que são ditos.
+  for (const item of timed) { const cut = cutFor(item.text); if (!cut) continue; const beat = beats.find(b => item.start >= b.at - 0.05 && item.start < b.at + b.duration); if (beat && beat.scene !== 'cta' && beat.scene !== 'titulo') (beat.extras ||= []).push({ tipo: 'recorte', midia: `media:${cut.id}`, at: round(Math.max(0, item.start - beat.at)), duracao: round(Math.min(beat.duration, item.end - item.start + 0.4)) }); }
+  // Caixinhas de lembrete (sem precisar ser faladas): inscrição perto de 20%, like perto de 55% e "opinião" nas frases opinativas.
+  const total = beats.length ? beats.at(-1).at + beats.at(-1).duration : 0;
+  const host = time => beats.find(b => time >= b.at && time < b.at + b.duration && !['titulo', 'cta', 'aparte'].includes(b.scene) && b.duration >= 1.6);
+  if (total >= 25) for (const [share, preset] of [[0.2, 'inscricao'], [0.55, 'like']]) { const beat = host(total * share) || beats.find(b => b.at >= total * share && !['titulo', 'cta', 'aparte'].includes(b.scene)); if (beat) (beat.extras ||= []).push({ tipo: 'caixinha', preset, at: 0.2, duracao: Math.min(3, Math.max(1.4, beat.duration - 0.3)) }); }
+  for (const item of timed) if (OPINION.test(item.text)) { const beat = beats.find(b => item.start >= b.at - 0.05 && item.start < b.at + b.duration && !['titulo', 'cta'].includes(b.scene) && b.duration >= 1.2); if (beat && !beat.extras?.some(extra => extra.tipo === 'caixinha')) (beat.extras ||= []).push({ tipo: 'caixinha', preset: 'opiniao', canto: 'superior-esquerdo', at: 0.1, duracao: Math.min(2.5, beat.duration - 0.2) }); }
   return { schema: 'contentlab-motion-v1', beats, narration: true, captions: true, music: { volume: 0.5, duck: 0.25 }, source: 'auto' };
 }
