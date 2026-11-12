@@ -91,8 +91,9 @@ Sem variantes, as palavras de impacto dos títulos A e B viram o texto. Versões
   - `aparte` (o Nox comentando sobre a cena) e `paineis3d` (3D).
   - Props, exemplos e regras: `motion_kit`.
 - **Humores do Nox:** `bravo`, `feliz`, `surpreso`, `tedio`, `confuso`, `piscada`, `determinado` e `triste`.
-- **SFX:** os nomes vêm da lista `sfx` do catálogo do kit (hoje `pop`, `tick`, `type`, `whoosh`, `swish`, `impact`, `sub`, `glitch`, `riser`, `ding`, `error` e `camera`). Cada som cai no quadro do evento da tela; som novo (sintetizado ou do Openverse com licença comercial) entra pelo plugin e passa a valer no plano depois de `npm run scenes:diazverso`. Guia: `skills/diazverso-motion/references/som.md` do plugin.
+- **SFX:** os nomes vêm da lista `sfx` do catálogo do kit (hoje `pop`, `tick`, `type`, `whoosh`, `swish`, `impact`, `sub`, `glitch`, `riser`, `ding`, `error` e `camera`). Inclui também `clique`, `sino`, `explosao`, `tapa`, `tapa-eco`, `whoosh-rapido` e `whoosh-lento` (Freesound em CC0, pelo Openverse). O plano automático alterna `whoosh`, `swish` e `whoosh-rapido` nos cortes, põe `clique` no clique das caixinhas e `tapa` (ou `tapa-eco`, no máximo a cada 90 s) nas piadas do Nox. Cada som cai no quadro do evento da tela; som novo (sintetizado ou do Openverse com licença comercial) entra pelo plugin e passa a valer no plano depois de `npm run scenes:diazverso`. Guia: `skills/diazverso-motion/references/som.md` do plugin.
 - **Mídia:** referência `media:<id>`. Imagem ou vídeo (vídeo entra sem áudio); mídia com direitos pendentes é recusada.
+- **Metadados:** o render final passa por `src/render/clean-metadata.js`: cópia de stream sem recodificar, sem etiquetas do contêiner, capítulos embutidos e SEI do x264, com `faststart`.
 - **Legenda:** nos Shorts (9:16) ela fica o tempo todo; no vídeo longo (16:9) o plano automático deixa só no gancho (primeiros 6 s) e nos apartes do Nox, com `legenda: false` nos outros beats. `legenda: false` esconde a legenda num beat; em `titulo` e `cta` ela já fica escondida.
 
 ## Verificação da entrega

@@ -1,9 +1,10 @@
-import { copyFile, link, mkdir, mkdtemp, open, readdir, readFile, rename, rm, stat } from 'node:fs/promises';
+import { copyFile, link, mkdir, mkdtemp, open, readdir, readFile, rm, stat } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
+import { cleanMetadata } from './clean-metadata.js';
 
 const run = promisify(execFile);
 const here = import.meta.url.startsWith('file:') ? path.dirname(fileURLToPath(import.meta.url)) : path.join(process.cwd(), 'src/render');
@@ -134,7 +135,8 @@ export class MotionRenderer {
       onProgress({ phase: 'Ajustando o volume', progress: 0.92 });
       const temporary = `${output}.partial.mp4`;
       await this.#loudness(raw, temporary);
-      await rename(temporary, output);
+      onProgress({ phase: 'Tirando os metadados', progress: 0.96 });
+      await cleanMetadata(this, temporary, output); await rm(temporary, { force: true });
       onProgress({ phase: 'Conferindo o arquivo', progress: 0.98 });
       return { status: 'completed', output: path.resolve(output), cached: false, inspection: await this.inspect(output) };
     } catch (error) {

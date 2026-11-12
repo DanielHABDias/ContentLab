@@ -1,4 +1,4 @@
-import { copyFile, mkdir, mkdtemp, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { execFile, spawn } from 'node:child_process';
@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { compileRenderPlan, missingSources } from './render-plan.js';
 import { buildFfmpegArgs } from './ffmpeg-graph.js';
 import { MotionRenderer } from './motion-renderer.js';
+import { cleanMetadata } from './clean-metadata.js';
 
 const run = promisify(execFile);
 const ANTON = import.meta.url.startsWith('file:') ? path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../assets/brand/fonts/Anton-Regular.ttf') : path.join(process.cwd(), 'assets/brand/fonts/Anton-Regular.ttf');
@@ -54,14 +55,14 @@ export class FfmpegRenderer {
     const plan = this.#plan(project);
     if (!(scale > 0 && scale <= 1)) throw new Error('Escala de render inválida');
     const cache = path.join(this.root, 'cache', `${plan.fingerprint}-${String(scale).replace('.', '_')}.mp4`); await mkdir(path.dirname(cache), { recursive: true });
-    if (await exists(cache)) { await copy(cache, output); return { status: 'completed', output: path.resolve(output), cached: true, plan, inspection: await this.inspect(output, plan, { scale }) }; }
+    if (await exists(cache)) { await cleanMetadata(this, cache, output); return { status: 'completed', output: path.resolve(output), cached: true, plan, inspection: await this.inspect(output, plan, { scale }) }; }
     const temporary = `${cache}.partial.mp4`;
     onProgress({ phase: 'rendering', progress: 0 });
     try {
       const manyClips = plan.layers.filter(layer => ['media', 'component'].includes(layer.type)).length > 32;
       if (manyClips && plan.duration > 60) await this.#renderSegments(plan, { output: temporary, scale, signal, onProgress });
       else await this.#run(plan, { output: temporary, scale }, { signal, onProgress, total: plan.duration });
-      await rename(temporary, cache); await copy(cache, output);
+      await rename(temporary, cache); await cleanMetadata(this, cache, output);
     }
     catch (error) { await rm(temporary, { force: true }); if (error.name === 'AbortError') return { status: 'cancelled', output: null, plan }; throw error.code ? error : new Error(`Render falhou: ${lastLines(error.stderr || error.message)}`); }
     onProgress({ phase: 'validating', progress: 0.99 }); const inspection = await this.inspect(output, plan, { scale }); onProgress({ phase: 'completed', progress: 1 });
@@ -141,4 +142,3 @@ function runFfmpeg(command, args, { signal, onTime = () => {}, timeout = Number(
 
 function lastLines(text) { return `${text}`.trim().split(/\r?\n/).slice(-3).join(' '); }
 async function exists(file) { try { await stat(file); return true; } catch { return false; } }
-async function copy(source, target) { await mkdir(path.dirname(path.resolve(target)), { recursive: true }); await copyFile(source, path.resolve(target)); }

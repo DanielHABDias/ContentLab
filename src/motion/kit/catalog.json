@@ -37,7 +37,14 @@
     "riser",
     "ding",
     "error",
-    "camera"
+    "camera",
+    "clique",
+    "sino",
+    "explosao",
+    "tapa",
+    "tapa-eco",
+    "whoosh-rapido",
+    "whoosh-lento"
   ],
   "fundos": [
     "estrelas",
