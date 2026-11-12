@@ -40,6 +40,13 @@ O ritmo segue as referências do canal: uma troca de informação a cada 1,5–3
 
 Para voltar à timeline de clips, use `motion_plan_set` com `plan: null`. Na interface, use Produção assistida → *Montar em motion (composição)*.
 
+## Cenas 3D
+
+- **`nox3d`:** o Nox em 3D cai em cena, a câmera gira em volta e ele faz um gesto: `acenar`, `apontar`, `pular`, `pensar` ou `parado`. Os olhos seguem os 8 humores, e há texto opcional ao lado.
+- **`paineis3d`:** a câmera voa por 2 a 4 painéis com imagens da obra no espaço, com rótulo e uma conclusão no fim.
+
+Quando o plano tem cena 3D, o render liga o WebGL por software (`gl: "swangle"`); funciona sem placa de vídeo. Nesta máquina, a cena 3D leva cerca de 4 s de render por segundo de vídeo. Use no máximo uma a cada ~30 s.
+
 ## Thumbnail
 
 `thumbnails_generate` usa o mesmo kit (composição `DiazversoThumb`, 1280×720). Cada variante A/B tem:
@@ -66,7 +73,8 @@ Sem variantes, as palavras de impacto dos títulos A e B viram o texto. Versões
   - `titulo`, `frase` e `nox`;
   - `evidencia`, `pagina` e `comparacao`;
   - `numero`, `ficha`, `formula` e `lista`;
-  - `cta`.
+  - `cta`;
+  - 3D: `nox3d` e `paineis3d`.
   - Props, exemplos e regras: `motion_kit`.
 - **Humores do Nox:** `bravo`, `feliz`, `surpreso`, `tedio`, `confuso`, `piscada`, `determinado` e `triste`.
 - **SFX:** `pop`, `tick`, `type`, `whoosh`, `swish`, `impact`, `sub`, `glitch`, `riser`, `ding`, `error` e `camera`.

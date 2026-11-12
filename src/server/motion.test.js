@@ -67,3 +67,19 @@ test('thumbnail do kit: still real 1280×720 com mídia da obra, texto e Nox', a
     expect(png.readUInt32BE(16)).toBe(1280); expect(png.readUInt32BE(20)).toBe(720);
   } finally { await rm(dir, { recursive: true, force: true }); }
 }, 180_000);
+
+test('cenas 3D: Nox 3D renderiza com WebGL (swangle) num still real', async () => {
+  const { mkdtemp, rm, readFile } = await import('node:fs/promises');
+  const os = await import('node:os'); const path = await import('node:path');
+  const { MotionRenderer } = await import('../render/motion-renderer.js');
+  expect(MOTION_KIT.cenas.nox3d && MOTION_KIT.cenas.paineis3d).toBeTruthy();
+  expect(MOTION_SCENES).toEqual(expect.arrayContaining(Object.keys(MOTION_KIT.cenas)));
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'contentlab-3d-test-'));
+  try {
+    const project = { aspectRatio: '16:9', media: [], motionInputs: {}, motion: { schema: 'contentlab-motion-v1', narration: false, captions: false, music: null, beats: [{ id: 'n', scene: 'nox3d', at: 0, duration: 2, props: { humor: 'bravo', gesto: 'apontar', texto: 'NOX 3D' }, sfx: [], flash: false }] } };
+    const { files } = await new MotionRenderer(dir).stills(project, { seconds: [1.5], directory: dir, scale: 0.25 });
+    const png = await readFile(files[0]);
+    expect(png.readUInt32BE(16)).toBe(480);
+    expect(png.length).toBeGreaterThan(20_000); // cena desenhada, não um quadro vazio
+  } finally { await rm(dir, { recursive: true, force: true }); }
+}, 180_000);

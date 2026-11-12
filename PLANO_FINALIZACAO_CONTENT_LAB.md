@@ -481,3 +481,9 @@ Objetivo: produzir pelo MCP vídeos no nível do demo (ritmo do RunnyIA, estéti
 - [x] `thumbnails_generate` com `style: "kit"` (padrão), variantes com mídia, texto de até 4 palavras, Nox, lado, tom, selo e VS; recusa mídia sem direitos.
 - [x] Versões de 320 px em `output/previas/` para conferir no celular.
 - [x] Teste real de render do still (1280×720).
+
+## F32 — Cenas 3D no modo composição
+
+- [x] `@remotion/three`, `three` e `@react-three/fiber` como dependências; cenas `nox3d` e `paineis3d` no contrato.
+- [x] Render com `gl: "swangle"` (WebGL por software) só quando o plano tem cena 3D: prévias e vídeo.
+- [x] Teste real: still do Nox 3D; vídeo de 14,5 s com 4 gestos do Nox e voo por 3 painéis conferido em frames (~62 s de render).

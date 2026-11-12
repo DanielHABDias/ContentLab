@@ -11,6 +11,9 @@ export const KIT_ENTRY = path.resolve(here, '../motion/kit/index.ts');
 const BRAND = path.resolve(here, '../../assets/brand');
 const SIZES = { '16:9': [1920, 1080], '9:16': [1080, 1920], '1:1': [1080, 1080], '4:5': [1080, 1350] };
 const LOUDNESS_TARGET = -14;
+/** Cenas 3D (Three.js) precisam de WebGL no Chrome headless: ANGLE sobre SwiftShader funciona sem GPU. */
+const SCENES_3D = new Set(['nox3d', 'paineis3d']);
+const chromium = plan => (plan.beats.some(beat => SCENES_3D.has(beat.scene)) ? { gl: 'swangle' } : {});
 
 /**
  * Render do modo composição: o plano de motion (beats do kit Diazverso) vira um único vídeo Remotion.
@@ -85,15 +88,16 @@ export class MotionRenderer {
       onProgress({ phase: 'Preparando o kit de motion', progress: 0.03 });
       const serveUrl = await bundle({ entryPoint: KIT_ENTRY, outDir: path.join(work, 'bundle'), publicDir, enableCaching: true, onProgress: () => {} });
       const inputProps = scaled;
-      const composition = await selectComposition({ serveUrl, id: 'DiazversoMotion', inputProps, logLevel: 'error' });
+      const chromiumOptions = chromium(plan);
+      const composition = await selectComposition({ serveUrl, id: 'DiazversoMotion', inputProps, chromiumOptions, logLevel: 'error' });
       if (stills) {
         const { renderStill } = await import('@remotion/renderer'); await mkdir(stills.directory, { recursive: true }); const files = [];
-        for (const second of stills.seconds) { const file = path.join(stills.directory, `previa-${String(Math.round(second * 10)).padStart(5, '0')}.png`); await renderStill({ serveUrl, composition, frame: Math.min(composition.durationInFrames - 1, Math.max(0, Math.round(second * fps))), output: file, inputProps, scale, logLevel: 'error' }); files.push(file); }
+        for (const second of stills.seconds) { const file = path.join(stills.directory, `previa-${String(Math.round(second * 10)).padStart(5, '0')}.png`); await renderStill({ serveUrl, composition, frame: Math.min(composition.durationInFrames - 1, Math.max(0, Math.round(second * fps))), output: file, inputProps, scale, chromiumOptions, logLevel: 'error' }); files.push(file); }
         return { status: 'completed', files };
       }
       const raw = path.join(work, 'raw.mp4');
       const { cancelSignal: cancel, cancel: stop } = makeCancelSignal(); signal?.addEventListener('abort', stop, { once: true });
-      await renderMedia({ serveUrl, composition, codec: 'h264', crf: 18, outputLocation: raw, inputProps, scale, concurrency: Math.max(1, Math.min(6, os.cpus().length - 2)), logLevel: 'error', cancelSignal: cancel, onProgress: ({ progress }) => onProgress({ phase: 'Renderizando a composição', progress: 0.05 + progress * 0.85 }) });
+      await renderMedia({ serveUrl, composition, codec: 'h264', crf: 18, outputLocation: raw, inputProps, scale, chromiumOptions, concurrency: Math.max(1, Math.min(6, os.cpus().length - 2)), logLevel: 'error', cancelSignal: cancel, onProgress: ({ progress }) => onProgress({ phase: 'Renderizando a composição', progress: 0.05 + progress * 0.85 }) });
       onProgress({ phase: 'Ajustando o volume', progress: 0.92 });
       const temporary = `${output}.partial.mp4`;
       await this.#loudness(raw, temporary);

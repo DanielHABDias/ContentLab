@@ -2,6 +2,7 @@ import React from 'react';
 import { AbsoluteFill, Audio, Composition, Sequence, staticFile, useCurrentFrame, CalculateMetadataFunction } from 'remotion';
 import { ANTON, C, Film, Flash, resolvePublic, useAnton } from './fx';
 import { Thumbnail, calculateThumb } from './Thumbnail';
+import { SCENES_3D } from './three';
 import { Asset, Assets, SCENES } from './scenes';
 
 /**
@@ -17,6 +18,7 @@ export type MotionProps = {
 };
 
 const NO_CAPTION = new Set(['titulo', 'cta']);
+const ALL_SCENES: Record<string, React.FC<any>> = { ...SCENES, ...SCENES_3D };
 
 /** Legenda palavra a palavra: blocos de até 3 palavras; a palavra falada fica amarela. */
 const Captions: React.FC<{ words: Word[]; fps: number; hidden: (t: number) => boolean }> = ({ words, fps, hidden }) => {
@@ -54,7 +56,7 @@ export const MotionVideo: React.FC<MotionProps> = (raw) => {
     <Assets.Provider value={assets}>
       <AbsoluteFill style={{ background: '#000' }}>
         {beats.map(beat => {
-          const Scene = SCENES[beat.scene];
+          const Scene = ALL_SCENES[beat.scene];
           const len = Math.max(1, frames(beat.duration));
           return Scene ? <Sequence key={beat.id} from={frames(beat.at)} durationInFrames={len}><Scene len={len} {...(beat.props || {})} /></Sequence> : null;
         })}

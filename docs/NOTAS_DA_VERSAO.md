@@ -18,6 +18,7 @@ Primeira versão candidata completa. Ela vai da ideia ao vídeo final, roda loca
 - **Segurança:** a API local recusa outros sites e DNS rebinding; os pacotes têm limites contra ZIP bomb; as fontes são locais e não existe telemetria (F22).
 - **Estilo Diazverso (F27–F28):** cenas HQ do plugin Diazverso com imagem do assunto em cada beat, Anton e Nox embutidos, legenda palavra a palavra (Whisper), SFX originais, trilha licenciada com ducking sob a voz, áreas seguras de Shorts, capítulos e `verificacao.md` na entrega. Disponível pela interface e pelo MCP.
 - **Modo composição (F29):** o vídeo inteiro como motion design do kit Diazverso, em beats: ritmo de troca a cada 1,5–3 s, Nox com 8 expressões, cenas das obras em painéis HQ, legenda palavra a palavra, som em cada troca, plano automático e prévia em PNG pelo MCP.
+- **Cenas 3D (F32):** Nox em 3D com expressões e gestos, e voo de câmera por painéis da obra no espaço, sem precisar de placa de vídeo.
 - **Thumbnail do kit (F31):** thumbnails A/B no estilo do canal, com a cena da obra, até 4 palavras em Anton, o Nox com expressão e uma versão do tamanho do celular para conferir.
 - **Fluxo combinado (F30):** antes de criar o projeto, o agente pergunta se é tudo automático, com pausas em etapas escolhidas para você revisar no app, ou com aprovação de cada etapa; e se a narração é voz de IA ou a sua, gravada no app.
 - **Instalação Linux sem npm:** atualização assinada com volta de versão, e desinstalação que pergunta antes de cada parte (F23).

@@ -6,7 +6,8 @@
     "Palavras gigantes (titulo) no gancho e nas viradas; frase (estrelas) como respiro; o mesmo tipo de cena no máximo 2 vezes seguidas.",
     "Cada troca tem som: whoosh/swish na troca, impact nas palavras gigantes, pop no Nox, tick em números, camera em painéis, riser antes do payoff.",
     "Beats em segundos, contíguos e em ordem (at do próximo = at + duration do anterior). Com narração, alinhe o at ao início da frase dita.",
-    "Números inventados para explicar uma ideia levam fonte 'simulação'; dados reais levam a fonte."
+    "Números inventados para explicar uma ideia levam fonte 'simulação'; dados reais levam a fonte.",
+    "Cenas 3D (nox3d, paineis3d) são destaque: no máximo 1 a cada ~30 s, para não pesar no render nem cansar."
   ],
   "humores": [
     "bravo",
@@ -258,6 +259,50 @@
       "exemplo": {
         "pergunta": "qual fraqueza deixa o seu herói favorito interessante?"
       }
+    },
+    "nox3d": {
+      "uso": "Nox em 3D (releitura procedural do canônico): cai em cena, a câmera gira em volta e ele faz um gesto; abertura, apresentação, reação marcante ou virada. Usar com moderação (1 a cada ~30 s)",
+      "props": {
+        "humor": "humor (olhos)",
+        "gesto": "parado | acenar | apontar | pular | pensar",
+        "texto": "texto curto ao lado",
+        "subtexto": "texto menor",
+        "fundo": "estrelas | explosao | meio-tom | papel | escuro | branco",
+        "tom": "cor do fundo",
+        "lado": "direita ou esquerda (onde fica o texto)"
+      },
+      "exemplo": {
+        "humor": "bravo",
+        "gesto": "apontar",
+        "texto": "ISSO TÁ ERRADO",
+        "fundo": "explosao",
+        "tom": "vermelho",
+        "lado": "esquerda"
+      },
+      "render": "precisa de WebGL (o editor usa gl swangle); ~4 s de render por segundo de vídeo"
+    },
+    "paineis3d": {
+      "uso": "Voo de câmera por painéis HQ no espaço: cada painel é uma imagem da obra; linha do tempo, sequência de casos ou abertura de capítulo",
+      "props": {
+        "paineis": "lista de { midia: media:<id> (imagem), rotulo }, 2 a 4",
+        "conclusao": "frase final gigante sobre o último painel",
+        "fundo": "estrelas | meio-tom | escuro",
+        "tom": "cor do fundo"
+      },
+      "exemplo": {
+        "paineis": [
+          {
+            "midia": "media:action-comics-1",
+            "rotulo": "ACTION COMICS #1"
+          },
+          {
+            "midia": "media:crise-1985",
+            "rotulo": "CRISE (1985)"
+          }
+        ],
+        "conclusao": "TUDO MUDOU."
+      },
+      "render": "precisa de WebGL; só imagens (vídeo não vira textura); 2–3 s por painel"
     }
   },
   "thumbnail": {
