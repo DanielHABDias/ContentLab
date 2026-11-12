@@ -202,7 +202,16 @@ export function createMcpServer() {
 
   tool(server, 'chapters_get', 'Capítulos do vídeo longo a partir dos tempos reais da narração montada (um por trecho do roteiro).', { path: projectPath }, async ({ path }) => api('/production/chapters', { path }));
 
-  tool(server, 'thumbnails_generate', 'Gera as thumbnails A e B (título sobre frame do vídeo, dois estilos) e grava na embalagem. Sem variants usa os títulos A/B.', { path: projectPath, variants: z.array(z.object({ label: z.enum(['A', 'B']), title: z.string().min(1), text: z.string().optional().describe('Texto curto na imagem; padrão = título'), mediaId: z.string().optional(), frameSeconds: z.number().nonnegative().optional() })).max(2).optional() }, async ({ path, variants }) => api('/production/thumbnails', { path, variants }));
+  tool(server, 'thumbnails_generate', 'Gera as thumbnails A e B com o kit Diazverso (style "kit", padrão): mídia da obra dominante, até 4 palavras em Anton (*palavra* fica amarela; "/" quebra a linha), Nox com a expressão do vídeo, selo opcional e duas mídias em VS. Grava na embalagem e devolve versões de 320 px em output/previas para conferir no tamanho do celular. A e B devem ter ângulos diferentes. style "simple" usa o título sobre um frame.', {
+    path: projectPath, style: z.enum(['kit', 'simple']).default('kit'),
+    variants: z.array(z.object({
+      label: z.enum(['A', 'B']), title: z.string().optional(), text: z.string().optional().describe('Até 4 palavras; complementa o título, não repete'),
+      mediaId: z.string().optional().describe('Assunto dominante (mídia da obra com direitos)'), mediaIdB: z.string().optional().describe('Segunda mídia: layout VS'),
+      humor: z.enum(['bravo', 'feliz', 'surpreso', 'tedio', 'confuso', 'piscada', 'determinado', 'triste']).optional().describe('Nox com essa expressão; omita para sem Nox'),
+      side: z.enum(['esquerda', 'direita']).optional().describe('Lado do texto'), tone: z.enum(['amarelo', 'vermelho', 'azul']).optional(), badge: z.string().max(18).optional().describe('Selo curto, ex.: "HQ 1986"'),
+      frameSeconds: z.number().nonnegative().optional(),
+    })).max(2).optional(),
+  }, async ({ path, style, variants }) => api('/production/thumbnails', { path, style, variants }));
 
   tool(server, 'render_start', 'Renderiza o vídeo final (fila persistente: sobrevive a reinícios). preset full-hd ou hd. Devolve jobId.', { path: projectPath, preset: z.enum(['full-hd', 'hd']).default('full-hd') }, async ({ path, preset }) => { const job = await api('/render/start', { path, presetId: preset }); return { jobId: job.id, hint: 'Use job_wait.' }; });
 

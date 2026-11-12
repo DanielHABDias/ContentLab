@@ -475,3 +475,9 @@ Objetivo: produzir pelo MCP vídeos no nível do demo (ritmo do RunnyIA, estéti
 - [x] Instruções do MCP pedem para combinar o fluxo numa pergunta antes de criar o projeto.
 - [x] Cenas TSX avulsas aposentadas no plugin; `scenes:diazverso` copia só o kit de motion e mantém as cópias do modo antigo.
 
+## F31 — Thumbnail pelo kit de motion
+
+- [x] `MotionRenderer.thumbnails`: still `DiazversoThumb` do kit com mídia da obra, texto em Anton, Nox e selo.
+- [x] `thumbnails_generate` com `style: "kit"` (padrão), variantes com mídia, texto de até 4 palavras, Nox, lado, tom, selo e VS; recusa mídia sem direitos.
+- [x] Versões de 320 px em `output/previas/` para conferir no celular.
+- [x] Teste real de render do still (1280×720).

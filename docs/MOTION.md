@@ -40,6 +40,17 @@ O ritmo segue as referências do canal: uma troca de informação a cada 1,5–3
 
 Para voltar à timeline de clips, use `motion_plan_set` com `plan: null`. Na interface, use Produção assistida → *Montar em motion (composição)*.
 
+## Thumbnail
+
+`thumbnails_generate` usa o mesmo kit (composição `DiazversoThumb`, 1280×720). Cada variante A/B tem:
+
+- `mediaId`: a obra, assunto dominante;
+- `text`: até 4 palavras, com a palavra-chave entre `*asteriscos*`;
+- `humor`: o Nox, opcional;
+- opcionais: `side` (lado do texto), `tone` (cor de destaque), `badge` (selo) e `mediaIdB` (layout VS).
+
+Sem variantes, as palavras de impacto dos títulos A e B viram o texto. Versões de 320 px ficam em `output/previas/` para conferir no tamanho do celular. A thumbnail antiga, com o título sobre um frame, continua disponível com `style: "simple"`.
+
 ## Roteiro em beats (`contentlab-motion-v1`)
 
 ```json

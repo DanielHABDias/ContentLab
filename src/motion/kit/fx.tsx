@@ -15,6 +15,9 @@ export const useAnton = () => {
   }, [handle]);
 };
 
+/** Caminhos `public:<arquivo>` (pasta pública do editor) viram URLs do bundle via staticFile. */
+export const resolvePublic = (value: unknown): any => typeof value === 'string' ? (value.startsWith('public:') ? staticFile(value.slice(7)) : value) : Array.isArray(value) ? value.map(resolvePublic) : value && typeof value === 'object' ? Object.fromEntries(Object.entries(value).map(([k, v]) => [k, resolvePublic(v)])) : value;
+
 export const ease = Easing.bezier(0.16, 1, 0.3, 1);
 export const pop = (frame: number, at: number, length = 8) => interpolate(frame - at, [0, length * 0.6, length], [0, 1.12, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.quad) });
 export const slide = (frame: number, at: number, length = 10) => interpolate(frame - at, [0, length], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: ease });

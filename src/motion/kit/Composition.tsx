@@ -1,6 +1,7 @@
 import React from 'react';
 import { AbsoluteFill, Audio, Composition, Sequence, staticFile, useCurrentFrame, CalculateMetadataFunction } from 'remotion';
-import { ANTON, C, Film, Flash, useAnton } from './fx';
+import { ANTON, C, Film, Flash, resolvePublic, useAnton } from './fx';
+import { Thumbnail, calculateThumb } from './Thumbnail';
 import { Asset, Assets, SCENES } from './scenes';
 
 /**
@@ -40,12 +41,10 @@ const Captions: React.FC<{ words: Word[]; fps: number; hidden: (t: number) => bo
   );
 };
 
-/** Caminhos `public:<arquivo>` (pasta pública do editor) viram URLs do bundle via staticFile. */
-const resolve = (value: unknown): any => typeof value === 'string' ? (value.startsWith('public:') ? staticFile(value.slice(7)) : value) : Array.isArray(value) ? value.map(resolve) : value && typeof value === 'object' ? Object.fromEntries(Object.entries(value).map(([k, v]) => [k, resolve(v)])) : value;
 
 export const MotionVideo: React.FC<MotionProps> = (raw) => {
   useAnton();
-  const { plan, assets, narration, music, words = [] } = resolve(raw) as MotionProps;
+  const { plan, assets, narration, music, words = [] } = resolvePublic(raw) as MotionProps;
   const { fps, beats } = plan;
   const frames = (s: number) => Math.max(0, Math.round(s * fps));
   const speaking = (t: number) => words.some(w => t >= w.start - 0.15 && t <= w.end + 0.25);
@@ -77,6 +76,10 @@ const calculateMetadata: CalculateMetadataFunction<MotionProps> = ({ props }) =>
 });
 
 export const Root: React.FC = () => (
-  <Composition id="DiazversoMotion" component={MotionVideo} calculateMetadata={calculateMetadata} durationInFrames={1} fps={30} width={1920} height={1080}
-    defaultProps={{ plan: { fps: 30, width: 1920, height: 1080, duration: 3, beats: [{ id: 'b1', scene: 'titulo', at: 0, duration: 3, props: { palavras: ['DIAZVERSO'] } }] }, assets: {} }} />
+  <>
+    <Composition id="DiazversoMotion" component={MotionVideo} calculateMetadata={calculateMetadata} durationInFrames={1} fps={30} width={1920} height={1080}
+      defaultProps={{ plan: { fps: 30, width: 1920, height: 1080, duration: 3, beats: [{ id: 'b1', scene: 'titulo', at: 0, duration: 3, props: { palavras: ['DIAZVERSO'] } }] }, assets: {} }} />
+    <Composition id="DiazversoThumb" component={Thumbnail} calculateMetadata={calculateThumb} durationInFrames={1} fps={30} width={1280} height={720}
+      defaultProps={{ assets: {}, texto: 'O HERÓI *CHATO*', humor: 'tedio' }} />
+  </>
 );

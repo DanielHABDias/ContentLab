@@ -8,7 +8,7 @@ import { promisify } from 'node:util';
 import { readProjectDirectory } from './project-registry.js';
 import { NarrationStore, scenesFromScript } from '../audio/narration-service.js';
 import { TranscriptStore } from '../media/transcript-store.js';
-import { planMotion } from './motion-planner.js';
+import { impact, planMotion } from './motion-planner.js';
 import { MotionRenderer, mediaRefs as mediaRefsPlan } from '../render/motion-renderer.js';
 import { motionPlanSchema } from '../core/contracts.js';
 import { MOTION_KIT } from '../motion/kit-catalog.js';
@@ -215,8 +215,9 @@ export class ProductionOperations {
    * Thumbnails A e B: título sobre um frame do vídeo (ou cor), em dois estilos para teste A/B.
    * Grava em `creative.packaging.thumbnailA/B` (A também vira a thumbnail principal).
    */
-  async thumbnails({ path: directory, variants }) {
+  async thumbnails({ path: directory, variants, style = 'kit' }) {
     await this.app.requireFeature('media.import');
+    if (style === 'kit') return this.#kitThumbnails(directory, variants);
     const project = await readProjectDirectory(directory);
     const packaging = project.creative.packaging;
     const list = (variants?.length ? variants : [{ label: 'A', title: packaging.titleA }, { label: 'B', title: packaging.titleB || packaging.titleA }]).slice(0, 2);
@@ -243,6 +244,51 @@ export class ProductionOperations {
     const next = { ...fresh.creative, packaging: { ...fresh.creative.packaging, ...result, thumbnailMediaId: result.thumbnailA || fresh.creative.packaging.thumbnailMediaId } };
     const updated = await this.app.runProjectAction({ path: directory, baseRevision: fresh.revision, action: { type: 'creative.update', creative: next } });
     return { ...result, revision: updated.project.revision };
+  }
+
+  /**
+   * Thumbnails do kit de motion: mídia da obra dominante, até 4 palavras em Anton (*palavra* em amarelo),
+   * Nox com a expressão do vídeo e selo opcional. Gera também a versão do tamanho do celular para conferir.
+   */
+  async #kitThumbnails(directory, variants) {
+    const project = await readProjectDirectory(directory);
+    const packaging = project.creative.packaging;
+    const content = project.media.filter(item => ['video', 'image'].includes(item.kind) && !['thumbnail', 'background', 'slide'].includes(item.role));
+    // Sem variantes: as palavras de impacto de cada título (até 3), a última em amarelo.
+    const fromTitle = title => { const words = impact(title || '', 3); return words.length ? [...words.slice(0, -1), `*${words.at(-1)}*`].join(' ') : ''; };
+    const list = (variants?.length ? variants : [{ label: 'A', text: fromTitle(packaging.titleA), humor: 'surpreso' }, { label: 'B', text: fromTitle(packaging.titleB || packaging.titleA), humor: 'determinado', side: 'direita' }]).slice(0, 2);
+    const kit = list.map((variant, index) => {
+      const text = String(variant.text || variant.title || '').trim();
+      if (!text) throw new Error('Informe o texto curto de cada thumbnail (até 4 palavras)');
+      if (text.replace(/\*/g, '').split(/\s+/).filter(Boolean).length > 4) throw Object.assign(new Error(`Texto da thumbnail ${variant.label || index + 1} tem mais de 4 palavras: "${text}"`), { code: 'THUMB_TEXT_LONG' });
+      const media = variant.mediaId || content[index % Math.max(1, content.length)]?.id;
+      return { label: variant.label === 'B' || index === 1 ? 'B' : 'A', texto: text.toUpperCase().replace(/\s*\/\s*/g, '\n'), midia: media ? `media:${media}` : undefined, midiaB: variant.mediaIdB ? `media:${variant.mediaIdB}` : undefined, humor: variant.humor, lado: variant.side, tom: variant.tone, selo: variant.badge };
+    });
+    const refs = kit.flatMap(item => [item.midia, item.midiaB]).filter(Boolean).map(ref => ref.slice(6));
+    const missing = refs.filter(id => !project.media.some(item => item.id === id));
+    if (missing.length) throw Object.assign(new Error(`Mídia não está no projeto: ${missing.join(', ')}`), { code: 'MEDIA_MISSING' });
+    const pending = refs.filter(id => project.media.find(item => item.id === id)?.rights === 'pending');
+    if (pending.length) throw Object.assign(new Error(`Confirme os direitos antes de usar: ${pending.join(', ')}`), { code: 'RIGHTS_PENDING' });
+    const resolved = { ...project, media: await Promise.all(project.media.map(async item => ({ ...item, uri: (await this.app.resolveMediaPath(item)) || item.uri }))) };
+    const [width, height] = THUMB_SIZES[project.aspectRatio] || THUMB_SIZES['16:9'];
+    const staging = await mkdtemp(path.join(os.tmpdir(), 'contentlab-kit-thumbs-'));
+    const result = {}; const previews = [];
+    try {
+      const renderer = new MotionRenderer(path.join(this.app.dataDirectory, 'render'), { ffmpeg: this.ffmpeg });
+      const files = await renderer.thumbnails(resolved, { variants: kit, directory: staging, width, height });
+      const review = path.join(path.resolve(directory), 'output', 'previas'); await mkdir(review, { recursive: true });
+      for (const { label, file } of files) {
+        const small = path.join(review, `thumb-${label}-celular.png`);
+        await run(this.ffmpeg, ['-hide_banner', '-loglevel', 'error', '-y', '-i', file, '-vf', 'scale=320:-2:flags=lanczos', small], { timeout: 60_000 });
+        previews.push(small);
+        const attached = await this.#attachGenerated(directory, file, `Thumbnail ${label}`, 'thumbnail');
+        result[`thumbnail${label}`] = attached.mediaId;
+      }
+    } finally { await rm(staging, { recursive: true, force: true }); }
+    const fresh = await readProjectDirectory(directory);
+    const next = { ...fresh.creative, packaging: { ...fresh.creative.packaging, ...result, thumbnailMediaId: result.thumbnailA || fresh.creative.packaging.thumbnailMediaId } };
+    const updated = await this.app.runProjectAction({ path: directory, baseRevision: fresh.revision, action: { type: 'creative.update', creative: next } });
+    return { ...result, phonePreviews: previews, revision: updated.project.revision, hint: 'Abra as versões de celular (320 px) e confira se o assunto e o texto se leem em 1 segundo.' };
   }
 
   /** Janela de tempo de cada cena do roteiro dentro da narração montada (segundos). */

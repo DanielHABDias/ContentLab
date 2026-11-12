@@ -25,6 +25,43 @@ export class MotionRenderer {
     return this.render(project, { stills: { seconds, directory }, scale, output: null });
   }
 
+  /**
+   * Thumbnails do kit (`DiazversoThumb`, 1280×720 ou o tamanho pedido): cada variante é um still com a mídia
+   * da obra, até 4 palavras em Anton e o Nox com expressão. Devolve um PNG por variante em `directory`.
+   */
+  async thumbnails(project, { variants, directory, width = 1280, height = 720 }) {
+    const work = await mkdtemp(path.join(os.tmpdir(), 'contentlab-thumb-')); const publicDir = path.join(work, 'public');
+    try {
+      for (const [from, to] of [['fonts/Anton-Regular.ttf', 'brand/Anton-Regular.ttf'], ['nox/nox-sem-olhos.png', 'brand/nox-sem-olhos.png']]) await place(path.join(BRAND, from), path.join(publicDir, to));
+      const assets = await this.#stageMedia(project, mediaRefs({ beats: variants.map(variant => ({ props: variant })) }), publicDir);
+      const { bundle } = await import('@remotion/bundler'); const { renderStill, selectComposition } = await import('@remotion/renderer');
+      const serveUrl = await bundle({ entryPoint: KIT_ENTRY, outDir: path.join(work, 'bundle'), publicDir, enableCaching: true, onProgress: () => {} });
+      await mkdir(directory, { recursive: true }); const files = [];
+      for (const { label, ...variant } of variants) {
+        const inputProps = { ...variant, assets, width, height };
+        const composition = await selectComposition({ serveUrl, id: 'DiazversoThumb', inputProps, logLevel: 'error' });
+        const file = path.join(directory, `thumb-${label}.png`);
+        await renderStill({ serveUrl, composition, frame: 0, output: file, inputProps, logLevel: 'error', overwrite: true });
+        files.push({ label, file });
+      }
+      return files;
+    } catch (error) {
+      throw error.code ? error : Object.assign(new Error(`Thumbnail do kit falhou: ${String(error.message).split('\n').slice(0, 3).join(' ')}`), { code: 'MOTION_RENDER_FAILED' });
+    } finally { await rm(work, { recursive: true, force: true }); }
+  }
+
+  /** Copia para a pasta pública só as mídias citadas e devolve o mapa id → { src: public:…, kind }. */
+  async #stageMedia(project, ids, publicDir) {
+    const assets = {};
+    for (const id of ids) {
+      const item = project.media.find(media => media.id === id);
+      if (!item?.uri) throw Object.assign(new Error(`Mídia citada não está no projeto: ${id}`), { code: 'MEDIA_MISSING' });
+      const file = `media/${id}${path.extname(item.uri).toLowerCase()}`; await place(item.uri, path.join(publicDir, file));
+      assets[id] = { src: `public:${file}`, kind: item.kind === 'video' ? 'video' : 'image' };
+    }
+    return assets;
+  }
+
   async render(project, { output, signal, onProgress = () => {}, scale = 1, stills = null }) {
     const plan = project.motion; const inputs = project.motionInputs || {};
     const [width, height] = SIZES[project.aspectRatio] || SIZES['16:9'];
@@ -36,13 +73,7 @@ export class MotionRenderer {
       for (const [from, to] of [['fonts/Anton-Regular.ttf', 'brand/Anton-Regular.ttf'], ['nox/nox-sem-olhos.png', 'brand/nox-sem-olhos.png'], ['nox/Nox.png', 'brand/Nox.png']]) await place(path.join(BRAND, from), path.join(publicDir, to));
       const used = new Set(plan.beats.flatMap(beat => beat.sfx || []).map(cue => cue.name));
       for (const name of used) await place(path.join(BRAND, 'sfx', `${name}.wav`), path.join(publicDir, 'sfx', `${name}.wav`));
-      const assets = {};
-      for (const id of mediaRefs(plan)) {
-        const item = project.media.find(media => media.id === id);
-        if (!item?.uri) throw Object.assign(new Error(`Mídia citada no plano não está no projeto: ${id}`), { code: 'MEDIA_MISSING' });
-        const file = `media/${id}${path.extname(item.uri).toLowerCase()}`; await place(item.uri, path.join(publicDir, file));
-        assets[id] = { src: `public:${file}`, kind: item.kind === 'video' ? 'video' : 'image' };
-      }
+      const assets = await this.#stageMedia(project, mediaRefs(plan), publicDir);
       let narration = null; let music = null;
       if (plan.narration !== false && inputs.narration) { await place(inputs.narration, path.join(publicDir, 'media', `narracao${path.extname(inputs.narration)}`)); narration = `public:media/narracao${path.extname(inputs.narration)}`; }
       if (plan.music && inputs.music) { await place(inputs.music, path.join(publicDir, 'media', `trilha${path.extname(inputs.music)}`)); music = `public:media/trilha${path.extname(inputs.music)}`; }

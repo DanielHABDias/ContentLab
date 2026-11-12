@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { expect, test } from 'vitest';
 import { impact, planMotion, timeSentences } from './motion-planner.js';
 import { motionPlanSchema, MOTION_SCENES } from '../core/contracts.js';
@@ -51,3 +52,18 @@ test('catálogo do kit cobre todas as cenas do contrato e o modo composição sa
 test('palavras de impacto priorizam nomes e números', () => {
   expect(impact('O Batman de 1940 já tinha medo')).toEqual(['BATMAN', '1940', 'MEDO']);
 });
+
+test('thumbnail do kit: still real 1280×720 com mídia da obra, texto e Nox', async () => {
+  const { mkdtemp, rm, readFile } = await import('node:fs/promises');
+  const { execFileSync } = await import('node:child_process');
+  const os = await import('node:os'); const path = await import('node:path');
+  const { MotionRenderer } = await import('../render/motion-renderer.js');
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'contentlab-thumb-test-'));
+  try {
+    const image = path.join(dir, 'obra.png');
+    execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc2=s=800x600', '-frames:v', '1', image]);
+    const files = await new MotionRenderer(dir).thumbnails({ media: [{ id: 'obra', kind: 'image', uri: image }] }, { directory: path.join(dir, 'out'), variants: [{ label: 'A', texto: 'O HERÓI *CHATO*', midia: 'media:obra', humor: 'tedio' }] });
+    const png = await readFile(files[0].file);
+    expect(png.readUInt32BE(16)).toBe(1280); expect(png.readUInt32BE(20)).toBe(720);
+  } finally { await rm(dir, { recursive: true, force: true }); }
+}, 180_000);
