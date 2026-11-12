@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, Mic, Square, Trash2, Upload, Wand2, X } from 'lucide-react';
+import { ConfirmDialog } from './Dialogs.jsx';
 import { localApi } from './local-api.js';
 import { JobsPanel, clock } from './MediaLibrary.jsx';
 import { DependencyNotice } from './DependencyGate.jsx';
@@ -142,11 +143,4 @@ function ProfileDialog({ takes, onClose, onCreate }) {
   </form></div>;
 }
 
-export function ConfirmDialog({ title, message, details = [], confirm, onClose, onConfirm }) {
-  const [busy, setBusy] = useState(false);
-  return <div className="dialog-backdrop" role="presentation"><div className="dialog" role="alertdialog" aria-modal="true" aria-label={title}>
-    <div className="section-title"><h2>{title}</h2><button type="button" className="icon-button" aria-label="Fechar" onClick={onClose}><X/></button></div>
-    <p>{message}</p>{details.length > 0 && <ul>{details.map(item => <li key={item}>{item}</li>)}</ul>}
-    <div className="dialog-actions"><button type="button" className="button quiet" autoFocus onClick={onClose}>Cancelar</button><button type="button" className="button danger" disabled={busy} onClick={async () => { setBusy(true); await onConfirm(); }}>{confirm}</button></div>
-  </div></div>;
-}
+export { ConfirmDialog } from './Dialogs.jsx';

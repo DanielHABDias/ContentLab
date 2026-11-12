@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Eye, EyeOff, Lock, LockOpen, Magnet, Play, Redo2, Scissors, Trash2, Undo2, Volume2, VolumeX } from 'lucide-react';
 import { localApi } from './local-api.js';
-import { ConfirmDialog } from './NarrationStudio.jsx';
+import { ConfirmDialog } from './Dialogs.jsx';
 import { clock } from './MediaLibrary.jsx';
 import { snapFrame } from '../timeline/snap.js';
 

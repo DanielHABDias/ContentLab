@@ -3,7 +3,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { App } from './App.jsx';
 import { localApi } from './local-api.js';
 
-vi.mock('./local-api.js', () => ({ localApi: { listProjects: vi.fn(), openProject: vi.fn(), createProject: vi.fn(), chooseDirectory: vi.fn(), choosePackage: vi.fn(), chooseMedia: vi.fn(), inspectPackage: vi.fn(), importPackage: vi.fn(), importMedia: vi.fn(), runProjectAction: vi.fn(), renderPresets: vi.fn(), renderJobs: vi.fn(), enqueueRender: vi.fn(), cancelRender: vi.fn(), retryRender: vi.fn(), revealRender: vi.fn(), renderLog: vi.fn(), forgetProject: vi.fn(), revealProject: vi.fn(), renameProject: vi.fn(), changeProjectId: vi.fn(), duplicateProject: vi.fn(), exportProject: vi.fn(), deleteProject: vi.fn(), restoreProject: vi.fn(), projectActivities: vi.fn(), cancelProjectActivities: vi.fn(), setupStatus: vi.fn(), setupJobs: vi.fn(), setupInstall: vi.fn(), setupPause: vi.fn(), setupResume: vi.fn(), setupCancel: vi.fn(), setupOnboarding: vi.fn(), relocateProject: vi.fn(), getSettings: vi.fn(), validateFolder: vi.fn(), updateSettings: vi.fn(), storageUsage: vi.fn(), storageOrphans: vi.fn(), storageCleanup: vi.fn(), planMigration: vi.fn(), startMigration: vi.fn(), storageJobs: vi.fn(), cancelMigration: vi.fn(), backupRegistry: vi.fn(), registryBackups: vi.fn(), restoreRegistry: vi.fn(), importFiles: vi.fn(), importUrl: vi.fn(), mediaUsage: vi.fn(), removeMedia: vi.fn(), createCut: vi.fn(), removeCut: vi.fn(), transcribe: vi.fn(), transcript: vi.fn(), saveTranscript: vi.fn(), searchTranscripts: vi.fn(), jobs: vi.fn(), cancelJob: vi.fn(), upload: vi.fn() } }));
+vi.mock('./local-api.js', () => ({ localApi: { listProjects: vi.fn(), openProject: vi.fn(), createProject: vi.fn(), chooseDirectory: vi.fn(), choosePackage: vi.fn(), chooseMedia: vi.fn(), inspectPackage: vi.fn(), importPackage: vi.fn(), importMedia: vi.fn(), runProjectAction: vi.fn(), renderPresets: vi.fn(), renderJobs: vi.fn(), enqueueRender: vi.fn(), cancelRender: vi.fn(), retryRender: vi.fn(), revealRender: vi.fn(), renderLog: vi.fn(), forgetProject: vi.fn(), revealProject: vi.fn(), renameProject: vi.fn(), changeProjectId: vi.fn(), duplicateProject: vi.fn(), exportProject: vi.fn(), deleteProject: vi.fn(), restoreProject: vi.fn(), projectActivities: vi.fn(), cancelProjectActivities: vi.fn(), setupStatus: vi.fn(), setupJobs: vi.fn(), setupInstall: vi.fn(), setupPause: vi.fn(), setupResume: vi.fn(), setupCancel: vi.fn(), setupOnboarding: vi.fn(), relocateProject: vi.fn(), getSettings: vi.fn(), about: vi.fn(), validateFolder: vi.fn(), updateSettings: vi.fn(), storageUsage: vi.fn(), storageOrphans: vi.fn(), storageCleanup: vi.fn(), planMigration: vi.fn(), startMigration: vi.fn(), storageJobs: vi.fn(), cancelMigration: vi.fn(), backupRegistry: vi.fn(), registryBackups: vi.fn(), restoreRegistry: vi.fn(), importFiles: vi.fn(), importUrl: vi.fn(), mediaUsage: vi.fn(), removeMedia: vi.fn(), createCut: vi.fn(), removeCut: vi.fn(), transcribe: vi.fn(), transcript: vi.fn(), saveTranscript: vi.fn(), searchTranscripts: vi.fn(), jobs: vi.fn(), cancelJob: vi.fn(), upload: vi.fn() } }));
 
 function setupStatus(overrides = {}) {
   const items = [
@@ -21,7 +21,7 @@ function realDetails(overrides = {}) {
   return { project, path: '/tmp/meu_projeto', history: [{ id: 'one', type: 'project.created', revision: 1 }], card: { id: project.id, title: project.title, type: project.type, aspectRatio: project.aspectRatio, revision: project.revision, stage: 'brief', progress: 0, path: '/tmp/meu_projeto' } };
 }
 
-beforeEach(() => { vi.clearAllMocks(); localApi.setupStatus.mockResolvedValue(setupStatus({ onboarding: { completedAt: '2026-11-11T00:00:00Z', dismissedAt: null } })); localApi.listProjects.mockResolvedValue({ projects: [] }); localApi.chooseDirectory.mockResolvedValue({ path: null }); localApi.choosePackage.mockResolvedValue({ path: null }); localApi.renderPresets.mockResolvedValue({ presets: [{ id: 'full-hd', label: 'Full HD', width: 1920, height: 1080 }] }); localApi.renderJobs.mockResolvedValue({ jobs: [] }); });
+beforeEach(() => { vi.clearAllMocks(); localApi.about.mockResolvedValue({ app: { name: 'Content Lab', version: '2.0.0' }, system: { platform: 'linux', arch: 'x64', node: 'v22', cpus: 12, memoryGb: 15.5 }, nativeDialog: { available: true, tool: 'zenity' }, paths: { data: '~/.local/share/contentlab' }, dependencies: [], projects: { known: 0 }, generatedAt: '2026-11-12T00:00:00Z' }); localApi.setupStatus.mockResolvedValue(setupStatus({ onboarding: { completedAt: '2026-11-11T00:00:00Z', dismissedAt: null } })); localApi.listProjects.mockResolvedValue({ projects: [] }); localApi.chooseDirectory.mockResolvedValue({ path: null }); localApi.choosePackage.mockResolvedValue({ path: null }); localApi.renderPresets.mockResolvedValue({ presets: [{ id: 'full-hd', label: 'Full HD', width: 1920, height: 1080 }] }); localApi.renderJobs.mockResolvedValue({ jobs: [] }); });
 
 test('primeira execução fica vazia e não injeta exemplos', async () => {
   render(<App/>); expect(await screen.findByText(/nenhum projeto recente/i)).toBeInTheDocument(); expect(screen.queryByText(/batman|omnitrix|heróis falham/i)).not.toBeInTheDocument();
@@ -271,14 +271,14 @@ test('mudar cache com dados abre migração assistida com plano antes de mover',
 
 test('limpar derivados pede confirmação e não remove nada se cancelado', async () => {
   mockSettings(); localApi.storageCleanup.mockResolvedValue({ removed: ['cortes'], bytes: 2048 });
-  const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
   render(<App/>); fireEvent.click(await screen.findByRole('button', { name: /configurações/i }));
   fireEvent.click(await screen.findByRole('button', { name: /limpar derivados/i }));
+  fireEvent.click(within(screen.getByRole('alertdialog', { name: 'Limpar derivados' })).getByRole('button', { name: 'Cancelar' }));
   expect(localApi.storageCleanup).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: /limpar derivados/i }));
+  fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Limpar' }));
   await waitFor(() => expect(localApi.storageCleanup).toHaveBeenCalledWith({}));
   expect(await screen.findByText(/liberado 2 KB/i)).toBeInTheDocument();
-  confirm.mockRestore();
 });
 
 test('projeto movido pode ser relocalizado pelo menu', async () => {
@@ -348,4 +348,23 @@ test('mídias: URL exige confirmar direitos; transcrição editada salva revisã
   expect(screen.getByText(/Original: Olá mundo/)).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /salvar revisão/i }));
   await waitFor(() => expect(localApi.saveTranscript).toHaveBeenCalledWith({ path: '/tmp/meu_projeto', mediaId: 'media_abc', baseRevision: 0, segments: [{ start: 0, end: 1.5, text: 'Olá, mundo!' }] }));
+});
+
+test('pedir mudanças abre diálogo acessível, exige motivo e devolve o foco', async () => {
+  const details = realDetails(); localApi.listProjects.mockResolvedValue({ projects: [details.card] }); localApi.openProject.mockResolvedValue(details); localApi.runProjectAction.mockResolvedValue(realDetails({ ...details.project, revision: 2 }));
+  render(<App/>); fireEvent.click(await screen.findByRole('button', { name: /abrir meu projeto/i }));
+  const opener = await screen.findByRole('button', { name: /pedir mudanças/i }); opener.focus(); fireEvent.click(opener);
+  const dialog = screen.getByRole('dialog', { name: 'Pedir mudanças' });
+  expect(within(dialog).getByLabelText(/o que precisa mudar/i)).toHaveFocus();
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Pedir mudanças' }));
+  expect(within(dialog).getByRole('alert')).toHaveTextContent(/escreva o motivo/i);
+  expect(localApi.runProjectAction).not.toHaveBeenCalled();
+  fireEvent.keyDown(document, { key: 'Escape' });
+  expect(screen.queryByRole('dialog', { name: 'Pedir mudanças' })).not.toBeInTheDocument();
+  expect(opener).toHaveFocus();
+  fireEvent.click(opener);
+  fireEvent.change(screen.getByLabelText(/o que precisa mudar/i), { target: { value: 'Tese fraca' } });
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Pedir mudanças' }));
+  await waitFor(() => expect(localApi.runProjectAction).toHaveBeenCalledWith(expect.objectContaining({ action: { type: 'stage.request_changes', stageId: 'brief', reason: 'Tese fraca' } })));
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 });

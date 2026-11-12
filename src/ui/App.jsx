@@ -8,6 +8,7 @@ import { MediaLibrary } from './MediaLibrary.jsx';
 import { NarrationStudio } from './NarrationStudio.jsx';
 import { TimelineEditor } from './TimelineEditor.jsx';
 import { RenderPanel } from './RenderPanel.jsx';
+import { ReasonDialog } from './Dialogs.jsx';
 import { SettingsScreen } from './SettingsScreen.jsx';
 import { DependencyNotice, FeatureList, StageGate, isStageBlocked } from './DependencyGate.jsx';
 import { STAGE_REQUIREMENTS, featureBlock } from '../core/capabilities.js';
@@ -25,8 +26,10 @@ function ProjectWorkspace({ details, onBack, onUpdated, setup, onOpenSetup }) {
   const run = async action => { setBusy(true); setNotice(''); setConflict(null); try { const updated = await localApi.runProjectAction({ path, baseRevision: project.revision, action }); onUpdated(updated); return updated; } catch (error) { setNotice(error.message); if (error.code === 'REVISION_CONFLICT') setConflict(error.details); throw error; } finally { setBusy(false); } };
   const reload = async () => { setBusy(true); try { onUpdated(await localApi.openProject(path)); setConflict(null); setNotice('Projeto recarregado com a revisão mais recente.'); } finally { setBusy(false); } };
   const runAutonomous = () => run({ type: 'workflow.run', stageId: activeStage.id, jobId: `job_${Date.now()}` }).catch(() => null);
-  const requestChanges = async () => { const reason = window.prompt('O que precisa mudar nesta etapa?'); if (reason?.trim()) await run({ type: 'stage.request_changes', stageId: activeStage.id, reason }); };
-  const reopen = async stageId => { const reason = window.prompt('Por que esta etapa será reaberta?'); if (reason?.trim()) await run({ type: 'stage.reopen', stageId, reason }); };
+  const [reasonFor, setReasonFor] = useState(null);
+  const requestChanges = () => setReasonFor({ kind: 'changes', stageId: activeStage.id });
+  const reopen = stageId => setReasonFor({ kind: 'reopen', stageId });
+  const reasonDialog = reasonFor && <ReasonDialog title={reasonFor.kind === 'changes' ? 'Pedir mudanças' : `Reabrir ${stageLabels[reasonFor.stageId]}`} label={reasonFor.kind === 'changes' ? 'O que precisa mudar nesta etapa?' : 'Por que esta etapa será reaberta?'} confirm={reasonFor.kind === 'changes' ? 'Pedir mudanças' : 'Reabrir etapa'} onClose={() => setReasonFor(null)} onSubmit={async reason => { await run({ type: reasonFor.kind === 'changes' ? 'stage.request_changes' : 'stage.reopen', stageId: reasonFor.stageId, reason }); setReasonFor(null); }}/>;
   if (screen === 'timeline') return <main id="main" className="creative-editor wide"><header className="editor-top"><button className="text-button" onClick={() => setScreen('workflow')}><ArrowLeft size={16}/> Workflow</button><div><span className="eyebrow">{project.title}</span><h1>Timeline</h1></div></header><TimelineEditor details={details} onUpdated={onUpdated}/></main>;
   if (screen === 'editor') return <CreativeEditor details={details} stageId={activeStage.id} onBack={() => setScreen('workflow')} onUpdated={onUpdated} setup={setup} onOpenSetup={onOpenSetup}/>;
   const latestJob = project.workflowJobs?.[0];
@@ -39,7 +42,7 @@ function ProjectWorkspace({ details, onBack, onUpdated, setup, onOpenSetup }) {
       {missing.length > 0 && <div className="notice error" role="status">Faltam para aprovar: {missing.join(', ')}.</div>}
       <div className="approval-bar"><div><span className="eyebrow">Etapa atual</span><strong>{stageLabels[activeStage.id]}</strong></div><button className="button quiet" onClick={requestChanges} disabled={busy}><MessageSquareText size={17}/> Pedir mudanças</button><button className="button primary" disabled={busy || missing.length > 0 || !['active', 'changes_requested', 'invalidated'].includes(activeStage.state)} onClick={() => run({ type: 'stage.approve', stageId: activeStage.id, expectedRevision: activeStage.revision }).catch(() => null)}><Check size={17}/> Aprovar etapa</button></div></section>
     {(project.changeRequests || []).length > 0 && <section className="history-card" aria-labelledby="changes-title"><div className="section-title"><h2 id="changes-title"><MessageSquareText size={20}/> Pedidos de mudança</h2></div><ul>{project.changeRequests.map(item => <li key={item.id}><span><strong>{stageLabels[item.stageId]}</strong> · {item.reason} · {item.author}</span><small>{item.status === 'open' ? `aberto na revisão ${item.requestedRevision}` : `resolvido na revisão ${item.resolvedRevision}`}</small></li>)}</ul></section>}
-    <section className="history-card" aria-labelledby="history-title"><div className="section-title"><h2 id="history-title"><History size={20}/> Histórico</h2><span>{history.length} eventos</span></div>{history.length ? <ul>{history.map(event => <li key={event.id}><span>{eventLabel(event)}</span><small>revisão {event.revision}</small></li>)}</ul> : <div className="empty-state">Nenhum evento registrado.</div>}</section>{configuring && <ConfigDialog project={project} busy={busy} onClose={() => setConfiguring(false)} onSave={async values => { await run({ type: 'project.update', ...values }); setConfiguring(false); }}/>}</main>;
+    <section className="history-card" aria-labelledby="history-title"><div className="section-title"><h2 id="history-title"><History size={20}/> Histórico</h2><span>{history.length} eventos</span></div>{history.length ? <ul>{history.map(event => <li key={event.id}><span>{eventLabel(event)}</span><small>revisão {event.revision}</small></li>)}</ul> : <div className="empty-state">Nenhum evento registrado.</div>}</section>{configuring && <ConfigDialog project={project} busy={busy} onClose={() => setConfiguring(false)} onSave={async values => { await run({ type: 'project.update', ...values }); setConfiguring(false); }}/>}{reasonDialog}</main>;
 }
 
 function ConfigDialog({ project, busy, onClose, onSave }) {

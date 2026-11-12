@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Download, Film, Link2, Plus, Scissors, Search, Trash2, Upload, X } from 'lucide-react';
+import { ConfirmDialog } from './Dialogs.jsx';
 import { localApi } from './local-api.js';
 import { DependencyNotice, FeatureList } from './DependencyGate.jsx';
 import { STAGE_REQUIREMENTS, featureBlock } from '../core/capabilities.js';
@@ -126,7 +127,7 @@ function MediaDetail({ projectPath, revision, media, available, setup, onOpenSet
 }
 
 function TranscriptPanel({ projectPath, media, setup, onOpenSetup, onChanged, onJobs, onSeek }) {
-  const [transcript, setTranscript] = useState(null); const [draft, setDraft] = useState(null); const [error, setError] = useState(null); const [status, setStatus] = useState('');
+  const [transcript, setTranscript] = useState(null); const [draft, setDraft] = useState(null); const [redo, setRedo] = useState(false); const [error, setError] = useState(null); const [status, setStatus] = useState('');
   const blocked = setup ? featureBlock('transcription', setup.items) : [];
   const load = useCallback(async () => { const value = (await localApi.transcript({ path: projectPath, mediaId: media.id })).transcript; setTranscript(value); setDraft(value ? value.current.map(segment => ({ ...segment })) : null); }, [projectPath, media.id]);
   useEffect(() => { load().catch(issue => setError(issue)); }, [load, media.transcript?.updatedAt]);
@@ -134,7 +135,8 @@ function TranscriptPanel({ projectPath, media, setup, onOpenSetup, onChanged, on
   const save = async () => { setError(null); try { await localApi.saveTranscript({ path: projectPath, mediaId: media.id, baseRevision: transcript.revision, segments: draft }); setStatus('Revisão salva. A saída original do Whisper foi preservada.'); await load(); await onChanged(); } catch (issue) { setError(issue); } };
   const changed = draft && transcript && JSON.stringify(draft) !== JSON.stringify(transcript.current);
   return <div className="transcript"><h3>Transcrição PT-BR</h3>
-    {blocked.length ? <FeatureList features={['transcription']} setup={setup} onOpenSetup={onOpenSetup}/> : <div className="setup-actions"><button className="button quiet" onClick={() => start(false)}>{transcript ? 'Verificar transcrição' : 'Transcrever'}</button>{transcript && <button className="button quiet" onClick={() => { if (window.confirm('Transcrever de novo? A revisão manual continua salva, mas a saída bruta será substituída.')) start(true); }}>Transcrever de novo</button>}</div>}
+    {blocked.length ? <FeatureList features={['transcription']} setup={setup} onOpenSetup={onOpenSetup}/> : <div className="setup-actions"><button className="button quiet" onClick={() => start(false)}>{transcript ? 'Verificar transcrição' : 'Transcrever'}</button>{transcript && <button className="button quiet" onClick={() => setRedo(true)}>Transcrever de novo</button>}</div>}
+    {redo && <ConfirmDialog title="Transcrever de novo" message="A revisão manual continua salva, mas a saída bruta será substituída." confirm="Transcrever" tone="primary" onClose={() => setRedo(false)} onConfirm={async () => { setRedo(false); await start(true); }}/>}
     <DependencyNotice error={error} onOpenSetup={onOpenSetup}/>{status && <p className="notice" role="status">{status}</p>}
     {draft && <>
       <ol className="segments">{draft.map((segment, index) => <li key={index}><button type="button" className="mini-button" onClick={() => onSeek(segment.start)} aria-label={`Ir para ${clock(segment.start)}`}>{clock(segment.start)}</button><label className="sr-only" htmlFor={`segment-${index}`}>Trecho {index + 1}</label><textarea id={`segment-${index}`} rows="2" value={segment.text} onChange={event => setDraft(previous => previous.map((item, position) => (position === index ? { ...item, text: event.target.value } : item)))}/>{transcript.raw[index] && transcript.raw[index].text !== segment.text && <small className="muted">Original: {transcript.raw[index].text}</small>}</li>)}</ol>

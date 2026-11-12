@@ -17,6 +17,7 @@ import { PackageService } from '../package/package-service.js';
 import { NativeDialog } from './native-dialog.js';
 import { AgentService } from '../core/agent-service.js';
 import { randomUUID } from 'node:crypto';
+import pkg from '../../package.json' with { type: 'json' };
 import { MediaService } from '../media/media-service.js';
 import { FfmpegRenderer } from '../render/ffmpeg-renderer.js';
 import { ComponentRegistry } from '../timeline/component-registry.js';
@@ -405,6 +406,27 @@ export class LocalApplicationService {
     await this.ready();
     const status = await this.setup.status();
     return { capabilities: status.items.filter(item => item.id !== 'node').map(item => ({ id: item.id, label: item.label, ready: item.ready, required: item.required, ...(item.ready ? { version: item.detected } : { solution: item.installable ? 'Instale em Dependências.' : item.systemCommand ? `Instale com: ${item.systemCommand}` : item.manualSteps || item.reason || 'Indisponível.' }) })) };
+  }
+
+  /**
+   * Sobre e diagnóstico: versões, sistema e pastas. O relatório troca a pasta
+   * pessoal por "~" e não inclui títulos, caminhos de projetos, roteiros nem perfis de voz.
+   */
+  async about() {
+    await this.ready();
+    const status = await this.setup.status();
+    const home = os.homedir();
+    const redact = value => (typeof value === 'string' && home && (value === home || value.startsWith(home + path.sep)) ? `~${value.slice(home.length)}` : value);
+    const projects = await this.registry.list().catch(() => []);
+    return {
+      app: { name: 'Content Lab', version: pkg.version },
+      system: { platform: process.platform, arch: process.arch, release: os.release(), node: process.version, cpus: os.cpus().length, memoryGb: +(os.totalmem() / 1024 ** 3).toFixed(1) },
+      nativeDialog: this.dialog.support ? this.dialog.support() : { available: process.platform === 'linux', tool: 'zenity' },
+      paths: { data: redact(this.dataDirectory), ...Object.fromEntries(Object.entries(this.settings.roots).map(([key, value]) => [key, redact(value) ?? null])) },
+      dependencies: status.items.map(item => ({ id: item.id, ready: item.ready, required: item.required, version: item.ready ? String(item.detected ?? '') : null })),
+      projects: { known: projects.length },
+      generatedAt: new Date().toISOString(),
+    };
   }
 
   /** Recusa a operação quando faltam dependências, indicando quais instalar. */

@@ -14,6 +14,7 @@ export const localApi = {
   health: () => request('/health'),
   listProjects: () => request('/projects'),
   diagnostics: () => request('/diagnostics'),
+  about: () => request('/about'),
   openProject: path => request('/projects/open', { method: 'POST', body: JSON.stringify({ path }) }),
   createProject: input => request('/projects/create', { method: 'POST', body: JSON.stringify(input) }),
   runProjectAction: input => request('/projects/action', { method: 'POST', body: JSON.stringify(input) }),

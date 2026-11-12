@@ -198,13 +198,13 @@ Aceite: o mesmo projeto produz resultados equivalentes pela UI, CLI e MCP; aprov
 Objetivo: eliminar controles ambíguos e garantir operação clara em máquinas suportadas.
 
 - [ ] Inventariar todos os controles e estados interativos; conectar ou desabilitar com explicação.
-- [ ] Substituir `window.prompt` por diálogos acessíveis para motivo de mudanças/reabertura.
+- [x] Substituir `window.prompt` por diálogos acessíveis para motivo de mudanças/reabertura.
 - [ ] Implementar navegação completa por teclado, foco restaurado, labels, live regions e contraste AA.
 - [ ] Testar loading, vazio, erro, offline local, cancelamento e arquivos ausentes.
-- [ ] Garantir que `:hover` nunca sugira ação em controle disabled.
-- [ ] Implementar adaptador de diálogo nativo para Windows/macOS ou documentar oficialmente Linux-only.
+- [x] Garantir que `:hover` nunca sugira ação em controle disabled.
+- [x] Implementar adaptador de diálogo nativo para Windows/macOS ou documentar oficialmente Linux-only.
 - [ ] Testar breakpoints e proporções em viewport desktop e móvel.
-- [ ] Adicionar página “Sobre e diagnóstico” com versões, caminhos e exportação de relatório sem dados sensíveis.
+- [x] Adicionar página “Sobre e diagnóstico” com versões, caminhos e exportação de relatório sem dados sensíveis.
 
 Aceite: todos os fluxos principais funcionam por teclado e cada indisponibilidade explica causa e solução.
 
@@ -369,3 +369,11 @@ Não iniciar empacotamento desktop antes de estabilizar armazenamento, setup e o
 - Primeiro teste a escrever: remover um projeto de Recentes preserva `project.json`; excluir via lixeira remove o caminho ativo e mantém possibilidade de restauração.
 - Arquivos iniciais prováveis: `src/server/project-registry.js`, `src/server/local-application-service.js`, `src/server/http-server.js`, `src/ui/App.jsx` e seus testes diretos.
 - Restrições: preservar projetos reais, não editar DiazVerso-Plugin, não usar force push e não considerar toast/placeholder como implementação.
+
+### F21 parcial (2026-11-12)
+
+- Feito: `Dialogs.jsx` (ConfirmDialog/ReasonDialog com foco preso, Esc e foco devolvido); nenhum `window.prompt/confirm` restante na UI; CSS de foco visível em campos, disabled sem hover e `prefers-reduced-motion`; seletor nativo zenity/PowerShell/AppleScript (`native-dialog.test.js`); `GET /api/v1/about` + painel “Sobre e diagnóstico” em Configurações com relatório JSON sem títulos/caminhos de projeto (pasta pessoal → `~`).
+- Validado: 172 testes, build, audit 0; painel verificado no navegador real em desktop e 375 px sem rolagem horizontal. Seletores Windows/macOS testados só por contrato (sem máquina real).
+- Falta: inventário completo de controles, navegação por teclado ponta a ponta na timeline/mídia, estados offline/cancelamento/arquivo ausente e auditoria de contraste AA.
+- Próxima ação: concluir os itens restantes da F21 ou seguir para F22.
+

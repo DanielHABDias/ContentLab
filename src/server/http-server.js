@@ -15,6 +15,7 @@ export function createContentLabServer({ dataDirectory = process.env.CONTENTLAB_
       const url = new URL(request.url, 'http://127.0.0.1');
       if (request.method === 'GET' && url.pathname === '/api/v1/health') return json(response, 200, await application.health());
       if (request.method === 'GET' && url.pathname === '/api/v1/projects') return json(response, 200, { projects: await application.listProjects() });
+      if (request.method === 'GET' && url.pathname === '/api/v1/about') return json(response, 200, await application.about());
       if (request.method === 'GET' && url.pathname === '/api/v1/diagnostics') return json(response, 200, await application.diagnostics());
       if (request.method === 'POST' && url.pathname === '/api/v1/projects/open') {
         const body = await readJson(request);

@@ -63,3 +63,10 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--lime); outline-
 .rights-note button { margin-left: auto; }
 .automation-job { display: grid; gap: 5px; margin-top: 14px; padding: 12px 14px; border: 1px solid #41414d; border-radius: 9px; background: #1b1b24; }
 .automation-job span { color: var(--muted); font-size: 12px; }
+/* F21: foco visível em todos os campos, disabled sem affordance de hover, movimento reduzido. */
+input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible,[tabindex]:focus-visible { outline: 3px solid var(--lime); outline-offset: 2px; }
+:is(button,input,select,textarea):disabled,[aria-disabled="true"] { cursor: not-allowed; }
+:is(button,[role="menuitem"]):disabled:hover { filter: none; transform: none !important; }
+@media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition: none !important; scroll-behavior: auto !important; } }
+
+@media (max-width: 640px) { .dialog { width: calc(100vw - 24px); max-height: calc(100vh - 24px); overflow: auto; } .section-title { flex-wrap: wrap; gap: 10px; } }

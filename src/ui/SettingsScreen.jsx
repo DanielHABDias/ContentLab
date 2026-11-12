@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Check, FolderOpen, HardDrive, RefreshCw, Trash2, X } from 'lucide-react';
 import { localApi } from './local-api.js';
+import { ConfirmDialog } from './Dialogs.jsx';
+import { DiagnosticsPanel } from './DiagnosticsPanel.jsx';
 import { formatBytes, formatDate } from './ProjectManagement.jsx';
 
 const ROOT_LABELS = {
@@ -15,7 +17,7 @@ const GB = 1024 ** 3;
 
 export function SettingsScreen({ onBack }) {
   const [settings, setSettings] = useState(null); const [usage, setUsage] = useState(null); const [jobs, setJobs] = useState([]); const [error, setError] = useState(''); const [status, setStatus] = useState('');
-  const [decision, setDecision] = useState(null); const [orphans, setOrphans] = useState(null); const [backups, setBackups] = useState([]); const [busy, setBusy] = useState(false);
+  const [decision, setDecision] = useState(null); const [orphans, setOrphans] = useState(null); const [backups, setBackups] = useState([]); const [busy, setBusy] = useState(false); const [confirming, setConfirming] = useState(null);
   const load = useCallback(async () => {
     try { const [value, used, running, list] = await Promise.all([localApi.getSettings(), localApi.storageUsage(), localApi.storageJobs(), localApi.registryBackups()]); setSettings(value); setUsage(used); setJobs(running.jobs); setBackups(list.backups); }
     catch (issue) { setError(issue.message); }
@@ -64,10 +66,10 @@ export function SettingsScreen({ onBack }) {
       <ul className="media-list">{Object.entries(usage.categories).map(([key, value]) => <li key={key}><span><strong>{USAGE_LABELS[key]}</strong><small><code>{value.path}</code>{value.count != null && ` · ${value.count} projetos`}</small></span><span>{formatBytes(value.bytes)}</span></li>)}</ul>
       <p className="setup-meta">Livre: {formatBytes(usage.freeBytes)}. Derivados recriáveis: {formatBytes(usage.derivedBytes)}.{usage.unanalyzedProjects > 0 && ` ${usage.unanalyzedProjects} projeto(s) dos Recentes não puderam ser analisados.`}</p>
       <div className="setup-actions">
-        <button className="button quiet" disabled={busy || migrating} onClick={() => { if (window.confirm('Remover cortes, downloads temporários, cache de render e código-fonte de compilação? Originais e mídias de projetos não são tocados.')) act(async () => { const result = await localApi.storageCleanup({}); setStatus(`Liberado ${formatBytes(result.bytes)}.`); }); }}><Trash2 size={16}/> Limpar derivados</button>
+        <button className="button quiet" disabled={busy || migrating} onClick={() => setConfirming({ title: 'Limpar derivados', message: 'Remover cortes, downloads temporários, cache de render e código-fonte de compilação? Originais e mídias de projetos não são tocados.', confirm: 'Limpar', run: async () => { const result = await localApi.storageCleanup({}); setStatus(`Liberado ${formatBytes(result.bytes)}.`); } })}><Trash2 size={16}/> Limpar derivados</button>
         <button className="button quiet" disabled={busy} onClick={() => act(async () => setOrphans({ ...(await localApi.storageOrphans()), selected: [] }))}>Analisar mídias sem uso</button>
       </div>
-      {orphans && <OrphanList orphans={orphans} busy={busy} onChange={setOrphans} onDelete={hashes => act(async () => { const result = await localApi.storageCleanup({ derived: false, orphanHashes: hashes }); setOrphans(null); setStatus(`Removidas ${hashes.length} mídias sem uso (${formatBytes(result.bytes)}).`); })}/>}
+      {orphans && <OrphanList orphans={orphans} busy={busy} onChange={setOrphans} onAsk={setConfirming} onDelete={hashes => act(async () => { const result = await localApi.storageCleanup({ derived: false, orphanHashes: hashes }); setOrphans(null); setStatus(`Removidas ${hashes.length} mídias sem uso (${formatBytes(result.bytes)}).`); })}/>}
     </section>
 
     <Limits settings={settings} busy={busy} onSave={limits => act(() => localApi.updateSettings({ baseRevision: settings.revision, limits }), 'Limites salvos.')}/>
@@ -75,9 +77,12 @@ export function SettingsScreen({ onBack }) {
     <section className="workflow-card" aria-labelledby="registry-title">
       <div className="section-title"><h2 id="registry-title">Registro de projetos</h2><button className="button quiet" disabled={busy} onClick={() => act(async () => { const result = await localApi.backupRegistry(); setStatus(`Backup criado com ${result.projects} projetos.`); })}>Criar backup</button></div>
       <p className="setup-meta">O registro guarda só os caminhos dos Recentes; os projetos ficam nas próprias pastas. Uma cópia de segurança é mantida a cada alteração e o registro é reconstruído automaticamente se corromper.</p>
-      {backups.length ? <ul className="media-list">{backups.slice(0, 5).map(backup => <li key={backup.name}><span><strong>{backup.name}</strong></span><button className="mini-button" disabled={busy} onClick={() => { if (window.confirm('Restaurar este backup dos Recentes? A lista atual é salva antes.')) act(() => localApi.restoreRegistry(backup.name), 'Registro restaurado.'); }}>Restaurar</button></li>)}</ul> : <div className="empty-state">Nenhum backup manual.</div>}
+      {backups.length ? <ul className="media-list">{backups.slice(0, 5).map(backup => <li key={backup.name}><span><strong>{backup.name}</strong></span><button className="mini-button" disabled={busy} onClick={() => setConfirming({ title: 'Restaurar backup', message: `Restaurar ${backup.name} nos Recentes? A lista atual é salva antes.`, confirm: 'Restaurar', tone: 'primary', run: () => localApi.restoreRegistry(backup.name), done: 'Registro restaurado.' })}>Restaurar</button></li>)}</ul> : <div className="empty-state">Nenhum backup manual.</div>}
     </section>
 
+    <DiagnosticsPanel/>
+
+    {confirming && <ConfirmDialog title={confirming.title} message={confirming.message} confirm={confirming.confirm} tone={confirming.tone} onClose={() => setConfirming(null)} onConfirm={async () => { const item = confirming; setConfirming(null); if (item.direct) item.direct(); else await act(item.run, item.done); }}/>}
     {decision && <MigrationDialog decision={decision} busy={busy} onChange={setDecision} onClose={() => setDecision(null)}
       onMigrate={() => act(async () => { await localApi.startMigration({ kind: decision.kind, target: decision.target, removeSource: decision.removeSource }); setDecision(null); setStatus('Migração iniciada.'); })}
       onEmpty={() => act(async () => { await localApi.updateSettings({ baseRevision: settings.revision, roots: { [decision.kind]: decision.target }, emptyRoots: [decision.kind] }); setDecision(null); setStatus(`Nova pasta em uso. Os dados antigos continuam em ${decision.plan.source}.`); })}/>}
@@ -104,13 +109,13 @@ function MigrationDialog({ decision, busy, onChange, onClose, onMigrate, onEmpty
   </div></div>;
 }
 
-function OrphanList({ orphans, busy, onChange, onDelete }) {
+function OrphanList({ orphans, busy, onChange, onAsk, onDelete }) {
   if (!orphans.orphans.length) return <p className="notice" role="status">Nenhuma mídia sem uso encontrada.</p>;
   const toggle = hash => onChange({ ...orphans, selected: orphans.selected.includes(hash) ? orphans.selected.filter(value => value !== hash) : [...orphans.selected, hash] });
   return <div className="consent-box">
     <p><strong>{orphans.orphans.length} mídias sem uso</strong> ({formatBytes(orphans.bytes)}) em projetos conhecidos.{orphans.unanalyzedProjects > 0 && ` Atenção: ${orphans.unanalyzedProjects} projeto(s) ausentes não foram analisados e podem usar estas mídias.`} Projetos fora dos Recentes também não são analisados.</p>
     <ul className="media-list">{orphans.orphans.map(file => <li key={file.hash}><label className="check"><input type="checkbox" checked={orphans.selected.includes(file.hash)} onChange={() => toggle(file.hash)}/> <code>{file.hash.slice(0, 16)}…</code></label><span>{formatBytes(file.size)}</span></li>)}</ul>
-    <button className="button danger" disabled={busy || !orphans.selected.length} onClick={() => { if (window.confirm(`Excluir ${orphans.selected.length} mídias sem uso? Isso não pode ser desfeito.`)) onDelete(orphans.selected); }}>Excluir selecionadas</button>
+    <button className="button danger" disabled={busy || !orphans.selected.length} onClick={() => onAsk({ title: 'Excluir mídias sem uso', message: `Excluir ${orphans.selected.length} mídias sem uso? Isso não pode ser desfeito.`, confirm: 'Excluir', direct: () => onDelete(orphans.selected) })}>Excluir selecionadas</button>
   </div>;
 }
 

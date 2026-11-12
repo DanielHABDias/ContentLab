@@ -87,3 +87,18 @@ test('enfileira render com preset válido, persiste e recusa proporção diverge
   const job = await service.enqueueRender({ path: created.path, outputDirectory: path.join(root, 'out'), presetId: 'hd' }); expect(await service.renderQueue.wait(job.id)).toMatchObject({ state: 'completed', presetId: 'hd', output: expect.stringMatching(/-hd\.mp4$/) });
   const restarted = new LocalApplicationService({ dataDirectory, setup, renderer }); expect((await restarted.listRenderJobs({ path: created.path })).jobs[0]).toMatchObject({ id: job.id, state: 'completed' });
 });
+
+test('sobre e diagnóstico mostra versões e esconde dados pessoais', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'contentlab-about-')); roots.push(root);
+  const service = new LocalApplicationService({ dataDirectory: path.join(root, 'data') });
+  await service.createProject({ title: 'Projeto secreto', type: 'long', aspectRatio: '16:9', parentDirectory: path.join(root, 'workspace') });
+  const about = await service.about();
+  expect(about.app).toMatchObject({ name: 'Content Lab', version: expect.stringMatching(/^\d+\.\d+\.\d+/) });
+  expect(about.system.node).toBe(process.version);
+  expect(about.nativeDialog).toHaveProperty('available');
+  expect(about.projects.known).toBe(1);
+  const text = JSON.stringify(about);
+  expect(text).not.toContain('Projeto secreto');
+  expect(text).not.toContain('projeto_secreto');
+  if (root.startsWith(os.homedir())) expect(text).not.toContain(os.homedir());
+});
