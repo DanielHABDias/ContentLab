@@ -85,6 +85,6 @@ Máquina de referência: Ryzen 5 5500 (12 threads), 15,5 GB de RAM e GPU AMD int
 
 ## Ainda falta
 
-- **Assinar o instalador:** a infraestrutura de assinatura das atualizações (Ed25519) está pronta, mas a chave de release ainda não foi gerada. Gerar e guardar essa chave é decisão de quem publica. Não existe assinatura de código do sistema (como o GPG da distribuição).
+- **Assinatura:** concluída em 2026-11-12. A chave de release foi gerada, o manifesto do 2.1.0-rc.1 está assinado e foi verificado com a chave embutida no pacote. Linux não tem assinatura de código do sistema para tar.gz.
 - **Instaladores para Windows e macOS.**
 - **Teste em VM** com outra distribuição.

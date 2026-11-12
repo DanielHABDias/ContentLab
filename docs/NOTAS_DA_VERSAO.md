@@ -26,7 +26,7 @@ Primeira versão candidata completa. Ela vai da ideia ao vídeo final, roda loca
 ## Limitações conhecidas
 
 - **Instalador:** só existe para Linux x64. Windows e macOS têm apenas o seletor de arquivos nativo.
-- **Assinatura:** o instalador ainda não é assinado, porque a chave de release não foi gerada (`scripts/release-keys.mjs`). Sem a chave, atualizar só funciona no modo manual.
+- **Assinatura:** o manifesto de atualização é assinado com Ed25519 e fixa o SHA-256 do pacote. Não há assinatura de código do sistema operacional.
 - **Voz clonada na CPU:** leva cerca de 30 s por segundo de fala nesta máquina. A GPU AMD sem ROCm não é usada.
 - **Escuta pendente:** a qualidade e o ritmo da voz clonada em PT-BR dependem da escuta do titular (`.tools/qa-f17/`).
 - **Render com muitos clipes:** gera muitas entradas no FFmpeg. Projetos com mais de 60 s nesse caso são renderizados em segmentos.

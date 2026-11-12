@@ -227,7 +227,7 @@ Aceite: a revisão não encontra escrita fora das raízes autorizadas nem execu�
 Objetivo: permitir que uma pessoa não desenvolvedora instale, execute, atualize e desinstale o Content Lab.
 
 - [x] Escolher shell desktop/empacotamento depois de um spike curto (por exemplo Tauri ou Electron), preservando o núcleo Node e contratos.
-- [ ] Produzir instalador assinado para o primeiro sistema oficialmente suportado.
+- [x] Produzir instalador assinado para o primeiro sistema oficialmente suportado.
 - [x] Separar aplicativo, dados do usuário, cache e modelos para atualizações sem perda.
 - [x] Implementar atualização com canal, versão, notas, checksum, rollback e opção manual.
 - [x] Desinstalação deve perguntar separadamente sobre aplicativo, cache/modelos e projetos.
@@ -410,4 +410,11 @@ Não iniciar empacotamento desktop antes de estabilizar armazenamento, setup e o
 - Revisão visual render × prévia; loudness dos renders; varredura de placeholders; doctor; audit 0; 182 testes.
 - Documentação: `docs/VALIDACAO_FINAL.md`, `docs/QA_E2E_RC.md`, `docs/NOTAS_DA_VERSAO.md`.
 - Pendências documentadas como limitações: chave de release, VM de outra distro, Windows/macOS, escuta da voz clonada pelo titular.
+
+### F23 — assinatura concluída (2026-11-12)
+
+- Chave Ed25519 gerada pelo dono (privada em `~/.config/contentlab-release/`, pública versionada em `packaging/release-public-key.pem`).
+- Pacote `contentlab-2.1.0-rc.1-linux-x64.tar.gz` gerado com manifesto `stable.json` assinado; verificado com a chave pública embutida no próprio pacote: assinatura válida, SHA-256 confere; URL, versão ou hash adulterados → `BAD_SIGNATURE`.
+- Linux não tem assinatura de código do sistema para tar.gz; a integridade vem do manifesto assinado que fixa o SHA-256.
+- Restam só itens que dependem do dono: escuta da voz com amostra de 60 s (F17) e instalação em VM de outra distribuição (F23).
 
