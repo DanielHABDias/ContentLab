@@ -183,13 +183,13 @@ Aceite: um render longo sobrevive a reinício e informa resultado real; um pacot
 
 Objetivo: terminar a promessa “da ideia ao pacote final” sem esconder decisões humanas.
 
-- [ ] Definir exatamente o que o modo autônomo executa e onde deve parar por direitos, consentimento, custo ou aprovação.
-- [ ] Criar jobs por etapa com logs compactos, entradas, saídas, revisão-base e operação idempotente.
-- [ ] Expor conflito de revisão e botão para recarregar/comparar, nunca sobrescrever silenciosamente.
-- [ ] Associar pedidos de mudança a motivo, autor, etapa, revisão e resolução.
-- [ ] Mostrar dependências invalidadas e impedir aprovação quando artefatos obrigatórios estiverem ausentes.
-- [ ] Garantir paridade de operações entre UI, CLI e MCP.
-- [ ] Não implementar publicação automática em redes sociais.
+- [x] Definir exatamente o que o modo autônomo executa e onde deve parar por direitos, consentimento, custo ou aprovação.
+- [x] Criar jobs por etapa com logs compactos, entradas, saídas, revisão-base e operação idempotente.
+- [x] Expor conflito de revisão e botão para recarregar/comparar, nunca sobrescrever silenciosamente.
+- [x] Associar pedidos de mudança a motivo, autor, etapa, revisão e resolução.
+- [x] Mostrar dependências invalidadas e impedir aprovação quando artefatos obrigatórios estiverem ausentes.
+- [x] Garantir paridade de operações entre UI, CLI e MCP.
+- [x] Não implementar publicação automática em redes sociais.
 
 Aceite: o mesmo projeto produz resultados equivalentes pela UI, CLI e MCP; aprovações continuam explícitas e auditáveis.
 
@@ -283,6 +283,13 @@ Aceite: em qualquer computador, a instalação baixa a variante certa, a geraç�
 Não iniciar empacotamento desktop antes de estabilizar armazenamento, setup e operações destrutivas. Não baixar modelos grandes antes de implementar consentimento, checksum, retomada e espaço em disco.
 
 ## Checkpoint de retomada
+
+### F20 concluída (2026-11-11)
+
+- Concluído: `workflow.run` compartilhado pelo núcleo cria jobs persistidos e idempotentes por etapa, com revisão-base, entradas, saídas, log compacto e motivo de parada. O modo autônomo somente verifica/prepara a etapa atual; para por artefatos, direitos, consentimento, custo ou aprovação e nunca aprova nem publica automaticamente.
+- Aprovação auditável: cada etapa exige artefatos mínimos reais. Reabrir invalida dependentes, a interface explica a dependência e pedidos de mudança guardam motivo, autor, etapa, revisão, status e resolução ao aprovar.
+- Concorrência: conflitos usam `REVISION_CONFLICT` estruturado. A interface oferece comparar revisões e recarregar o projeto; CLI preserva código/detalhes e MCP/UI usam a mesma `AgentService`, sem sobrescrita silenciosa.
+- Testes: 24 arquivos/166 testes, build de produção e auditoria sem vulnerabilidades; cobrem contratos, persistência/reabertura, jobs idempotentes, bloqueio de artefatos, auditoria de mudanças, conflito estruturado e fluxos da interface. Próxima tarefa: F21, somente quando solicitada pelo usuário.
 
 ### F19 concluída (2026-11-11)
 

@@ -94,6 +94,8 @@ test('SRT enviado pela interface e componente Remotion entram na timeline e no p
 test('troca de proporção pede confirmação com relatório e reabre edição aprovada', async () => {
   const { app, project, media } = await setup();
   let state = await app.editAddMedia({ path: project.path, baseRevision: await revision(app, project), trackId: 'visual_main', mediaId: media.id });
+  state = await app.editAddMedia({ path: project.path, baseRevision: state.project.revision, trackId: 'audio_main', mediaId: media.id });
+  state = await app.runProjectAction({ path: project.path, baseRevision: state.project.revision, action: { type: 'creative.update', creative: { brief: { thesis: 'Tese', audience: 'Público', promise: 'Promessa', notes: '' }, script: { hook: 'Gancho', development: 'Desenvolvimento', payoff: 'Final', visual: '', sources: '' }, packaging: { titleA: 'Título', titleB: '', description: 'Descrição', tags: '', seo: '', thumbnailMediaId: null } } } });
   for (let index = 0; index < 6; index += 1) {
     const current = (await app.inspectProject(project.path)).project; const stage = current.stages.find(item => ['active', 'changes_requested'].includes(item.state));
     if (!stage || stage.id === 'review') break;

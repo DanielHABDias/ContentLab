@@ -27,6 +27,6 @@ try {
   process.stdout.write(`${JSON.stringify({ ok: true, result })}\n`);
 } catch (error) {
   process.stderr.write(`Content Lab: ${error.message}\n`);
-  process.stdout.write(`${JSON.stringify({ ok: false, error: { code: 'CONTENTLAB_ERROR', message: error.message } })}\n`);
+  process.stdout.write(`${JSON.stringify({ ok: false, error: { code: error.code || 'CONTENTLAB_ERROR', message: error.message, ...(error.details ? { details: error.details } : {}) } })}\n`);
   process.exitCode = 1;
 }

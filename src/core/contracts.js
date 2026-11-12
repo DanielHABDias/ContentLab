@@ -12,6 +12,33 @@ export const workflowStageSchema = z.object({
   dependsOn: z.array(idSchema).default([]),
 });
 
+export const changeRequestSchema = z.object({
+  id: idSchema,
+  stageId: idSchema,
+  reason: z.string().min(1),
+  author: z.string().min(1).max(120),
+  requestedRevision: z.number().int().positive(),
+  requestedAt: z.string(),
+  status: z.enum(['open', 'resolved']),
+  resolution: z.string().min(1).nullable(),
+  resolvedRevision: z.number().int().positive().nullable(),
+  resolvedAt: z.string().nullable(),
+});
+
+export const workflowJobSchema = z.object({
+  id: idSchema,
+  stageId: idSchema,
+  state: z.enum(['waiting_input', 'waiting_rights', 'waiting_consent', 'waiting_cost', 'waiting_approval', 'completed', 'failed']),
+  baseRevision: z.number().int().positive(),
+  operationId: idSchema,
+  inputs: z.array(z.string()),
+  outputs: z.array(z.string()),
+  log: z.array(z.string()).max(20),
+  stopReason: z.enum(['missing_artifacts', 'rights', 'consent', 'cost', 'approval']).nullable(),
+  createdAt: z.string(),
+  finishedAt: z.string().nullable(),
+});
+
 export const mediaCutSchema = z.object({
   id: idSchema,
   name: z.string().min(1).max(80),
@@ -97,6 +124,8 @@ export const projectSchema = z.object({
   mode: z.enum(['review', 'autonomous']),
   revision: z.number().int().positive(),
   stages: z.array(workflowStageSchema),
+  changeRequests: z.array(changeRequestSchema).default([]),
+  workflowJobs: z.array(workflowJobSchema).default([]),
   media: z.array(mediaRefSchema),
   timeline: timelineSchema,
   creative: z.object({
@@ -120,9 +149,10 @@ export const operationSchema = z.object({
     z.object({ type: z.literal('clip.add'), trackId: idSchema, clip: clipSchema }),
     z.object({ type: z.literal('clip.remove'), trackId: idSchema, clipId: idSchema }),
     z.object({ type: z.literal('clip.move'), trackId: idSchema, clipId: idSchema, startFrame: z.number().int().nonnegative() }),
-    z.object({ type: z.literal('stage.approve'), stageId: idSchema, expectedRevision: z.number().int().nonnegative() }),
-    z.object({ type: z.literal('stage.reopen'), stageId: idSchema, reason: z.string().min(1) }),
-    z.object({ type: z.literal('stage.request_changes'), stageId: idSchema, reason: z.string().min(1) }),
+    z.object({ type: z.literal('stage.approve'), stageId: idSchema, expectedRevision: z.number().int().nonnegative(), author: z.string().min(1).max(120).default('usuário') }),
+    z.object({ type: z.literal('stage.reopen'), stageId: idSchema, reason: z.string().min(1), author: z.string().min(1).max(120).default('usuário'), requestId: idSchema.optional() }),
+    z.object({ type: z.literal('stage.request_changes'), stageId: idSchema, reason: z.string().min(1), author: z.string().min(1).max(120).default('usuário'), requestId: idSchema.optional() }),
+    z.object({ type: z.literal('workflow.run'), stageId: idSchema.optional(), jobId: idSchema, author: z.string().min(1).max(120).default('Content Lab') }),
     z.object({ type: z.literal('project.update'), title: z.string().min(1).optional(), projectType: z.enum(['long', 'short', 'custom']).optional(), aspectRatio: aspectRatioSchema.optional(), mode: z.enum(['review', 'autonomous']).optional() }),
     z.object({ type: z.literal('creative.update'), creative: projectSchema.shape.creative }),
     z.object({ type: z.literal('media.add'), media: mediaRefSchema }),

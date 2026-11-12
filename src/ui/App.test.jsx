@@ -36,7 +36,27 @@ test('configurar persiste e continuar abre a etapa real', async () => {
 });
 
 test('aprovação usa operação persistente em vez de estado simulado', async () => {
-  const details = realDetails(); localApi.listProjects.mockResolvedValue({ projects: [details.card] }); localApi.openProject.mockResolvedValue(details); localApi.runProjectAction.mockResolvedValue(realDetails({ ...details.project, revision: 2 })); render(<App/>); fireEvent.click(await screen.findByRole('button', { name: /abrir meu projeto/i })); fireEvent.click(await screen.findByRole('button', { name: /aprovar etapa/i })); await waitFor(() => expect(localApi.runProjectAction).toHaveBeenCalledWith({ path: '/tmp/meu_projeto', baseRevision: 1, action: { type: 'stage.approve', stageId: 'brief', expectedRevision: 0 } }));
+  const details = realDetails({ creative: { ...realDetails().project.creative, brief: { thesis: 'Tese', audience: 'Público', promise: 'Promessa', notes: '' } } }); localApi.listProjects.mockResolvedValue({ projects: [details.card] }); localApi.openProject.mockResolvedValue(details); localApi.runProjectAction.mockResolvedValue(realDetails({ ...details.project, revision: 2 })); render(<App/>); fireEvent.click(await screen.findByRole('button', { name: /abrir meu projeto/i })); fireEvent.click(await screen.findByRole('button', { name: /aprovar etapa/i })); await waitFor(() => expect(localApi.runProjectAction).toHaveBeenCalledWith({ path: '/tmp/meu_projeto', baseRevision: 1, action: { type: 'stage.approve', stageId: 'brief', expectedRevision: 0 } }));
+});
+
+test('modo autônomo executa job da etapa sem aprovar silenciosamente', async () => {
+  const details = realDetails({ mode: 'autonomous' });
+  localApi.listProjects.mockResolvedValue({ projects: [details.card] }); localApi.openProject.mockResolvedValue(details);
+  localApi.runProjectAction.mockResolvedValue(realDetails({ ...details.project, revision: 2, workflowJobs: [{ id: 'job_one', stageId: 'brief', state: 'waiting_input', baseRevision: 1, operationId: 'op_one', inputs: ['project@1'], outputs: ['missing:tese'], log: ['Faltam: tese'], stopReason: 'missing_artifacts', createdAt: 'x', finishedAt: 'x' }] }));
+  render(<App/>); fireEvent.click(await screen.findByRole('button', { name: /abrir meu projeto/i }));
+  expect(await screen.findByText(/nunca publica automaticamente/i)).toBeInTheDocument(); fireEvent.click(screen.getByRole('button', { name: /executar etapa atual/i }));
+  await waitFor(() => expect(localApi.runProjectAction).toHaveBeenCalledWith(expect.objectContaining({ action: expect.objectContaining({ type: 'workflow.run', stageId: 'brief', jobId: expect.stringMatching(/^job_/) }) })));
+  expect(await screen.findByText(/faltam: tese/i)).toBeInTheDocument();
+});
+
+test('conflito oferece comparar e recarregar sem sobrescrever', async () => {
+  const details = realDetails({ creative: { ...realDetails().project.creative, brief: { thesis: 'Tese', audience: 'Público', promise: 'Promessa', notes: '' } } });
+  localApi.listProjects.mockResolvedValue({ projects: [details.card] }); localApi.openProject.mockResolvedValue(details);
+  localApi.runProjectAction.mockRejectedValue(Object.assign(new Error('Conflito de revisão: esperado 1, atual 2'), { code: 'REVISION_CONFLICT', details: { expected: 1, actual: 2 } }));
+  render(<App/>); fireEvent.click(await screen.findByRole('button', { name: /abrir meu projeto/i })); await screen.findByRole('heading', { name: 'Meu projeto' }); fireEvent.click(screen.getByRole('button', { name: /aprovar etapa/i }));
+  expect(await screen.findByText(/esperado 1, atual 2/i)).toBeInTheDocument(); fireEvent.click(screen.getByText('Comparar')); expect(screen.getByText(/sua base: revisão 1/i)).toBeInTheDocument();
+  localApi.openProject.mockResolvedValue(realDetails({ ...details.project, revision: 2 })); fireEvent.click(screen.getByRole('button', { name: /recarregar/i }));
+  await waitFor(() => expect(localApi.openProject).toHaveBeenLastCalledWith('/tmp/meu_projeto'));
 });
 
 function cardWith(overrides = {}) { return { ...realDetails().card, status: 'ready', sizeBytes: 2048, modifiedAt: '2026-11-10T10:00:00Z', openedAt: '2026-11-11T10:00:00Z', ...overrides }; }

@@ -8,7 +8,7 @@ import { createWorkflow } from './workflow.js';
 
 const roots = [];
 afterEach(async () => Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true }))));
-async function setup() { const root = await mkdtemp(path.join(os.tmpdir(), 'contentlab-agent-')); roots.push(root); const service = new AgentService(new ProjectStore(root)); await service.create({ schema: 'contentlab-project-v1', id: 'agent_demo', title: 'Demo', type: 'long', aspectRatio: '16:9', mode: 'review', revision: 1, stages: createWorkflow(), media: [], timeline: { schema: 'contentlab-timeline-v1', fps: 30, durationInFrames: 300, aspectRatio: '16:9', safeArea: { top: .05, right: .05, bottom: .05, left: .05 }, tracks: [{ id: 'visual_main', kind: 'visual', name: 'Principal', muted: false, locked: false, clips: [] }] } }); return { root, service }; }
+async function setup(mode = 'review') { const root = await mkdtemp(path.join(os.tmpdir(), 'contentlab-agent-')); roots.push(root); const service = new AgentService(new ProjectStore(root)); await service.create({ schema: 'contentlab-project-v1', id: 'agent_demo', title: 'Demo', type: 'long', aspectRatio: '16:9', mode, revision: 1, stages: createWorkflow(), media: [], timeline: { schema: 'contentlab-timeline-v1', fps: 30, durationInFrames: 300, aspectRatio: '16:9', safeArea: { top: .05, right: .05, bottom: .05, left: .05 }, tracks: [{ id: 'visual_main', kind: 'visual', name: 'Principal', muted: false, locked: false, clips: [] }] }, creative: { brief: { thesis: 'Tese', audience: 'Público', promise: 'Promessa', notes: '' }, script: { hook: '', development: '', payoff: '', visual: '', sources: '' }, packaging: { titleA: '', titleB: '', description: '', tags: '', seo: '', thumbnailMediaId: null } } }); return { root, service }; }
 
 test('dry-run retorna diff sem alterar revisão', async () => {
   const { service } = await setup();
@@ -22,6 +22,21 @@ test('operação é idempotente e aprovação exige revisão esperada', async ()
   const operation = { schema: 'contentlab-operation-v1', operationId: 'op_approve', projectId: 'agent_demo', baseRevision: 1, dryRun: false, actions: [{ type: 'stage.approve', stageId: 'brief', expectedRevision: 0 }] };
   expect((await service.run(operation)).status).toBe('applied');
   expect((await service.run(operation)).status).toBe('unchanged');
+});
+
+test('modo autônomo cria job idempotente e para na aprovação humana', async () => {
+  const { service } = await setup('autonomous');
+  const operation = { schema: 'contentlab-operation-v1', operationId: 'op_auto_brief', projectId: 'agent_demo', baseRevision: 1, dryRun: false, actions: [{ type: 'workflow.run', stageId: 'brief', jobId: 'job_auto_brief' }] };
+  expect((await service.run(operation)).status).toBe('applied');
+  expect((await service.run(operation)).status).toBe('unchanged');
+  const project = await service.inspect('agent_demo', { compact: false });
+  expect(project.workflowJobs[0]).toMatchObject({ state: 'waiting_approval', stopReason: 'approval', baseRevision: 1 });
+  expect(project.stages[0].state).toBe('active');
+});
+
+test('conflito de revisão é estruturado para recarregar e comparar', async () => {
+  const { service } = await setup();
+  await expect(service.run({ schema: 'contentlab-operation-v1', operationId: 'op_stale', projectId: 'agent_demo', baseRevision: 9, dryRun: false, actions: [{ type: 'project.update', title: 'Outro' }] })).rejects.toMatchObject({ code: 'REVISION_CONFLICT', details: { expected: 9, actual: 1 } });
 });
 
 test('CLI cria e inspeciona projeto com saída JSON compacta', async () => {

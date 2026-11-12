@@ -234,7 +234,7 @@ export class LocalApplicationService {
     const absolute = path.resolve(directory);
     return await this.activities.track(absolute, 'escrita', async () => {
       const project = await readProjectDirectory(absolute);
-      if (project.revision !== baseRevision) throw new Error(`Conflito de revisão: esperado ${baseRevision}, atual ${project.revision}`);
+      if (project.revision !== baseRevision) throw Object.assign(new Error(`Conflito de revisão: esperado ${baseRevision}, atual ${project.revision}`), { code: 'REVISION_CONFLICT', details: { expected: baseRevision, actual: project.revision, compare: { title: project.title, stageStates: project.stages.map(({ id, state, revision }) => ({ id, state, revision })) } } });
       const store = new ProjectStore(path.dirname(absolute));
       const agent = new AgentService(store);
       await agent.run({ schema: 'contentlab-operation-v1', operationId: `op_${randomUUID().replaceAll('-', '')}`, projectId: project.id, baseRevision, dryRun: false, actions: actions || [action] });

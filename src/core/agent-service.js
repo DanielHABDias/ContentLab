@@ -1,5 +1,5 @@
 import { parseOperation, parseProject } from './contracts.js';
-import { approveStage, reopenStage, requestChanges } from './workflow.js';
+import { approveStage, planAutonomousStage, reopenStage, requestChanges } from './workflow.js';
 import { applyTimelineCommands, validateTimeline } from '../timeline/timeline-engine.js';
 
 export class AgentService {
@@ -18,8 +18,8 @@ export class AgentService {
     const previous = await this.store.history(operation.projectId);
     const duplicate = previous.find(event => event.operationId === operation.operationId);
     if (duplicate) return { status: 'unchanged', operationId: operation.operationId, revision: duplicate.revision };
-    if (current.revision !== operation.baseRevision) throw new Error(`Conflito de revisão: esperado ${operation.baseRevision}, atual ${current.revision}`);
-    const next = applyActions(current, operation.actions);
+    if (current.revision !== operation.baseRevision) throw revisionConflict(operation.baseRevision, current.revision, current);
+    const next = applyActions(current, operation.actions, operation.operationId);
     const diff = summarizeDiff(current, next);
     if (operation.dryRun) return { status: 'preview', operationId: operation.operationId, baseRevision: current.revision, diff };
     const saved = await this.store.update(operation.projectId, current.revision, () => next, { type: 'operation.applied', operationId: operation.operationId, actions: operation.actions.map(action => action.type) });
@@ -27,12 +27,19 @@ export class AgentService {
   }
 }
 
-function applyActions(project, actions) {
+function applyActions(project, actions, operationId) {
   let draft = structuredClone(project);
   for (const action of actions) {
     if (action.type === 'stage.approve') draft = approveStage(draft, action.stageId, action.expectedRevision);
-    else if (action.type === 'stage.reopen') draft = reopenStage(draft, action.stageId, action.reason);
-    else if (action.type === 'stage.request_changes') draft = requestChanges(draft, action.stageId, action.reason);
+    else if (action.type === 'stage.reopen') draft = reopenStage(draft, action.stageId, action.reason, action);
+    else if (action.type === 'stage.request_changes') draft = requestChanges(draft, action.stageId, action.reason, action);
+    else if (action.type === 'workflow.run') {
+      if (draft.mode !== 'autonomous') throw new Error('Ative o modo autônomo antes de executar o workflow');
+      const stageId = action.stageId || draft.stages.find(stage => ['active', 'changes_requested', 'invalidated'].includes(stage.state))?.id;
+      if (!stageId) throw new Error('Não há etapa disponível para execução');
+      const job = planAutonomousStage(draft, stageId, { jobId: action.jobId, operationId });
+      draft.workflowJobs = [job, ...(draft.workflowJobs || []).filter(item => item.id !== job.id)].slice(0, 100);
+    }
     else if (action.type === 'project.update') {
       if (action.title !== undefined) draft.title = action.title;
       if (action.projectType !== undefined) draft.type = action.projectType;
@@ -112,5 +119,9 @@ function summarizeDiff(before, after) {
 }
 
 function compactProject(project) {
-  return { id: project.id, title: project.title, revision: project.revision, type: project.type, aspectRatio: project.aspectRatio, mode: project.mode, stages: project.stages.map(({ id, state, revision }) => ({ id, state, revision })), mediaCount: project.media.length, trackCount: project.timeline.tracks.length, clipCount: project.timeline.tracks.reduce((sum, track) => sum + track.clips.length, 0) };
+  return { id: project.id, title: project.title, revision: project.revision, type: project.type, aspectRatio: project.aspectRatio, mode: project.mode, stages: project.stages.map(({ id, state, revision }) => ({ id, state, revision })), openChangeRequests: (project.changeRequests || []).filter(item => item.status === 'open').length, latestWorkflowJob: project.workflowJobs?.[0] || null, mediaCount: project.media.length, trackCount: project.timeline.tracks.length, clipCount: project.timeline.tracks.reduce((sum, track) => sum + track.clips.length, 0) };
+}
+
+function revisionConflict(expected, actual, current) {
+  return Object.assign(new Error(`Conflito de revisão: esperado ${expected}, atual ${actual}`), { code: 'REVISION_CONFLICT', details: { expected, actual, compare: { title: current.title, stageStates: current.stages.map(({ id, state, revision }) => ({ id, state, revision })) } } });
 }

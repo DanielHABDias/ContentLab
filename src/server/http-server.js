@@ -65,7 +65,7 @@ export function createContentLabServer({ dataDirectory = process.env.CONTENTLAB_
       if (url.pathname.startsWith('/api/')) return json(response, 404, { error: 'Rota local desconhecida' });
       return await serveStatic(response, staticDirectory, url.pathname);
     } catch (error) {
-      const status = ['PROJECT_BUSY', 'PROJECT_LOCKED', 'SETTINGS_CONFLICT', 'MIGRATION_RUNNING', 'NARRATION_CONFLICT', 'TRANSCRIPT_CONFLICT', 'VOICE_BUSY', 'HISTORY_STALE'].includes(error.code) || /Conflito de revisão/.test(error.message) ? 409 : 400;
+      const status = ['PROJECT_BUSY', 'PROJECT_LOCKED', 'SETTINGS_CONFLICT', 'MIGRATION_RUNNING', 'NARRATION_CONFLICT', 'TRANSCRIPT_CONFLICT', 'VOICE_BUSY', 'HISTORY_STALE', 'REVISION_CONFLICT'].includes(error.code) || /Conflito de revisão/.test(error.message) ? 409 : 400;
       return json(response, status, { error: error.message, ...(typeof error.code === 'string' && /^[A-Z_]+$/.test(error.code) ? { code: error.code } : {}), ...(error.details ? { details: error.details } : {}) });
     }
   });

@@ -71,6 +71,8 @@ npm run mcp
 
 Operações aceitam `dryRun`, `operationId` idempotente e revisão-base. O MCP usa `stdio`; configure o cliente para executar `node /caminho/ContentLab/src/adapters/mcp-server.js` e, se necessário, `CONTENTLAB_DATA_DIR`.
 
+O modo autônomo usa a mesma operação `workflow.run` pela interface, CLI e MCP. Cada execução persiste um job compacto com etapa, entradas, saídas, revisão-base e log. Ele nunca aprova nem publica sozinho: para quando faltam artefatos e sempre exige decisão humana para direitos de mídia, consentimento de voz, custo de render e aprovação. Conflitos retornam `REVISION_CONFLICT` com as revisões para recarregar e comparar sem sobrescrever trabalho externo.
+
 ## Pacotes
 
 `.contentlab` é um ZIP versionado com manifesto, deduplicação SHA-256 e verificação de integridade. ZIP padrão é a alternativa interoperável. Veja [formato e extração segura](docs/FORMATO_CONTENTLAB.md).
