@@ -5,6 +5,7 @@ import { motionPlanSchema, MOTION_SCENES } from '../core/contracts.js';
 import { MOTION_KIT } from '../motion/kit-catalog.js';
 import { mediaRefs } from '../render/motion-renderer.js';
 import { missingStageArtifacts } from '../core/workflow.js';
+import { noxDir } from '../core/nox-pack.js';
 
 const window = (id, text, start, length) => ({ scene: { id, label: id, text }, start, length });
 const windows = [
@@ -122,7 +123,7 @@ test('plano automático: poses no aparte, fundos variados, cena sozinha, caixinh
   expect(mediaRefs(plan)).toContain('m_moeda');
 });
 
-test('plano automático: o Nox troca de pose enquanto fala, passa por todas as poses do catálogo e a legenda segue o formato', async () => {
+test.skipIf(!noxDir())('plano automático: o Nox troca de pose enquanto fala, passa por todas as poses do catálogo e a legenda segue o formato', async () => {
   const { loadPoseCatalog } = await import('./production-operations.js');
   const poses = await loadPoseCatalog();
   expect(Object.keys(poses).length).toBeGreaterThanOrEqual(20);

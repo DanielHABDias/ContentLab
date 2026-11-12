@@ -64,12 +64,15 @@ test('documentação do kit: lista sons e poses e só serve arquivos do catálog
   const docs = await fetch(`${base}/api/v1/brand/docs`).then(response => response.json());
   expect(docs.sfx.map(item => item.name)).toEqual(expect.arrayContaining(['whoosh', 'sino', 'tapa-eco']));
   expect(docs.sfx.every(item => item.available && item.use)).toBe(true);
-  expect(docs.poses).toHaveLength(21); expect(docs.poses.find(pose => pose.id === 'apontando').files).toContain('apontando-b.png');
+  const { noxDir } = await import('../core/nox-pack.js'); const pack = noxDir(); // o Nox fica no plugin Diazverso, fora do Content Lab
+  if (pack) { expect(docs.noxPack).toBe('conectado'); expect(docs.poses).toHaveLength(21); expect(docs.poses.find(pose => pose.id === 'apontando').files).toContain('apontando-b.png'); }
+  else expect(docs.noxPack).toMatch(/plugin Diazverso/);
   expect(docs.captions.join(' ')).toMatch(/Short.*o tempo todo/);
   const sound = await fetch(`${base}/api/v1/brand/file?kind=sfx&name=sino`);
   expect(sound.status).toBe(200); expect(sound.headers.get('content-type')).toBe('audio/wav'); expect(Buffer.from(await sound.arrayBuffer()).subarray(0, 4).toString()).toBe('RIFF');
   const pose = await fetch(`${base}/api/v1/brand/file?kind=pose&name=apontando-b`);
-  expect(pose.status).toBe(200); expect(pose.headers.get('content-type')).toBe('image/png'); await pose.arrayBuffer();
+  if (pack) { expect(pose.status).toBe(200); expect(pose.headers.get('content-type')).toBe('image/png'); } else expect(pose.status).toBe(400);
+  await pose.arrayBuffer();
   for (const query of ['kind=sfx&name=../../package', 'kind=sfx&name=nao-existe', 'kind=pose&name=catalogo', 'kind=fonts&name=Anton-Regular']) expect((await fetch(`${base}/api/v1/brand/file?${query}`)).status).toBe(400);
   expect((await fetch(`${base}/api/v1/brand/docs`, { headers: { 'sec-fetch-site': 'cross-site' } })).status).toBe(403);
 });

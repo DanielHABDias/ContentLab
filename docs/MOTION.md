@@ -110,7 +110,7 @@ No modo composição, o `verificacao.md` confere:
 
 ## Atualizar o kit
 
-O kit, o catálogo, o Nox sem olhos e os SFX vêm do plugin. Depois de mudar o plugin, rode `npm run scenes:diazverso`.
+O kit, o catálogo e os SFX vêm do plugin; depois de mudar o plugin, rode `npm run scenes:diazverso`. O Nox (canônico, sem olhos e poses) não é copiado: o render lê direto do plugin no computador (`src/core/nox-pack.js`), e sem ele o render pede para definir `DIAZVERSO_PLUGIN_DIR`.
 
 ## Limites
 

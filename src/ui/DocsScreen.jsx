@@ -28,7 +28,7 @@ export function DocsScreen({ onBack }) {
     </section>
 
     <section className="workflow-card" aria-labelledby="docs-poses"><div className="section-title"><h2 id="docs-poses">Poses do Nox</h2><span>{docs.poses.length} poses</span></div>
-      <p className="hint">Enquanto fala, o Nox troca de pose a cada 0,7–1 s, sem animação entre elas. Variantes (-b) são sorteadas.</p>
+      {docs.noxPack !== 'conectado' && <p className="hint" role="status">{docs.noxPack}</p>}<p className="hint">Enquanto fala, o Nox troca de pose a cada 0,7–1 s, sem animação entre elas. Variantes (-b) são sorteadas.</p>
       <ul className="pose-grid">{docs.poses.map(pose => <li key={pose.id}><div className="pose-images">{pose.files.length ? pose.files.map(file => <img key={file} src={localApi.brandFileUrl('pose', file.replace(/\.png$/, ''))} alt={`Nox, pose ${pose.id}${file.includes('-b') ? ' (variante)' : ''}: ${pose.gesture}`} width="96" height="142" loading="lazy" decoding="async"/>) : <span className="hint">Sem PNG: usa o Nox com o humor.</span>}</div><strong translate="no">{pose.id}</strong><small>{pose.gesture}</small>{pose.eyes && <small>Olhos: {pose.eyes}</small>}<span className="tone-list">{pose.tones.map(tone => <span key={tone} className="tone" title={docs.tones[tone]}>{TONE_LABELS[tone] || tone}</span>)}</span></li>)}</ul>
     </section>
 

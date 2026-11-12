@@ -4,7 +4,6 @@ import { copyFile, link, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs
 import { existsSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { readProjectDirectory } from './project-registry.js';
 import { NarrationStore, scenesFromScript } from '../audio/narration-service.js';
@@ -18,10 +17,10 @@ import { mediaRefs, sanitizeProps } from '../render/remotion-component-runtime.j
 import { missingStageArtifacts } from '../core/workflow.js';
 import { SCENES_TRACK, scenesTrack } from './edit-operations.js';
 import { BUNDLED_COMPONENTS } from '../timeline/components/catalog.js';
+import { noxDir } from '../core/nox-pack.js';
 
-/** Catálogo de poses do Nox (do plugin, copiado por `npm run scenes:diazverso`): nome → { arquivos, gesto, olhos, tons }. */
-const POSE_CATALOG = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../assets/brand/nox/poses/catalogo.json');
-export const loadPoseCatalog = (file = POSE_CATALOG) => readFile(file, 'utf8').then(text => JSON.parse(text).poses || null).catch(() => null);
+/** Catálogo de poses do Nox (pacote do plugin Diazverso no computador): nome → { arquivos, gesto, olhos, tons }. */
+export const loadPoseCatalog = (file = noxDir() && path.join(noxDir(), 'poses', 'catalogo.json')) => (file ? readFile(file, 'utf8') : Promise.reject(new Error('sem pacote do Nox'))).then(text => JSON.parse(text).poses || null).catch(() => null);
 
 const run = promisify(execFile);
 const FONTS = ['/usr/share/fonts/truetype/inter-zorin-os/Inter-Bold.ttf', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', '/usr/share/fonts/TTF/DejaVuSans-Bold.ttf', '/Library/Fonts/Arial Bold.ttf', '/System/Library/Fonts/Supplemental/Arial Bold.ttf', 'C:\\Windows\\Fonts\\arialbd.ttf'];

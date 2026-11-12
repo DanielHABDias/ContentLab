@@ -88,3 +88,7 @@ Máquina de referência: Ryzen 5 5500 (12 threads), 15,5 GB de RAM e GPU AMD int
 - **Assinatura:** concluída em 2026-11-12. A chave de release foi gerada, o manifesto do 2.1.0-rc.1 está assinado e foi verificado com a chave embutida no pacote. Linux não tem assinatura de código do sistema para tar.gz.
 - **Instaladores para Windows e macOS.**
 - **Teste em VM** com outra distribuição.
+
+## Marca Diazverso fora do pacote
+
+O Nox (mascote do Diazverso) não vai no app nem no repositório. No computador do criador, o app o encontra no plugin Diazverso: `DIAZVERSO_PLUGIN_DIR` (ou `CONTENTLAB_NOX_DIR`), a pasta `DiazVerso-Plugin` ao lado do Content Lab, `~/Documentos/Projects/DiazVerso-Plugin` ou `~/DiazVerso-Plugin`.

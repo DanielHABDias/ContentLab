@@ -18,7 +18,7 @@ Pelo MCP (`docs/MCP.md`), o agente opera o app real. Antes de `project_create`, 
 
 ## Edição no modo composição
 
-- **Nox:** as 21 poses estão no catálogo `assets/brand/nox/poses/catalogo.json` (gesto, olhos, tons). Num aparte ou na cena `nox`, a pose troca a cada ~0,85 s enquanto ele fala (`falas`/`poses` com 2–5 itens), a primeira no tom da frase e sem repetir em seguida. Todas as poses aparecem ao longo do vídeo longo: `motion_plan_auto` devolve `poses.posesFaltando`, e as que faltarem entram em apartes de tom compatível pelo `motion_plan_set`.
+- **Nox:** as 21 poses e o catálogo (gesto, olhos, tons) ficam no plugin Diazverso (`assets/brand/nox/poses/catalogo.json` de lá); o Content Lab só os lê do computador e não os guarda. Num aparte ou na cena `nox`, a pose troca a cada ~0,85 s enquanto ele fala (`falas`/`poses` com 2–5 itens), a primeira no tom da frase e sem repetir em seguida. Todas as poses aparecem ao longo do vídeo longo: `motion_plan_auto` devolve `poses.posesFaltando`, e as que faltarem entram em apartes de tom compatível pelo `motion_plan_set`.
 - **Legenda:** nos Shorts (9:16), o tempo todo. No vídeo longo (16:9), só no gancho (primeiros 6 s) e nos apartes do Nox; nos outros beats, `legenda: false`.
 - **SFX:** os nomes válidos são os da lista `sfx` de `motion_kit`. Cada som cai no quadro do evento da tela (`at` em segundos dentro do beat; negativo começa antes do corte):
   - cortes: `whoosh`, `swish` e `whoosh-rapido` em rodízio; `whoosh-lento` (~1 s antes) em transição longa ou abertura de capítulo;

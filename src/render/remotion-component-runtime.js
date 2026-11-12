@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { requireNoxDir } from '../core/nox-pack.js';
 
 const here = import.meta.url.startsWith('file:') ? path.dirname(fileURLToPath(import.meta.url)) : path.join(process.cwd(), 'src/render');
 export const BRAND_ROOT = path.resolve(here, '../../assets/brand');
@@ -103,7 +104,7 @@ export async function stageAssets(props, media, publicDir) {
     if (ref.startsWith('brand:')) {
       const name = ref.slice(6); const file = BRAND_FILES[name] || (/^[a-z-]{2,32}$/.test(name) ? `graphics/${name}.svg` : null);
       if (!file) throw new Error(`Asset de marca desconhecido: ${name}`);
-      source = path.join(BRAND_ROOT, file); target = `brand/${file}`;
+      source = name === 'nox' ? path.join(requireNoxDir(), 'Nox.png') : path.join(BRAND_ROOT, file); target = `brand/${file}`;
     } else {
       const item = media[ref.slice(6)];
       if (!item?.source) throw new Error(`Mídia não encontrada no projeto: ${ref.slice(6)}`);

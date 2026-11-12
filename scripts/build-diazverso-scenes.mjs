@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Importa as cenas HQ do plugin Diazverso (repositório do mesmo criador) para o Content Lab:
 // cada cena TSX vira um arquivo único (só React/Remotion), com o catálogo de props tirado
-// dos exemplos do plugin, e os assets de marca (Anton, Nox, página HQ, ícones) são copiados.
+// dos exemplos do plugin, e os assets genéricos (Anton, página HQ, ícones, SFX) são copiados. O Nox fica no plugin.
 //   node scripts/build-diazverso-scenes.mjs [caminho-do-plugin]
 import { build } from 'esbuild';
 import { existsSync } from 'node:fs';
@@ -85,17 +85,16 @@ for (const file of legacy ?  (await readdir(scenesDir)).filter(name => name.ends
 }
 if (legacy) await writeFile(path.join(outDir, 'catalog.json'), `${JSON.stringify({ plugin: version, components: catalog }, null, 2)}\n`);
 
-for (const [from, to] of [['assets/brand/fonts/anton/Anton-Regular.ttf', 'fonts/Anton-Regular.ttf'], ['assets/brand/fonts/anton/OFL.txt', 'fonts/OFL.txt'], ['assets/brand/nox/Nox.png', 'nox/Nox.png'], ['assets/brand/backgrounds/comic-page.png', 'backgrounds/comic-page.png'], ...(await readdir(path.join(plugin, 'assets/graphics'))).map(file => [`assets/graphics/${file}`, `graphics/${file}`])]) {
+for (const [from, to] of [['assets/brand/fonts/anton/Anton-Regular.ttf', 'fonts/Anton-Regular.ttf'], ['assets/brand/fonts/anton/OFL.txt', 'fonts/OFL.txt'], ['assets/brand/backgrounds/comic-page.png', 'backgrounds/comic-page.png'], ...(await readdir(path.join(plugin, 'assets/graphics'))).map(file => [`assets/graphics/${file}`, `graphics/${file}`])]) {
   await mkdir(path.dirname(path.join(brandOut, to)), { recursive: true }); await copyFile(path.join(plugin, from), path.join(brandOut, to));
 }
 // Kit de motion (composição única): copiado como está, com os assets que ele usa.
 const kitSource = path.join(plugin, 'skills/diazverso-motion/kit'); const kitOut = path.join(root, 'src/motion/kit');
 await rm(kitOut, { recursive: true, force: true }); await mkdir(kitOut, { recursive: true });
 for (const file of await readdir(kitSource)) await copyFile(path.join(kitSource, file), path.join(kitOut, file));
-await copyFile(path.join(plugin, 'assets/brand/nox/nox-sem-olhos.png'), path.join(brandOut, 'nox/nox-sem-olhos.png'));
 // Poses do Nox para o stop motion (quando o plugin tiver).
-await rm(path.join(brandOut, 'nox/poses'), { recursive: true, force: true });
-if (existsSync(path.join(plugin, 'assets/brand/nox/poses'))) { await mkdir(path.join(brandOut, 'nox/poses'), { recursive: true }); for (const file of (await readdir(path.join(plugin, 'assets/brand/nox/poses'))).filter(name => /\.(png|json)$/.test(name))) await copyFile(path.join(plugin, 'assets/brand/nox/poses', file), path.join(brandOut, 'nox/poses', file)); }
+// O Nox (Nox.png, nox-sem-olhos.png, poses) é do Diazverso e não entra no Content Lab: o app lê do plugin (src/core/nox-pack.js).
+await rm(path.join(brandOut, 'nox'), { recursive: true, force: true });
 await mkdir(path.join(brandOut, 'sfx'), { recursive: true });
 for (const file of (await readdir(path.join(plugin, 'assets/sfx/motion'))).filter(name => name.endsWith('.wav'))) await copyFile(path.join(plugin, 'assets/sfx/motion', file), path.join(brandOut, 'sfx', file));
 await writeFile(path.join(kitOut, 'VERSION'), `${version}\n`);

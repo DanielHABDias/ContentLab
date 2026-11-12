@@ -64,7 +64,7 @@ A tela inicial cria, abre, importa e retoma projetos locais reais. Não são ins
 
 ### Documentação
 
-A aba **Documentação**, na barra lateral, mostra o que todo projeto traz do kit Diazverso. Nela você ouve cada SFX com um clique, vê as 21 poses do Nox (com gesto, olhos e tons) e consulta as cenas, os humores, os fundos e as regras de legenda e de som. Os arquivos vêm de `GET /api/v1/brand/docs` e `GET /api/v1/brand/file?kind=sfx|pose&name=…`, que só servem nomes do catálogo. Pelo MCP, use `kit_docs`.
+A aba **Documentação**, na barra lateral, mostra o que todo projeto traz do kit Diazverso. Nela você ouve cada SFX com um clique, vê as 21 poses do Nox (lidas do plugin Diazverso no computador; o Nox não faz parte do Content Lab) (com gesto, olhos e tons) e consulta as cenas, os humores, os fundos e as regras de legenda e de som. Os arquivos vêm de `GET /api/v1/brand/docs` e `GET /api/v1/brand/file?kind=sfx|pose&name=…`, que só servem nomes do catálogo. Pelo MCP, use `kit_docs`.
 
 ### Gerenciar projetos
 

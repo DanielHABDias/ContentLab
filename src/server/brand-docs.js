@@ -2,10 +2,11 @@ import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { MOTION_KIT } from '../motion/kit-catalog.js';
+import { NOX_MISSING, noxDir } from '../core/nox-pack.js';
 
 /**
  * Documentação do padrão do canal (aba Documentação da interface, mesmo núcleo para CLI/MCP).
- * Lê o catálogo do kit e o de poses do Nox, que vêm do plugin Diazverso; nada aqui escreve em assets/brand.
+ * Lê o catálogo do kit e as poses do Nox direto do pacote do plugin Diazverso no computador; nada aqui escreve arquivos.
  */
 export const BRAND_ROOT = import.meta.url.startsWith('file:') ? path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../assets/brand') : path.join(process.cwd(), 'assets/brand');
 
@@ -48,10 +49,13 @@ export const SOUND_RULES = [
 ];
 
 export class BrandDocs {
-  constructor({ root = BRAND_ROOT, kit = MOTION_KIT } = {}) { this.root = root; this.kit = kit; }
+  constructor({ root = BRAND_ROOT, nox = undefined, kit = MOTION_KIT } = {}) { this.root = root; this.noxRoot = nox; this.kit = kit; }
+
+  /** Pacote do Nox no plugin Diazverso (fora do Content Lab); null se não houver. */
+  nox() { return this.noxRoot === undefined ? noxDir() : this.noxRoot; }
 
   async poseCatalog() {
-    if (!this.poses) this.poses = JSON.parse(await readFile(path.join(this.root, 'nox', 'poses', 'catalogo.json'), 'utf8'));
+    if (!this.poses) { const dir = this.nox(); this.poses = dir ? JSON.parse(await readFile(path.join(dir, 'poses', 'catalogo.json'), 'utf8').catch(() => '{}')) : {}; }
     return this.poses;
   }
 
@@ -71,6 +75,7 @@ export class BrandDocs {
       tones: catalog.tons || {},
       poses,
       poseUse: this.kit.poses?.uso || '',
+      noxPack: this.nox() ? 'conectado' : NOX_MISSING,
     };
   }
 
@@ -86,7 +91,8 @@ export class BrandDocs {
       const catalog = await this.poseCatalog();
       const known = Object.values(catalog.poses || {}).some(pose => (pose.arquivos || []).includes(`${value}.png`));
       if (!known) throw new Error('Pose fora do catálogo');
-      file = path.join(this.root, 'nox', 'poses', `${value}.png`);
+      if (!this.nox()) throw new Error(NOX_MISSING);
+      file = path.join(this.nox(), 'poses', `${value}.png`);
     } else throw new Error('Tipo de arquivo inválido');
     const info = await stat(file).catch(() => null);
     if (!info?.isFile()) throw new Error('Arquivo do kit não encontrado; rode npm run scenes:diazverso');

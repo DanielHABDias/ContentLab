@@ -13,6 +13,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { requireNoxDir } from '../src/core/nox-pack.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const work = await mkdtemp(path.join(os.tmpdir(), 'contentlab-motion-qa-'));
@@ -38,7 +39,7 @@ const sheet = async (video, out, every = 1) => execFileSync('ffmpeg', ['-hide_ba
 const brand = path.join(root, 'assets/brand');
 const mediaDir = path.join(work, 'midias'); await mkdir(mediaDir, { recursive: true });
 const icons = ['escudo', 'lampada', 'balanca', 'caminho', 'mascara', 'raio'].map(name => { const out = path.join(mediaDir, `${name}.png`); execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-c:v', 'librsvg', '-width', '1000', '-i', path.join(brand, 'graphics', `${name}.svg`), '-frames:v', '1', out]); return out; });
-const nox = path.join(mediaDir, 'nox.png'); await copyFile(path.join(brand, 'nox/Nox.png'), nox);
+const nox = path.join(mediaDir, 'nox.png'); await copyFile(path.join(requireNoxDir(), 'Nox.png'), nox);
 const clip = path.join(mediaDir, 'muralha-caindo.mp4'); execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc2=s=1280x720:r=30:d=6', '-vf', 'hue=s=0.3,eq=contrast=1.3', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', clip]);
 
 const only = process.argv.find(arg => arg.startsWith('--only='))?.slice(7) || 'abc';

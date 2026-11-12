@@ -5,6 +5,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { cleanMetadata } from './clean-metadata.js';
+import { requireNoxDir } from '../core/nox-pack.js';
 
 const run = promisify(execFile);
 const here = import.meta.url.startsWith('file:') ? path.dirname(fileURLToPath(import.meta.url)) : path.join(process.cwd(), 'src/render');
@@ -23,7 +24,7 @@ const chromium = plan => (plan.beats.some(beat => SCENES_3D.has(beat.scene)) ? {
  */
 const pngSize = async file => { const handle = await open(file, 'r'); try { const head = Buffer.alloc(24); await handle.read(head, 0, 24, 0); return head.toString('ascii', 12, 16) === 'IHDR' ? { w: head.readUInt32BE(16), h: head.readUInt32BE(20) } : null; } finally { await handle.close(); } };
 /**
- * Poses do Nox: PNGs prontos (gesto e olhos desenhados) em `assets/brand/nox/poses/`; o nome do arquivo é a pose
+ * Poses do Nox: PNGs prontos (gesto e olhos desenhados) em `poses/` do pacote do Nox (plugin Diazverso); o nome do arquivo é a pose
  * e o sufixo `-b`, `-c`… (ou `-2`, `-3`…) faz dele variante da mesma pose, sorteada pelo kit.
  */
 export async function loadNoxPoses(dir, prefix) {
@@ -52,7 +53,7 @@ export class MotionRenderer {
   async thumbnails(project, { variants, directory, width = 1280, height = 720 }) {
     const work = await mkdtemp(path.join(os.tmpdir(), 'contentlab-thumb-')); const publicDir = path.join(work, 'public');
     try {
-      for (const [from, to] of [['fonts/Anton-Regular.ttf', 'brand/Anton-Regular.ttf'], ['nox/nox-sem-olhos.png', 'brand/nox-sem-olhos.png']]) await place(path.join(BRAND, from), path.join(publicDir, to));
+      const nox = requireNoxDir(); await place(path.join(BRAND, 'fonts/Anton-Regular.ttf'), path.join(publicDir, 'brand/Anton-Regular.ttf')); await place(path.join(nox, 'nox-sem-olhos.png'), path.join(publicDir, 'brand/nox-sem-olhos.png'));
       const assets = await this.#stageMedia(project, mediaRefs({ beats: variants.map(variant => ({ props: variant })) }), publicDir);
       const { bundle } = await import('@remotion/bundler'); const { renderStill, selectComposition } = await import('@remotion/renderer');
       const serveUrl = await bundle({ entryPoint: KIT_ENTRY, outDir: path.join(work, 'bundle'), publicDir, enableCaching: true, onProgress: () => {} });
@@ -90,10 +91,12 @@ export class MotionRenderer {
     try {
       onProgress({ phase: 'Preparando mídias', progress: 0.01 });
       await mkdir(path.join(publicDir, 'brand'), { recursive: true }); await mkdir(path.join(publicDir, 'sfx'), { recursive: true }); await mkdir(path.join(publicDir, 'media'), { recursive: true });
-      for (const [from, to] of [['fonts/Anton-Regular.ttf', 'brand/Anton-Regular.ttf'], ['nox/nox-sem-olhos.png', 'brand/nox-sem-olhos.png'], ['nox/Nox.png', 'brand/Nox.png']]) await place(path.join(BRAND, from), path.join(publicDir, to));
-      // Poses do Nox (stop motion) que existirem em assets/brand/nox/poses, com os olhos de poses.json.
-      const { poses, files } = await loadNoxPoses(path.join(BRAND, 'nox', 'poses'), 'public:brand/poses/');
-      for (const file of files) await place(path.join(BRAND, 'nox', 'poses', file), path.join(publicDir, 'brand', 'poses', file));
+      // Nox e poses vêm do pacote do plugin Diazverso no computador (não fazem parte do Content Lab).
+      const nox = requireNoxDir();
+      await place(path.join(BRAND, 'fonts/Anton-Regular.ttf'), path.join(publicDir, 'brand/Anton-Regular.ttf'));
+      for (const file of ['nox-sem-olhos.png', 'Nox.png']) await place(path.join(nox, file), path.join(publicDir, 'brand', file));
+      const { poses, files } = await loadNoxPoses(path.join(nox, 'poses'), 'public:brand/poses/');
+      for (const file of files) await place(path.join(nox, 'poses', file), path.join(publicDir, 'brand', 'poses', file));
       const used = new Set(plan.beats.flatMap(beat => beat.sfx || []).map(cue => cue.name));
       for (const name of used) await place(path.join(BRAND, 'sfx', `${name}.wav`), path.join(publicDir, 'sfx', `${name}.wav`));
       const assets = await this.#stageMedia(project, mediaRefs(plan), publicDir);

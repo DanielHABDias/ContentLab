@@ -11,6 +11,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { requireNoxDir } from '../src/core/nox-pack.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const work = await mkdtemp(path.join(os.tmpdir(), 'contentlab-hq-'));
@@ -68,7 +69,7 @@ async function produce({ title, type, brief, script, packaging, voice, scenes, s
 const brand = path.join(root, 'assets/brand');
 const imageDir = path.join(work, 'imagens'); await mkdir(imageDir, { recursive: true });
 const icons = ['escudo', 'lampada', 'balanca', 'caminho', 'mascara', 'raio'].map(name => { const out = path.join(imageDir, `${name}.png`); execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-c:v', 'librsvg', '-width', '900', '-i', path.join(brand, 'graphics', `${name}.svg`), '-frames:v', '1', out]); return out; });
-const nox = path.join(brand, 'nox/Nox.png');
+const nox = path.join(requireNoxDir(), 'Nox.png');
 
 const results = [];
 try {
