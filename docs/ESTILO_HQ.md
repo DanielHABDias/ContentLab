@@ -1,65 +1,69 @@
-# Estilo HQ: cenas animadas, trilha e Shorts
+# Estilo Diazverso: cenas HQ do plugin, imagens e legenda por palavra
 
-O Content Lab monta vídeos no estilo HQ maduro, o mesmo que o plugin Diazverso planeja. São cenas animadas em Remotion, trilha que baixa sob a voz, efeitos nas trocas de cena, Shorts 1080×1920 com áreas seguras, capítulos e a lista do que foi conferido. Funciona pela interface e pelo MCP, com o mesmo núcleo.
+O Content Lab monta vídeos seguindo o **padrão visual mínimo do plugin Diazverso** (`skills/diazverso-core/references/padrao-visual.md` no plugin). Funciona pela interface e pelo MCP, com o mesmo núcleo.
 
-As cenas, a trilha e os efeitos são **originais do Content Lab**. O plugin Diazverso foi usado só como referência e nada dele é copiado. A trilha e os SFX são sintetizados no seu computador (FFmpeg, sem samples de terceiros), então os direitos são próprios e servem para canal monetizado.
+As cenas são as **do próprio plugin Diazverso**: o mesmo criador é dono dos dois repositórios. `npm run scenes:diazverso` compila cada cena TSX do plugin num arquivo único em `src/timeline/components/diazverso/` e copia os assets de marca para `assets/brand/`:
 
-## Cenas HQ
+- a fonte Anton, sob a SIL OFL, com a licença em `assets/brand/fonts/OFL.txt`;
+- o Nox;
+- a página HQ;
+- os ícones.
 
-Cada cena ocupa a tela inteira com fundo próprio e deixa o terço de baixo livre para a legenda. Campos do tipo *texto* aceitam várias linhas, uma por item.
+Para atualizar as cenas depois de mudar o plugin, rode o comando de novo.
 
-| Cena (`componentId`) | Para quê | Campos principais |
-| --- | --- | --- |
-| `hq_abertura` | Gancho: título entra palavra por palavra | `title`, `kicker` |
-| `hq_cartoes` | Ideias, etapas ou evidências ligadas | `items` (uma por linha) |
-| `hq_linha_tempo` | Trajetória com datas | `items` no formato `ano \| fato` |
-| `hq_comparativo` | Dois lados frente a frente, com "VS" | `leftTitle`, `leftItems`, `rightTitle`, `rightItems` |
-| `hq_dialogo` | Encenação curta em balões | `lines` no formato `Nome: fala` |
-| `hq_citacao` | Tese ou frase-chave revelada palavra a palavra | `text`, `author`, `highlight` |
-| `hq_chamada` | Payoff ou pergunta final em estouro de quadrinho | `text`, `subtext` |
-| `kinetic_emphasis` | Palavra em destaque sobre o vídeo | `text`, `color` |
+## O que o padrão exige
 
-Todas têm cores configuráveis (`background`, `accent`). Não use `hq_dialogo` para inventar fala de personagem de obra real.
-
-## Montagem automática
-
-1. Narração gerada e montada.
-2. **Trilha e efeitos:** Produção assistida → *Gerar trilha e efeitos sonoros* (MCP `audio_library`).
-3. **Montar no estilo HQ** (MCP `timeline_auto_assemble` com `scenes: "auto"`, `music: true`, `sfx: true`):
-   - Cenas: uma cena por trecho do roteiro, na trilha **Cenas**, com início e fim nos tempos reais da narração. O plano automático põe abertura no gancho, linha do tempo onde há datas, cartões onde há várias frases curtas, frase em destaque no resto e encerramento no payoff.
-   - Trilha: fica em volume baixo e abaixa sozinha enquanto há fala (*ducking* por sidechain).
-   - Efeitos: whoosh nas trocas de cena e ding no encerramento.
-   - Legendas: sincronizadas por cena e sempre por cima das cenas.
-   - Shorts: em 9:16, aplica as áreas seguras (a legenda termina em cerca de 78% da altura, longe da interface da plataforma).
-4. Troque qualquer cena na timeline: os campos aparecem no painel do clip. Pelo MCP, o agente pode usar `scene_list`, que mostra o plano sugerido, e mandar a própria lista em `scenes`.
-5. Render em *Full HD*: 1920×1080 no longo e 1080×1920 no Short, a 30 fps.
-6. **Pasta de entrega** (`output/entrega/`):
-   - `roteiro.md`
-   - `embalagem.md`, com capítulos nos vídeos longos (tempos da narração)
-   - thumbnails A/B
-   - `video.mp4`
-   - `verificacao.md`, que lista roteiro, embalagem, direitos, render conferido com ffprobe, legendas, capítulos e aprovação final
-
-## Comparação com o que o Diazverso planeja
-
-| Diazverso | Content Lab |
+| Regra do plugin | Como o Content Lab cumpre |
 | --- | --- |
-| Roteiro aprovado, títulos A/B, thumbnails A/B | Etapas com aprovação e thumbnails A/B geradas |
-| Cenas HQ Remotion (`Sequence` por beat) | Cenas HQ próprias na trilha Cenas, uma por trecho |
-| Fundos procedurais HQ (meio-tom, papel, grade) | Fundo próprio em cada cena |
-| SFX originais (whoosh, ding, boom, riser) | Gerados localmente por `audio_library` |
-| Música sob a narração | Trilha original com ducking |
-| Preset vertical 1080×1920, 30 fps, área de legenda | Áreas seguras de Shorts aplicadas na montagem |
-| Legenda sincronizada com a fala | Por cena, a partir dos tempos reais dos takes |
-| Capítulos conferidos no render | Calculados dos tempos da narração montada |
-| Gates antes do kit | `verificacao.md` só marca o que foi conferido de fato |
-| Publicação manual pelo criador | Igual: o Content Lab nunca publica |
+| Imagem com assunto em toda cena | Cada beat recebe uma imagem do projeto (`media:<id>`) ou o Nox. A montagem automática **recusa** projeto sem imagens do assunto (`VISUAL_EVIDENCE_MISSING`); slides de texto não contam |
+| Troca visual a cada 4–8 s (longo) e 2–5 s (Short) | Um beat por frase ou grupo curto de frases: no máximo 7 s no longo e 4,5 s no Short |
+| Não repetir o mesmo componente seguido | O plano alterna imagem com frases, página HQ de dois painéis e galeria de cartas |
+| Anton | Embutida. Cenas e legendas usam Anton |
+| Legenda palavra a palavra com tempos reais | `narration_transcribe` (Whisper local) gera os tempos de cada palavra; a legenda sai em blocos de até 3 palavras. Sem transcrição, cai para legenda por frase |
+| Trilha licenciada | A trilha de `audio_library` é só **rascunho**. A verificação fica pendente até você importar uma faixa licenciada (YouTube Audio Library ou biblioteca sua) com papel *música* |
+| SFX com função | Whoosh nas trocas de trecho e ding no payoff, originais |
+| Short de 60 s ou mais | Aparece na verificação como decisão sua, sem bloquear |
 
-## Limites conhecidos
+## Cenas disponíveis
 
-- **Nox:** o personagem não está embutido. Para usá-lo, importe a imagem como mídia com direitos próprios e coloque-a na timeline.
-- **Fonte das cenas:** as cenas usam Anton ou Impact quando instaladas; se não houver nenhuma, usam DejaVu Sans Bold. Nenhuma fonte é baixada automaticamente.
-- **Sincronia das legendas:** a legenda segue a proporção de caracteres dentro de cada cena, sem alinhamento por palavra. Confira o render antes de publicar.
-- **Escuta:** a trilha e os efeitos têm sinal medido, mas a escuta e o gosto continuam com você.
+`scene_list` mostra cada cena com as suas props e um exemplo. Props do tipo JSON aceitam objetos e listas. Referências de arquivo dentro das props:
+
+- `media:<id>`: imagem do projeto;
+- `brand:nox`, `brand:anton` e `brand:comic-page`;
+- ícones: `brand:escudo`, `brand:lampada`, `brand:balanca`, `brand:caminho`, `brand:mascara` e `brand:raio`.
+
+| `componentId` | Para quê |
+| --- | --- |
+| `dv_imagem_frases_hq` | Imagem do assunto com 1–3 palavras de impacto (gancho, evidência, payoff) |
+| `dv_pagina_hq_cenas` | Página HQ com 2–4 painéis de imagens ou clipes |
+| `dv_galeria_cartas_hq` | Cartas com imagem e título em sequência |
+| `dv_comparativo_ideias_hq` | Duas ideias ou consequências frente a frente |
+| `dv_dialogo_hq` | Diálogo curto, por exemplo Nox × uma ideia. Nunca use fala canônica inventada |
+| `dv_linha_do_tempo_hq` | Linha do tempo com clipes por marco |
+| `dv_brainstorm_hq`, `dv_carrossel_frases_hq`, `dv_texto_hq`, `dv_quadro_hq_sobre_cena`, `dv_caixinha_hq`, `dv_barra_loading_hq`, `dv_personagem_espiral_legenda`, `dv_comic_page_cta` | Recursos pontuais (ênfase curta, orientação, CTA) |
+
+## Fluxo
+
+1. **Roteiro aprovado** no formato do plugin: história ou trajetória, ou ensino através da história.
+2. **Imagens do assunto:** importe imagens dos personagens, capas, painéis ou frames oficiais com direitos confirmados (`media_import_files`). A política de fontes e direitos está em `imagens-e-direitos.md`, no plugin.
+3. **Narração**, gerada e montada.
+4. **`narration_transcribe`** + `job_wait`, para a legenda palavra a palavra. Leva cerca de 3× a duração do áudio em CPU.
+5. **`scene_list`:** confira o plano, troque cenas ou imagens se quiser e mande a lista em `scenes`, ou use `"auto"`.
+6. **`timeline_auto_assemble`** com `scenes`, `sfx: true` e a sua trilha licenciada (`music: true`).
+7. **Render** em Full HD, depois **entrega**. O `verificacao.md` inclui:
+   - imagem em cada cena;
+   - trilha licenciada;
+   - legendas;
+   - capítulos;
+   - direitos;
+   - a duração do Short.
+
+Na interface, o caminho é Produção assistida → *Montar no estilo HQ*. No painel do clip, as props JSON aparecem em campos editáveis.
+
+## Limites
+
+- **Imagens:** o Content Lab não busca nem baixa imagens de personagens. Escolher a imagem e confirmar os direitos é com você (ou com o agente, seguindo a skill `find-broll` do plugin, com a sua aprovação).
+- **Transcrição:** a legenda vem do Whisper e pode errar nomes próprios. Corrija na timeline antes do render final.
+- **Gosto:** escuta, visual e ritmo final continuam com você. A verificação só marca o que foi conferido.
 
 O teste real está em `npm run qa:hq`, com relatório em [QA_HQ.md](QA_HQ.md).

@@ -34,6 +34,7 @@ const skipTests = source => !/\.test\.(js|jsx)$/.test(source) && !source.include
 await cp(path.join(root, 'dist'), path.join(staging, 'app', 'dist'), { recursive: true });
 await cp(path.join(root, 'src'), path.join(staging, 'app', 'src'), { recursive: true, filter: skipTests });
 await cp(path.join(root, 'tools'), path.join(staging, 'app', 'tools'), { recursive: true, filter: source => !source.includes('__pycache__') });
+await cp(path.join(root, 'assets'), path.join(staging, 'app', 'assets'), { recursive: true });
 await mkdir(path.join(staging, 'app', 'scripts'), { recursive: true });
 for (const file of ['contentlab-installer.mjs', 'bootstrap.mjs', 'start.mjs']) await copyFile(path.join(root, 'scripts', file), path.join(staging, 'app', 'scripts', file));
 for (const file of ['package.json', 'package-lock.json', 'LICENSE']) await copyFile(path.join(root, file), path.join(staging, 'app', file));

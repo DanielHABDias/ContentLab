@@ -25,7 +25,8 @@
     "app:stop": "node scripts/start.mjs stop",
     "app:status": "node scripts/start.mjs status",
     "qa:hq": "node scripts/qa-hq.mjs",
-    "qa:mcp": "node scripts/qa-mcp.mjs"
+    "qa:mcp": "node scripts/qa-mcp.mjs",
+    "scenes:diazverso": "node scripts/build-diazverso-scenes.mjs"
   },
   "dependencies": {
     "@fontsource/barlow-condensed": "^5.3.0",

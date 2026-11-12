@@ -5,7 +5,7 @@ import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { mediaUsages } from '../core/agent-service.js';
 import { PortugueseTranscriber } from '../media/media-service.js';
-import { TranscriptStore, searchSegments, segmentsFromWhisper } from '../media/transcript-store.js';
+import { TranscriptStore, searchSegments, segmentsFromWhisper, wordsFromWhisper } from '../media/transcript-store.js';
 import { JobQueue } from './job-queue.js';
 import { LifecycleError } from './project-lifecycle.js';
 import { readProjectDirectory } from './project-registry.js';
@@ -32,7 +32,8 @@ export class MediaOperations {
     return { status: 'imported', mediaId: media.id, name: media.name };
   }
 
-  async importFiles({ path: directory, sources = [], rights = 'pending' }) {
+  async importFiles({ path: directory, sources = [], rights = 'pending', role }) {
+    if (role !== undefined && !['content', 'music', 'sfx'].includes(role)) throw new Error('Papel inválido: use content, music ou sfx');
     if (!Array.isArray(sources) || !sources.length || sources.length > 200 || sources.some(source => typeof source !== 'string')) throw new Error('Escolha de 1 a 200 arquivos');
     await this.app.requireFeature('media.import');
     await readProjectDirectory(directory);
@@ -42,7 +43,7 @@ export class MediaOperations {
       for (const [index, source] of sources.entries()) {
         if (combined.aborted) throw abortError();
         progress({ done: index, total: sources.length, phase: `Importando ${path.basename(source)}` });
-        try { results.push({ source, ...(await this.attach(directory, await this.app.media.importFile(source), { rights, source: { type: 'file', value: path.resolve(source) } })) }); }
+        try { results.push({ source, ...(await this.attach(directory, await this.app.media.importFile(source), { rights, role, source: { type: 'file', value: path.resolve(source) } })) }); }
         catch (error) { results.push({ source, status: 'failed', error: error.message }); }
       }
       progress({ done: sources.length, total: sources.length });
@@ -133,7 +134,7 @@ export class MediaOperations {
     return this.jobs.start({ kind: 'transcription', projectPath: directory, label: `Transcrever ${mediaId}`, run: ({ signal, progress }) => this.app.activities.track(directory, 'transcrição', async activitySignal => {
       const output = await transcriber.transcribe(source, { signal: AbortSignal.any([signal, activitySignal]), onProgress: value => progress({ phase: value.phase, done: value.percent, total: 100 }) });
       const segments = segmentsFromWhisper(output.json);
-      await store.saveRaw(mediaId, { segments, srt: output.srt, key });
+      await store.saveRaw(mediaId, { segments, srt: output.srt, key, words: wordsFromWhisper(output.json) });
       const current = await readProjectDirectory(directory);
       await this.app.runProjectAction({ path: directory, baseRevision: current.revision, action: { type: 'media.transcript.set', mediaId, transcript: { status: 'raw', model: key.model, language: key.language, segments: segments.length, updatedAt: new Date().toISOString() } } });
       return { segments: segments.length };

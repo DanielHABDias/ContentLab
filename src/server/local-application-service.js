@@ -416,6 +416,7 @@ export class LocalApplicationService {
   productionAudio(input) { return this.productionOps.audioLibrary(input); }
   productionScenes(input) { return this.productionOps.sceneSuggestions(input); }
   productionChapters(input) { return this.productionOps.chapters(input); }
+  productionTranscribeNarration(input) { return this.productionOps.transcribeNarration(input); }
   voicePlan() { return this.narrationOps.voicePlan(); }
 
   /** Capacidades para as telas de etapa, derivadas do mesmo catálogo do setup. */

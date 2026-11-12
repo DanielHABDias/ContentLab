@@ -18,10 +18,10 @@ export class TranscriptStore {
 
   async meta(mediaId) { return await readJson(path.join(this.#dir(mediaId), 'meta.json')); }
 
-  async saveRaw(mediaId, { segments, srt, key }) {
+  async saveRaw(mediaId, { segments, srt, key, words = [] }) {
     const directory = this.#dir(mediaId);
     await mkdir(directory, { recursive: true });
-    await atomic(path.join(directory, 'raw.json'), `${JSON.stringify({ schema: 'contentlab-transcript-v1', segments }, null, 2)}\n`);
+    await atomic(path.join(directory, 'raw.json'), `${JSON.stringify({ schema: 'contentlab-transcript-v1', segments, words }, null, 2)}\n`);
     await atomic(path.join(directory, 'raw.srt'), srt);
     await atomic(path.join(directory, 'meta.json'), `${JSON.stringify({ ...key, segments: segments.length, createdAt: new Date().toISOString() }, null, 2)}\n`);
   }
@@ -31,7 +31,7 @@ export class TranscriptStore {
     const raw = await readJson(path.join(directory, 'raw.json'));
     if (!raw) return null;
     const revised = await readJson(path.join(directory, 'revised.json'));
-    return { raw: raw.segments, revised: revised?.segments || null, revision: revised?.revision || 0, meta: await this.meta(mediaId), current: revised?.segments || raw.segments };
+    return { raw: raw.segments, words: raw.words || [], revised: revised?.segments || null, revision: revised?.revision || 0, meta: await this.meta(mediaId), current: revised?.segments || raw.segments };
   }
 
   /** Salva correções sem tocar na saída bruta; recusa revisão desatualizada. */
@@ -62,6 +62,22 @@ export function validateSegments(segments) {
 /** Converte a saída JSON completa do whisper.cpp (`-ojf`) em trechos em segundos. */
 export function segmentsFromWhisper(json) {
   return (json.transcription || []).map(item => ({ start: round((item.offsets?.from ?? 0) / 1000), end: round((item.offsets?.to ?? 0) / 1000), text: String(item.text || '').trim() })).filter(segment => segment.text && segment.end > segment.start);
+}
+
+/**
+ * Palavras com tempo a partir dos tokens do whisper.cpp (`-ojf`): token com espaço inicial abre
+ * palavra nova; pontuação e pedaços sem espaço juntam-se à anterior. Marcadores `[_..._]` saem.
+ */
+export function wordsFromWhisper(json) {
+  const words = [];
+  for (const item of json.transcription || []) for (const token of item.tokens || []) {
+    const text = String(token.text || ''); const from = (token.offsets?.from ?? 0) / 1000; const to = (token.offsets?.to ?? 0) / 1000;
+    if (!text.trim() || /^\s*\[_/.test(text)) continue;
+    const last = words.at(-1);
+    if (last && !/^\s/.test(text)) { last.text += text; last.end = round(Math.max(last.end, to)); continue; }
+    words.push({ start: round(from), end: round(Math.max(from, to)), text: text.trim() });
+  }
+  return words.filter(word => /[\p{L}\p{N}]/u.test(word.text));
 }
 
 export function toSrt(segments) {

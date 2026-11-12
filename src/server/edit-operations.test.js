@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { BUNDLED_COMPONENTS } from '../timeline/components/catalog.js';
 import { mkdtemp, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -78,8 +79,8 @@ test('SRT enviado pela interface e componente Remotion entram na timeline e no p
   const { app, project } = await setup();
   let state = await app.editCaptions({ path: project.path, baseRevision: await revision(app, project), srtName: 'ui.srt', srtText: '1\n00:00:00,000 --> 00:00:01,000\nLegenda da interface\n', startFrame: 30, style: 'titulo' });
   expect((await clips(app, project, 'captions_main'))[0]).toMatchObject({ text: 'Legenda da interface', startFrame: 30, style: 'titulo' });
-  expect(state.components).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'kinetic_emphasis', exportName: 'KineticEmphasis' }), expect.objectContaining({ id: 'hq_abertura', use: expect.any(String) })]));
-  expect(state.components).toHaveLength(8);
+  expect(state.components).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'kinetic_emphasis', exportName: 'KineticEmphasis' }), expect.objectContaining({ id: 'dv_imagem_frases_hq', use: expect.any(String) })]));
+  expect(state.components).toHaveLength(BUNDLED_COMPONENTS.length);
   state = await app.editAddComponent({ path: project.path, baseRevision: state.project.revision, componentId: 'kinetic_emphasis', componentProps: { text: 'FUNCIONA', color: '#ff0000' }, startFrame: 0, durationInFrames: 30 });
   const component = state.project.timeline.tracks[0].clips.find(item => item.type === 'component');
   expect(component).toMatchObject({ componentId: 'kinetic_emphasis', componentProps: { text: 'FUNCIONA', color: '#ff0000' } });

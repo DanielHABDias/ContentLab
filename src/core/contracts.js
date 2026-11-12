@@ -77,6 +77,9 @@ const keyframeSchema = z.object({
   easing: z.enum(['linear', 'ease-in', 'ease-out', 'ease-in-out', 'spring']).default('linear'),
 });
 
+/** Valor JSON de prop de componente (cenas do plugin usam listas e objetos), com profundidade limitada. */
+const componentValue = z.lazy(() => z.union([z.string().max(4000), z.number().finite(), z.boolean(), z.null(), z.array(componentValue).max(64), z.record(z.string().max(64), componentValue)]));
+
 export const clipSchema = z.object({
   id: idSchema,
   type: z.enum(['media', 'text', 'shape', 'caption', 'component']),
@@ -84,7 +87,7 @@ export const clipSchema = z.object({
   durationInFrames: z.number().int().positive(),
   sourceId: idSchema.optional(),
   componentId: idSchema.optional(),
-  componentProps: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).default({}),
+  componentProps: z.record(z.string(), componentValue).refine(value => JSON.stringify(value).length <= 64_000, 'Props de componente grandes demais').default({}),
   fit: z.enum(['cover', 'contain', 'stretch']).default('cover'),
   anchor: z.enum(['center', 'top', 'bottom', 'left', 'right']).default('center'),
   layout: z.partialRecord(aspectRatioSchema, z.object({ x: z.number(), y: z.number(), width: z.number().positive(), height: z.number().positive() })).optional(),

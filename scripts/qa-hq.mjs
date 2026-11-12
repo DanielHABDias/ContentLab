@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-// QA do estilo HQ pelo MCP real (como um chat faria): vídeo longo 16:9 com cenas HQ automáticas,
-// trilha com ducking, SFX e capítulos; Short 1080×1920 com cenas escolhidas pelo agente e áreas
-// seguras. Extrai um frame do meio de cada cena para inspeção visual e mede o áudio.
+// QA do estilo Diazverso pelo MCP real (como um chat faria): imagens do assunto importadas (Nox e
+// ícones do Diazverso, direitos próprios), narração transcrita para legenda palavra a palavra, cenas
+// HQ do plugin com um beat visual por frase, SFX e trilha de rascunho com ducking, capítulos; Short
+// 1080×1920 com um diálogo do Nox escolhido pelo agente. Extrai frames e mede o áudio.
 //   node scripts/qa-hq.mjs [--keep]
 import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -30,21 +31,24 @@ const approve = async projectPath => { const { currentStage } = await call('proj
 const probe = file => JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration:stream=codec_type,width,height,r_frame_rate', '-of', 'json', file], { encoding: 'utf8' }));
 const loudness = file => spawnSync('ffmpeg', ['-hide_banner', '-nostats', '-i', file, '-af', 'ebur128=framelog=quiet', '-f', 'null', '-'], { encoding: 'utf8' }).stderr;
 
-async function produce({ title, type, brief, script, packaging, voice, scenes, shots }) {
+async function produce({ title, type, brief, script, packaging, voice, scenes, shots, images }) {
   const created = await call('project_create', { title, type, mode: 'autonomous' }); const projectPath = created.path;
   note(`▶ ${title} (${type} ${created.aspectRatio})`);
   await call('creative_write', { path: projectPath, brief }); await approve(projectPath);
   await call('creative_write', { path: projectPath, script }); await approve(projectPath);
   await call('creative_write', { path: projectPath, packaging }); await approve(projectPath);
-  const audio = await call('audio_library', { path: projectPath, seconds: 240 }); note(`  trilha e ${Object.keys(audio.sfx).length} SFX originais gerados (${audio.rights})`);
+  const imported = await call('media_import_files', { path: projectPath, files: images, rights: 'owned' }); await waitJob(projectPath, imported.jobId, 'importação');
+  note(`  ${images.length} imagens do assunto importadas (direitos próprios)`);
+  const audio = await call('audio_library', { path: projectPath, seconds: 240 }); note(`  ${Object.keys(audio.sfx).length} SFX originais e trilha de rascunho (${audio.rights})`);
   await approve(projectPath); // mídia
   const job = await call('narration_generate', { path: projectPath, engine: 'standard', voice }); await waitJob(projectPath, job.jobId, 'narração');
   const assembled = await call('narration_assemble', { path: projectPath, preset: 'balanced' }); await waitJob(projectPath, assembled.jobId, 'montagem da narração');
+  const transcribed = await call('narration_transcribe', { path: projectPath }); if (transcribed.jobId) await waitJob(projectPath, transcribed.jobId, 'transcrição');
   const listed = await call('scene_list', { path: projectPath });
-  note(`  cenas disponíveis: ${listed.components.length}; plano sugerido: ${listed.suggestion.map(item => item.componentId).join(', ')}`);
-  const plan = scenes === 'auto' ? 'auto' : scenes(listed.suggestion);
+  note(`  cenas disponíveis: ${listed.components.length}; ${listed.evidence.length} imagens; plano (${listed.timing}): ${listed.suggestion.map(item => `${item.componentId.replace('dv_', '')} ${item.length.toFixed(1)}s`).join(', ')}`);
+  const plan = scenes === 'auto' ? 'auto' : scenes(listed.suggestion, listed.evidence);
   const timeline = await call('timeline_auto_assemble', { path: projectPath, scenes: plan, music: true, sfx: true });
-  note(`  timeline: ${timeline.durationSeconds.toFixed(1)} s, ${timeline.sceneClips} cenas HQ, trilha=${timeline.music}, sfx=${timeline.sfx}, ${timeline.captions} legendas, área segura ${timeline.safeArea}`);
+  note(`  timeline: ${timeline.durationSeconds.toFixed(1)} s, ${timeline.sceneClips} cenas, ${timeline.images} imagens distintas, trilha=${timeline.music}, sfx=${timeline.sfx}, ${timeline.captions} legendas (${timeline.captionSync}), área segura ${timeline.safeArea}`);
   await approve(projectPath); await approve(projectPath); // narração, edição
   await call('thumbnails_generate', { path: projectPath });
   const render = await call('render_start', { path: projectPath, preset: 'full-hd' }); const rendered = await waitJob(projectPath, render.jobId, 'render');
@@ -60,36 +64,48 @@ async function produce({ title, type, brief, script, packaging, voice, scenes, s
   return { title, type, projectPath, output: rendered.output, duration: Number(info.format.duration), size: `${video.width}x${video.height}`, lufs, delivery, chapters, frames, sceneClips: timeline.sceneClips };
 }
 
+// Imagens com direitos próprios: Nox (fornecido pelo criador) e ícones originais do Diazverso rasterizados.
+const brand = path.join(root, 'assets/brand');
+const imageDir = path.join(work, 'imagens'); await mkdir(imageDir, { recursive: true });
+const icons = ['escudo', 'lampada', 'balanca', 'caminho', 'mascara', 'raio'].map(name => { const out = path.join(imageDir, `${name}.png`); execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-c:v', 'librsvg', '-width', '900', '-i', path.join(brand, 'graphics', `${name}.svg`), '-frames:v', '1', out]); return out; });
+const nox = path.join(brand, 'nox/Nox.png');
+
 const results = [];
 try {
   await call('contentlab_start');
   results.push(await produce({
-    title: 'A escolha que mudou a Marvel', type: 'long', voice: 'pm_alex', scenes: 'auto',
-    shots: duration => Array.from({ length: 8 }, (_, index) => ((index + 0.5) * duration) / 8),
-    brief: { thesis: 'Uma editora à beira da falência se salvou ao apostar em heróis com defeitos humanos', audience: 'Fãs de quadrinhos e de histórias de negócios', promise: 'Entender a escolha criativa que salvou a Marvel', notes: '' },
+    title: 'O escudo que pesava demais', type: 'long', voice: 'pm_alex', scenes: 'auto', images: [nox, ...icons],
+    shots: duration => Array.from({ length: 10 }, (_, index) => ((index + 0.5) * duration) / 10),
+    brief: { thesis: 'Proteger tudo o tempo todo impede o herói de escolher o que realmente importa', audience: 'Fãs de heróis que gostam de entender escolhas', promise: 'Entender por que um herói precisa escolher o que proteger', notes: 'Nox participa da explicação' },
     script: {
-      hook: 'Em 1996 a Marvel estava falida. Vinte anos depois, valia bilhões. O que aconteceu no meio?',
-      development: 'Para entender, precisamos voltar ao começo. Em 1939 nasce a Timely Comics. Em 1961 surge o Quarteto Fantástico. Em 1962 o Homem-Aranha muda tudo.\n\nA aposta era simples. Heróis com problemas de verdade. Contas atrasadas, brigas em família, medo de falhar.\n\nOs leitores não queriam deuses perfeitos. Queriam alguém parecido com eles, que mesmo assim escolhesse fazer o certo.\n\nQuando a crise chegou, essa ideia virou o ativo mais valioso da empresa: personagens que as pessoas sentiam como amigos.',
-      payoff: 'A lição vale para qualquer história: perfeição não cria vínculo, escolhas difíceis criam. Qual personagem te ensinou isso?',
+      hook: 'O Nox carregava um escudo enorme. Ele protegia tudo. E justamente por isso, não protegia nada direito.',
+      development: 'Todo herói começa assim. Quer salvar todo mundo, ao mesmo tempo, sem perder ninguém. Parece nobre. Na prática, é uma promessa impossível.\n\nO escudo pesa. Cada pessoa nova é mais um peso. E um dia o Nox percebeu que estava sempre atrasado, sempre cansado, sempre um passo atrás.\n\nFoi aí que veio a lâmpada. Ele não precisava de um escudo maior. Precisava escolher onde estar. Uma balança, não uma muralha.\n\nEscolher dói. Quem fica de fora cobra. Mas um herói que escolhe chega a tempo. Um herói que tenta tudo chega tarde em todo lugar.',
+      payoff: 'Proteger não é segurar o mundo inteiro. É decidir o que vale o seu peso. E você, o que está carregando que não precisava?',
     },
-    packaging: { titleA: 'A escolha que salvou a Marvel', titleB: 'Heróis com defeito valem bilhões', description: 'Como uma editora falida se reergueu apostando em heróis humanos.', tags: 'marvel, quadrinhos, história, negócios', seo: 'história da marvel falência 1996 homem-aranha' },
+    packaging: { titleA: 'O escudo que pesava demais', titleB: 'Por que herói precisa escolher', description: 'O Nox aprende que proteger tudo é não proteger nada.', tags: 'nox, heróis, escolhas, diazverso', seo: 'herói escolhas responsabilidade' },
   }));
   results.push(await produce({
-    title: 'Nox e a regra quebrada', type: 'short', voice: 'pf_dora',
-    shots: duration => [0.8, duration * 0.3, duration * 0.55, duration * 0.8, duration - 0.6],
-    scenes: suggestion => suggestion.map((item, index) => index === 1 ? { sceneId: item.sceneId, componentId: 'hq_dialogo', props: { lines: 'Nox: E se a regra estiver errada?\nVocê: Então eu sigo a regra mesmo assim?\nNox: Ou faz uma escolha melhor.' } }
-      : index === 2 ? { sceneId: item.sceneId, componentId: 'hq_comparativo', props: { leftTitle: 'Seguir', leftItems: 'Seguro\nPrevisível', rightTitle: 'Escolher', rightItems: 'Arriscado\nSeu', leftColor: '#27a8ff', rightColor: '#ff435a' } }
-      : { sceneId: item.sceneId, componentId: item.componentId, props: item.props }),
-    brief: { thesis: 'Regras ajudam, mas a escolha é sua', audience: 'Público de Shorts', promise: 'Uma ideia sobre escolhas em um minuto', notes: '' },
-    script: { hook: 'Toda regra foi uma escolha de alguém.', development: 'O Nox encontrou uma regra que não fazia mais sentido. E perguntou o que ninguém perguntava.\n\nSeguir é confortável. Escolher dá trabalho, mas é a única forma de algo mudar.', payoff: 'Qual regra você seguiria até o fim?' },
-    packaging: { titleA: 'A regra quebrada', titleB: 'Seguir ou escolher?', description: 'Um minuto sobre regras e escolhas.', tags: 'shorts, escolhas, nox', seo: 'regras escolhas' },
+    title: 'Nox e a regra quebrada', type: 'short', voice: 'pf_dora', images: [nox, icons[0], icons[4], icons[1], icons[5]],
+    shots: duration => Array.from({ length: 8 }, (_, index) => Math.min(duration - 0.3, 0.6 + (index * duration) / 8)),
+    // O agente troca o 3º beat por um diálogo: Nox × a regra (ícone da máscara), com tempos dentro do beat.
+    scenes: (suggestion, evidence) => suggestion.map((item, index) => index !== 2 ? item : { ...item, componentId: 'dv_dialogo_hq', props: {
+      backgroundStyle: 'halftone', left: { asset: 'nox', name: 'NOX', color: '#2676E8' }, right: { asset: 'regra', name: 'A REGRA', color: '#EF3F49' },
+      turns: [{ speaker: 'left', text: 'POR QUE EU SIGO VOCÊ?', at: 0, duration: Math.floor(item.length * 10 / 2) / 10, animation: 'escrita', writeDuration: 0.6 }, { speaker: 'right', text: 'PORQUE SEMPRE FOI ASSIM.', at: Math.floor(item.length * 10 / 2) / 10, duration: Math.floor(item.length * 10 / 2) / 10 - 0.05, animation: 'none' }],
+      assets: { nox: evidence[0].ref, regra: evidence[2].ref, anton: 'brand:anton' } } }),
+    brief: { thesis: 'Regras ajudam, mas seguir sem perguntar também é uma escolha', audience: 'Público de Shorts', promise: 'Uma ideia sobre regras e escolhas em um minuto', notes: 'Nox participa' },
+    script: {
+      hook: 'Toda regra que você segue foi a escolha de alguém. A pergunta é: ela ainda faz sentido?',
+      development: 'O Nox seguia uma regra antiga. Ninguém lembrava quem tinha criado. Todo mundo só obedecia, porque sempre foi assim.\n\nUm dia ele perguntou por quê. Silêncio. A regra protegia um problema que nem existia mais.\n\nSeguir é confortável. Você não erra sozinho. Escolher dá trabalho, porque o erro passa a ser seu. Mas é o único jeito de alguma coisa mudar.',
+      payoff: 'Regra boa aguenta uma pergunta. Qual regra na sua vida você nunca questionou? Me conta nos comentários.',
+    },
+    packaging: { titleA: 'A regra que ninguém questionava', titleB: 'Seguir ou escolher?', description: 'Um minuto sobre regras e escolhas, com o Nox.', tags: 'shorts, escolhas, nox, diazverso', seo: 'regras escolhas' },
   }));
 } catch (error) {
   note(`✘ ${error.stack || error.message}`); process.exitCode = 1;
 } finally {
   await call('contentlab_stop', { force: true }).catch(() => {});
   await client.close();
-  const report = ['# QA do estilo HQ via MCP', '', `Executado em ${new Date().toISOString()} · ${os.platform()} ${os.arch()} · narração padrão Kokoro · cenas Remotion · trilha e SFX gerados`, '', '| Projeto | Formato | Duração | Cenas HQ | Loudness | Capítulos | Verificação |', '| --- | --- | --- | --- | --- | --- | --- |', ...results.map(item => `| ${item.title} | ${item.size} | ${item.duration.toFixed(1)} s | ${item.sceneClips} | ${item.lufs} LUFS | ${item.chapters.length} | ${item.delivery.checks.filter(check => check.ok).length}/${item.delivery.checks.length} |`), '', '## Registro', '', '```text', ...log, '```', ''].join('\n');
+  const report = ['# QA do estilo Diazverso via MCP', '', `Executado em ${new Date().toISOString()} · ${os.platform()} ${os.arch()} · narração padrão Kokoro · legenda palavra a palavra (Whisper) · cenas HQ do plugin Diazverso · imagens próprias (Nox e ícones) · SFX originais e trilha de rascunho`, '', 'Teste técnico do fluxo com imagens próprias; a qualidade editorial final depende das imagens reais dos personagens e de uma trilha licenciada, escolhidas pelo criador.', '', '| Projeto | Formato | Duração | Cenas HQ | Loudness | Capítulos | Verificação |', '| --- | --- | --- | --- | --- | --- | --- |', ...results.map(item => `| ${item.title} | ${item.size} | ${item.duration.toFixed(1)} s | ${item.sceneClips} | ${item.lufs} LUFS | ${item.chapters.length} | ${item.delivery.checks.filter(check => check.ok).length}/${item.delivery.checks.length} |`), '', '## Registro', '', '```text', ...log, '```', ''].join('\n');
   await writeFile(path.join(root, 'docs', 'QA_HQ.md'), report);
   console.log(`\nRelatório: docs/QA_HQ.md · artefatos: ${process.argv.includes('--keep') ? work : '(removidos)'}`);
   if (!process.argv.includes('--keep')) await rm(work, { recursive: true, force: true });

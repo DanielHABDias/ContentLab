@@ -3,7 +3,7 @@ import path from 'node:path';
 import * as ts from 'typescript';
 import { createHash } from 'node:crypto';
 
-export const allowedComponentImports = new Set(['react', 'remotion', '@remotion/shapes', '@remotion/transitions']);
+export const allowedComponentImports = new Set(['react', 'react/jsx-runtime', 'remotion', '@remotion/shapes', '@remotion/transitions']);
 const SOURCE_LIMIT = 256 * 1024;
 
 export class ComponentRegistry {
@@ -55,7 +55,7 @@ function validatePropsSchema(schema) {
   for (const [key, descriptor] of Object.entries(schema)) {
     if (!/^[A-Za-z_$][\w$]*$/.test(key)) throw new Error(`Propriedade inválida: ${key}`);
     const type = typeof descriptor === 'string' ? descriptor : descriptor?.type;
-    if (!['string', 'text', 'number', 'boolean', 'color'].includes(type)) throw new Error(`Tipo de propriedade não permitido: ${key}`);
+    if (!['string', 'text', 'number', 'boolean', 'color', 'json'].includes(type)) throw new Error(`Tipo de propriedade não permitido: ${key}`);
   }
 }
 async function exists(target) { return Boolean(await stat(target).catch(() => null)); }

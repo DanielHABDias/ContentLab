@@ -3,11 +3,13 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
+import { fileURLToPath } from 'node:url';
 import { compileRenderPlan, missingSources } from './render-plan.js';
 import { buildFfmpegArgs } from './ffmpeg-graph.js';
 
 const run = promisify(execFile);
-const FONT_CANDIDATES = ['/usr/share/fonts/truetype/inter-zorin-os/Inter-Bold.ttf', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', '/usr/share/fonts/TTF/DejaVuSans-Bold.ttf', '/Library/Fonts/Arial Bold.ttf', '/System/Library/Fonts/Supplemental/Arial Bold.ttf', 'C:\\Windows\\Fonts\\arialbd.ttf'];
+const ANTON = import.meta.url.startsWith('file:') ? path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../assets/brand/fonts/Anton-Regular.ttf') : path.join(process.cwd(), 'assets/brand/fonts/Anton-Regular.ttf');
+const FONT_CANDIDATES = [ANTON, '/usr/share/fonts/truetype/inter-zorin-os/Inter-Bold.ttf', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', '/usr/share/fonts/TTF/DejaVuSans-Bold.ttf', '/Library/Fonts/Arial Bold.ttf', '/System/Library/Fonts/Supplemental/Arial Bold.ttf', 'C:\\Windows\\Fonts\\arialbd.ttf'];
 
 /**
  * Render real a partir do `RenderPlan`: camadas visuais com enquadramento,

@@ -47,8 +47,9 @@ Um servidor MCP não consegue iniciar uma mensagem no chat por conta própria; q
 | `stage_wait_decision`, `stage_approve`, `stage_request_changes` | Aprovação humana ou do agente. Ver as regras abaixo |
 | `media_import_files`, `media_import_url`, `media_generate_slides` | Mídias próprias ou licenciadas, ou um slide por cena do roteiro quando não há filmagem |
 | `voice_options`, `narration_generate`, `narration_assemble` | Narração **padrão** (Kokoro: Alex, Dora, Santa; rápida) ou **clonada** (seu perfil de voz; lenta em CPU) e a montagem tratada da narração |
-| `scene_list`, `scene_add` | Cenas HQ animadas disponíveis, com um plano sugerido por trecho do roteiro; adicionar uma cena num intervalo |
-| `audio_library` | Trilha e efeitos sonoros (whoosh, ding, boom, riser) **originais**, sintetizados localmente, com direitos próprios |
+| `narration_transcribe` | Transcreve a narração montada (Whisper local) para legenda palavra a palavra |
+| `scene_list`, `scene_add` | Cenas HQ do plugin Diazverso, com plano sugerido (um beat visual por frase, cada um com imagem do assunto); adicionar uma cena num intervalo |
+| `audio_library` | Efeitos sonoros **originais** (whoosh, ding, boom, riser) e uma trilha sintetizada que é só rascunho |
 | `timeline_auto_assemble` | Coloca a narração no áudio, distribui as mídias pela duração e cria legendas sincronizadas por cena. Opcionalmente: cenas HQ (`scenes: "auto"` ou lista), trilha com ducking (`music`), SFX nas trocas (`sfx`). Em 9:16 aplica as áreas seguras de Shorts |
 | `chapters_get` | Capítulos a partir dos tempos reais da narração |
 | `thumbnails_generate` | Gera as thumbnails A e B (título sobre um frame do vídeo, ou sobre um degradê) e grava na embalagem |
@@ -78,7 +79,7 @@ Um servidor MCP não consegue iniciar uma mensagem no chat por conta própria; q
 11. `render_start` → `job_wait` → espera a decisão
 12. `deliverable_build` e `project_export` (ZIP)
 
-Para o **estilo HQ** (cenas animadas, trilha e SFX; ver [ESTILO_HQ.md](ESTILO_HQ.md)): no passo 6 chame `audio_library`; no passo 9 use `scene_list` e depois `timeline_auto_assemble` com `scenes: "auto"` (ou a sua lista), `music: true` e `sfx: true`; renderize Shorts em `full-hd` para sair em 1080×1920.
+Para o **estilo Diazverso** ([ESTILO_HQ.md](ESTILO_HQ.md)): no passo 6 importe imagens do assunto com direitos (`media_import_files`), uma faixa licenciada com papel música e chame `audio_library` para os SFX; depois do passo 8 rode `narration_transcribe` + `job_wait`; no passo 9 use `scene_list` e `timeline_auto_assemble` com `scenes: "auto"` (ou a sua lista), `music: true` e `sfx: true`; renderize Shorts em `full-hd` para sair em 1080×1920.
 
 Para 5 Shorts: repetir o fluxo com `type: short`, `mode: autonomous` e `stage_approve` no lugar das esperas.
 

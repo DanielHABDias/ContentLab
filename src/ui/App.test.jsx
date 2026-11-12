@@ -414,8 +414,8 @@ test('edição oferece montar a timeline automaticamente e recarrega o projeto',
   fireEvent.click(within(panel).getByRole('button', { name: 'Executar: Montar timeline automaticamente' }));
   await waitFor(() => expect(localApi.productionAssemble).toHaveBeenCalledWith({ path: '/tmp/meu_projeto' }));
   expect(await within(panel).findByText(/6 clip\(s\), 18 legenda\(s\), 55.9 s/)).toBeInTheDocument();
-  localApi.productionAssemble.mockResolvedValue({ revision: 10, durationSeconds: 55.9, visualClips: 0, sceneClips: 6, music: false, sfx: false, captions: 18 });
+  localApi.productionAssemble.mockResolvedValue({ revision: 10, durationSeconds: 55.9, visualClips: 0, sceneClips: 6, images: 4, music: false, sfx: false, captions: 18 });
   fireEvent.click(within(panel).getByRole('button', { name: 'Executar: Montar no estilo HQ' }));
   await waitFor(() => expect(localApi.productionAssemble).toHaveBeenLastCalledWith({ path: '/tmp/meu_projeto', scenes: 'auto', music: false, sfx: false }));
-  expect(await within(panel).findByText(/6 cena\(s\) HQ, 18 legenda\(s\)/)).toBeInTheDocument();
+  expect(await within(panel).findByText(/6 cena\(s\) com 4 imagem\(ns\), 18 legenda\(s\)/)).toBeInTheDocument();
 });

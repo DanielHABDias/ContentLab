@@ -1,10 +1,14 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+const here = import.meta.url.startsWith('file:') ? path.dirname(fileURLToPath(import.meta.url)) : path.join(process.cwd(), 'src/render');
+export const BRAND_ROOT = path.resolve(here, '../../assets/brand');
+const BRAND_FILES = { anton: 'fonts/Anton-Regular.ttf', nox: 'nox/Nox.png', 'comic-page': 'backgrounds/comic-page.png' };
+const BRAND_VERSION = 'diazverso-1.2.0';
 const worker = import.meta.url.startsWith('file:') ? path.join(path.dirname(fileURLToPath(import.meta.url)), 'remotion-worker.js') : path.join(process.cwd(), 'src/render/remotion-worker.js');
 
 /** Renderiza TSX validado fora do processo principal e guarda o WebM transparente por fingerprint. */
@@ -17,7 +21,7 @@ export class RemotionComponentRuntime {
       if (!layer.componentId) throw componentError(layer.id, 'Clip sem componente selecionado');
       try {
         const manifest = await this.registry.inspect(layer.componentId);
-        const key = createHash('sha256').update(JSON.stringify({ runtime: 'png-v1', hash: manifest.hash, props: layer.componentProps, fps: plan.fps, duration: layer.durationInFrames, canvas: plan.canvas })).digest('hex');
+        const key = createHash('sha256').update(JSON.stringify({ runtime: 'png-v2', hash: manifest.hash, props: layer.componentProps, media: layer.componentMedia || {}, brand: BRAND_VERSION, fps: plan.fps, duration: layer.durationInFrames, canvas: renderSize(layer, plan) })).digest('hex');
         const output = path.join(this.root, 'components', key); const complete = path.join(output, 'complete.json');
         if (!(await stat(complete).catch(() => null))) {
           let pending = this.inflight.get(output);
@@ -42,7 +46,9 @@ export class RemotionComponentRuntime {
     await mkdir(path.dirname(output), { recursive: true });
     const temporary = await mkdtemp(path.join(os.tmpdir(), 'contentlab-remotion-'));
     const request = path.join(temporary, 'request.json'); const partial = `${output}.${randomUUID()}.partial`;
-    await writeFile(request, JSON.stringify({ sourcePath: manifest.sourcePath, exportName: manifest.exportName, props: sanitizeProps(manifest.propsSchema, layer.componentProps), fps: plan.fps, durationInFrames: layer.durationInFrames, width: plan.canvas.width, height: plan.canvas.height, output: partial, workDirectory: temporary }));
+    const publicDir = path.join(temporary, 'public');
+    const props = await stageAssets(sanitizeProps(manifest.propsSchema, layer.componentProps), layer.componentMedia || {}, publicDir);
+    await writeFile(request, JSON.stringify({ sourcePath: manifest.sourcePath, exportName: manifest.exportName, props, publicDir, fps: plan.fps, durationInFrames: layer.durationInFrames, width: renderSize(layer, plan).width, height: renderSize(layer, plan).height, output: partial, workDirectory: temporary }));
     try {
       await runWorker(request, { timeoutMs: this.timeoutMs, memoryMb: this.memoryMb, signal, cacheDirectory: this.root });
       const digits = String(Math.max(0, layer.durationInFrames - 1)).length;
@@ -55,17 +61,76 @@ export class RemotionComponentRuntime {
   }
 }
 
+/** O componente é renderizado no tamanho da caixa do clip (ex.: Short com a faixa da legenda reservada), sem distorcer. */
+export function renderSize(layer, plan) {
+  const even = value => Math.max(2, Math.round(value / 2) * 2);
+  return layer.box ? { width: even(layer.box.width), height: even(layer.box.height) } : plan.canvas;
+}
+
 export function sanitizeProps(schema, values = {}) {
   const result = {};
+  // Padrões JSON (exemplos completos do plugin) só valem quando nenhuma prop foi passada:
+  // misturá-los a props parciais criaria listas incoerentes (ex.: foco num painel que não existe).
+  const empty = !values || Object.keys(values).length === 0;
   for (const [key, descriptor] of Object.entries(schema || {})) {
     const spec = typeof descriptor === 'string' ? { type: descriptor } : descriptor;
-    const value = values[key] ?? spec.default;
+    const value = values?.[key] ?? (spec.type === 'json' && !empty ? undefined : spec.default);
     if (value === undefined) continue;
     if (spec.type === 'number') { const number = Number(value); if (!Number.isFinite(number)) throw new Error(`Valor inválido para ${key}`); result[key] = number; }
     else if (spec.type === 'boolean') result[key] = value === true || value === 'true';
+    else if (spec.type === 'json') {
+      let parsed = value;
+      // Texto que não é JSON fica como texto (props livres das cenas do plugin, ex.: panelLayout).
+      if (typeof value === 'string') { try { parsed = JSON.parse(value); } catch { parsed = value; } }
+      if (parsed === undefined || JSON.stringify(parsed).length > 32_000) throw new Error(`Valor inválido para ${key}`);
+      result[key] = parsed;
+    }
     else { const text = String(value); if (text.length > 4000) throw new Error(`Valor grande demais para ${key}`); result[key] = text; }
   }
   return result;
+}
+
+/**
+ * Referências de arquivo nas props: `brand:<nome>` (Anton, Nox, página HQ, ícones do Diazverso) e
+ * `media:<id>` (mídia do projeto). Copia só o necessário para a pasta pública do render e troca
+ * por `public:<caminho>`, que o worker resolve com staticFile.
+ */
+export async function stageAssets(props, media, publicDir) {
+  const staged = new Map();
+  const place = async (ref) => {
+    if (staged.has(ref)) return staged.get(ref);
+    let source; let target;
+    if (ref.startsWith('brand:')) {
+      const name = ref.slice(6); const file = BRAND_FILES[name] || (/^[a-z-]{2,32}$/.test(name) ? `graphics/${name}.svg` : null);
+      if (!file) throw new Error(`Asset de marca desconhecido: ${name}`);
+      source = path.join(BRAND_ROOT, file); target = `brand/${file}`;
+    } else {
+      const item = media[ref.slice(6)];
+      if (!item?.source) throw new Error(`Mídia não encontrada no projeto: ${ref.slice(6)}`);
+      source = item.source; target = `media/${ref.slice(6).replace(/[^\w-]/g, '_')}${path.extname(item.source).toLowerCase()}`;
+    }
+    if (!(await stat(source).catch(() => null))) throw new Error(`Arquivo ausente: ${path.basename(source)}`);
+    await mkdir(path.dirname(path.join(publicDir, target)), { recursive: true });
+    await copyFile(source, path.join(publicDir, target));
+    const value = `public:${target}`; staged.set(ref, value); return value;
+  };
+  const walk = async (value) => {
+    if (typeof value === 'string') return /^(brand|media):[\w.-]+$/.test(value) ? place(value) : value;
+    if (Array.isArray(value)) return Promise.all(value.map(walk));
+    if (value && typeof value === 'object') return Object.fromEntries(await Promise.all(Object.entries(value).map(async ([key, item]) => [key, await walk(item)])));
+    return value;
+  };
+  await mkdir(path.join(publicDir, 'assets/brand/backgrounds'), { recursive: true });
+  // HQComicPage (dentro das cenas Diazverso) lê a página HQ deste caminho fixo.
+  await copyFile(path.join(BRAND_ROOT, BRAND_FILES['comic-page']), path.join(publicDir, 'assets/brand/backgrounds/comic-page.png'));
+  return walk(props);
+}
+
+/** IDs `media:<id>` citados nas props de um componente. */
+export function mediaRefs(props) {
+  const found = new Set();
+  const walk = value => { if (typeof value === 'string') { const match = /^media:([\w.-]+)$/.exec(value); if (match) found.add(match[1]); } else if (value && typeof value === 'object') Object.values(value).forEach(walk); };
+  walk(props); return [...found];
 }
 
 function runWorker(request, { timeoutMs, memoryMb, signal, cacheDirectory }) {

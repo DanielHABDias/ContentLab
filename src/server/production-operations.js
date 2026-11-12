@@ -7,8 +7,9 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { readProjectDirectory } from './project-registry.js';
 import { NarrationStore, scenesFromScript } from '../audio/narration-service.js';
+import { TranscriptStore } from '../media/transcript-store.js';
 import { wrap } from '../render/ffmpeg-graph.js';
-import { sanitizeProps } from '../render/remotion-component-runtime.js';
+import { mediaRefs, sanitizeProps } from '../render/remotion-component-runtime.js';
 import { missingStageArtifacts } from '../core/workflow.js';
 import { SCENES_TRACK, scenesTrack } from './edit-operations.js';
 import { BUNDLED_COMPONENTS } from '../timeline/components/catalog.js';
@@ -17,6 +18,7 @@ const run = promisify(execFile);
 const FONTS = ['/usr/share/fonts/truetype/inter-zorin-os/Inter-Bold.ttf', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', '/usr/share/fonts/TTF/DejaVuSans-Bold.ttf', '/Library/Fonts/Arial Bold.ttf', '/System/Library/Fonts/Supplemental/Arial Bold.ttf', 'C:\\Windows\\Fonts\\arialbd.ttf'];
 const SIZES = { '16:9': [1920, 1080], '9:16': [1080, 1920], '1:1': [1080, 1080], '4:5': [1080, 1350] };
 const THUMB_SIZES = { '16:9': [1280, 720], '9:16': [1080, 1920], '1:1': [1080, 1080], '4:5': [1080, 1350] };
+const fold = text => String(text).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const PALETTE = ['#15151d', '#0f2a3d', '#2a1420', '#1d2a10', '#22182e'];
 /** Chamada curta: a primeira frase, cortada em palavra inteira (com reticências) se passar do limite. */
 export function headline(text, max) {
@@ -34,27 +36,100 @@ export function captionChunks(sentence) {
   return chunks;
 }
 /** Áreas seguras de Shorts 9:16 (margens conservadoras; a legenda termina em ~78% da altura). */
+/**
+ * Legenda palavra a palavra (padrão Diazverso): blocos de até 3 palavras e 18 caracteres, quebrando
+ * depois de pontuação; cada bloco fica até a próxima palavra (sem piscar entre blocos curtos).
+ */
+export function wordCues(words, total = Infinity) {
+  const cues = []; let block = [];
+  const flush = next => { if (!block.length) return; const start = block[0].start; const natural = block.at(-1).end + 0.25; const end = Math.min(total, next ? Math.min(next.start, Math.max(natural, start + 0.3)) : natural); cues.push({ start, end: Math.max(start + 0.1, end - 0.02), text: block.map(word => word.text).join(' ') }); block = []; };
+  words.forEach((word, index) => {
+    const length = block.reduce((sum, item) => sum + item.text.length + 1, 0) + word.text.length;
+    if (block.length && (block.length >= 3 || length > 18 || word.start - block.at(-1).end > 0.6)) flush(word);
+    block.push(word);
+    if (/[.!?…,;:]$/.test(word.text)) flush(words[index + 1]);
+  });
+  flush(null);
+  return cues;
+}
+
+/** Caixa da cena no Short: largura toda, 64% de cima; a legenda fica abaixo, até a margem segura. */
+export const SHORTS_SCENE_BOX = { x: 0, y: 0, width: 1, height: 0.64 };
 export const SHORTS_SAFE_AREA = { top: 0.125, right: 0.148, bottom: 0.224, left: 0.089 };
 const YEAR = /\b(1[0-9]{3}|20[0-9]{2})\b/;
 const fxId = () => `fx_${randomUUID().replaceAll('-', '').slice(0, 10)}`;
-const PALETTES = [['#15233b', '#ff435a'], ['#18243c', '#ffcf3f'], ['#2a1420', '#ffcf3f'], ['#1d1626', '#27a8ff'], ['#202a1a', '#d8ff48']];
+/** Imagens que mostram o assunto (não slides de texto nem thumbnails), com direitos resolvidos, na ordem de importação. */
+export const evidenceImages = project => project.media.filter(item => item.kind === 'image' && !['slide', 'thumbnail'].includes(item.role) && item.rights !== 'pending');
+
+/** Duração máxima de um beat visual (padrão Diazverso: troca a cada 2–5 s em Shorts, 4–8 s no longo). */
+export const MAX_BEAT_SECONDS = { vertical: 4.5, horizontal: 7 };
+
+/** Divide cada trecho do roteiro em beats visuais por frase, sem passar da duração máxima. */
+export function planBeats(windows, { vertical = false } = {}) {
+  const max = vertical ? MAX_BEAT_SECONDS.vertical : MAX_BEAT_SECONDS.horizontal;
+  const beats = [];
+  for (const window of windows) {
+    const parts = sentences(window.scene.text); const characters = parts.reduce((sum, part) => sum + part.length, 0) || 1;
+    let current = null; let cursor = window.start;
+    for (const part of parts.length ? parts : [window.scene.text]) {
+      const span = window.length * (part.length / characters);
+      if (current && current.length + span > max) { beats.push(current); current = null; }
+      current ||= { sceneId: window.scene.id, start: cursor, length: 0, text: '' };
+      current.length += span; current.text = `${current.text} ${part}`.trim(); cursor += span;
+    }
+    if (current) beats.push(current);
+  }
+  return beats;
+}
+
+const STOP = new Set('a o as os um uma uns umas de do da dos das em no na nos nas por para com sem que e é ou se mas mais muito como ao aos à às seu sua seus suas ele ela eles elas isso esse essa este esta foi era são ser ter tem tinha já não nem só também quando onde porque então depois antes até sobre entre estava estavam está estão ficou fica vai vão eram foram sendo havia pode podem faz fez coisa quer querem parece cada quem todo toda todos todas sempre nunca aqui agora assim dele dela você voce nada tudo algo alguém ninguém mesmo outro outra apenas ainda precisa precisava veio começa justamente direito prática'.split(' '));
+/** Até 3 palavras de impacto de uma frase (nomes próprios, números e palavras fortes), na ordem da fala. */
+export function impactWords(text, limit = 3) {
+  const words = String(text).replace(/[“”"()«»]/g, '').split(/\s+/).map(word => word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '')).filter(Boolean);
+  const scored = words.map((word, index) => ({ word, index, score: (/^\p{N}/u.test(word) ? 3 : 0) + (index > 0 && /^\p{Lu}/u.test(word) ? 3 : 0) + (word.length >= 7 ? 2 : word.length >= 5 ? 1 : 0) - (STOP.has(word.toLowerCase()) ? 9 : 0) }));
+  const picked = scored.filter(item => item.score > 0).sort((a, b) => b.score - a.score || a.index - b.index).slice(0, limit).sort((a, b) => a.index - b.index).map(item => item.word);
+  return (picked.length ? picked : words.slice(0, limit)).map(word => word.toUpperCase());
+}
+const round = value => Math.round(value * 100) / 100;
+const ANTON = 'brand:anton';
 
 /**
- * Plano automático de cenas HQ a partir do roteiro: abertura no gancho, encerramento no payoff,
- * linha do tempo quando o trecho tem datas, cartões quando há várias frases curtas e frase em destaque no resto.
- * É um ponto de partida: o agente ou a pessoa pode trocar qualquer cena.
+ * Plano automático no estilo Diazverso com as cenas do plugin: um beat visual por frase (ou grupo
+ * curto de frases), cada um com imagem do assunto (`media:<id>` das imagens do projeto, ou o Nox
+ * quando não há imagem). Alterna imagem com frases, página HQ com dois painéis e galeria de cartas
+ * para não repetir o mesmo componente. É ponto de partida: o agente ou a pessoa pode trocar cenas.
  */
-export function planScenes(scenes, { title = '' } = {}) {
-  return scenes.map((scene, index) => {
-    const [background, accent] = PALETTES[index % PALETTES.length];
-    const parts = sentences(scene.text);
-    if (index === 0) return { sceneId: scene.id, componentId: 'hq_abertura', props: { title: headline(scene.text, 64), kicker: headline(title, 28), background, accent } };
-    if (index === scenes.length - 1 && scenes.length > 1) return { sceneId: scene.id, componentId: 'hq_chamada', props: { text: headline(parts.at(-1) || scene.text, 70), subtext: '', background, accent } };
-    const dated = parts.filter(part => YEAR.test(part));
-    if (dated.length >= 2) return { sceneId: scene.id, componentId: 'hq_linha_tempo', props: { title: '', items: dated.slice(0, 5).map(part => `${part.match(YEAR)[1]} | ${headline(part.replace(YEAR, '').replace(/^[\s,.:;-]*(em|no ano de)?\s*/i, ''), 46)}`).join('\n'), background, accent } };
-    if (parts.length >= 3) return { sceneId: scene.id, componentId: 'hq_cartoes', props: { title: '', items: parts.slice(0, 4).map(part => headline(part, 48)).join('\n'), background, accent, card: '#f6f3ea' } };
-    const strongest = [...parts].sort((a, b) => Math.abs(a.length - 90) - Math.abs(b.length - 90))[0] || scene.text;
-    return { sceneId: scene.id, componentId: 'hq_citacao', props: { text: headline(strongest, 150), author: '', highlight: '', background, accent } };
+export function planScenes(windows, { title = '', images = [], vertical = false } = {}) {
+  const pool = images.map(item => (typeof item === 'string' ? { id: item, name: '' } : item)).map(item => ({ ...item, key: fold(String(item.name || '').replace(/\.[a-z0-9]+$/i, '')) }));
+  let next = 0; let recent = new Set();
+  // Imagem citada no texto do beat (pelo nome do arquivo) vem primeiro; depois rodízio, evitando repetir o beat anterior.
+  const pickFor = text => {
+    if (!pool.length) return 'brand:nox';
+    const words = new Set(fold(text).split(/[^a-z0-9]+/).filter(word => word.length >= 3));
+    const named = pool.find(item => item.key && !recent.has(item.id) && item.key.split(/[^a-z0-9]+/).some(word => word.length >= 3 && words.has(word)));
+    let chosen = named;
+    for (let tries = 0; !chosen && tries < pool.length; tries += 1) { const candidate = pool[next++ % pool.length]; if (!recent.has(candidate.id) || pool.length <= recent.size) chosen = candidate; }
+    chosen ||= pool[next++ % pool.length];
+    recent.add(chosen.id); return `media:${chosen.id}`;
+  };
+  const take = (count, text) => Array.from({ length: count }, () => pickFor(text));
+  return planBeats(windows, { vertical }).map((beat, index, beats) => {
+    recent = new Set([...recent].slice(-1));
+    const words = impactWords(beat.text, 3);
+    const phrases = words.map((text, position) => ({ text, at: round(0.15 + (beat.length * 0.6 * position) / Math.max(1, words.length)), size: position === 0 ? 1.1 : 0.85 }));
+    const base = { sceneId: beat.sceneId, start: beat.start, length: beat.length, text: beat.text };
+    const imageScene = side => ({ ...base, componentId: 'dv_imagem_frases_hq', props: { label: index === 0 ? headline(title, 28).toUpperCase() : '', imageSide: side, phrases, fontFamily: 'Anton', assets: { image: take(1, beat.text)[0], anton: ANTON } } });
+    const kind = index === 0 || index === beats.length - 1 ? 0 : index % 4;
+    if ((kind === 1 || (vertical && kind === 3)) && images.length >= 2 && beat.length >= (vertical ? 1.6 : 2.6)) {
+      const half = round(beat.length / 2); const [a, b] = take(2, beat.text); const labels = impactWords(beat.text, 2);
+      return { ...base, componentId: 'dv_pagina_hq_cenas', props: { panelLayout: 'parallax', panels: [{ asset: 'a', mediaType: 'image', label: labels[0] || '' }, { asset: 'b', mediaType: 'image', label: labels[1] || '' }], focus: [{ panel: 1, at: 0, until: half }, { panel: 2, at: half, until: round(beat.length) }], fontFamily: 'Anton', assets: { a, b, anton: ANTON } } };
+    }
+    if (kind === 3 && images.length >= 3 && beat.length >= 3.2 && !vertical) {
+      const cards = take(3, beat.text); const titles = impactWords(beat.text, 3); while (titles.length < 3) titles.push(titles.at(-1) || 'DIAZVERSO');
+      const step = Math.min(0.9, (beat.length - 1) / 3);
+      return { ...base, componentId: 'dv_galeria_cartas_hq', props: { title: headline(beat.text, 40).toUpperCase(), subtitle: '', columns: 3, items: cards.map((_, position) => ({ asset: `c${position}`, title: titles[position], caption: '', at: round(0.2 + position * step) })), fontFamily: 'Anton', assets: { ...Object.fromEntries(cards.map((card, position) => [`c${position}`, card])), anton: ANTON } } };
+    }
+    return imageScene(index % 2 === 0 ? 'right' : 'left');
   });
 }
 
@@ -211,12 +286,28 @@ export class ProductionOperations {
     return { ...created, seconds: length, rights: 'owned' };
   }
 
-  /** Plano de cenas sugerido (sem gravar): uma cena HQ por trecho do roteiro. */
+  /**
+   * Plano de cenas sugerido (sem gravar): beats visuais com imagem do assunto em cada um. Usa os tempos
+   * reais da narração montada; sem ela, estima 15 caracteres por segundo. `evidence` lista as imagens que podem entrar.
+   */
   async sceneSuggestions({ path: directory }) {
     const project = await readProjectDirectory(directory);
     const scenes = scenesFromScript(project.creative?.script);
     if (!scenes.length) throw new Error('Escreva o roteiro antes de planejar as cenas');
-    return { scenes: planScenes(scenes, { title: project.creative?.packaging?.titleA || project.title }).map((item, index) => ({ ...item, label: scenes[index].label, text: scenes[index].text })), components: BUNDLED_COMPONENTS.map(({ id, label, use, propsSchema }) => ({ id, label, use, props: Object.keys(propsSchema) })) };
+    const session = await new NarrationStore(directory).read().catch(() => ({}));
+    const narration = session.assembled?.mediaId && project.media.find(item => item.id === session.assembled.mediaId);
+    let windows;
+    if (narration?.metadata?.durationSeconds) windows = this.#windows(project, session, narration.metadata.durationSeconds);
+    else { let cursor = 0; windows = scenes.map(scene => { const window = { scene, start: cursor, length: Math.max(2, scene.text.length / 15) }; cursor += window.length; return window; }); }
+    const evidence = evidenceImages(project);
+    const plan = planScenes(windows, { title: project.creative?.packaging?.titleA || project.title, images: evidence.map(item => ({ id: item.id, name: item.name })), vertical: project.aspectRatio === '9:16' });
+    return {
+      scenes: plan.map(item => ({ ...item, start: round(item.start), length: round(item.length), label: scenes.find(scene => scene.id === item.sceneId)?.label })),
+      evidence: evidence.map(item => ({ id: item.id, name: item.name, ref: `media:${item.id}` })),
+      timing: narration ? 'narration' : 'estimated',
+      warnings: evidence.length ? [] : ['Sem imagens do assunto: o plano usa o Nox em todas as cenas. Importe imagens dos personagens/obra antes de montar.'],
+      components: BUNDLED_COMPONENTS.map(({ id, label, use, propsSchema }) => ({ id, label, use, props: Object.keys(propsSchema) })),
+    };
   }
 
   /**
@@ -224,7 +315,7 @@ export class ProductionOperations {
    * cenas HQ por trecho do roteiro (`scenes: 'auto'` ou lista), trilha com ducking e SFX nas trocas,
    * e legendas sincronizadas por cena. Em 9:16 aplica as áreas seguras de Shorts. Substitui a montagem anterior.
    */
-  async assemble({ path: directory, captions = true, captionStyle = 'legenda', scenes = null, music = false, musicVolume = 0.35, sfx = false, shortsSafeArea = true }) {
+  async assemble({ path: directory, captions = true, captionStyle = 'legenda', captionMode = 'auto', scenes = null, music = false, musicVolume = 0.35, sfx = false, shortsSafeArea = true }) {
     const project = await readProjectDirectory(directory);
     const session = await new NarrationStore(directory).read();
     const narration = session.assembled?.mediaId && project.media.find(item => item.id === session.assembled.mediaId);
@@ -233,8 +324,10 @@ export class ProductionOperations {
     if (!(total > 0)) throw new Error('Duração da narração desconhecida');
     const fps = project.timeline.fps; const totalFrames = Math.round(total * fps);
     const windows = this.#windows(project, session, total);
-    const plan = scenes === 'auto' || scenes === true ? planScenes(windows.map(item => item.scene), { title: project.creative?.packaging?.titleA || project.title }) : Array.isArray(scenes) ? scenes : [];
     const all = project.media.filter(item => ['video', 'image'].includes(item.kind) && item.role !== 'thumbnail');
+    const evidence = evidenceImages(project);
+    if ((scenes === 'auto' || scenes === true) && !evidence.length) throw Object.assign(new Error('O estilo HQ precisa de imagens do assunto: importe imagens dos personagens/obra com direitos confirmados (slides de texto não contam)'), { code: 'VISUAL_EVIDENCE_MISSING' });
+    const plan = scenes === 'auto' || scenes === true ? planScenes(windows, { title: project.creative?.packaging?.titleA || project.title, images: evidence.map(item => ({ id: item.id, name: item.name })), vertical: project.aspectRatio === '9:16' }) : Array.isArray(scenes) ? scenes : [];
     const visuals = all.some(item => item.role !== 'slide') ? all.filter(item => item.role !== 'slide') : all;
     if (!visuals.length && !plan.length) throw Object.assign(new Error('Sem mídia visual: importe vídeos/imagens, gere slides do roteiro ou use cenas HQ'), { code: 'VISUAL_MISSING' });
     if (visuals.some(item => item.rights === 'pending')) throw Object.assign(new Error('Confirme os direitos das mídias antes de montar'), { code: 'RIGHTS_PENDING' });
@@ -247,7 +340,9 @@ export class ProductionOperations {
     for (const track of project.timeline.tracks) if (['visual_main', 'audio_main', SCENES_TRACK, 'audio_music', 'audio_sfx'].includes(track.id)) for (const clip of track.clips) commands.push({ op: 'clip.remove', trackId: track.id, clipId: clip.id });
     const base = { fit: 'cover', anchor: 'center', keyframes: {}, sourceInFrame: 0, style: 'legenda' };
     commands.push({ op: 'clip.add', trackId: 'audio_main', clip: { ...base, id: clipId(), type: 'media', sourceId: narration.id, name: 'Narração', startFrame: 0, durationInFrames: totalFrames, effects: [], volume: 1 } });
-    if (visuals.length) {
+    // Short com cenas: a cena ocupa a parte de cima e o terço de baixo fica livre para a legenda (padrão Diazverso).
+    const sceneLayout = project.aspectRatio === '9:16' && plan.length ? { '9:16': SHORTS_SCENE_BOX } : undefined;
+    if (visuals.length && !sceneLayout) {
       const slot = Math.max(fps * 3, Math.round(totalFrames / visuals.length));
       let cursor = 0; let index = 0;
       while (cursor < totalFrames) {
@@ -264,12 +359,14 @@ export class ProductionOperations {
       if (!project.timeline.tracks.some(track => track.id === SCENES_TRACK)) commands.push({ op: 'track.add', track: scenesTrack() });
       const manifests = new Map((await this.app.components.list()).map(item => [item.id, item]));
       for (const [position, item] of plan.entries()) {
-        const window = windows.find(entry => entry.scene.id === item.sceneId) || (Number.isInteger(item.index) ? windows[item.index] : windows[position]);
+        const window = Number.isFinite(item.start) && Number.isFinite(item.length) ? { start: item.start, length: item.length } : windows.find(entry => entry.scene.id === item.sceneId) || (Number.isInteger(item.index) ? windows[item.index] : windows[position]);
         const manifest = manifests.get(item.componentId);
         if (!window || !manifest) throw Object.assign(new Error(`Cena inválida: ${item.sceneId || position} → ${item.componentId}`), { code: 'SCENE_INVALID' });
-        const startFrame = Math.round(window.start * fps); const end = position === plan.length - 1 && window === windows.at(-1) ? totalFrames : Math.round((window.start + window.length) * fps);
+        const missing = mediaRefs(item.props || {}).filter(id => !project.media.some(media => media.id === id));
+        if (missing.length) throw Object.assign(new Error(`Cena ${item.sceneId || position} usa mídia que não está no projeto: ${missing.join(', ')}`), { code: 'SCENE_INVALID' });
+        const startFrame = Math.round(window.start * fps); const end = position === plan.length - 1 ? totalFrames : Math.min(totalFrames, Math.round((window.start + window.length) * fps));
         if (end - startFrame < 1) continue;
-        commands.push({ op: 'clip.add', trackId: SCENES_TRACK, clip: { ...base, id: clipId(), type: 'component', componentId: item.componentId, componentProps: sanitizeProps(manifest.propsSchema, item.props || {}), name: manifest.label, startFrame, durationInFrames: end - startFrame, fit: 'stretch', effects: [], volume: 1 } });
+        commands.push({ op: 'clip.add', trackId: SCENES_TRACK, clip: { ...base, id: clipId(), type: 'component', componentId: item.componentId, componentProps: sanitizeProps(manifest.propsSchema, item.props || {}), name: manifest.label, startFrame, durationInFrames: end - startFrame, fit: 'stretch', ...(sceneLayout ? { layout: sceneLayout, anchor: 'top' } : {}), effects: [], volume: 1 } });
         sceneClips += 1;
       }
     }
@@ -290,11 +387,13 @@ export class ProductionOperations {
       }
     }
     let details = await this.app.editOps.edit({ path: directory, baseRevision: project.revision, commands, label: 'Montagem automática' });
-    const summary = { durationSeconds: total, visualClips: commands.filter(item => item.trackId === 'visual_main').length, sceneClips, music: Boolean(musicMedia), sfx: Boolean(sfx), safeArea: shortsSafeArea && project.aspectRatio === '9:16' ? 'shorts' : 'default' };
+    const summary = { durationSeconds: total, visualClips: commands.filter(item => item.trackId === 'visual_main').length, sceneClips, images: new Set(plan.flatMap(item => mediaRefs(item.props || {}))).size, music: Boolean(musicMedia), sfx: Boolean(sfx), safeArea: shortsSafeArea && project.aspectRatio === '9:16' ? 'shorts' : 'default' };
     if (!captions) return { revision: details.project.revision, ...summary };
 
-    const cues = [];
-    for (const window of windows) {
+    const words = captionMode === 'phrases' ? [] : await this.#narrationWords(directory, narration);
+    if (captionMode === 'words' && !words.length) throw Object.assign(new Error('Transcreva a narração antes (narration_transcribe) para legenda palavra a palavra'), { code: 'WORDS_MISSING' });
+    const cues = words.length ? wordCues(words, total) : [];
+    if (!words.length) for (const window of windows) {
       const parts = sentences(window.scene.text).flatMap(captionChunks);
       const characters = parts.reduce((sum, part) => sum + part.length, 0) || 1;
       let local = window.start;
@@ -304,7 +403,25 @@ export class ProductionOperations {
       const srt = cues.map((cue, position) => `${position + 1}\n${srtTime(cue.start)} --> ${srtTime(cue.end)}\n${cue.text}\n`).join('\n');
       details = await this.app.editOps.captions({ path: directory, baseRevision: details.project.revision, srtText: srt, srtName: 'roteiro.srt', style: captionStyle });
     }
-    return { revision: details.project.revision, ...summary, captions: cues.length };
+    return { revision: details.project.revision, ...summary, captions: cues.length, captionSync: words.length ? 'words' : 'phrases' };
+  }
+
+  /** Palavras com tempo da transcrição da narração montada (só se a transcrição é deste arquivo). */
+  async #narrationWords(directory, narration) {
+    const store = new TranscriptStore(directory);
+    const meta = await store.meta(narration.id).catch(() => null);
+    if (!meta || meta.sha256 !== narration.sha256) return [];
+    return (await store.read(narration.id))?.words || [];
+  }
+
+  /** Transcreve a narração montada (Whisper) para legendas palavra a palavra. Devolve jobId. */
+  async transcribeNarration({ path: directory, force = false }) {
+    const project = await readProjectDirectory(directory);
+    const session = await new NarrationStore(directory).read();
+    const narration = session.assembled?.mediaId && project.media.find(item => item.id === session.assembled.mediaId);
+    if (!narration) throw Object.assign(new Error('Monte a narração antes'), { code: 'NARRATION_MISSING' });
+    const result = await this.app.mediaOps.transcribe({ path: directory, mediaId: narration.id, force });
+    return result?.id ? { jobId: result.id, mediaId: narration.id } : { status: result.status, mediaId: narration.id };
   }
 
   /** Capítulos (um por trecho do roteiro) a partir dos tempos reais da narração montada. */
@@ -378,10 +495,13 @@ export class ProductionOperations {
     const renders = (await this.app.listRenderJobs({ path: directory })).jobs.filter(job => job.state === 'completed' && job.output && existsSync(job.output));
     const latest = renders.sort((a, b) => String(b.finishedAt).localeCompare(String(a.finishedAt)))[0];
     if (latest) { const name = `video${path.extname(latest.output)}`; const destination = path.join(target, name); await rm(destination, { force: true }); await link(latest.output, destination).catch(() => copyFile(latest.output, destination)); files.push(name); }
-    const checks = this.#checks(project, latest && await this.#probe(latest.output), latest, files, chapters);
-    await writeFile(path.join(target, 'verificacao.md'), `# Verificação da entrega\n\n${checks.map(item => `- [${item.ok ? 'x' : ' '}] **${item.label}:** ${item.detail}`).join('\n')}\n\nA publicação é manual: o Content Lab não envia nada para redes sociais. Assista ao vídeo inteiro antes de publicar.\n`);
+    const session = await new NarrationStore(directory).read().catch(() => ({}));
+    const narration = session.assembled?.mediaId && project.media.find(item => item.id === session.assembled.mediaId);
+    const byWord = Boolean(narration && (await this.#narrationWords(directory, narration)).length);
+    const checks = this.#checks(project, latest && await this.#probe(latest.output), latest, files, chapters, byWord);
+    await writeFile(path.join(target, 'verificacao.md'), `# Verificação da entrega\n\n${checks.map(item => `- [${item.ok ? 'x' : ' '}] **${item.label}${item.advisory ? ' (decisão sua)' : ''}:** ${item.detail}`).join('\n')}\n\nA publicação é manual: o Content Lab não envia nada para redes sociais. Assista ao vídeo inteiro antes de publicar.\n`);
     files.push('verificacao.md');
-    return { directory: target, files, video: latest?.output || null, chapters, checks, complete: checks.every(item => item.ok) };
+    return { directory: target, files, video: latest?.output || null, chapters, checks, complete: checks.every(item => item.ok || item.advisory) };
   }
 
   /** Itens conferidos de verdade (estado salvo e ffprobe do render), sem presumir aprovação. */
@@ -393,7 +513,25 @@ export class ProductionOperations {
     } catch { return null; }
   }
 
-  #checks(project, inspection, latest, files, chapters) {
+  /** Padrão Diazverso: toda cena HQ mostra uma imagem do assunto (imagem do projeto ou Nox), não só texto. */
+  #visualCheck(project) {
+    const scenes = project.timeline.tracks.find(track => track.id === SCENES_TRACK)?.clips || [];
+    if (!scenes.length) return { id: 'visual', label: 'Imagem do assunto em cada cena', ok: false, detail: 'sem cenas HQ na timeline' };
+    const withImage = scenes.filter(clip => /"(media|brand):(?!anton|comic-page)[\w.-]+"/.test(JSON.stringify(clip.componentProps || {})));
+    const distinct = new Set(scenes.flatMap(clip => mediaRefs(clip.componentProps || {}))).size;
+    return { id: 'visual', label: 'Imagem do assunto em cada cena', ok: withImage.length === scenes.length && distinct > 0, detail: `${withImage.length}/${scenes.length} cenas com imagem; ${distinct} imagem(ns) distinta(s) do projeto` };
+  }
+
+  /** Trilha final precisa de licença registrada; a trilha sintetizada serve só de rascunho. */
+  #musicCheck(project) {
+    const ids = new Set(project.timeline.tracks.flatMap(track => track.clips).map(clip => clip.sourceId));
+    const music = project.media.filter(item => item.role === 'music' && ids.has(item.id));
+    if (!music.length) return { id: 'music', label: 'Trilha licenciada', ok: false, detail: 'sem trilha: importe uma faixa licenciada (ex.: YouTube Audio Library) com papel música' };
+    const generated = music.filter(item => item.source?.type === 'generated');
+    return { id: 'music', label: 'Trilha licenciada', ok: !generated.length, detail: generated.length ? 'trilha sintetizada é rascunho: troque por faixa licenciada antes de publicar' : `${music.length} faixa(s) com licença registrada` };
+  }
+
+  #checks(project, inspection, latest, files, chapters, byWord = false) {
     const stage = id => project.stages.find(item => item.id === id)?.state === 'approved';
     const pending = project.media.filter(item => item.rights === 'pending');
     const captions = project.timeline.tracks.filter(track => track.kind === 'caption').reduce((sum, track) => sum + track.clips.length, 0);
@@ -402,7 +540,10 @@ export class ProductionOperations {
       { id: 'packaging', label: 'Títulos e thumbnails A/B', ok: stage('packaging') && files.includes('thumbnail-A.png') && files.includes('thumbnail-B.png'), detail: `${files.filter(name => name.startsWith('thumbnail-')).length}/2 thumbnails${stage('packaging') ? ', embalagem aprovada' : ', embalagem não aprovada'}` },
       { id: 'rights', label: 'Direitos das mídias', ok: pending.length === 0, detail: pending.length ? `${pending.length} mídia(s) com direitos pendentes` : `${project.media.length} mídia(s) próprias ou licenciadas` },
       { id: 'render', label: 'Vídeo final', ok: Boolean(latest && inspection?.audio), detail: latest ? (inspection ? `${inspection.width}×${inspection.height}, ${Number(inspection.duration || 0).toFixed(1)} s, conferido com ffprobe` : 'render concluído') : 'sem render concluído' },
-      { id: 'captions', label: 'Legendas', ok: captions > 0, detail: captions ? `${captions} legenda(s) na timeline, sincronizadas por cena` : 'sem legendas' },
+      this.#visualCheck(project),
+      this.#musicCheck(project),
+      ...(project.type === 'short' ? [{ id: 'duration', label: 'Duração do Short', advisory: true, ok: Number(inspection?.duration || 0) >= 60, detail: `${Number(inspection?.duration || 0).toFixed(1)} s; o canal prefere 60 s ou mais quando o conteúdo sustenta` }] : []),
+      { id: 'captions', label: 'Legendas', ok: captions > 0, detail: captions ? `${captions} legenda(s) na timeline, sincronizadas ${byWord ? 'palavra a palavra (Whisper)' : 'por frase'}` : 'sem legendas' },
       ...(project.type === 'long' ? [{ id: 'chapters', label: 'Capítulos', ok: chapters.length >= 3, detail: chapters.length >= 3 ? `${chapters.length} capítulos dos tempos da narração` : 'menos de 3 trechos: sem capítulos' }] : []),
       { id: 'review', label: 'Aprovação final', ok: stage('review'), detail: stage('review') ? 'aprovada' : 'aguardando sua aprovação' },
     ];

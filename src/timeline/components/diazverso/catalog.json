@@ -1,0 +1,1550 @@
+{
+  "plugin": "1.2.0",
+  "components": [
+    {
+      "id": "dv_barra_loading_hq",
+      "file": "diazverso/BarraLoadingHQ.tsx",
+      "exportName": "BarraLoadingHQCena",
+      "label": "Diazverso · BarraLoadingHQ",
+      "use": "Barra de progresso para orientar capítulos",
+      "propsSchema": {
+        "position": {
+          "type": "string",
+          "label": "position",
+          "default": "bottom"
+        },
+        "width": {
+          "type": "number",
+          "label": "width",
+          "default": 86
+        },
+        "height": {
+          "type": "number",
+          "label": "height",
+          "default": 6
+        },
+        "margin": {
+          "type": "number",
+          "label": "margin",
+          "default": 7
+        },
+        "trackColor": {
+          "type": "color",
+          "label": "trackColor",
+          "default": "#FFF3D6"
+        },
+        "outlineColor": {
+          "type": "color",
+          "label": "outlineColor",
+          "default": "#101018"
+        },
+        "texture": {
+          "type": "boolean",
+          "label": "texture",
+          "default": true
+        },
+        "points": {
+          "type": "json",
+          "label": "points",
+          "default": [
+            {
+              "at": 0,
+              "value": 0
+            },
+            {
+              "at": 2,
+              "value": 30
+            },
+            {
+              "at": 3.5,
+              "value": 30
+            },
+            {
+              "at": 6,
+              "value": 70,
+              "easing": "smooth"
+            },
+            {
+              "at": 7,
+              "value": 70
+            },
+            {
+              "at": 9.5,
+              "value": 100,
+              "easing": "smooth"
+            }
+          ]
+        },
+        "colors": {
+          "type": "json",
+          "label": "colors",
+          "default": [
+            {
+              "at": 0,
+              "color": "#2689FF"
+            },
+            {
+              "at": 4,
+              "color": "#2689FF"
+            },
+            {
+              "at": 7,
+              "color": "#FF354A"
+            }
+          ]
+        },
+        "backgroundStyle": {
+          "type": "json",
+          "label": "backgroundStyle"
+        },
+        "backgroundOpacity": {
+          "type": "number",
+          "label": "backgroundOpacity"
+        },
+        "x": {
+          "type": "json",
+          "label": "x"
+        },
+        "y": {
+          "type": "json",
+          "label": "y"
+        },
+        "opacity": {
+          "type": "number",
+          "label": "opacity"
+        }
+      }
+    },
+    {
+      "id": "dv_brainstorm_hq",
+      "file": "diazverso/BrainstormHQ.tsx",
+      "exportName": "BrainstormHQCena",
+      "label": "Diazverso · BrainstormHQ",
+      "use": "Grafo de ideias, evidências e percurso entre casos",
+      "propsSchema": {
+        "backgroundColor": {
+          "type": "color",
+          "label": "backgroundColor",
+          "default": "#18243C"
+        },
+        "cardColor": {
+          "type": "color",
+          "label": "cardColor",
+          "default": "#273E65"
+        },
+        "textColor": {
+          "type": "color",
+          "label": "textColor",
+          "default": "#FFFFFF"
+        },
+        "lineColor": {
+          "type": "color",
+          "label": "lineColor",
+          "default": "#FF435A"
+        },
+        "zoomOutDuration": {
+          "type": "number",
+          "label": "zoomOutDuration",
+          "default": 1.4
+        },
+        "nodes": {
+          "type": "json",
+          "label": "nodes",
+          "default": [
+            {
+              "id": "regra",
+              "text": "A regra",
+              "asset": "escudo"
+            },
+            {
+              "id": "escolha",
+              "text": "Uma escolha"
+            },
+            {
+              "id": "legado",
+              "text": "O legado",
+              "asset": "escudo"
+            },
+            {
+              "id": "consequencia",
+              "asset": "escudo"
+            }
+          ]
+        },
+        "steps": {
+          "type": "json",
+          "label": "steps",
+          "default": [
+            {
+              "node": "regra",
+              "hold": 2
+            },
+            {
+              "node": "escolha",
+              "from": "regra",
+              "moveDuration": 0.9,
+              "hold": 2
+            },
+            {
+              "node": "legado",
+              "from": "regra",
+              "moveDuration": 1.1,
+              "hold": 2
+            },
+            {
+              "node": "consequencia",
+              "from": "escolha",
+              "moveDuration": 0.9,
+              "hold": 2
+            }
+          ]
+        },
+        "fontFamily": {
+          "type": "string",
+          "label": "fontFamily",
+          "default": "Anton"
+        },
+        "assets": {
+          "type": "json",
+          "label": "assets",
+          "default": {
+            "escudo": "brand:escudo",
+            "anton": "brand:anton"
+          }
+        },
+        "backgroundStyle": {
+          "type": "string",
+          "label": "backgroundStyle"
+        },
+        "backgroundOpacity": {
+          "type": "number",
+          "label": "backgroundOpacity"
+        },
+        "paperTone": {
+          "type": "string",
+          "label": "paperTone"
+        },
+        "gridBackgroundColor": {
+          "type": "color",
+          "label": "gridBackgroundColor"
+        },
+        "gridLineColor": {
+          "type": "color",
+          "label": "gridLineColor"
+        },
+        "presentation": {
+          "type": "string",
+          "label": "presentation"
+        },
+        "heading": {
+          "type": "string",
+          "label": "heading"
+        },
+        "pathBend": {
+          "type": "number",
+          "label": "pathBend"
+        },
+        "dotColor": {
+          "type": "color",
+          "label": "dotColor"
+        },
+        "dotSize": {
+          "type": "number",
+          "label": "dotSize"
+        }
+      }
+    },
+    {
+      "id": "dv_caixinha_hq",
+      "file": "diazverso/CaixinhaHQ.tsx",
+      "exportName": "CaixinhaHQCena",
+      "label": "Diazverso · CaixinhaHQ",
+      "use": "Caixa contextual de informação",
+      "propsSchema": {
+        "preset": {
+          "type": "string",
+          "label": "preset",
+          "default": "inscricao"
+        },
+        "corner": {
+          "type": "string",
+          "label": "corner",
+          "default": "inferior-direito"
+        },
+        "animation": {
+          "type": "string",
+          "label": "animation",
+          "default": "lateral"
+        },
+        "at": {
+          "type": "number",
+          "label": "at",
+          "default": 0
+        },
+        "holdDuration": {
+          "type": "number",
+          "label": "holdDuration",
+          "default": 5
+        },
+        "action": {
+          "type": "string",
+          "label": "action",
+          "default": "auto"
+        },
+        "actionAt": {
+          "type": "number",
+          "label": "actionAt",
+          "default": 2.9
+        },
+        "actionDuration": {
+          "type": "number",
+          "label": "actionDuration",
+          "default": 0.45
+        },
+        "animationDuration": {
+          "type": "number",
+          "label": "animationDuration",
+          "default": 0.4
+        },
+        "fontFamily": {
+          "type": "string",
+          "label": "fontFamily",
+          "default": "Anton"
+        },
+        "assets": {
+          "type": "json",
+          "label": "assets",
+          "default": {
+            "anton": "brand:anton"
+          }
+        },
+        "backgroundStyle": {
+          "type": "json",
+          "label": "backgroundStyle"
+        },
+        "backgroundOpacity": {
+          "type": "number",
+          "label": "backgroundOpacity"
+        },
+        "exitAnimation": {
+          "type": "json",
+          "label": "exitAnimation"
+        },
+        "motionCurve": {
+          "type": "string",
+          "label": "motionCurve"
+        },
+        "text": {
+          "type": "json",
+          "label": "text"
+        },
+        "instagramHandle": {
+          "type": "json",
+          "label": "instagramHandle"
+        },
+        "boxColor": {
+          "type": "json",
+          "label": "boxColor"
+        },
+        "textColor": {
+          "type": "json",
+          "label": "textColor"
+        },
+        "icon": {
+          "type": "json",
+          "label": "icon"
+        }
+      }
+    },
+    {
+      "id": "dv_carrossel_frases_hq",
+      "file": "diazverso/CarrosselFrasesHQ.tsx",
+      "exportName": "CarrosselFrasesHQCena",
+      "label": "Diazverso · CarrosselFrasesHQ",
+      "use": "Carrossel de frases-chave",
+      "propsSchema": {
+        "phrases": {
+          "type": "json",
+          "label": "phrases",
+          "default": [
+            {
+              "text": "BATMAN NÃO É JUIZ",
+              "at": 0.8
+            },
+            {
+              "text": "BATMAN NÃO É JÚRI",
+              "at": 3
+            },
+            {
+              "text": "NEM O CARRASCO",
+              "at": 5.2,
+              "color": "#EF3F49"
+            },
+            {
+              "text": "ONDE FICA O LIMITE?",
+              "at": 7.4
+            }
+          ]
+        },
+        "fontFamily": {
+          "type": "string",
+          "label": "fontFamily",
+          "default": "Anton"
+        },
+        "align": {
+          "type": "string",
+          "label": "align",
+          "default": "left"
+        },
+        "motionDuration": {
+          "type": "number",
+          "label": "motionDuration",
+          "default": 0.45
+        },
+        "backgroundStyle": {
+          "type": "string",
+          "label": "backgroundStyle",
+          "default": "halftone"
+        },
+        "backgroundColor": {
+          "type": "color",
+          "label": "backgroundColor",
+          "default": "#10131E"
+        },
+        "activeColor": {
+          "type": "color",
+          "label": "activeColor",
+          "default": "#F4C542"
+        },
+        "inactiveColor": {
+          "type": "color",
+          "label": "inactiveColor",
+          "default": "#9698A2"
+        },
+        "inactiveOpacity": {
+          "type": "number",
+          "label": "inactiveOpacity",
+          "default": 0.38
+        },
+        "inactiveScale": {
+          "type": "number",
+          "label": "inactiveScale",
+          "default": 0.6
+        },
+        "activeBandColor": {
+          "type": "color",
+          "label": "activeBandColor",
+          "default": "#A0A0A0"
+        },
+        "activeBandOpacity": {
+          "type": "number",
+          "label": "activeBandOpacity",
+          "default": 0.12
+        },
+        "assets": {
+          "type": "json",
+          "label": "assets",
+          "default": {
+            "anton": "brand:anton"
+          }
+        },
+        "textScale": {
+          "type": "number",
+          "label": "textScale"
+        },
+        "backgroundOpacity": {
+          "type": "number",
+          "label": "backgroundOpacity"
+        },
+        "paperTone": {
+          "type": "string",
+          "label": "paperTone"
+        },
+        "gridBackgroundColor": {
+          "type": "color",
+          "label": "gridBackgroundColor"
+        },
+        "gridLineColor": {
+          "type": "color",
+          "label": "gridLineColor"
+        }
+      }
+    },
+    {
+      "id": "dv_comic_page_cta",
+      "file": "diazverso/ComicPageCTA.tsx",
+      "exportName": "ComicPageCTACena",
+      "label": "Diazverso · ComicPageCTA",
+      "use": "CTA de encerramento em página HQ com o Nox",
+      "propsSchema": {
+        "headline": {
+          "type": "string",
+          "label": "headline",
+          "default": "A REGRA DO BATMAN E O CORINGA"
+        },
+        "stripeColor": {
+          "type": "color",
+          "label": "stripeColor",
+          "default": "#EF3F49"
+        },
+        "fontFamily": {
+          "type": "string",
+          "label": "fontFamily",
+          "default": "Anton"
+        },
+        "assets": {
+          "type": "json",
+          "label": "assets",
+          "default": {
+            "thumbnail": "brand:nox",
+            "character": "brand:nox",
+            "anton": "brand:anton"
+          }
+        },
+        "backgroundStyle": {
+          "type": "json",
+          "label": "backgroundStyle"
+        },
+        "backgroundOpacity": {
+          "type": "number",
+          "label": "backgroundOpacity"
+        },
+        "timingScale": {
+          "type": "number",
+          "label": "timingScale"
+        },
+        "fadeOutDuration": {
+          "type": "json",
+          "label": "fadeOutDuration"
+        },
+        "characterScale": {
+          "type": "number",
+          "label": "characterScale"
+        },
+        "channelName": {
+          "type": "string",
+          "label": "channelName"
+        },
+        "topTitle": {
+          "type": "string",
+          "label": "topTitle"
+        },
+        "subscribeText": {
+          "type": "string",
+          "label": "subscribeText"
+        },
+        "calloutText": {
+          "type": "string",
+          "label": "calloutText"
+        },
+        "leftTitle": {
+          "type": "string",
+          "label": "leftTitle"
+        },
+        "rightTitle": {
+          "type": "string",
+          "label": "rightTitle"
+        }
+      }
+    },
+    {
+      "id": "dv_comparativo_ideias_hq",
+      "file": "diazverso/ComparativoIdeiasHQ.tsx",
+      "exportName": "ComparativoIdeiasHQCena",
+      "label": "Diazverso · ComparativoIdeiasHQ",
+      "use": "Comparação visual de duas ideias ou consequências, com imagens",
+      "propsSchema": {
+        "title": {
+          "type": "string",
+          "label": "title",
+          "default": "UMA ESCOLHA, DUAS CONSEQUÊNCIAS"
+        },
+        "fontFamily": {
+          "type": "string",
+          "label": "fontFamily",
+          "default": "Anton"
+        },
+        "backgroundStyle": {
+          "type": "string",
+          "label": "backgroundStyle",
+          "default": "halftone"
+        },
+        "items": {
+          "type": "json",
+          "label": "items",
+          "default": [
+            {
+              "text": "O QUE ELE PROTEGE",
+              "asset": "escudo"
+            },
+            {
+              "text": "O QUE ELE ARRISCA",
+              "asset": "mascara"
+            }
+          ]
+        },
+        "assets": {
+          "type": "json",
+          "label": "assets",
+          "default": {
+            "escudo": "brand:escudo",
+            "mascara": "brand:mascara",
+            "anton": "brand:anton"
+          }
+        },
+        "backgroundOpacity": {
+          "type": "number",
+          "label": "backgroundOpacity"
+        },
+        "paperTone": {
+          "type": "string",
+          "label": "paperTone"
+        },
+        "gridBackgroundColor": {
+          "type": "color",
+          "label": "gridBackgroundColor"
+        },
+        "gridLineColor": {
+          "type": "color",
+          "label": "gridLineColor"
+        },
+        "backgroundColor": {
+          "type": "color",
+          "label": "backgroundColor"
+        },
+        "textColor": {
+          "type": "color",
+          "label": "textColor"
+        },
+        "startDelay": {
+          "type": "number",
+          "label": "startDelay"
+        },
+        "stagger": {
+          "type": "number",
+          "label": "stagger"
+        },
+        "entryDuration": {
+          "type": "number",
+          "label": "entryDuration"
+        },
+        "textDuration": {
+          "type": "number",
+          "label": "textDuration"
+        }
+      }
+    },
+    {
+      "id": "dv_dialogo_hq",
+      "file": "diazverso/DialogoHQ.tsx",
+      "exportName": "DialogoHQCena",
+      "label": "Diazverso · DialogoHQ",
+      "use": "Diálogo contextual entre dois personagens/ideias (Nox pode participar)",
+      "propsSchema": {
+        "fontFamily": {
+          "type": "string",
+          "label": "fontFamily",
+          "default": "Anton"
+        },
+        "backgroundStyle": {
+          "type": "string",
+          "label": "backgroundStyle",
+          "default": "halftone"
+        },
+        "backgroundColor": {
+          "type": "color",
+          "label": "backgroundColor",
+          "default": "#10131E"
+        },
+        "backgroundOpacity": {
+          "type": "number",
+          "label": "backgroundOpacity",
+          "default": 100
+        },
+        "highlightOpacity": {
+          "type": "number",
+          "label": "highlightOpacity",
+          "default": 85
+        },
+        "motionDuration": {
+          "type": "number",
+          "label": "motionDuration",
+          "default": 0.45
+        },
+        "left": {
+          "type": "json",
+          "label": "left",
+          "default": {
+            "asset": "esquerda",
+            "name": "A REGRA",
+            "color": "#2676E8"
+          }
+        },
+        "right": {
+          "type": "json",
+          "label": "right",
+          "default": {
+            "asset": "direita",
+            "name": "A CONSEQUÊNCIA",
+            "color": "#EF3F49"
+          }
+        },
+        "turns": {
+          "type": "json",
+          "label": "turns",
+          "default": [
+            {
+              "speaker": "left",
+              "text": "SE EU CRUZAR ESSA LINHA, TALVEZ NÃO VOLTE.",
+              "at": 0,
+              "duration": 3.2,
+              "animation": "escrita",
+              "writeDuration": 1
+            },
+            {
+              "speaker": "right",
+              "text": "E QUEM JÁ NÃO CONSEGUIU VOLTAR?",
+              "at": 3.2,
+              "duration": 3.2,
+              "animation": "none"
+            },
+            {
+              "speaker": "left",
+              "text": "É POR ISSO QUE ESSA ESCOLHA IMPORTA.",
+              "at": 6.4,
+              "duration": 3.2,
+              "animation": "escrita",
+              "writeDuration": 0.9
+            }
+          ]
+        },
+        "assets": {
+          "type": "json",
+          "label": "assets",
+          "default": {
+            "esquerda": "brand:escudo",
+            "direita": "brand:mascara",
+            "anton": "brand:anton"
+          }
+        },
+        "textColor": {
+          "type": "color",
+          "label": "textColor"
+        },
+        "paperTone": {
+          "type": "string",
+          "label": "paperTone"
+        },
+        "gridBackgroundColor": {
+          "type": "color",
+          "label": "gridBackgroundColor"
+        },
+        "gridLineColor": {
+          "type": "color",
+          "label": "gridLineColor"
+        }
+      }
+    },
+    {
+      "id": "dv_galeria_cartas_hq",
+      "file": "diazverso/GaleriaCartasHQ.tsx",
+      "exportName": "GaleriaCartasHQCena",
+      "label": "Diazverso · GaleriaCartasHQ",
+      "use": "Galeria de cartas com imagem, título e legenda (evidências em sequência)",
+      "propsSchema": {
+        "title": {
+          "type": "string",
+          "label": "title",
+          "default": "AS PEÇAS DESSA HISTÓRIA"
+        },
+        "subtitle": {
+          "type": "string",
+          "label": "subtitle",
+          "default": "UMA GALERIA EM MOVIMENTO"
+        },
+        "backgroundColor": {
+          "type": "color",
+          "label": "backgroundColor",
+          "default": "#1B2943"
+        },
+        "cardColor": {
+          "type": "color",
+          "label": "cardColor",
+          "default": "#F6EDD8"
+        },
+        "textColor": {
+          "type": "color",
+          "label": "textColor",
+          "default": "#FFFFFF"
+        },
+        "cardTextColor": {
+          "type": "color",
+          "label": "cardTextColor",
+          "default": "#111723"
+        },
+        "accentColor": {
+          "type": "color",
+          "label": "accentColor",
+          "default": "#F4C542"
+        },
+        "entryDuration": {
+          "type": "number",
+          "label": "entryDuration",
+          "default": 0.65
+        },
+        "textDuration": {
+          "type": "number",
+          "label": "textDuration",
+          "default": 0.2
+        },
+        "stackOffset": {
+          "type": "number",
+          "label": "stackOffset",
+          "default": 16
+        },
+        "items": {
+          "type": "json",
+          "label": "items",
+          "default": [
+            {
+              "asset": "escudo",
+              "title": "A REGRA",
+              "caption": "Preservar o princípio",
+              "at": 0.25
+            },
+            {
+              "asset": "lampada",
+              "title": "A ESCOLHA",
+              "caption": "Buscar outra saída",
+              "at": 1.35
+            },
+            {
+              "asset": "balanca",
+              "title": "O LIMITE",
+              "caption": "Pesar as consequências",
+              "at": 2.45
+            },
+            {
+              "asset": "caminho",
+              "title": "A EXCEÇÃO",
+              "caption": "Um novo caminho",
+              "at": 3.55,
+              "accentColor": "#79AFE9"
+            },
+            {
+              "asset": "escudo",
+              "title": "O PREÇO",
+              "caption": "Quem paga a conta?",
+              "at": 4.65,
+              "accentColor": "#E88882"
+            },
+            {
+              "asset": "lampada",
+              "title": "O RETORNO",
+              "caption": "De volta ao começo",
+              "at": 5.75,
+              "accentColor": "#B79AE4"
+            },
+            {
+              "asset": "balanca",
+              "title": "A CONSEQUÊNCIA",
+              "caption": "Tudo deixa uma marca",
+              "at": 6.85,
+              "accentColor": "#8ACCB1"
+            }
+          ]
+        },
+        "fontFamily": {
+          "type": "string",
+          "label": "fontFamily",
+          "default": "Anton"
+        },
+        "assets": {
+          "type": "json",
+          "label": "assets",
+          "default": {
+            "escudo": "brand:escudo",
+            "lampada": "brand:lampada",
+            "balanca": "brand:balanca",
+            "caminho": "brand:caminho",
+            "anton": "brand:anton"
+          }
+        },
+        "backgroundStyle": {
+          "type": "string",
+          "label": "backgroundStyle"
+        },
+        "backgroundOpacity": {
+          "type": "number",
+          "label": "backgroundOpacity"
+        },
+        "paperTone": {
+          "type": "string",
+          "label": "paperTone"
+        },
+        "gridBackgroundColor": {
+          "type": "color",
+          "label": "gridBackgroundColor"
+        },
+        "gridLineColor": {
+          "type": "color",
+          "label": "gridLineColor"
+        },
+        "columns": {
+          "type": "json",
+          "label": "columns"
+        },
+        "startDelay": {
+          "type": "number",
+          "label": "startDelay"
+        },
+        "stagger": {
+          "type": "number",
+          "label": "stagger"
+        }
+      }
+    },
+    {
+      "id": "dv_imagem_frases_hq",
+      "file": "diazverso/ImagemFrasesHQ.tsx",
+      "exportName": "ImagemFrasesHQCena",
+      "label": "Diazverso · ImagemFrasesHQ",
+      "use": "Imagem do assunto com frases de impacto reveladas junto da fala",
+      "propsSchema": {
+        "label": {
+          "type": "string",
+          "label": "label",
+          "default": "UMA ESCOLHA MORAL"
+        },
+        "imageSide": {
+          "type": "string",
+          "label": "imageSide",
+          "default": "right"
+        },
+        "backgroundColor": {
+          "type": "color",
+          "label": "backgroundColor",
+          "default": "#111522"
+        },
+        "textColor": {
+          "type": "color",
+          "label": "textColor",
+          "default": "#FFFFFF"
+        },
+        "mutedColor": {
+          "type": "color",
+          "label": "mutedColor",
+          "default": "#A6A9B1"
+        },
+        "accentColor": {
+          "type": "color",
+          "label": "accentColor",
+          "default": "#EF3F49"
+        },
+        "glowIntensity": {
+          "type": "number",
+          "label": "glowIntensity",
+          "default": 0.65
+        },
+        "imageScale": {
+          "type": "number",
+          "label": "imageScale",
+          "default": 1
+        },
+        "phrases": {
+          "type": "json",
+          "label": "phrases",
+          "default": [
+            {
+              "text": "ELE VOLTA.",
+              "at": 0.5,
+              "size": 0.7
+            },
+            {
+              "text": "CAPUZ",
+              "at": 1.4,
+              "size": 1.1
+            },
+            {
+              "text": "VERMELHO",
+              "at": 2.2,
+              "size": 1.1
+            },
+            {
+              "text": "A MESMA HISTÓRIA. UMA RESPOSTA DIFERENTE.",
+              "at": 3.5,
+              "size": 0.4
+            }
+          ]
+        },
+        "fontFamily": {
+          "type": "string",
+          "label": "fontFamily",
+          "default": "Anton"
+        },
+        "assets": {
+          "type": "json",
+          "label": "assets",
+          "default": {
+            "image": "brand:mascara",
+            "anton": "brand:anton"
+          }
+        },
+        "backgroundStyle": {
+          "type": "string",
+          "label": "backgroundStyle"
+        },
+        "backgroundOpacity": {
+          "type": "number",
+          "label": "backgroundOpacity"
+        },
+        "paperTone": {
+          "type": "string",
+          "label": "paperTone"
+        },
+        "gridBackgroundColor": {
+          "type": "color",
+          "label": "gridBackgroundColor"
+        },
+        "gridLineColor": {
+          "type": "color",
+          "label": "gridLineColor"
+        },
+        "glowColor": {
+          "type": "json",
+          "label": "glowColor"
+        }
+      }
+    },
+    {
+      "id": "dv_linha_do_tempo_hq",
+      "file": "diazverso/LinhaDoTempoHQ.tsx",
+      "exportName": "LinhaDoTempoHQCena",
+      "label": "Diazverso · LinhaDoTempoHQ",
+      "use": "Linha do tempo com clipes por marco",
+      "propsSchema": {
+        "direction": {
+          "type": "string",
+          "label": "direction",
+          "default": "forward"
+        },
+        "backgroundColor": {
+          "type": "color",
+          "label": "backgroundColor",
+          "default": "#E8C64F"
+        },
+        "accentColor": {
+          "type": "color",
+          "label": "accentColor",
+          "default": "#2676E8"
+        },
+        "textColor": {
+          "type": "color",
+          "label": "textColor",
+          "default": "#FFFFFF"
+        },
+        "startDelay": {
+          "type": "number",
+          "label": "startDelay",
+          "default": 0.3
+        },
+        "moveDuration": {
+          "type": "number",
+          "label": "moveDuration",
+          "default": 0.8
+        },
+        "enterDuration": {
+          "type": "number",
+          "label": "enterDuration",
+          "default": 1.05
+        },
+        "enterLast": {
+          "type": "boolean",
+          "label": "enterLast",
+          "default": true
+        },
+        "clips": {
+          "type": "json",
+          "label": "clips",
+          "default": [
+            {
+              "asset": "clip1",
+              "title": "2010",
+              "subtitle": "CAPUZ VERMELHO",
+              "sourceStart": 0.1,
+              "hold": 1.35,
+              "crt": true
+            },
+            {
+              "asset": "clip2",
+              "title": "2015",
+              "subtitle": "ARKHAM KNIGHT",
+              "sourceStart": 4.5,
+              "hold": 1.35,
+              "crt": false
+            },
+            {
+              "asset": "clip3",
+              "title": "2016",
+              "subtitle": "A PIADA MORTAL",
+              "sourceStart": 5,
+              "hold": 1.35,
+              "crt": true
+            }
+          ]
+        },
+        "fontFamily": {
+          "type": "string",
+          "label": "fontFamily",
+          "default": "Anton"
+        },
+        "assets": {
+          "type": "json",
+          "label": "assets",
+          "default": {
+            "clip1": "brand:nox",
+            "clip2": "brand:nox",
+            "clip3": "brand:nox",
+            "anton": "brand:anton"
+          }
+        },
+        "backgroundStyle": {
+          "type": "string",
+          "label": "backgroundStyle"
+        },
+        "backgroundOpacity": {
+          "type": "number",
+          "label": "backgroundOpacity"
+        },
+        "paperTone": {
+          "type": "string",
+          "label": "paperTone"
+        },
+        "gridBackgroundColor": {
+          "type": "color",
+          "label": "gridBackgroundColor"
+        },
+        "gridLineColor": {
+          "type": "color",
+          "label": "gridLineColor"
+        }
+      }
+    },
+    {
+      "id": "dv_pagina_hq_cenas",
+      "file": "diazverso/PaginaHQCenas.tsx",
+      "exportName": "PaginaHQCenasCena",
+      "label": "Diazverso · PaginaHQCenas",
+      "use": "Página HQ multipainel com imagens ou clipes e foco por painel",
+      "propsSchema": {
+        "backgroundColor": {
+          "type": "color",
+          "label": "backgroundColor",
+          "default": "#E8C64F"
+        },
+        "accentColor": {
+          "type": "color",
+          "label": "accentColor",
+          "default": "#2676E8"
+        },
+        "panels": {
+          "type": "json",
+          "label": "panels",
+          "default": [
+            {
+              "asset": "clip1",
+              "label": "CAPUZ VERMELHO",
+              "sourceStart": 0.1,
+              "crt": true,
+              "mediaType": "image"
+            },
+            {
+              "asset": "clip2",
+              "label": "BATGIRL",
+              "sourceStart": 5,
+              "crt": true,
+              "mediaType": "image"
+            },
+            {
+              "asset": "clip3",
+              "label": "JOKER JR.",
+              "sourceStart": 15,
+              "crt": true,
+              "mediaType": "image"
+            },
+            {
+              "asset": "clip4",
+              "label": "ARKHAM KNIGHT",
+              "sourceStart": 4.5,
+              "crt": false,
+              "mediaType": "image"
+            }
+          ]
+        },
+        "focus": {
+          "type": "json",
+          "label": "focus",
+          "default": [
+            {
+              "panel": 1,
+              "at": 0.35,
+              "until": 2.1
+            },
+            {
+              "panel": 2,
+              "at": 2.1,
+              "until": 3.85
+            },
+            {
+              "panel": 3,
+              "at": 3.85,
+              "until": 5.6
+            },
+            {
+              "panel": 4,
+              "at": 5.6,
+              "until": 9
+            }
+          ]
+        },
+        "enter": {
+          "type": "json",
+          "label": "enter",
+          "default": {
+            "panel": 4,
+            "at": 7.1,
+            "duration": 1.2
+          }
+        },
+        "fontFamily": {
+          "type": "string",
+          "label": "fontFamily",
+          "default": "Anton"
+        },
+        "assets": {
+          "type": "json",
+          "label": "assets",
+          "default": {
+            "clip1": "brand:nox",
+            "clip2": "brand:nox",
+            "clip3": "brand:nox",
+            "clip4": "brand:nox",
+            "anton": "brand:anton"
+          }
+        },
+        "backgroundStyle": {
+          "type": "string",
+          "label": "backgroundStyle"
+        },
+        "backgroundOpacity": {
+          "type": "number",
+          "label": "backgroundOpacity"
+        },
+        "paperTone": {
+          "type": "string",
+          "label": "paperTone"
+        },
+        "gridBackgroundColor": {
+          "type": "color",
+          "label": "gridBackgroundColor"
+        },
+        "gridLineColor": {
+          "type": "color",
+          "label": "gridLineColor"
+        },
+        "panelLayout": {
+          "type": "string",
+          "label": "panelLayout"
+        },
+        "parallaxDuration": {
+          "type": "number",
+          "label": "parallaxDuration"
+        },
+        "splitColors": {
+          "type": "json",
+          "label": "splitColors"
+        },
+        "dividerColor": {
+          "type": "color",
+          "label": "dividerColor"
+        },
+        "heading": {
+          "type": "string",
+          "label": "heading"
+        },
+        "headingColor": {
+          "type": "color",
+          "label": "headingColor"
+        },
+        "entryDuration": {
+          "type": "number",
+          "label": "entryDuration"
+        }
+      }
+    },
+    {
+      "id": "dv_personagem_espiral_legenda",
+      "file": "diazverso/PersonagemEspiralLegenda.tsx",
+      "exportName": "PersonagemEspiralLegendaCena",
+      "label": "Diazverso · PersonagemEspiralLegenda",
+      "use": "Personagem recortado com espiral e legenda",
+      "propsSchema": {
+        "backgroundVariant": {
+          "type": "string",
+          "label": "backgroundVariant",
+          "default": "espiral"
+        },
+        "entryDuration": {
+          "type": "number",
+          "label": "entryDuration",
+          "default": 0.6
+        },
+        "entryDelay": {
+          "type": "number",
+          "label": "entryDelay",
+          "default": 0
+        },
+        "characterScale": {
+          "type": "number",
+          "label": "characterScale",
+          "default": 1
+        },
+        "headAnchor": {
+          "type": "json",
+          "label": "headAnchor",
+          "default": {
+            "x": 0.5,
+            "y": 0.3
+          }
+        },
+        "sway": {
+          "type": "number",
+          "label": "sway",
+          "default": 0.65
+        },
+        "maxWords": {
+          "type": "number",
+          "label": "maxWords",
+          "default": 5
+        },
+        "captionColor": {
+          "type": "color",
+          "label": "captionColor",
+          "default": "#FFFFFF"
+        },
+        "highlightColors": {
+          "type": "json",
+          "label": "highlightColors",
+          "default": [
+            "#175AE8",
+            "#F22932",
+            "#111111"
+          ]
+        },
+        "transcriptOffset": {
+          "type": "number",
+          "label": "transcriptOffset",
+          "default": 0
+        },
+        "words": {
+          "type": "json",
+          "label": "words",
+          "default": [
+            {
+              "word": "O",
+              "start": 0.65,
+              "end": 0.85
+            },
+            {
+              "word": "Batman",
+              "start": 0.85,
+              "end": 1.4
+            },
+            {
+              "word": "não",
+              "start": 1.4,
+              "end": 1.7
+            },
+            {
+              "word": "mata",
+              "start": 1.7,
+              "end": 2.2
+            },
+            {
+              "word": "mas",
+              "start": 2.5,
+              "end": 2.9
+            },
+            {
+              "word": "essa",
+              "start": 2.9,
+              "end": 3.3
+            },
+            {
+              "word": "regra",
+              "start": 3.3,
+              "end": 3.8
+            },
+            {
+              "word": "tem",
+              "start": 3.8,
+              "end": 4
+            },
+            {
+              "word": "consequências",
+              "start": 4,
+              "end": 4.8
+            }
+          ]
+        },
+        "fontFamily": {
+          "type": "string",
+          "label": "fontFamily",
+          "default": "Anton"
+        },
+        "assets": {
+          "type": "json",
+          "label": "assets",
+          "default": {
+            "character": "brand:nox",
+            "anton": "brand:anton"
+          }
+        },
+        "backgroundStyle": {
+          "type": "json",
+          "label": "backgroundStyle"
+        },
+        "backgroundOpacity": {
+          "type": "number",
+          "label": "backgroundOpacity"
+        },
+        "captions": {
+          "type": "json",
+          "label": "captions"
+        }
+      }
+    },
+    {
+      "id": "dv_quadro_hq_sobre_cena",
+      "file": "diazverso/QuadroHQSobreCena.tsx",
+      "exportName": "QuadroHQSobreCenaCena",
+      "label": "Diazverso · QuadroHQSobreCena",
+      "use": "Quadro de texto sobre a cena (tese, pergunta)",
+      "propsSchema": {
+        "upperText": {
+          "type": "string",
+          "label": "upperText",
+          "default": "A TESE"
+        },
+        "lowerText": {
+          "type": "string",
+          "label": "lowerText",
+          "default": "UM DIA RUIM?"
+        },
+        "tagColor": {
+          "type": "color",
+          "label": "tagColor",
+          "default": "#5CA5AD"
+        },
+        "fontFamily": {
+          "type": "string",
+          "label": "fontFamily",
+          "default": "Anton"
+        },
+        "assets": {
+          "type": "json",
+          "label": "assets",
+          "default": {
+            "anton": "brand:anton"
+          }
+        },
+        "backgroundStyle": {
+          "type": "json",
+          "label": "backgroundStyle"
+        },
+        "backgroundOpacity": {
+          "type": "number",
+          "label": "backgroundOpacity"
+        },
+        "compactAt": {
+          "type": "number",
+          "label": "compactAt"
+        },
+        "compactDuration": {
+          "type": "number",
+          "label": "compactDuration"
+        },
+        "compactScale": {
+          "type": "number",
+          "label": "compactScale"
+        }
+      }
+    },
+    {
+      "id": "dv_texto_hq",
+      "file": "diazverso/TextoHQ.tsx",
+      "exportName": "TextoHQCena",
+      "label": "Diazverso · TextoHQ",
+      "use": "Texto/palavras cinéticas de ênfase curta (até 3 s)",
+      "propsSchema": {
+        "text": {
+          "type": "string",
+          "label": "text",
+          "default": "UMA IDEIA MUDA TUDO"
+        },
+        "fontFamily": {
+          "type": "string",
+          "label": "fontFamily",
+          "default": "Anton"
+        },
+        "textColor": {
+          "type": "color",
+          "label": "textColor",
+          "default": "#FFFFFF"
+        },
+        "backgroundStyle": {
+          "type": "string",
+          "label": "backgroundStyle",
+          "default": "paper"
+        },
+        "paperTone": {
+          "type": "string",
+          "label": "paperTone",
+          "default": "dark"
+        },
+        "textScale": {
+          "type": "number",
+          "label": "textScale",
+          "default": 0.9
+        },
+        "entryAnimation": {
+          "type": "string",
+          "label": "entryAnimation",
+          "default": "escrita"
+        },
+        "entryDuration": {
+          "type": "number",
+          "label": "entryDuration",
+          "default": 1.1
+        },
+        "exitAnimation": {
+          "type": "string",
+          "label": "exitAnimation",
+          "default": "fechar"
+        },
+        "exitDuration": {
+          "type": "number",
+          "label": "exitDuration",
+          "default": 0.4
+        },
+        "assets": {
+          "type": "json",
+          "label": "assets",
+          "default": {
+            "anton": "brand:anton"
+          }
+        }
+      }
+    }
+  ]
+}

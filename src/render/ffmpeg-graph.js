@@ -2,7 +2,8 @@ import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const STYLES = {
-  legenda: { size: 0.045, position: 'bottom', box: 0.6 },
+  // Legenda pelo lado menor: ≈67 px em 1920×1080 e 1080×1920 (padrão Diazverso: ≥56 px no 16:9, ≥64 px no 9:16).
+  legenda: { size: 0.062, relative: 'short', position: 'bottom', box: 0.6 },
   destaque: { size: 0.06, position: 'top', box: 0.75 },
   titulo: { size: 0.085, position: 'center', box: 0 },
 };
@@ -53,7 +54,7 @@ export async function buildFfmpegArgs(plan, { from = 0, to = plan.duration, scal
     } else if ((layer.type === 'caption' || layer.type === 'text') && layer.text?.trim()) {
       if (!fontFile) throw new Error('Nenhuma fonte encontrada para desenhar textos');
       const style = STYLES[layer.style] || STYLES.legenda;
-      const size = Math.round(height * style.size);
+      const size = Math.round((style.relative === 'short' ? Math.min(width, height) : height) * style.size);
       const lines = wrap(layer.text.trim(), Math.floor((width * (1 - plan.safeArea.left - plan.safeArea.right)) / (size * 0.55))).split('\n');
       const lineHeight = Math.round(size * (style.box ? 1.6 : 1.3));
       const top = style.position === 'bottom' ? `h*${(1 - plan.safeArea.bottom).toFixed(4)}-${lines.length * lineHeight}` : style.position === 'top' ? `h*${plan.safeArea.top.toFixed(4)}` : `(h-${lines.length * lineHeight})/2`;

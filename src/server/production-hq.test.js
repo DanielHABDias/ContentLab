@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { planScenes, SHORTS_SAFE_AREA } from './production-operations.js';
+import { impactWords, MAX_BEAT_SECONDS, planBeats, planScenes, SHORTS_SAFE_AREA } from './production-operations.js';
 import { compileRenderPlan } from '../render/render-plan.js';
 import { buildFfmpegArgs } from '../render/ffmpeg-graph.js';
 import { BUNDLED_COMPONENTS } from '../timeline/components/catalog.js';
@@ -9,20 +9,30 @@ import { ComponentRegistry, allowedComponentImports } from '../timeline/componen
 import os from 'node:os';
 import { mkdtemp } from 'node:fs/promises';
 
-const scene = (id, text) => ({ id, label: id, text });
+const window = (id, text, start, length) => ({ scene: { id, label: id, text }, start, length });
 
-test('plano automático: abertura, linha do tempo com datas, cartões/frase e encerramento', () => {
-  const plan = planScenes([
-    scene('hook-1', 'Em 1996 a Marvel estava falida. O que aconteceu?'),
-    scene('development-1', 'Em 1939 nasce a Timely. Em 1962 surge o Homem-Aranha.'),
-    scene('development-2', 'Heróis com problemas. Contas atrasadas. Medo de falhar.'),
-    scene('development-3', 'Os leitores queriam alguém parecido com eles, que mesmo assim escolhesse fazer o certo.'),
-    scene('payoff-1', 'Perfeição não cria vínculo. Qual personagem te ensinou isso?'),
-  ], { title: 'A escolha' });
-  expect(plan.map(item => item.componentId)).toEqual(['hq_abertura', 'hq_linha_tempo', 'hq_cartoes', 'hq_citacao', 'hq_chamada']);
-  expect(plan[1].props.items.split('\n')).toEqual([expect.stringMatching(/^1939 \| /), expect.stringMatching(/^1962 \| /)]);
-  expect(plan[4].props.text).toBe('Qual personagem te ensinou isso?');
-  expect(plan.every(item => item.sceneId)).toBe(true);
+test('plano Diazverso: um beat por frase com imagem do assunto e sem repetir componente', () => {
+  const windows = [
+    window('hook-1', 'Em 1996 a Marvel estava falida. O que aconteceu?', 0, 6),
+    window('development-1', 'Em 1939 nasce a Timely. Em 1962 surge o Homem-Aranha. Stan Lee e Steve Ditko mudam tudo.', 6, 12),
+    window('payoff-1', 'Perfeição não cria vínculo. Qual personagem te ensinou isso?', 18, 6),
+  ];
+  const beats = planBeats(windows, { vertical: false });
+  expect(beats.every(beat => beat.length <= MAX_BEAT_SECONDS.horizontal + 0.01 || !beat.text.includes('. '))).toBe(true);
+  expect(beats.at(-1).start + beats.at(-1).length).toBeCloseTo(24, 5);
+  const plan = planScenes(windows, { title: 'A escolha', images: ['img1', 'img2', 'img3'] });
+  expect(plan.length).toBe(beats.length);
+  expect(plan[0]).toMatchObject({ componentId: 'dv_imagem_frases_hq', props: { assets: { image: 'media:img1', anton: 'brand:anton' } } });
+  expect(plan.map(item => item.componentId)).toContain('dv_pagina_hq_cenas');
+  for (const item of plan) expect(JSON.stringify(item.props)).toMatch(/media:img\d/);
+  for (let index = 2; index < plan.length; index += 1) expect(new Set(plan.slice(index - 2, index + 1).map(item => item.componentId)).size).toBeGreaterThan(1);
+  const nox = planScenes(windows, { images: [] });
+  expect(nox.every(item => JSON.stringify(item.props).includes('brand:nox'))).toBe(true);
+});
+
+test('palavras de impacto: nomes, números e palavras fortes, sem artigos', () => {
+  expect(impactWords('Em 1996 a Marvel estava falida.')).toEqual(['1996', 'MARVEL', 'FALIDA']);
+  expect(impactWords('E o que aconteceu?', 3).length).toBeGreaterThan(0);
 });
 
 test('cenas embutidas: arquivo único, só React/Remotion, registráveis com props de várias linhas', async () => {
@@ -45,7 +55,7 @@ test('legendas ficam por cima das cenas mesmo quando a trilha de cenas é adicio
   const plan = compileRenderPlan(timeline([
     { id: 'visual_main', kind: 'visual', name: 'V', muted: false, locked: false, clips: [] },
     { id: 'captions_main', kind: 'caption', name: 'L', muted: false, locked: false, clips: [clip('cap', { type: 'caption', text: 'Oi' })] },
-    { id: 'visual_scenes', kind: 'visual', name: 'Cenas', muted: false, locked: false, clips: [clip('scene', { type: 'component', componentId: 'hq_abertura' })] },
+    { id: 'visual_scenes', kind: 'visual', name: 'Cenas', muted: false, locked: false, clips: [clip('scene', { type: 'component', componentId: 'dv_texto_hq' })] },
   ]));
   expect(plan.layers.map(layer => layer.id)).toEqual(['scene', 'cap']);
 });
@@ -69,4 +79,9 @@ test('trilha com duck abaixa sob a voz via sidechain; sem voz, mistura simples',
 test('área segura de Shorts põe a legenda acima de 78% da altura', () => {
   expect(1920 * (1 - SHORTS_SAFE_AREA.bottom)).toBeCloseTo(1490, -1);
   expect(SHORTS_SAFE_AREA.left * 1080).toBeCloseTo(96, -1);
+});
+
+test('imagem citada no texto do beat (pelo nome do arquivo) entra naquele beat', () => {
+  const plan = planScenes([window('d', 'Foi aí que veio a lâmpada.', 0, 3)], { images: [{ id: 'a', name: 'escudo.png' }, { id: 'b', name: 'lampada.png' }] });
+  expect(plan[0].props.assets.image).toBe('media:b');
 });

@@ -16,7 +16,7 @@ Primeira versão candidata completa. Ela vai da ideia ao vídeo final, roda loca
 - **Workflow:** aprovações e pedidos de mudança. O modo autônomo para por direitos, consentimento, custo ou aprovação (F20).
 - **Acessibilidade:** diálogos acessíveis, uso por teclado, contraste AA, aviso quando o servidor fica offline, seletor nativo no Linux, Windows e macOS, e a tela "Sobre e diagnóstico" (F21).
 - **Segurança:** a API local recusa outros sites e DNS rebinding; os pacotes têm limites contra ZIP bomb; as fontes são locais e não existe telemetria (F22).
-- **Estilo HQ (F27):** sete cenas animadas originais, trilha e SFX gerados localmente com ducking sob a voz, áreas seguras de Shorts, capítulos e `verificacao.md` na entrega. Disponível pela interface e pelo MCP.
+- **Estilo Diazverso (F27–F28):** cenas HQ do plugin Diazverso com imagem do assunto em cada beat, Anton e Nox embutidos, legenda palavra a palavra (Whisper), SFX originais, trilha licenciada com ducking sob a voz, áreas seguras de Shorts, capítulos e `verificacao.md` na entrega. Disponível pela interface e pelo MCP.
 - **Instalação Linux sem npm:** atualização assinada com volta de versão, e desinstalação que pergunta antes de cada parte (F23).
 
 ## Correções da F24

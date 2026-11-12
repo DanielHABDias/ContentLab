@@ -441,5 +441,17 @@ Objetivo: produzir o tipo de vídeo que o plugin Diazverso planeja — cenas HQ 
 - [x] Capítulos dos tempos da narração em `embalagem.md`; `verificacao.md` com o que foi conferido (ffprobe, direitos, aprovações).
 - [x] MCP: `scene_list`, `scene_add`, `audio_library`, `chapters_get`, `timeline_auto_assemble` ampliado; interface: Produção assistida.
 - [x] QA real `npm run qa:hq` (longo 16:9 + Short 9:16 via MCP), frames inspecionados.
-- [ ] Escuta da trilha/SFX e avaliação visual pelo dono.
+- [ ] Escuta da trilha/SFX e avaliação visual pelo dono. (Avaliado: o resultado não seguiu o plugin; substituído pela F28.)
 
+## F28 — Padrão Diazverso: cenas do plugin, imagem em cada cena e legenda por palavra
+
+Objetivo: corrigir a F27, que não seguia o plugin (vídeo só com texto, sem Nox nem Anton, legenda por cena, trilha sintetizada como final). O plugin 1.2.0 passou a ter um padrão visual mínimo objetivo; o Content Lab passa a cumpri-lo.
+
+- [x] Cenas HQ do plugin compiladas para arquivo único (`npm run scenes:diazverso`); assets de marca (Anton OFL, Nox, página HQ, ícones) em `assets/brand/`.
+- [x] Props `json`; referências `media:<id>`/`brand:<nome>` levadas à pasta pública do render e resolvidas com `staticFile`; Anton também nas legendas.
+- [x] Plano automático por beat (uma frase ou grupo curto: até 7 s no longo, 4,5 s no Short) com imagem do assunto em cada beat e sem repetir componente; montagem recusa projeto sem imagens (`VISUAL_EVIDENCE_MISSING`).
+- [x] Legenda palavra a palavra a partir do Whisper (`narration_transcribe`), com recuo para legenda por frase.
+- [x] Verificação: imagem em cada cena, trilha licenciada (a sintetizada é rascunho), duração do Short como decisão do criador.
+- [x] MCP e interface atualizados; importação com papel `music`.
+- [x] QA real `npm run qa:hq` com imagens próprias (Nox e ícones), frames inspecionados.
+- [ ] Vídeo real com imagens dos personagens e trilha licenciada escolhidas pelo dono, e avaliação dele.
