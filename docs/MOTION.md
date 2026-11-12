@@ -47,7 +47,7 @@ Para voltar à timeline de clips, use `motion_plan_set` com `plan: null`. Na int
 - **O Nox em opinião e humor (`aparte`):**
   - a cena desfoca e o Nox aparece inteiro, subindo pela borda de baixo, com as pernas fora do quadro;
   - cada fala (`falas: [{ pose, humor, icone, texto }]`) troca a pose de uma vez, em stop motion, com balão de ícone ou texto;
-  - as poses são PNGs em `assets/brand/nox/poses/` (lista e pedido para gerar em `skills/diazverso-nox/references/poses.md` do plugin). Sem o PNG, entra o Nox canônico com a expressão;
+  - as poses se combinam com os humores: cada pose é um PNG do corpo sem olhos em `assets/brand/nox/poses/`, e o `poses.json` da pasta guarda onde ficam os olhos, que o kit desenha com o humor pedido. Variantes (`pensando-b`) são sorteadas a cada fala. Lista e pedido para gerar em `skills/diazverso-nox/references/poses.md` do plugin. Sem o PNG, entra o Nox canônico com o humor;
   - o plano escolhe a pose pelo tom da frase: pergunta → `pensando`, opinião → `apontando`, erro → `facepalm`.
 - **Extras por cima da cena** (`extras` no beat):
   - **caixinhas HQ** que não precisam ser faladas: inscrição perto de 20%, like perto de 55% e "minha opinião, tá?" nas frases opinativas;

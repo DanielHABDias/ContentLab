@@ -62,14 +62,22 @@ export const Nox: React.FC<{ mood: Mood; height: number; x: number; y: number; f
 
 
 /**
- * Poses do Nox (stop motion): PNGs desenhados a partir do canônico, cada um com um gesto e a expressão
- * dos olhos já desenhada (mão na frente do rosto pensando, arminha, apontando, dando de ombros…).
- * Ficam em `assets/brand/nox/poses/<pose>.png` (fundo transparente, figura inteira recortada rente,
- * pés na base). O editor entrega o mapa pose → arquivo por este contexto.
+ * Poses do Nox (stop motion), combináveis com qualquer humor: cada pose é um PNG do corpo inteiro com o gesto
+ * dos braços e o rosto SEM olhos; o kit desenha os olhos do humor pedido nas posições gravadas em
+ * `assets/brand/nox/poses/poses.json`. Assim 1 pose × 8 humores = 8 combinações. Uma pose pode ter
+ * variantes (`pensando-b` com `"pose": "pensando"`); o kit sorteia uma por fala.
+ * Também aceita o formato antigo (nome → caminho, olhos já desenhados no PNG).
  */
-export const NoxPoses = createContext<Record<string, string>>({});
-export const POSES = ['pensando', 'arminha', 'apontando', 'ombros', 'joinha', 'facepalm', 'bracos-cruzados', 'acenando', 'rindo', 'assustado', 'comemorando', 'explicando'] as const;
-export type Pose = typeof POSES[number] | 'parado';
+export type PoseInfo = {
+  src: string; w: number; h: number; pose?: string;
+  /** Centros dos olhos em pixels do PNG; largura do olho esquerdo (no canônico, 80 px com a figura de 669 px). */
+  olhos?: { esquerdo: [number, number]; direito: [number, number]; largura?: number; largura_direito?: number; angulo?: number } | null;
+  /** Olho escondido pela mão (esquerdo/direito da imagem). */
+  cobre?: 'nenhum' | 'esquerdo' | 'direito' | 'ambos';
+};
+export const NoxPoses = createContext<Record<string, string | PoseInfo>>({});
+export const POSES = ['pensando', 'arminha', 'apontando', 'ombros', 'joinha', 'facepalm', 'bracos-cruzados', 'acenando', 'rindo', 'assustado', 'comemorando', 'explicando', 'parado'] as const;
+export type Pose = typeof POSES[number];
 
 /** Tremidinha de stop motion: a cada `hold` frames a figura "reassenta" alguns pixels e graus. */
 export const boil = (frame: number, seed: string, hold = 3, amount = 1) => {
@@ -85,11 +93,27 @@ export const NoxPose: React.FC<{ pose?: Pose | string; mood?: Mood; height: numb
   const frame = useCurrentFrame();
   const poses = useContext(NoxPoses);
   const b = boil(frame, seed);
-  const src = pose && pose !== 'parado' ? poses[pose] : undefined;
+  const options = Object.entries(poses).filter(([name, info]) => name === pose || (typeof info === 'object' && info.pose === pose)).map(([, info]) => info);
+  const info = options.length ? options[Math.floor(random(`${seed}${pose}`) * options.length)] : undefined;
   const lean: Record<string, number> = { pensando: -6, apontando: 5, ombros: 0, facepalm: -8, assustado: 4, comemorando: -3, acenando: 4, arminha: 6, rindo: -4, joinha: 3, explicando: 2 };
-  const angle = tilt + b.r + (src ? 0 : lean[pose] || 0);
+  const angle = tilt + b.r + (info ? 0 : lean[pose] || 0);
   const box: React.CSSProperties = { position: 'absolute', left: cx + b.x, top: bottom - height + b.y, height, transform: `translateX(-50%) scaleX(${flip ? -1 : 1}) rotate(${angle}deg)`, transformOrigin: '50% 100%' };
-  if (src) return <Img src={src} style={{ ...box, width: 'auto' }} />;
+  if (typeof info === 'string') return <Img src={info} style={{ ...box, width: 'auto' }} />;
+  if (info) {
+    const o = info.olhos; const cobre = info.cobre || 'nenhum';
+    const eye = (side: 'L' | 'R', [x, y]: [number, number], s: number) => (
+      <g transform={`rotate(${o?.angulo || 0} ${x} ${y}) translate(${x} ${y}) scale(${s}) translate(${-x} ${-y})`}><Eye cx={x} cy={y} mood={mood} side={side} blink={0} look={0} /></g>
+    );
+    return (
+      <div style={{ ...box, width: (height * info.w) / info.h }}>
+        <Img src={info.src} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
+        {o && <svg viewBox={`0 0 ${info.w} ${info.h}`} width="100%" height="100%" style={{ position: 'absolute', inset: 0, overflow: 'visible' }}>
+          {cobre !== 'esquerdo' && cobre !== 'ambos' && eye('L', o.esquerdo, (o.largura || 80) / 80)}
+          {cobre !== 'direito' && cobre !== 'ambos' && eye('R', o.direito, (o.largura_direito || (o.largura || 80) * 0.75) / 60)}
+        </svg>}
+      </div>
+    );
+  }
   const w = (height * 412) / 669;
   return <div style={{ ...box, width: w }}><Nox mood={mood} height={height} x={0} y={0} blinkEvery={100000} /></div>;
 };

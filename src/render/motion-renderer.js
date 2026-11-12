@@ -1,4 +1,4 @@
-import { copyFile, link, mkdir, mkdtemp, readdir, rename, rm, stat } from 'node:fs/promises';
+import { copyFile, link, mkdir, mkdtemp, open, readdir, readFile, rename, rm, stat } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
@@ -20,6 +20,28 @@ const chromium = plan => (plan.beats.some(beat => SCENES_3D.has(beat.scene)) ? {
  * Prepara a pasta pública (marca, SFX e só as mídias citadas), resolve `media:<id>`, renderiza com
  * narração, legenda por palavra e trilha com ducking, e normaliza o áudio para −14 LUFS com limitador.
  */
+const pngSize = async file => { const handle = await open(file, 'r'); try { const head = Buffer.alloc(24); await handle.read(head, 0, 24, 0); return head.toString('ascii', 12, 16) === 'IHDR' ? { w: head.readUInt32BE(16), h: head.readUInt32BE(20) } : null; } finally { await handle.close(); } };
+const point = value => Array.isArray(value) && value.length === 2 && value.every(Number.isFinite) ? value : null;
+
+/**
+ * Poses do Nox: `poses.json` (formato 1) liga cada pose ao PNG sem olhos e à posição dos olhos, que o kit
+ * redesenha com o humor pedido. PNG sem entrada no JSON entra no formato antigo (olhos já desenhados).
+ */
+export async function loadNoxPoses(dir, prefix) {
+  const names = (await readdir(dir).catch(() => [])).filter(name => /^[a-z0-9-]+\.png$/.test(name));
+  const manifest = await readFile(path.join(dir, 'poses.json'), 'utf8').then(JSON.parse).catch(() => ({}));
+  const poses = {}; const files = new Set();
+  for (const [name, entry] of Object.entries(manifest.poses || {})) {
+    const file = entry?.arquivo; if (!/^[a-z0-9-]+$/.test(name) || !names.includes(file)) continue;
+    const size = await pngSize(path.join(dir, file)); if (!size) continue;
+    const eyes = entry.olhos && point(entry.olhos.esquerdo) && point(entry.olhos.direito) ? { esquerdo: entry.olhos.esquerdo, direito: entry.olhos.direito, largura: Number(entry.olhos.largura) || undefined, largura_direito: Number(entry.olhos.largura_direito) || undefined, angulo: Number(entry.olhos.angulo) || 0 } : null;
+    poses[name] = { src: `${prefix}${file}`, ...size, pose: typeof entry.pose === 'string' ? entry.pose : name, olhos: eyes, cobre: ['esquerdo', 'direito', 'ambos'].includes(entry.cobre) ? entry.cobre : 'nenhum' };
+    files.add(file);
+  }
+  for (const file of names) if (!files.has(file) && !Object.values(manifest.poses || {}).some(entry => entry?.arquivo === file)) { poses[file.slice(0, -4)] = `${prefix}${file}`; files.add(file); }
+  return { poses, files: [...files] };
+}
+
 export class MotionRenderer {
   constructor(root, { ffmpeg = 'ffmpeg', ffprobe = 'ffprobe' } = {}) { this.root = path.resolve(root); this.ffmpeg = ffmpeg; this.ffprobe = ffprobe; this.bundles = new Map(); }
 
@@ -74,9 +96,9 @@ export class MotionRenderer {
       onProgress({ phase: 'Preparando mídias', progress: 0.01 });
       await mkdir(path.join(publicDir, 'brand'), { recursive: true }); await mkdir(path.join(publicDir, 'sfx'), { recursive: true }); await mkdir(path.join(publicDir, 'media'), { recursive: true });
       for (const [from, to] of [['fonts/Anton-Regular.ttf', 'brand/Anton-Regular.ttf'], ['nox/nox-sem-olhos.png', 'brand/nox-sem-olhos.png'], ['nox/Nox.png', 'brand/Nox.png']]) await place(path.join(BRAND, from), path.join(publicDir, to));
-      // Poses do Nox (stop motion) que existirem em assets/brand/nox/poses: nome → arquivo.
-      const poses = {};
-      for (const file of (await readdir(path.join(BRAND, 'nox', 'poses')).catch(() => [])).filter(name => name.endsWith('.png'))) { await place(path.join(BRAND, 'nox', 'poses', file), path.join(publicDir, 'brand', 'poses', file)); poses[file.slice(0, -4)] = `public:brand/poses/${file}`; }
+      // Poses do Nox (stop motion) que existirem em assets/brand/nox/poses, com os olhos de poses.json.
+      const { poses, files } = await loadNoxPoses(path.join(BRAND, 'nox', 'poses'), 'public:brand/poses/');
+      for (const file of files) await place(path.join(BRAND, 'nox', 'poses', file), path.join(publicDir, 'brand', 'poses', file));
       const used = new Set(plan.beats.flatMap(beat => beat.sfx || []).map(cue => cue.name));
       for (const name of used) await place(path.join(BRAND, 'sfx', `${name}.wav`), path.join(publicDir, 'sfx', `${name}.wav`));
       const assets = await this.#stageMedia(project, mediaRefs(plan), publicDir);

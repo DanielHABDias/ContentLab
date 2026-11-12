@@ -44,7 +44,9 @@ const ICON_RULES = [[/dinheiro|grana|pag[ao]|preço|caro|rico/, 'dinheiro'], [/t
 const iconFor = text => { const folded = fold(text); const hit = ICON_RULES.find(([rule]) => rule.test(folded)); return hit ? hit[1] : /\?$/.test(text) ? 'interrogacao' : 'exclamacao'; };
 /** Pose do Nox (stop motion) pelo tom da frase: pergunta pensa, opinião aponta, ironia/erro é facepalm. */
 const OPINION = /\b(pra mim|eu acho|acho que|na real|sinceramente|opinião|convenhamos|vamos combinar)\b/i;
-const posesFor = text => (/\?$/.test(text) ? ['pensando', 'ombros'] : OPINION.test(text) ? ['apontando', 'arminha'] : NEGATIVE.test(text) ? ['facepalm', 'rindo'] : SURPRISE.test(text) ? ['assustado', 'explicando'] : ['explicando', 'joinha']);
+const posesFor = text => rotate(String(text).length, (/\?$/.test(text) ? ['pensando', 'ombros'] : OPINION.test(text) ? ['apontando', 'arminha', 'maos-na-cintura'] : NEGATIVE.test(text) ? ['facepalm', 'rindo'] : SURPRISE.test(text) ? ['assustado', 'explicando'] : ['explicando', 'joinha', 'cochichando']));
+/** Gira a lista para variar a primeira pose entre frases parecidas. */
+function rotate(n, list) { const k = n % list.length; return [...list.slice(k), ...list.slice(0, k)]; }
 const NUMBER = /(\d+(?:[.,]\d+)?)\s*(%|mil|milhões|bilhões|anos)?/gi;
 /** Primeiro número que não é um ano (anos viram contexto, não contador). */
 const numberIn = text => [...String(text).matchAll(NUMBER)].find(match => !/^(1[0-9]{3}|20[0-9]{2})$/.test(match[1]) || match[2] === '%') || null;

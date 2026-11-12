@@ -363,6 +363,7 @@
   },
   "poses": {
     "lista": [
+      "parado",
       "pensando",
       "arminha",
       "apontando",
@@ -374,9 +375,11 @@
       "rindo",
       "assustado",
       "comemorando",
-      "explicando"
+      "explicando",
+      "maos-na-cintura",
+      "cochichando"
     ],
-    "uso": "stop motion: cada fala do Nox troca a pose de uma vez (sem animação entre poses). PNGs em assets/brand/nox/poses; pose ausente usa o Nox canônico com o humor",
+    "uso": "stop motion: cada fala do Nox troca a pose de uma vez (sem animação entre poses). Pose = PNG do corpo sem olhos; o kit desenha os olhos do humor pedido (pose × humor) nas posições de assets/brand/nox/poses/poses.json e sorteia entre variantes (pensando-b…). Pose ausente usa o Nox canônico com o humor",
     "guia": "skills/diazverso-nox/references/poses.md"
   },
   "extras": {

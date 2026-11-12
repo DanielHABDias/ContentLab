@@ -4,7 +4,7 @@ import { ANTON, C, Film, Flash, resolvePublic, useAnton } from './fx';
 import { Thumbnail, calculateThumb } from './Thumbnail';
 import { SCENES_3D } from './three';
 import { Extra, Extras } from './overlays';
-import { NoxPoses } from './Nox';
+import { NoxPoses, PoseInfo } from './Nox';
 import { Asset, Assets, SCENES } from './scenes';
 
 /**
@@ -17,8 +17,8 @@ export type MotionProps = {
   plan: { fps: number; width: number; height: number; duration: number; beats: Beat[]; captions?: boolean; musicVolume?: number; duck?: number };
   assets: Record<string, Asset>;
   narration?: string | null; music?: string | null; words?: Word[];
-  /** Poses do Nox disponíveis: nome → caminho (public:brand/poses/<pose>.png). */
-  poses?: Record<string, string>;
+  /** Poses do Nox disponíveis (poses.json): nome → PNG sem olhos + posição dos olhos; formato antigo: nome → caminho. */
+  poses?: Record<string, string | PoseInfo>;
 };
 
 const NO_CAPTION = new Set(['titulo', 'cta']);
