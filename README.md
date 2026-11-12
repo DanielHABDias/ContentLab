@@ -93,6 +93,8 @@ Tudo funciona localmente. A aplicação não publica em redes sociais nem exige 
 
 ## Desenvolvimento e documentação
 
+Versão atual: **2.1.0-rc.1** — [notas](docs/NOTAS_DA_VERSAO.md) e [validação](docs/VALIDACAO_FINAL.md). QA ponta a ponta: `npm run qa:e2e`.
+
 ```bash
 npm test
 npm run build

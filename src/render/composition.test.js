@@ -88,7 +88,7 @@ test('projeto longo compila rápido e só a janela pedida entra no grafo', async
   const started = performance.now();
   const plan = compileRenderPlan(project.timeline, project.media);
   expect(performance.now() - started).toBeLessThan(500);
-  expect(plan.duration).toBe(6000);
+  expect(plan.duration).toBeCloseTo(6000, 0); // termina no fim do último clip, não na duração nominal
   expect(opacityExpression([{ time: 0, value: 0 }, { time: 1, value: 1 }], 0)).toMatch(/^if\(lt\(T,0\.0000\),0/);
   expect(wrap('uma frase longa que precisa quebrar em linhas', 12).split('\n').length).toBeGreaterThan(2);
 });

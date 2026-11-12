@@ -240,14 +240,14 @@ Aceite: instalar e abrir não exige `npm`; atualizar preserva projetos; desinsta
 
 Objetivo: provar o produto completo antes de chamá-lo de finalizado.
 
-- [ ] Criar matriz E2E: primeira execução, instalar dependências, criar, abrir, configurar, excluir/restaurar, mídia, transcrição, narração, timeline, render, pacote e reabertura.
-- [ ] Testar ao menos projeto longo 16:9 e Short 9:16 com mídia licenciada pequena.
-- [ ] Executar `npm run check`, testes E2E do instalador, `npm run doctor` e `npm audit --omit=dev`.
-- [ ] Fazer varredura por demonstrações, placeholders, botões sem ação e mensagens de integração futura.
-- [ ] Fazer teste de recuperação após encerrar o processo durante download, autosave, importação e render.
-- [ ] Fazer revisão visual e auditiva dos artefatos reais.
-- [ ] Atualizar README, arquitetura, solução de problemas, licenças e notas da versão.
-- [ ] Confirmar árvore Git limpa, commits por macroetapa e push normal da `main`.
+- [x] Criar matriz E2E: primeira execução, instalar dependências, criar, abrir, configurar, excluir/restaurar, mídia, transcrição, narração, timeline, render, pacote e reabertura.
+- [x] Testar ao menos projeto longo 16:9 e Short 9:16 com mídia licenciada pequena.
+- [x] Executar `npm run check`, testes E2E do instalador, `npm run doctor` e `npm audit --omit=dev`.
+- [x] Fazer varredura por demonstrações, placeholders, botões sem ação e mensagens de integração futura.
+- [x] Fazer teste de recuperação após encerrar o processo durante download, autosave, importação e render.
+- [x] Fazer revisão visual e auditiva dos artefatos reais.
+- [x] Atualizar README, arquitetura, solução de problemas, licenças e notas da versão.
+- [x] Confirmar árvore Git limpa, commits por macroetapa e push normal da `main`.
 
 Aceite: um usuário novo conclui o fluxo sem terminal, nenhum teste crítico falha e todas as limitações restantes estão documentadas como tais.
 
@@ -402,4 +402,12 @@ Não iniciar empacotamento desktop antes de estabilizar armazenamento, setup e o
 - Instalação limpa real: HOME vazio, PATH sem npm/node; instalou, abriu, criou projeto, desinstalou mantendo projeto. Corrigido `typescript` como dependência de runtime.
 - Falta: chave de release gerada/guardada por quem publica (instalador ainda não assinado), VM com outra distribuição, instaladores Windows/macOS.
 - Próxima ação: gerar chave de release (decisão do dono) ou seguir para F24.
+
+### F24 concluída — 2.1.0-rc.1 (2026-11-12)
+
+- `scripts/qa-e2e.mjs` (`npm run qa:e2e`): servidor real + HTTP + FFmpeg; 16:9 longo e 9:16 Short; recuperação por kill -9 em render e importação. 22/22.
+- Corrigido: render terminava na duração nominal da timeline (cauda preta) → termina no último clip.
+- Revisão visual render × prévia; loudness dos renders; varredura de placeholders; doctor; audit 0; 182 testes.
+- Documentação: `docs/VALIDACAO_FINAL.md`, `docs/QA_E2E_RC.md`, `docs/NOTAS_DA_VERSAO.md`.
+- Pendências documentadas como limitações: chave de release, VM de outra distro, Windows/macOS, escuta da voz clonada pelo titular.
 

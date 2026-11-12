@@ -26,7 +26,10 @@ export function compileRenderPlan(timeline, media = [], { aspectRatio = timeline
       opacity: (clip.keyframes?.opacity || []).filter(point => typeof point.value === 'number').map(point => ({ time: point.frame / fps, value: point.value })),
     };
   })).sort((a, b) => a.zIndex - b.zIndex);
-  const plan = { schema: 'contentlab-render-plan-v2', fps, durationInFrames: timeline.durationInFrames, duration: timeline.durationInFrames / fps, aspectRatio, canvas, safeArea: timeline.safeArea, layers };
+  // O vídeo termina onde o conteúdo termina: a duração padrão da timeline não vira cauda preta.
+  const contentEnd = Math.max(0, ...timeline.tracks.flatMap(track => track.clips.map(clip => clip.startFrame + clip.durationInFrames)));
+  const durationInFrames = contentEnd > 0 ? contentEnd : timeline.durationInFrames;
+  const plan = { schema: 'contentlab-render-plan-v2', fps, durationInFrames, duration: durationInFrames / fps, aspectRatio, canvas, safeArea: timeline.safeArea, layers };
   return { ...plan, fingerprint: createHash('sha256').update(stable(plan)).digest('hex') };
 }
 

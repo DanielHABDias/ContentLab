@@ -1,6 +1,6 @@
 {
   "name": "content-lab",
-  "version": "2.0.0",
+  "version": "2.1.0-rc.1",
   "private": true,
   "type": "module",
   "engines": {
@@ -18,7 +18,9 @@
     "contentlab": "node src/adapters/cli.js",
     "mcp": "node src/adapters/mcp-server.js",
     "doctor": "node scripts/bootstrap.mjs --check",
-    "prepare:local": "node scripts/bootstrap.mjs --prepare"
+    "prepare:local": "node scripts/bootstrap.mjs --prepare",
+    "qa:e2e": "node scripts/qa-e2e.mjs",
+    "package:linux": "node scripts/package-linux.mjs"
   },
   "dependencies": {
     "@fontsource/barlow-condensed": "^5.3.0",
