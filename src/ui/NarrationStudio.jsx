@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, Mic, Square, Trash2, Upload, Wand2, X } from 'lucide-react';
-import { ConfirmDialog } from './Dialogs.jsx';
+import { ConfirmDialog, useDialogFocus } from './Dialogs.jsx';
 import { localApi } from './local-api.js';
 import { JobsPanel, clock } from './MediaLibrary.jsx';
 import { DependencyNotice } from './DependencyGate.jsx';
@@ -104,16 +104,17 @@ function VoiceSection({ projectPath, state, setup, onOpenSetup, act, startJob, r
   const checkPlan = async () => setPlan((await act(() => localApi.voicePlan()))?.plan || null);
   const askRemove = async profile => { const report = await act(() => localApi.voiceProfileReport(profile.id)); if (report) setRemoving(report); };
   return <section className="workflow-card" aria-labelledby="voice-title">
-    <div className="section-title"><div><span className="eyebrow">Voz clonada · VoxCPM2</span><h2 id="voice-title">Sua voz, com consentimento</h2></div>{!missing.length && <button className="button quiet" onClick={() => setCreating(true)} disabled={!state.narration.takes.length}>Novo perfil</button>}</div>
+    <div className="section-title"><div><span className="eyebrow">Voz clonada · VoxCPM2</span><h2 id="voice-title">Sua voz, com consentimento</h2></div>{!missing.length && <span className="header-actions"><button className="button primary" onClick={() => setCreating('guided')}><Mic size={17}/> Gravar minha voz</button><button className="button quiet" onClick={() => setCreating('take')} disabled={!state.narration.takes.some(take => take.origin !== 'generated')} title="Usar um take já gravado ou importado">Usar take existente</button></span>}</div>
     {missing.length > 0 ? <div className="notice error" role="alert"><span>Para gerar voz, instale: {missing.map(item => item.label).join(', ')}.</span><button className="mini-button" onClick={() => onOpenSetup(missing.map(item => item.id))}>Instalar dependências</button></div> : <>
-      {state.profiles.length ? <ul className="media-list">{state.profiles.map(profile => <li key={profile.id}><span><strong>{profile.name}</strong><small>Titular: {profile.consent.holder} · consentimento em {new Date(profile.consent.grantedAt).toLocaleDateString('pt-BR')} · amostra de {clock(profile.durationSeconds)}</small><audio controls preload="none" src={fileUrl(projectPath, { profile: profile.id })} aria-label={`Amostra de ${profile.name}`}/></span><button className="icon-button" aria-label={`Excluir perfil ${profile.name}`} onClick={() => askRemove(profile)}><Trash2 size={16}/></button></li>)}</ul> : <div className="empty-state"><strong>Nenhum perfil de voz.</strong><span>Grave um take de 10 a 30 s lendo um texto e crie o perfil a partir dele.</span></div>}
+      {state.profiles.length ? <ul className="media-list">{state.profiles.map(profile => <li key={profile.id}><span><strong>{profile.name}</strong><small>Titular: {profile.consent.holder} · consentimento em {new Date(profile.consent.grantedAt).toLocaleDateString('pt-BR')} · amostra de {clock(profile.durationSeconds)}</small><audio controls preload="none" src={fileUrl(projectPath, { profile: profile.id })} aria-label={`Amostra de ${profile.name}`}/></span><button className="icon-button" aria-label={`Excluir perfil ${profile.name}`} onClick={() => askRemove(profile)}><Trash2 size={16}/></button></li>)}</ul> : <div className="empty-state"><strong>Nenhum perfil de voz.</strong><span>Use “Gravar minha voz”: o Content Lab mostra um texto de cerca de 60 s, grava e cria o perfil. A narração por voz clonada só fica disponível depois disso.</span></div>}
       {state.profiles.length > 0 && <>
         <div className="generate-bar"><label>Perfil<select value={profileId} onChange={event => setProfileId(event.target.value)}>{state.profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label><button className="mini-button" onClick={checkPlan}>Verificar recursos</button><button className="button primary" disabled={!pending.length || running} onClick={() => startJob(() => localApi.generateVoice({ path: projectPath, profileId, sceneIds: pending.map(scene => scene.id) }))}>Gerar {pending.length} cena{pending.length === 1 ? '' : 's'} pendente{pending.length === 1 ? '' : 's'}</button></div>
         {plan && <p className="plan-line" role="status">{plan.status === 'ready' ? `Pronto: ${plan.device.toUpperCase()}, ${plan.threads} núcleos, até ${Math.round(plan.memoryLimitBytes / 1024 ** 3)} GB.` : plan.reasons.join(' ')}{plan.estimate?.realtimeFactor ? ` Cerca de ${plan.estimate.realtimeFactor} s de processamento por segundo de fala (${plan.estimate.source}).` : ''}</p>}
         {state.scenes.length ? <ol className="media-list">{state.scenes.map(scene => <li key={scene.id}><span><strong>{scene.label}</strong><small>{scene.text.length > 140 ? `${scene.text.slice(0, 140)}…` : scene.text}</small></span>{scene.generated[profileId] ? <span className="available">Gerada</span> : <button className="mini-button" disabled={running} onClick={() => startJob(() => localApi.generateVoice({ path: projectPath, profileId, sceneIds: [scene.id] }))}>Gerar</button>}</li>)}</ol> : <div className="empty-state"><span>Escreva abertura, desenvolvimento ou payoff no roteiro para gerar cenas.</span></div>}
       </>}
     </>}
-    {creating && <ProfileDialog takes={state.narration.takes.filter(take => take.origin !== 'generated')} onClose={() => setCreating(false)} onCreate={async values => { if (await act(() => localApi.createVoiceProfile({ path: projectPath, ...values }), 'Perfil de voz criado.')) setCreating(false); }}/>}
+    {creating === 'guided' && <GuidedVoiceDialog projectPath={projectPath} onClose={() => setCreating(false)} onCreate={async values => { if (await act(() => localApi.createVoiceProfile({ path: projectPath, ...values }), 'Perfil de voz criado. Já dá para gerar a narração das cenas.')) setCreating(false); }}/>}
+    {creating === 'take' && <ProfileDialog takes={state.narration.takes.filter(take => take.origin !== 'generated')} onClose={() => setCreating(false)} onCreate={async values => { if (await act(() => localApi.createVoiceProfile({ path: projectPath, ...values }), 'Perfil de voz criado.')) setCreating(false); }}/>}
     {removing && <ConfirmDialog title="Excluir perfil de voz" message={`O perfil “${removing.profile.name}” e a amostra serão apagados. ${removing.takes ? `Também serão apagados ${removing.takes} take(s) gerado(s) em ${removing.projects.length} projeto(s)${removing.projects.some(item => item.assembled) ? ', e as montagens que os usam saem do catálogo' : ''}.` : 'Nenhum áudio gerado com ele.'}`} details={removing.projects.map(item => `${item.title}: ${item.takes.length} take(s)${item.assembled ? ' + montagem' : ''}`)} confirm="Excluir perfil e áudios" onClose={() => setRemoving(null)} onConfirm={async () => { const result = await act(() => localApi.deleteVoiceProfile(removing.profile.id)); setRemoving(null); if (result) await act(async () => null, result.deleted ? 'Perfil e áudios gerados excluídos.' : `Alguns itens falharam: ${result.failures.map(item => item.error).join('; ')}`); }}/>}
   </section>;
 }
@@ -144,3 +145,59 @@ function ProfileDialog({ takes, onClose, onCreate }) {
 }
 
 export { ConfirmDialog } from './Dialogs.jsx';
+
+/** Texto de leitura (~150 palavras, ~60 s em ritmo de narração) com variedade de sons do PT-BR, perguntas, exclamações e números. */
+export const VOICE_SAMPLE_TEXT = `Olá! Este é o meu perfil de voz para o Content Lab. Vou ler este texto com calma, do jeito que eu falo nos meus vídeos. Hoje o céu amanheceu limpo, e a cidade acordou devagar: o padeiro abriu a porta às seis e quinze, o ônibus passou lotado e alguém gritou lá da esquina. Você já reparou como cada lugar tem um som próprio? Na praia, as ondas quebram sem pressa; na floresta, os pássaros conversam entre os galhos; no centro, as buzinas não param nunca. Eu gosto de histórias que começam pequenas e crescem aos poucos. Um detalhe, uma pergunta, uma ideia que ninguém tinha percebido. Então eu pesquiso, escrevo, gravo e edito, até tudo fazer sentido. Será que vai dar certo? Às vezes dá, às vezes não. Mas cada vídeo me ensina alguma coisa nova. Obrigado por ouvir até aqui, e até a próxima!`;
+const SAMPLE_LIMIT = 58;
+
+function GuidedVoiceDialog({ projectPath, onClose, onCreate }) {
+  const [phase, setPhase] = useState('intro'); const [seconds, setSeconds] = useState(0); const [error, setError] = useState('');
+  const [take, setTake] = useState(null); const [preview, setPreview] = useState(''); const [name, setName] = useState('Minha voz'); const [holder, setHolder] = useState(''); const [referenceText, setReferenceText] = useState(VOICE_SAMPLE_TEXT); const [consent, setConsent] = useState(false);
+  const stream = useRef(null); const recorder = useRef(null); const timer = useRef(null);
+  const ref = useDialogFocus(onClose, phase === 'recording' || phase === 'saving');
+  useEffect(() => () => { window.clearInterval(timer.current); stream.current?.getTracks().forEach(track => track.stop()); if (preview) URL.revokeObjectURL(preview); }, [preview]);
+  const stop = () => { if (recorder.current?.state === 'recording') recorder.current.stop(); };
+  const record = async () => {
+    setError('');
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') { setError('Este navegador não permite gravar. Use “Usar take existente” com um áudio importado.'); return; }
+    try { stream.current ||= await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); }
+    catch { setError('Microfone negado ou indisponível. Libere o microfone para este endereço no navegador.'); return; }
+    const chunks = []; const type = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4'].find(item => MediaRecorder.isTypeSupported?.(item)) || '';
+    const media = new MediaRecorder(stream.current, type ? { mimeType: type } : undefined); recorder.current = media;
+    media.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
+    media.onstop = async () => {
+      window.clearInterval(timer.current); setPhase('saving');
+      const blob = new Blob(chunks, { type: media.mimeType }); const extension = media.mimeType.includes('ogg') ? 'ogg' : media.mimeType.includes('mp4') ? 'm4a' : 'webm';
+      try {
+        const result = await localApi.uploadTake({ path: projectPath, blob, name: `amostra-de-voz.${extension}` });
+        setTake(result.take); setPreview(current => { if (current) URL.revokeObjectURL(current); return URL.createObjectURL(blob); }); setPhase('review');
+      } catch (issue) { setError(issue.message); setPhase('intro'); }
+    };
+    media.start(1000); setSeconds(0); setPhase('recording');
+    timer.current = window.setInterval(() => setSeconds(value => { if (value + 1 >= SAMPLE_LIMIT) stop(); return value + 1; }), 1000);
+  };
+  const short = take && take.durationSeconds < 20;
+  return <div className="dialog-backdrop" role="presentation"><div ref={ref} className="dialog guided-voice" role="dialog" aria-modal="true" aria-labelledby="guided-title">
+    <div className="section-title"><div><span className="eyebrow">Perfil de voz · cerca de 60 s</span><h2 id="guided-title">Gravar minha voz</h2></div><button type="button" className="icon-button" aria-label="Fechar" disabled={phase === 'recording' || phase === 'saving'} onClick={onClose}><X/></button></div>
+    {phase !== 'review' && <>
+      <p className="hint">Lugar silencioso, microfone a um palmo da boca, sem música. Leia no seu ritmo normal de narração. A gravação para sozinha em {SAMPLE_LIMIT} s.</p>
+      <blockquote className="reading-text" aria-label="Texto para ler">{VOICE_SAMPLE_TEXT}</blockquote>
+      <div className="dialog-actions" aria-live="polite">
+        {phase === 'recording' ? <><span className="recording-clock" role="timer" aria-label={`Gravando: ${seconds} de ${SAMPLE_LIMIT} segundos`}><span className="rec-dot" aria-hidden="true"/>{clock(seconds)} / {clock(SAMPLE_LIMIT)}</span><button className="button danger" onClick={stop} disabled={seconds < 3}><Square size={16}/> Parar</button></>
+          : <button className="button primary" onClick={record} disabled={phase === 'saving'}><Mic size={17}/> {phase === 'saving' ? 'Salvando…' : 'Começar a gravar'}</button>}
+      </div>
+    </>}
+    {phase === 'review' && <form onSubmit={event => { event.preventDefault(); onCreate({ takeId: take.id, name, holder, referenceText: referenceText.trim(), consent }); }}>
+      <p>Amostra gravada: <strong>{clock(take.durationSeconds)}</strong>. Ouça antes de criar o perfil.</p>
+      <audio controls src={preview} aria-label="Ouvir amostra gravada"/>
+      {short && <p className="notice error" role="status">Amostra curta: com menos de 20 s a voz tende a soar mais robótica. Vale gravar de novo lendo o texto inteiro.</p>}
+      <label>Texto lido na amostra (corrija se você mudou alguma palavra)<textarea rows="5" required value={referenceText} onChange={event => setReferenceText(event.target.value)}/></label>
+      <label>Nome do perfil<input required value={name} onChange={event => setName(event.target.value)}/></label>
+      <label>Titular da voz<input required value={holder} onChange={event => setHolder(event.target.value)} placeholder="Nome de quem gravou"/></label>
+      <label className="check consent"><input type="checkbox" checked={consent} onChange={event => setConsent(event.target.checked)}/> Sou o titular desta voz (ou tenho autorização por escrito dele) e autorizo gerar narrações com ela neste computador.</label>
+      {error && <p className="notice error" role="alert">{error}</p>}
+      <div className="dialog-actions"><button type="button" className="button quiet" onClick={() => { setTake(null); setPhase('intro'); }}>Gravar de novo</button><button className="button primary" disabled={!consent || !holder.trim()}>Criar perfil</button></div>
+    </form>}
+    {phase !== 'review' && error && <p className="notice error" role="alert">{error}</p>}
+  </div></div>;
+}

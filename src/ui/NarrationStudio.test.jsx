@@ -25,7 +25,7 @@ test('voz clonada bloqueada sem VoxCPM2 leva às dependências; takes continuam 
   expect(await screen.findByText('Abertura')).toBeInTheDocument();
   fireEvent.click(within(screen.getByRole('region', { name: /sua voz/i })).getByRole('button', { name: /instalar dependências/i }));
   expect(onOpenSetup).toHaveBeenCalledWith(['voxcpm2']);
-  expect(screen.queryByRole('button', { name: /novo perfil/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /gravar minha voz/i })).not.toBeInTheDocument();
 });
 
 test('microfone só é pedido depois do clique explícito', async () => {
@@ -63,7 +63,7 @@ test('perfil exige consentimento marcado; geração pede só cenas pendentes', a
   localApi.createVoiceProfile.mockResolvedValue({ profile: {} });
   localApi.generateVoice.mockResolvedValue({ id: 'job_1', kind: 'voice.generate', label: 'Gerar voz: 1 cena', state: 'running', progress: { phase: 'Abertura', done: 0, total: 1 } });
   render(<NarrationStudio projectPath="/p" setup={setup()} onOpenSetup={vi.fn()}/>);
-  fireEvent.click(await screen.findByRole('button', { name: /novo perfil/i }));
+  fireEvent.click(await screen.findByRole('button', { name: /usar take existente/i }));
   const dialog = screen.getByRole('form', { name: /novo perfil de voz/i });
   fireEvent.change(within(dialog).getByLabelText('Titular da voz'), { target: { value: 'Daniel' } });
   fireEvent.change(within(dialog).getByLabelText(/texto lido/i), { target: { value: 'Olá.' } });
@@ -93,4 +93,31 @@ test('inventário: estúdio de narração sem controles anônimos', async () => 
   const { container } = render(<NarrationStudio projectPath="/p" setup={setup(true)} onOpenSetup={vi.fn()}/>);
   expect(await screen.findByText('Abertura')).toBeInTheDocument();
   expect(auditControls(container)).toEqual([]);
+});
+
+test('gravação guiada mostra texto de ~60 s, para sozinha e cria perfil com o texto lido', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  const { VOICE_SAMPLE_TEXT } = await import('./NarrationStudio.jsx');
+  class FakeRecorder { static isTypeSupported(type) { return type.startsWith('audio/webm'); } constructor() { this.mimeType = 'audio/webm'; this.state = 'inactive'; } start() { this.state = 'recording'; } stop() { this.state = 'inactive'; this.ondataavailable({ data: new Blob(['x'], { type: 'audio/webm' }) }); this.onstop(); } }
+  globalThis.MediaRecorder = FakeRecorder; URL.createObjectURL = vi.fn(() => 'blob:amostra'); URL.revokeObjectURL = vi.fn();
+  Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: { getUserMedia: vi.fn(async () => ({ getTracks: () => [{ stop: vi.fn() }] })) } });
+  localApi.uploadTake.mockResolvedValue({ take: { id: 'take_amostra', durationSeconds: 57.6 } });
+  localApi.createVoiceProfile.mockResolvedValue({ profile: {} });
+  render(<NarrationStudio projectPath="/p" setup={setup()} onOpenSetup={vi.fn()}/>);
+  fireEvent.click(await screen.findByRole('button', { name: /gravar minha voz/i }));
+  const dialog = screen.getByRole('dialog', { name: /gravar minha voz/i });
+  expect(within(dialog).getByLabelText('Texto para ler')).toHaveTextContent(VOICE_SAMPLE_TEXT.slice(0, 40));
+  expect(VOICE_SAMPLE_TEXT.split(/\s+/).length).toBeGreaterThanOrEqual(135);
+  expect(navigator.mediaDevices.getUserMedia).not.toHaveBeenCalled();
+  fireEvent.click(within(dialog).getByRole('button', { name: /começar a gravar/i }));
+  await waitFor(() => expect(within(dialog).getByRole('timer')).toBeInTheDocument());
+  await vi.advanceTimersByTimeAsync(60_000);
+  await waitFor(() => expect(localApi.uploadTake).toHaveBeenCalledWith(expect.objectContaining({ path: '/p', name: 'amostra-de-voz.webm' })));
+  expect(await within(dialog).findByText(/^0:57/)).toBeInTheDocument();
+  fireEvent.change(within(dialog).getByLabelText('Titular da voz'), { target: { value: 'Daniel' } });
+  const create = within(dialog).getByRole('button', { name: 'Criar perfil' }); expect(create).toBeDisabled();
+  fireEvent.click(within(dialog).getByRole('checkbox'));
+  fireEvent.click(create);
+  await waitFor(() => expect(localApi.createVoiceProfile).toHaveBeenCalledWith({ path: '/p', takeId: 'take_amostra', name: 'Minha voz', holder: 'Daniel', referenceText: VOICE_SAMPLE_TEXT, consent: true }));
+  vi.useRealTimers();
 });

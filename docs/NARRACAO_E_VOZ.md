@@ -51,3 +51,15 @@ Limitações: um ouvinte, três frases; os testes públicos em português (relat
 O VoxCPM2 não declara marca d'água. O canal deve continuar sinalizando conteúdo sintético realista conforme as regras do YouTube, e o consentimento do titular continua obrigatório.
 
 A validação auditiva final continua exigindo corpus PT-BR autorizado no hardware do usuário antes de declarar qualidade de produção.
+
+## Gravar minha voz (perfil guiado)
+
+Em Narração → "Sua voz, com consentimento", o botão **Gravar minha voz** cria o perfil sem precisar de um take gravado antes.
+
+1. O app mostra um texto de leitura de cerca de 147 palavras, umas 60 s em ritmo de narração. Ele cobre bem os sons do PT-BR e tem perguntas, exclamações e números.
+2. O microfone só é pedido quando a pessoa clica em "Começar a gravar". A gravação para sozinha em 58 s, porque o limite da amostra é de 60 s.
+3. A amostra vira um take do projeto. A pessoa ouve antes de criar o perfil e pode gravar de novo.
+4. O texto de referência já vem preenchido com o texto lido e pode ser corrigido se alguma palavra mudou. Amostras com menos de 20 s recebem um aviso, porque soam mais robóticas.
+5. Criar o perfil exige o nome do titular e o consentimento marcado.
+
+A narração por voz clonada só fica disponível quando o VoxCPM2 está instalado em Dependências e existe pelo menos um perfil. Até lá a tela explica o que falta. "Usar take existente" continua disponível para amostras importadas.
