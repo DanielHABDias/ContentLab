@@ -75,6 +75,8 @@ O editor de roteiro separa fala, direção visual e fontes; packaging mantém t�
 
 ## CLI e MCP
 
+**Produzir com um agente de IA:** o MCP deixa o Claude/Codex operar o app real — escrever, narrar (voz padrão ou clonada), montar, gerar thumbnails A/B, renderizar e entregar, esperando sua aprovação a cada etapa ou em modo autônomo. Configuração e ferramentas: [docs/MCP.md](docs/MCP.md).
+
 ```bash
 CONTENTLAB_DATA_DIR=/caminho/projetos npm run contentlab -- project.inspect project_id
 CONTENTLAB_DATA_DIR=/caminho/projetos npm run contentlab -- project.run operacao.json

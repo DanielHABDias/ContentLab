@@ -418,3 +418,15 @@ Não iniciar empacotamento desktop antes de estabilizar armazenamento, setup e o
 - Linux não tem assinatura de código do sistema para tar.gz; a integridade vem do manifesto assinado que fixa o SHA-256.
 - Restam só itens que dependem do dono: escuta da voz com amostra de 60 s (F17) e instalação em VM de outra distribuição (F23).
 
+## F26 — MCP completo: agente produz o vídeo do início ao fim
+
+Objetivo: um chat (Claude/Codex) opera o app real via MCP — abre o Content Lab, escreve ideia/roteiro/embalagem, narra, monta, gera thumbnails A/B, renderiza e entrega — esperando a aprovação humana em cada etapa ou, a pedido, em modo autônomo.
+
+- [x] MCP fala com o app real pela API local (mesmo núcleo, pastas e Recentes); `contentlab_start/stop/status`.
+- [x] Narração padrão sem clonagem: Kokoro-82M via kokoro-onnx (MIT + Apache-2.0, áudio de treino permissivo), PT-BR (Alex, Dora, Santa), instalável em Dependências com SHA-256 fixado; ~5× mais rápido que o tempo real em CPU. Também na interface.
+- [x] Jobs longos devolvem jobId; `job_wait` espera em ciclos e envia progresso; `stage_wait_decision` espera a decisão no app (aprovar ou pedir mudança, com o motivo).
+- [x] Aprovação: modo revisão bloqueia o agente (`APPROVAL_REQUIRED`) salvo `userApproved`; modo autônomo aprova e registra o agente no histórico; direitos e consentimento continuam obrigatórios.
+- [x] Slides do roteiro, montagem automática (narração + visuais + legendas por cena), thumbnails A/B (frame ou degradê), pasta `output/entrega/`, export ZIP. Também na interface (Produção assistida).
+- [x] QA real `npm run qa:mcp`: vídeo longo 16:9 com espera de aprovação e pedido de mudança + 5 Shorts autônomos; tudo persiste após desligar e reabrir.
+- [ ] Escuta da narração padrão pelo dono (`.tools/qa-f26/`).
+

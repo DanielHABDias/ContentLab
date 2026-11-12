@@ -9,6 +9,7 @@ import { SetupService } from '../setup/setup-service.js';
 import { MediaOperations } from './media-operations.js';
 import { NarrationOperations } from './narration-operations.js';
 import { EditOperations } from './edit-operations.js';
+import { ProductionOperations } from './production-operations.js';
 import { ActivityTracker, LifecycleError, SystemOpener, SystemTrash } from './project-lifecycle.js';
 import { ProjectRegistry, readProjectDirectory } from './project-registry.js';
 import { ProjectStore } from '../core/project-store.js';
@@ -38,6 +39,7 @@ export class LocalApplicationService {
     this.mediaOps = new MediaOperations(this, { transcriber });
     this.narrationOps = new NarrationOperations(this, { voice });
     this.editOps = new EditOperations(this);
+    this.productionOps = new ProductionOperations(this);
     this.settingsStore = new SettingsStore(this.dataDirectory, this.defaults);
     this.settings = { revision: 0, roots: { ...this.defaults.roots }, limits: { ...this.defaults.limits } };
     this.storage = new StorageService({
@@ -400,6 +402,13 @@ export class LocalApplicationService {
   voiceProfileReport(input) { return this.narrationOps.profileReport(input); }
   voiceProfileDelete(input) { return this.narrationOps.deleteProfile(input); }
   voiceGenerate(input) { return this.narrationOps.generate(input); }
+  async voiceProfiles() { return { profiles: (await this.narrationOps.profiles.list()).map(profile => ({ id: profile.id, name: profile.name, holder: profile.consent?.holder, sampleSeconds: profile.durationSeconds })) }; }
+  productionSlides(input) { return this.productionOps.slides(input); }
+  productionThumbnails(input) { return this.productionOps.thumbnails(input); }
+  productionAssemble(input) { return this.productionOps.assemble(input); }
+  productionSummary(input) { return this.productionOps.summary(input); }
+  productionWait(input) { return this.productionOps.waitForDecision(input); }
+  productionDeliverable(input) { return this.productionOps.deliverable(input); }
   voicePlan() { return this.narrationOps.voicePlan(); }
 
   /** Capacidades para as telas de etapa, derivadas do mesmo catálogo do setup. */

@@ -29,6 +29,7 @@ export function NarrationStudio({ projectPath, setup, onOpenSetup }) {
     <JobsPanel jobs={jobs} uploads={[]} onCancel={async jobId => { await localApi.cancelJob(jobId); refreshJobs(); }}/>
     <TakesSection projectPath={projectPath} narration={narration} act={act} base={base}/>
     <TreatmentSection projectPath={projectPath} narration={narration} presets={state.presets} previewSeconds={state.previewSeconds} act={act} startJob={startJob} base={base}/>
+    <StandardVoiceSection projectPath={projectPath} state={state} setup={setup} onOpenSetup={onOpenSetup} startJob={startJob} running={running}/>
     <VoiceSection projectPath={projectPath} state={state} setup={setup} onOpenSetup={onOpenSetup} act={act} startJob={startJob} running={running}/>
   </div>;
 }
@@ -93,6 +94,25 @@ function TreatmentSection({ projectPath, narration, presets, previewSeconds, act
     <div className="dialog-actions"><button className="button quiet" disabled={!takeIds.length || busy} onClick={listen}>{busy ? 'Preparando…' : `Ouvir preview (${previewSeconds} s)`}</button><button className="button primary" disabled={!takeIds.length} onClick={() => startJob(() => localApi.assembleNarration({ ...base, takeIds, treatment: settings }))}><Wand2 size={17}/> Montar narração</button></div>
     {preview && <div className="ab-preview">{[['original', 'Sem tratamento'], ['treated', 'Com tratamento']].map(([key, label]) => <div key={key}><strong>{label}</strong><audio controls src={fileUrl(projectPath, { preview: preview[key].file })} aria-label={`Preview ${label.toLowerCase()}`}/><small>{measureLine(preview[key].measures)}</small></div>)}</div>}
     {narration.assembled && <div className="rights-note"><strong>Narração montada{narration.assembled.outdated ? ' · um take usado foi excluído; monte de novo' : ''}</strong><span>{measureLine(narration.assembled.measures)} · já está no catálogo de mídias do projeto.</span><audio controls preload="none" src={fileUrl(projectPath, { assembled: 1 })} aria-label="Ouvir narração montada"/></div>}
+  </section>;
+}
+
+function StandardVoiceSection({ projectPath, state, setup, onOpenSetup, startJob, running }) {
+  const missing = setup ? featureBlock('voice.standard', setup.items) : [];
+  const voices = state.standardVoices || [];
+  const [voice, setVoice] = useState(voices[0]?.id || 'pm_alex'); const [speed, setSpeed] = useState('1');
+  const done = state.narration.takes.filter(take => take.engine === 'standard' && take.voice === voice && !take.stale).length;
+  return <section className="workflow-card" aria-labelledby="standard-voice-title">
+    <div className="section-title"><div><span className="eyebrow">Narração padrão · Kokoro</span><h2 id="standard-voice-title">Voz sintética pronta</h2></div></div>
+    {missing.length > 0 ? <div className="notice error" role="alert"><span>Para gerar a narração padrão, instale: {missing.map(item => item.label).join(', ')}.</span><button className="mini-button" onClick={() => onOpenSetup(missing.map(item => item.id))}>Instalar dependências</button></div> : <>
+      <p className="setup-meta">Não usa a sua voz: é uma voz sintética em PT-BR, rápida (segundos por cena). Gera uma faixa por cena do roteiro; depois monte a narração acima.</p>
+      <div className="generate-bar">
+        <label>Voz<select value={voice} onChange={event => setVoice(event.target.value)}>{voices.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
+        <label>Velocidade<select value={speed} onChange={event => setSpeed(event.target.value)}>{['0.9', '1', '1.1', '1.2'].map(value => <option key={value} value={value}>{value}×</option>)}</select></label>
+        <button className="button primary" disabled={running || !state.scenes.length} onClick={() => startJob(() => localApi.generateVoice({ path: projectPath, engine: 'standard', voice, speed: Number(speed) }))}>Gerar narração padrão</button>
+      </div>
+      <p className="plan-line">{state.scenes.length ? `${done} de ${state.scenes.length} cena(s) prontas com esta voz.` : 'Escreva o roteiro para ter cenas a narrar.'}</p>
+    </>}
   </section>;
 }
 

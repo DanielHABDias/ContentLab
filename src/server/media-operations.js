@@ -23,11 +23,11 @@ export class MediaOperations {
   }
 
   /** Vincula um arquivo já no cache ao projeto, sem duplicar o mesmo conteúdo. */
-  async attach(directory, imported, { rights = 'pending', source, name }) {
+  async attach(directory, imported, { rights = 'pending', source, name, role }) {
     const project = await readProjectDirectory(directory);
     const duplicate = project.media.find(item => item.sha256 === imported.hash);
     if (duplicate) return { status: 'duplicate', mediaId: duplicate.id, name: duplicate.name || path.basename(duplicate.uri) };
-    const media = { id: imported.id, kind: kindOf(imported), uri: imported.path, sha256: imported.hash, rights, name: name || path.basename(source?.value || imported.path), source, importedAt: new Date().toISOString(), metadata: summarize(imported.metadata), cuts: [], transcript: null };
+    const media = { id: imported.id, kind: kindOf(imported), uri: imported.path, sha256: imported.hash, rights, name: name || path.basename(source?.value || imported.path), source, ...(role ? { role } : {}), importedAt: new Date().toISOString(), metadata: summarize(imported.metadata), cuts: [], transcript: null };
     await this.app.runProjectAction({ path: directory, baseRevision: project.revision, action: { type: 'media.add', media } });
     return { status: 'imported', mediaId: media.id, name: media.name };
   }

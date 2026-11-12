@@ -1,4 +1,5 @@
-import { copyFile, mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { execFile } from 'node:child_process';
@@ -223,6 +224,41 @@ function round(value, digits = 3) { const factor = 10 ** digits; return Math.rou
  * dispositivo, núcleos e teto de memória sem swap (Linux: systemd-run), com
  * prioridade baixa. Estourar o teto encerra só a geração, nunca o sistema.
  */
+export const STANDARD_VOICES = [
+  { id: 'pm_alex', label: 'Alex (masculina)' },
+  { id: 'pf_dora', label: 'Dora (feminina)' },
+  { id: 'pm_santa', label: 'Santa (masculina, grave)' },
+];
+
+/** Perfil "virtual" da narração padrão: entra na mesma chave de cache das cenas. */
+export function standardProfile(voice = 'pm_alex', speed = 1) {
+  if (!STANDARD_VOICES.some(item => item.id === voice)) throw Object.assign(new Error(`Voz padrão desconhecida: ${voice}`), { code: 'INVALID_VOICE' });
+  const rate = Number(speed);
+  if (!(rate >= 0.5 && rate <= 2)) throw Object.assign(new Error('Velocidade da narração deve ficar entre 0,5 e 2'), { code: 'INVALID_VOICE' });
+  return { id: `standard-${voice}-${rate}`, sampleSha256: 'kokoro-82m-v1.0', referenceText: '', voice, speed: rate };
+}
+
+/** Narração padrão (Kokoro-82M, PT-BR, sem clonagem). Leve: CPU, sem limite de memória especial. */
+export class KokoroVoice {
+  static model = 'kokoro';
+  constructor({ runner = 'contentlab-tts', modelPath, spawnFile = execFile } = {}) { this.runner = runner; this.modelPath = modelPath; this.spawnFile = spawnFile; }
+  async generate({ text, voice = 'pm_alex', speed = 1, output, signal }) {
+    const directory = await mkdtemp(path.join(os.tmpdir(), 'contentlab-tts-'));
+    try {
+      const textFile = path.join(directory, 'texto.txt');
+      await writeFile(textFile, String(text).trim());
+      const threads = Math.max(1, Math.min(8, os.cpus().length - 2));
+      await new Promise((resolve, reject) => this.spawnFile(this.runner, ['--model', this.modelPath, '--voice', voice, '--speed', String(speed), '--lang', 'pt-br', '--text-file', textFile, '--output', path.resolve(output), '--threads', String(threads)], { timeout: 60 * 60_000, maxBuffer: 4 * 1024 * 1024, signal }, (error, stdout, stderr) => {
+        if (!error) return resolve(stdout);
+        if (error.code === 'ENOENT') return reject(Object.assign(new Error('Narração padrão não instalada: instale em Dependências'), { code: 'DEPENDENCY_MISSING' }));
+        let message = error.message; try { message = JSON.parse(String(stderr).trim().split('\n').pop()).error || message; } catch { /* texto livre */ }
+        reject(Object.assign(new Error(`Narração padrão falhou: ${message}`), { code: signal?.aborted ? 'CANCELLED' : 'VOICE_FAILED' }));
+      }));
+      return { output: path.resolve(output) };
+    } finally { await rm(directory, { recursive: true, force: true }); }
+  }
+}
+
 export class VoxCPMVoice {
   static model = 'voxcpm2';
   constructor({ runner = 'contentlab-voice', modelPath, planner, onMeasured = async () => {}, spawnFile = execFile, platform = process.platform } = {}) {

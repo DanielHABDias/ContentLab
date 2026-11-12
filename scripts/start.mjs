@@ -9,13 +9,14 @@ import { execFileSync, spawn } from 'node:child_process';
 import { mkdir, open, readFile, readdir, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { serverRoots } from '../src/server/app-paths.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
 const command = ['stop', 'status'].find(name => args.includes(name)) || 'start';
 const port = Number(process.env.CONTENTLAB_PORT || 4173);
 const url = `http://127.0.0.1:${port}/`;
-const dataDirectory = process.env.CONTENTLAB_DATA_DIR || path.join(root, '.contentlab');
+const dataDirectory = serverRoots({ repositoryRoot: root }).dataDirectory;
 const pidFile = path.join(dataDirectory, 'contentlab.pid');
 const logFile = path.join(dataDirectory, 'logs', 'server.log');
 const headers = { 'content-type': 'application/json', 'x-contentlab-client': '1' };
@@ -36,6 +37,7 @@ async function newestMtime(directory) {
 
 async function needsBuild() {
   if (args.includes('--rebuild')) return true;
+  if (process.env.CONTENTLAB_INSTALLED === '1') return false;
   try { const built = (await stat(path.join(root, 'dist', 'index.html'))).mtimeMs; return Math.max(await newestMtime(path.join(root, 'src', 'ui')), (await stat(path.join(root, 'src', 'main.jsx'))).mtimeMs, (await stat(path.join(root, 'index.html'))).mtimeMs) > built; }
   catch { return true; }
 }

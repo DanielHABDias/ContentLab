@@ -3,7 +3,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { App } from './App.jsx';
 import { localApi } from './local-api.js';
 
-vi.mock('./local-api.js', () => ({ OFFLINE_EVENT: 'contentlab:connection', localApi: { listProjects: vi.fn(), openProject: vi.fn(), createProject: vi.fn(), chooseDirectory: vi.fn(), choosePackage: vi.fn(), chooseMedia: vi.fn(), inspectPackage: vi.fn(), importPackage: vi.fn(), importMedia: vi.fn(), runProjectAction: vi.fn(), renderPresets: vi.fn(), renderJobs: vi.fn(), enqueueRender: vi.fn(), cancelRender: vi.fn(), retryRender: vi.fn(), revealRender: vi.fn(), renderLog: vi.fn(), forgetProject: vi.fn(), revealProject: vi.fn(), renameProject: vi.fn(), changeProjectId: vi.fn(), duplicateProject: vi.fn(), exportProject: vi.fn(), deleteProject: vi.fn(), restoreProject: vi.fn(), projectActivities: vi.fn(), cancelProjectActivities: vi.fn(), setupStatus: vi.fn(), setupJobs: vi.fn(), setupInstall: vi.fn(), setupPause: vi.fn(), setupResume: vi.fn(), setupCancel: vi.fn(), setupOnboarding: vi.fn(), relocateProject: vi.fn(), getSettings: vi.fn(), about: vi.fn(), serverWork: vi.fn(), shutdown: vi.fn(), updateStatus: vi.fn(), updateCheck: vi.fn(), updateApply: vi.fn(), updateRollback: vi.fn(), updateConfigure: vi.fn(), validateFolder: vi.fn(), updateSettings: vi.fn(), storageUsage: vi.fn(), storageOrphans: vi.fn(), storageCleanup: vi.fn(), planMigration: vi.fn(), startMigration: vi.fn(), storageJobs: vi.fn(), cancelMigration: vi.fn(), backupRegistry: vi.fn(), registryBackups: vi.fn(), restoreRegistry: vi.fn(), importFiles: vi.fn(), importUrl: vi.fn(), mediaUsage: vi.fn(), removeMedia: vi.fn(), createCut: vi.fn(), removeCut: vi.fn(), transcribe: vi.fn(), transcript: vi.fn(), saveTranscript: vi.fn(), searchTranscripts: vi.fn(), jobs: vi.fn(), cancelJob: vi.fn(), upload: vi.fn() } }));
+vi.mock('./local-api.js', () => ({ OFFLINE_EVENT: 'contentlab:connection', localApi: { listProjects: vi.fn(), openProject: vi.fn(), createProject: vi.fn(), chooseDirectory: vi.fn(), choosePackage: vi.fn(), chooseMedia: vi.fn(), inspectPackage: vi.fn(), importPackage: vi.fn(), importMedia: vi.fn(), runProjectAction: vi.fn(), renderPresets: vi.fn(), renderJobs: vi.fn(), enqueueRender: vi.fn(), cancelRender: vi.fn(), retryRender: vi.fn(), revealRender: vi.fn(), renderLog: vi.fn(), forgetProject: vi.fn(), revealProject: vi.fn(), renameProject: vi.fn(), changeProjectId: vi.fn(), duplicateProject: vi.fn(), exportProject: vi.fn(), deleteProject: vi.fn(), restoreProject: vi.fn(), projectActivities: vi.fn(), cancelProjectActivities: vi.fn(), setupStatus: vi.fn(), setupJobs: vi.fn(), setupInstall: vi.fn(), setupPause: vi.fn(), setupResume: vi.fn(), setupCancel: vi.fn(), setupOnboarding: vi.fn(), relocateProject: vi.fn(), getSettings: vi.fn(), about: vi.fn(), serverWork: vi.fn(), productionSlides: vi.fn(), productionAssemble: vi.fn(), productionThumbnails: vi.fn(), productionDeliverable: vi.fn(), shutdown: vi.fn(), updateStatus: vi.fn(), updateCheck: vi.fn(), updateApply: vi.fn(), updateRollback: vi.fn(), updateConfigure: vi.fn(), validateFolder: vi.fn(), updateSettings: vi.fn(), storageUsage: vi.fn(), storageOrphans: vi.fn(), storageCleanup: vi.fn(), planMigration: vi.fn(), startMigration: vi.fn(), storageJobs: vi.fn(), cancelMigration: vi.fn(), backupRegistry: vi.fn(), registryBackups: vi.fn(), restoreRegistry: vi.fn(), importFiles: vi.fn(), importUrl: vi.fn(), mediaUsage: vi.fn(), removeMedia: vi.fn(), createCut: vi.fn(), removeCut: vi.fn(), transcribe: vi.fn(), transcript: vi.fn(), saveTranscript: vi.fn(), searchTranscripts: vi.fn(), jobs: vi.fn(), cancelJob: vi.fn(), upload: vi.fn() } }));
 
 function setupStatus(overrides = {}) {
   const items = [
@@ -401,4 +401,17 @@ test('desligar mostra o trabalho em andamento, confirma e encerra tudo', async (
   await waitFor(() => expect(localApi.shutdown).toHaveBeenCalledWith(true));
   expect(await screen.findByRole('heading', { name: /content lab desligado/i })).toBeInTheDocument();
   expect(screen.getByText(/npm run app/)).toBeInTheDocument();
+});
+
+test('edição oferece montar a timeline automaticamente e recarrega o projeto', async () => {
+  const details = realDetails({ stages: stageAt('edit') });
+  localApi.listProjects.mockResolvedValue({ projects: [details.card] }); localApi.openProject.mockResolvedValue(details);
+  localApi.productionAssemble.mockResolvedValue({ revision: 9, durationSeconds: 55.9, visualClips: 6, captions: 18 });
+  render(<App/>); fireEvent.click(await screen.findByRole('button', { name: /abrir meu projeto/i }));
+  fireEvent.click(await screen.findByRole('button', { name: /continuar/i }));
+  const panel = (await screen.findByRole('heading', { name: /produção assistida/i })).closest('section');
+  expect(within(panel).getByText(/montar timeline automaticamente/i)).toBeInTheDocument();
+  fireEvent.click(within(panel).getByRole('button', { name: 'Executar' }));
+  await waitFor(() => expect(localApi.productionAssemble).toHaveBeenCalledWith({ path: '/tmp/meu_projeto' }));
+  expect(await within(panel).findByText(/6 clip\(s\), 18 legenda\(s\), 55.9 s/)).toBeInTheDocument();
 });

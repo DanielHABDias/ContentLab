@@ -55,7 +55,8 @@ export const mediaRefSchema = z.object({
   sha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
   rights: z.enum(['owned', 'licensed', 'authorized', 'pending']),
   name: z.string().max(255).optional(),
-  source: z.object({ type: z.enum(['file', 'url', 'upload']), value: z.string().max(4096) }).optional(),
+  source: z.object({ type: z.enum(['file', 'url', 'upload', 'generated']), value: z.string().max(4096) }).optional(),
+  role: z.enum(['content', 'thumbnail', 'slide', 'narration']).optional(),
   importedAt: z.string().optional(),
   metadata: z.object({
     durationSeconds: z.number().nonnegative().nullable(),
@@ -131,11 +132,11 @@ export const projectSchema = z.object({
   creative: z.object({
     brief: z.object({ thesis: z.string(), audience: z.string(), promise: z.string(), notes: z.string() }),
     script: z.object({ hook: z.string(), development: z.string(), payoff: z.string(), visual: z.string(), sources: z.string() }),
-    packaging: z.object({ titleA: z.string(), titleB: z.string(), description: z.string(), tags: z.string(), seo: z.string(), thumbnailMediaId: idSchema.nullable() }),
+    packaging: z.object({ titleA: z.string(), titleB: z.string(), description: z.string(), tags: z.string(), seo: z.string(), thumbnailMediaId: idSchema.nullable(), thumbnailA: idSchema.nullable().default(null), thumbnailB: idSchema.nullable().default(null) }),
   }).default({
     brief: { thesis: '', audience: '', promise: '', notes: '' },
     script: { hook: '', development: '', payoff: '', visual: '', sources: '' },
-    packaging: { titleA: '', titleB: '', description: '', tags: '', seo: '', thumbnailMediaId: null },
+    packaging: { titleA: '', titleB: '', description: '', tags: '', seo: '', thumbnailMediaId: null, thumbnailA: null, thumbnailB: null },
   }),
 });
 

@@ -63,3 +63,15 @@ Em Narração → "Sua voz, com consentimento", o botão **Gravar minha voz** cr
 5. Criar o perfil exige o nome do titular e o consentimento marcado.
 
 A narração por voz clonada só fica disponível quando o VoxCPM2 está instalado em Dependências e existe pelo menos um perfil. Até lá a tela explica o que falta. "Usar take existente" continua disponível para amostras importadas.
+
+## Narração padrão (Kokoro, sem clonagem)
+
+Para narrar sem usar a sua voz, use a **narração padrão**. Ela é instalada em Dependências como "Narração padrão (Kokoro, PT-BR)".
+
+- **Vozes:** Alex (masculina), Dora (feminina) e Santa (masculina, grave).
+- **Velocidade:** de 0,9× a 1,2×.
+- **Desempenho:** roda em CPU, cerca de 5× mais rápido que o tempo real, e não precisa de limite de memória especial.
+- **Cache por cena:** o mesmo texto com a mesma voz não é gerado de novo. Se o roteiro mudar, a cena fica marcada como desatualizada.
+- **Licença:** o kokoro-onnx é MIT. Os pesos do Kokoro-82M são Apache-2.0 e foram treinados só com áudio de licença permissiva, então o uso comercial é permitido. A fonética usa o espeak-ng (GPL-3) como programa separado, baixado na instalação e não redistribuído pelo Content Lab.
+
+Na interface, ela fica em Narração → Voz sintética pronta. Pelo MCP, use `narration_generate` com `engine: "standard"` e `voice`.

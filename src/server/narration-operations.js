@@ -3,7 +3,7 @@ import { createWriteStream } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
-import { NarrationStore, VOICE_PRESETS, VoiceProfileStore, VoxCPMVoice, generationKey, measureAudio, normalizeTreatment, renderParts, scenesFromScript, treatmentFilters } from '../audio/narration-service.js';
+import { NarrationStore, VOICE_PRESETS, VoiceProfileStore, VoxCPMVoice, generationKey, measureAudio, normalizeTreatment, renderParts, scenesFromScript, treatmentFilters, KokoroVoice, STANDARD_VOICES, standardProfile } from '../audio/narration-service.js';
 import os from 'node:os';
 import { processAlive, readLock, withProjectLock } from '../core/project-lock.js';
 import { LifecycleError } from './project-lifecycle.js';
@@ -19,8 +19,9 @@ const PREVIEW_SECONDS = 20;
  * com cache e consentimento obrigatório. Usa a mesma fila de jobs da mídia.
  */
 export class NarrationOperations {
-  constructor(app, { voice = null } = {}) {
+  constructor(app, { voice = null, standardVoice = null } = {}) {
     this.app = app;
+    this.standardFactory = standardVoice || (async () => new KokoroVoice(app.setup.voiceRuntime('kokoro')));
     this.voiceFactory = voice || (async () => new VoxCPMVoice({ ...app.setup.voiceRuntime('voxcpm2'), planner: () => app.setup.voicePlan(), onMeasured: value => app.setup.recordCalibration('voxcpm2', value) }));
   }
 
@@ -40,6 +41,7 @@ export class NarrationOperations {
     const takes = session.takes.map(take => {
       if (take.origin !== 'generated') return take;
       const scene = scenes.find(item => item.id === take.sceneId);
+      if (take.engine === 'standard') { let profile = null; try { profile = standardProfile(take.voice, take.speed); } catch { /* voz removida */ } return { ...take, stale: !scene || !profile || generationKey({ model: 'kokoro', profile, text: scene.text }) !== take.cacheKey }; }
       const profile = profiles.find(item => item.id === take.profileId);
       return { ...take, stale: !scene || !profile || generationKey({ profile, text: scene.text }) !== take.cacheKey };
     });
@@ -47,6 +49,7 @@ export class NarrationOperations {
       narration: { ...session, takes },
       scenes: scenes.map(scene => ({ ...scene, generated: Object.fromEntries(profiles.map(profile => [profile.id, takes.find(take => take.origin === 'generated' && take.cacheKey === generationKey({ profile, text: scene.text }))?.id || null])) })),
       profiles: profiles.map(publicProfile),
+      standardVoices: STANDARD_VOICES,
       presets: Object.entries(VOICE_PRESETS).map(([id, value]) => ({ id, ...value })),
       previewSeconds: PREVIEW_SECONDS,
     };
@@ -165,7 +168,7 @@ export class NarrationOperations {
       const measures = await measureAudio(this.tools, output);
       if (!measures.wav48kMono) throw new Error('A montagem não saiu em WAV 48 kHz mono');
       progress({ phase: 'Vinculando ao projeto', done: 2 });
-      const attached = await this.app.mediaOps.attach(directory, await this.app.media.importFile(output), { rights: 'owned', source: { type: 'file', value: output }, name: 'Narração montada' });
+      const attached = await this.app.mediaOps.attach(directory, await this.app.media.importFile(output), { rights: 'owned', source: { type: 'file', value: output }, name: 'Narração montada', role: 'narration' });
       const previous = (await store.read()).assembled;
       await store.mutate(undefined, value => { value.treatment = settings; value.assembled = { file: path.relative(store.root, output), takeIds: ids, treatment: settings, measures, mediaId: attached.mediaId, createdAt: new Date().toISOString() }; });
       if (previous?.file && previous.file !== path.relative(store.root, output)) await rm(store.resolve(previous.file), { force: true });
@@ -207,7 +210,13 @@ export class NarrationOperations {
    * Gera as cenas do roteiro com a voz do perfil, uma por vez, em um único job.
    * Cenas já geradas com o mesmo texto/perfil/modelo vêm do cache.
    */
-  async generate({ path: directory, profileId, sceneIds }) {
+  /**
+   * Gera a narração das cenas do roteiro. `engine: 'cloned'` usa o perfil de voz (VoxCPM2,
+   * exige consentimento); `engine: 'standard'` usa a narração padrão (Kokoro) com `voice` e `speed`.
+   * Retorna um job; cenas já geradas com o mesmo texto e voz vêm do cache.
+   */
+  async generate({ path: directory, profileId, sceneIds, engine = profileId ? 'cloned' : 'standard', voice: standardVoiceId = 'pm_alex', speed = 1 }) {
+    if (engine === 'standard') return this.#generateStandard({ directory, sceneIds, voiceId: standardVoiceId, speed });
     await this.app.requireFeature('voice.synthetic');
     const project = await readProjectDirectory(directory);
     const profile = await this.profiles.read(profileId);
@@ -245,6 +254,39 @@ export class NarrationOperations {
       progress({ done: scenes.length, total: scenes.length });
       return { results, generated: results.filter(item => item.status === 'generated').length, cached: results.filter(item => item.status === 'cached').length };
     }).catch(error => { throw error.code === 'PROJECT_LOCKED' ? voiceBusy(error.details.owner) : error; }), { cancellable: true }) });
+  }
+
+  async #generateStandard({ directory, sceneIds, voiceId, speed }) {
+    await this.app.requireFeature('voice.standard');
+    const profile = standardProfile(voiceId, speed);
+    const project = await readProjectDirectory(directory);
+    const all = scenesFromScript(project.creative?.script);
+    const scenes = sceneIds?.length ? sceneIds.map(id => all.find(scene => scene.id === id) || (() => { throw new Error(`Cena desconhecida: ${id}`); })()) : all;
+    if (!scenes.length) throw new Error('O roteiro não tem texto para narrar (abertura, desenvolvimento ou payoff)');
+    if (this.jobs.list({ projectPath: directory }).some(job => job.kind === 'voice.generate' && job.state === 'running')) throw new LifecycleError('VOICE_BUSY', 'Já existe uma geração de voz em andamento neste projeto');
+    const store = new NarrationStore(directory);
+    const voice = await this.standardFactory();
+    return this.jobs.start({ kind: 'voice.generate', projectPath: directory, label: `Narração padrão: ${scenes.length} cena${scenes.length === 1 ? '' : 's'}`, run: ({ signal, progress }) => this.app.activities.track(directory, 'geração de voz', async activitySignal => {
+      const combined = AbortSignal.any([signal, activitySignal]);
+      const results = [];
+      for (const [index, scene] of scenes.entries()) {
+        if (combined.aborted) throw Object.assign(new Error('Cancelado'), { code: 'CANCELLED' });
+        const cacheKey = generationKey({ model: 'kokoro', profile, text: scene.text });
+        const existing = (await store.read()).takes.find(take => take.cacheKey === cacheKey);
+        if (existing) { results.push({ sceneId: scene.id, status: 'cached', takeId: existing.id }); continue; }
+        progress({ done: index, total: scenes.length, phase: scene.label });
+        const cacheFile = path.join(store.root, 'generated', `${cacheKey}.wav`);
+        await mkdir(path.dirname(cacheFile), { recursive: true });
+        await voice.generate({ text: scene.text, voice: profile.voice, speed: profile.speed, output: cacheFile, signal: combined });
+        const label = STANDARD_VOICES.find(item => item.id === profile.voice).label.split(' ')[0];
+        const take = await store.createTake({ source: cacheFile, name: `Narração padrão (${label}) · ${scene.label}`, origin: 'generated', signal: combined, extra: { sceneId: scene.id, engine: 'standard', voice: profile.voice, speed: profile.speed, cacheKey, model: KokoroVoice.model }, ...this.tools });
+        await store.mutate(undefined, value => { value.takes.push(take); });
+        await rm(cacheFile, { force: true });
+        results.push({ sceneId: scene.id, status: 'generated', takeId: take.id });
+      }
+      progress({ done: scenes.length, total: scenes.length });
+      return { engine: 'standard', voice: profile.voice, results, generated: results.filter(item => item.status === 'generated').length, cached: results.filter(item => item.status === 'cached').length };
+    }, { cancellable: true }) });
   }
 
   /** O que some ao excluir o perfil: takes gerados e montagens que os usam, por projeto conhecido. */
