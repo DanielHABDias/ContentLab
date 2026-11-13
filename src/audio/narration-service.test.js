@@ -120,3 +120,10 @@ test('Q8 usa o motor nativo, a mesma referência e só promove o WAV depois de v
   expect((await stat(output)).size).toBeGreaterThan(100);
   await expect(stat(`${output}.partial.wav`)).rejects.toMatchObject({ code: 'ENOENT' });
 });
+
+test('monta vários intervalos do mesmo arquivo na ordem exata, sem alterar o original', async () => {
+  const { root, a } = await setup(); const before = await readFile(a);
+  const output = await renderParts('ffmpeg', [{ file: a, start: 0, end: 0.5 }, { file: a, start: 2, end: 3 }], path.join(root, 'editado.wav'));
+  expect(await measureAudio({}, output)).toMatchObject({ durationSeconds: expect.closeTo(1.5, 2), wav48kMono: true });
+  expect(await readFile(a)).toEqual(before);
+});

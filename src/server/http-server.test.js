@@ -77,3 +77,26 @@ test('documentação do kit: lista cenas com exemplo, fundos e sons e só serve 
   for (const query of ['kind=sfx&name=../../package', 'kind=sfx&name=nao-existe', 'kind=pose&name=parado', 'kind=font&name=outra', 'kind=fonts&name=Anton-Regular']) expect((await fetch(`${base}/api/v1/brand/file?${query}`)).status).toBe(400);
   expect((await fetch(`${base}/api/v1/brand/docs`, { headers: { 'sec-fetch-site': 'cross-site' } })).status).toBe(403);
 });
+
+test('ondas usam o mesmo arquivo autorizado do take e preservam reprodução por intervalo de bytes', async () => {
+  const { execFileSync } = await import('node:child_process');
+  const { LocalApplicationService } = await import('./local-application-service.js');
+  const root = await mkdtemp(path.join(os.tmpdir(), 'contentlab-wave-http-')); resources.push(root);
+  const app = new LocalApplicationService({ dataDirectory: path.join(root, 'data') });
+  const project = await app.createProject({ title: 'Áudio', type: 'long', aspectRatio: '16:9', parentDirectory: root });
+  const file = path.join(root, 'sample.wav');
+  execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'sine=duration=1', file]);
+  await app.narrationImport({ path: project.path, sources: [file] });
+  const take = (await app.narrationState({ path: project.path })).narration.takes[0];
+  const server = createContentLabServer({ application: app }); resources.unshift(server);
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const url = `${base}/api/v1/narration/file?${new URLSearchParams({ path: project.path, take: take.id })}`;
+  const waveform = await fetch(`${url}&waveform=1`);
+  expect(waveform.status).toBe(200);
+  expect(await waveform.json()).toMatchObject({ duration: expect.closeTo(1, 1), peaks: expect.arrayContaining([expect.any(Number)]) });
+  const playback = await fetch(url, { headers: { range: 'bytes=0-43' } });
+  expect(playback.status).toBe(206); expect((await playback.arrayBuffer()).byteLength).toBe(44);
+  expect((await fetch(`${base}/api/v1/narration/file?${new URLSearchParams({ path: project.path, take: '../../sample.wav', waveform: '1' })}`)).status).not.toBe(200);
+  expect((await fetch(`${url}&waveform=1`, { headers: { origin: 'https://exemplo.com' } })).status).toBe(403);
+});

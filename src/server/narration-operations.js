@@ -1,3 +1,4 @@
+import { takeSegments, validateSegments } from '../audio/audio-edits.js';
 import { voiceMode, VOICE_MODES } from '../core/voice-modes.js';
 import { mkdir, rm, stat } from 'node:fs/promises';
 import { createWriteStream } from 'node:fs';
@@ -108,12 +109,15 @@ export class NarrationOperations {
   }
 
   /** Renomeia ou corta (início/fim em segundos) sem tocar no arquivo. `trim: null` desfaz o corte. */
-  async updateTake({ path: directory, baseRevision, takeId, name, trim }) {
+  async updateTake({ path: directory, baseRevision, takeId, name, trim, segments }) {
     const store = await this.#store(directory);
     const { session } = await store.mutate(baseRevision, value => {
       const take = requireTake(value, takeId);
       if (name !== undefined) { if (!String(name).trim()) throw new Error('Nome vazio'); take.name = String(name).trim().slice(0, 80); }
+      const before = JSON.stringify(takeSegments(take));
+      if (trim !== undefined && segments !== undefined) throw new Error('Escolha corte simples ou trechos, não ambos');
       if (trim !== undefined) {
+        delete take.segments;
         if (trim === null) take.trim = null;
         else {
           const start = Number(trim.start); const end = Number(trim.end);
@@ -122,6 +126,8 @@ export class NarrationOperations {
           take.trim = { start: round(start), end: round(Math.min(end, take.durationSeconds)) };
         }
       }
+      if (segments !== undefined) { take.segments = segments === null ? null : validateSegments(segments, take.durationSeconds); take.trim = null; }
+      if (before !== JSON.stringify(takeSegments(take)) && value.assembled?.takeIds.includes(takeId)) value.assembled = { ...value.assembled, outdated: true };
     });
     return { narration: session };
   }
@@ -440,7 +446,7 @@ export class NarrationOperations {
 
   #parts(store, session, takeIds) {
     if (!Array.isArray(takeIds) || !takeIds.length) throw new Error('Selecione ao menos um take');
-    return takeIds.map(id => { const take = requireTake(session, id); return { file: store.resolve(take.file), start: take.trim?.start || 0, end: take.trim?.end || 0 }; });
+    return takeIds.flatMap(id => { const take = requireTake(session, id); return takeSegments(take).map(part => ({ file: store.resolve(take.file), ...part })); });
   }
 }
 

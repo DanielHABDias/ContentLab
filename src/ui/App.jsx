@@ -1,3 +1,4 @@
+import { WaveAudioPlayer } from './WaveAudioPlayer.jsx';
 import { NarrationReader } from './NarrationReader.jsx';
 import { ScriptPanel } from './ScriptPanel.jsx';
 import { useEffect, useRef, useState } from 'react';
@@ -156,7 +157,7 @@ function MediaOverview({ details }) {
   const media = details.project.media;
   return <section className="workflow-card" aria-labelledby="media-overview-title"><div className="section-title"><h2 id="media-overview-title">Mídias do projeto</h2><span className="muted">{media.length} {media.length === 1 ? 'arquivo' : 'arquivos'}</span></div>
     {media.length ? <ul className="media-overview">{media.map(item => <li key={item.id}>
-      {item.kind === 'image' ? <img src={mediaUrl(details.path, item.id)} alt="" loading="lazy"/> : item.kind === 'video' ? <video src={mediaUrl(details.path, item.id)} controls preload="metadata" aria-label={`Ver ${item.name || item.id}`}/> : item.kind === 'audio' ? <audio src={mediaUrl(details.path, item.id)} controls preload="none" aria-label={`Ouvir ${item.name || item.id}`}/> : null}
+      {item.kind === 'image' ? <img src={mediaUrl(details.path, item.id)} alt="" loading="lazy"/> : item.kind === 'video' ? <video src={mediaUrl(details.path, item.id)} controls preload="metadata" aria-label={`Ver ${item.name || item.id}`}/> : item.kind === 'audio' ? <WaveAudioPlayer src={mediaUrl(details.path, item.id)} label={`Ouvir ${item.name || item.id}`} duration={item.metadata?.durationSeconds}/> : null}
       <span><strong>{item.name || item.uri.split('/').at(-1)}</strong><small>{[ROLE_LABELS[item.role], RIGHTS_LABELS[item.rights]].filter(Boolean).join(' · ')}</small></span>
     </li>)}</ul> : <div className="empty-state">Nenhuma mídia no projeto.</div>}
   </section>;

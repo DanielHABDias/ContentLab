@@ -1,5 +1,9 @@
+import { RecordingWave } from './RecordingWave.jsx';
+import { WaveAudioPlayer } from './WaveAudioPlayer.jsx';
+import { AudioTakeEditor } from './AudioTakeEditor.jsx';
+import { editDuration, takeSegments } from '../audio/audio-edits.js';
 import { useEffect, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, AudioLines, Check, Loader2, Gauge, Headphones, Lock, Mic, Scissors, Sparkles, Square, Trash2, Upload, Volume2, Wand2, Wind, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, AudioLines, Check, Loader2, Gauge, Headphones, Lock, Mic, Pause, Play, Scissors, Sparkles, Square, Trash2, Upload, Volume2, Wand2, Wind, X } from 'lucide-react';
 import { ConfirmDialog } from './Dialogs.jsx';
 import { localApi } from './local-api.js';
 import { JobsPanel, clock } from './MediaLibrary.jsx';
@@ -95,25 +99,30 @@ function TakesSection({ projectPath, narration, act, base }) {
   const importFiles = async () => { const choice = await act(() => localApi.chooseMedia('Importar áudio para a narração', true)); if (!choice?.paths?.length) return; const result = await act(() => localApi.narrationImport({ path: projectPath, sources: choice.paths })); if (result) await act(async () => null, result.failed ? `${result.imported} importado(s); falharam: ${result.results.filter(item => item.error).map(item => item.error).join('; ')}` : `${result.imported} take(s) importado(s).`); };
   const move = (index, delta) => { const order = narration.takes.map(take => take.id); const [item] = order.splice(index, 1); order.splice(index + delta, 0, item); return act(() => localApi.reorderTakes({ ...base, order })); };
   return <section className="workflow-card" aria-labelledby="takes-title">
-    <div className="section-title"><div><span className="eyebrow">Takes</span><h2 id="takes-title">Gravações e áudios</h2></div><div className="header-actions"><NarrationReaderLink projectPath={projectPath}/><Recorder projectPath={projectPath} onDone={() => act(async () => null, 'Gravação salva como take.')}/><button className="button quiet" onClick={importFiles}><Upload size={17}/> Importar áudio</button></div></div>
+    <div className="section-title"><div><span className="eyebrow">Takes</span><h2 id="takes-title">Gravações e áudios</h2></div><div className="header-actions"><NarrationReaderLink projectPath={projectPath}/><Recorder projectPath={projectPath} onDone={async take => { await act(async () => null, 'Gravação salva como take.'); if (take) setEditing(take); }}/><button className="button quiet" onClick={importFiles}><Upload size={17}/> Importar áudio</button></div></div>
     {narration.takes.length ? <ol className="media-list take-list">{narration.takes.map((take, index) => <li key={take.id}>
-      <span><strong>{take.name}</strong><small>{ORIGINS[take.origin]} · {clock(take.durationSeconds)}{take.trim ? ` · usa ${clock(take.trim.start)}–${clock(take.trim.end)}` : ''}{take.stale ? ' · texto da cena mudou' : ''}</small><audio controls preload="none" src={fileUrl(projectPath, { take: take.id })} aria-label={`Ouvir ${take.name}`}/></span>
+      <span><strong>{take.name}</strong><small>{ORIGINS[take.origin]} · {clock(editDuration(takeSegments(take)))}{take.trim ? ` · usa ${clock(take.trim.start)}–${clock(take.trim.end)}` : ''}{take.stale ? ' · texto da cena mudou' : ''}</small><WaveAudioPlayer src={fileUrl(projectPath, { take: take.id })} label={`Ouvir ${take.name}`} duration={take.durationSeconds} segments={takeSegments(take)}/></span>
       <span className="take-actions"><button className="icon-button" aria-label={`Subir ${take.name}`} disabled={index === 0} onClick={() => move(index, -1)}><ArrowUp size={16}/></button><button className="icon-button" aria-label={`Descer ${take.name}`} disabled={index === narration.takes.length - 1} onClick={() => move(index, 1)}><ArrowDown size={16}/></button><button className="mini-button" onClick={() => setEditing(take)}>Editar</button><button className="icon-button" aria-label={`Excluir ${take.name}`} onClick={() => setDeleting(take)}><Trash2 size={16}/></button></span>
     </li>)}</ol> : <div className="empty-state"><strong>Nenhum take ainda.</strong><span>Grave pelo microfone ou importe um áudio. Os originais nunca são alterados.</span></div>}
-    {editing && <TakeDialog take={editing} onClose={() => setEditing(null)} onSave={async values => { if (await act(() => localApi.updateTake({ ...base, takeId: editing.id, ...values }), 'Take atualizado.')) setEditing(null); }}/>}
+    {editing && <AudioTakeEditor src={fileUrl(projectPath, { take: editing.id })} take={editing} onClose={() => setEditing(null)} onSave={async values => { const result = await act(() => localApi.updateTake({ ...base, takeId: editing.id, ...values }), 'Take atualizado.'); if (result) setEditing(null); else throw new Error('Não foi possível salvar. Confira o aviso da narração e tente novamente.'); }}/>}
     {deleting && <ConfirmDialog title="Excluir take" message={`“${deleting.name}” e o arquivo dele serão apagados deste projeto.`} confirm="Excluir take" onClose={() => setDeleting(null)} onConfirm={async () => { await act(() => localApi.deleteTake({ ...base, takeId: deleting.id }), 'Take excluído.'); setDeleting(null); }}/>}
   </section>;
 }
 
 /** Microfone só depois do clique explícito em “Permitir microfone”. */
 function Recorder({ projectPath, onDone }) {
-  const [phase, setPhase] = useState('idle'); const [error, setError] = useState(''); const [seconds, setSeconds] = useState(0); const recorder = useRef(null); const stream = useRef(null); const timer = useRef(null);
+  const [phase, setPhase] = useState('idle'); const [error, setError] = useState(''); const [seconds, setSeconds] = useState(0); const recorder = useRef(null); const stream = useRef(null); const timer = useRef(null); const pendingUpload = useRef(null);
   useEffect(() => () => { window.clearInterval(timer.current); stream.current?.getTracks().forEach(track => track.stop()); }, []);
   const allow = async () => {
     setError('');
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') { setError('Este navegador não permite gravar. Importe um áudio.'); return; }
     try { stream.current = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); setPhase('ready'); }
     catch { setError('Microfone negado ou indisponível.'); setPhase('idle'); }
+  };
+  const saveRecording = async () => {
+    setError(''); setPhase('saving');
+    try { const result = await localApi.uploadTake({ path: projectPath, ...pendingUpload.current }); pendingUpload.current = null; await onDone(result?.take); setPhase('ready'); }
+    catch (issue) { setError(`${issue.message} A gravação está preservada nesta aba; tente salvar novamente.`); setPhase('unsaved'); }
   };
   const start = () => {
     const chunks = []; const type = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4'].find(item => MediaRecorder.isTypeSupported?.(item)) || '';
@@ -122,16 +131,18 @@ function Recorder({ projectPath, onDone }) {
     media.onstop = async () => {
       window.clearInterval(timer.current); setPhase('saving');
       const blob = new Blob(chunks, { type: media.mimeType }); const extension = media.mimeType.includes('ogg') ? 'ogg' : media.mimeType.includes('mp4') ? 'm4a' : 'webm';
-      try { await localApi.uploadTake({ path: projectPath, blob, name: `gravacao.${extension}` }); onDone(); setPhase('ready'); } catch (issue) { setError(issue.message); setPhase('ready'); }
+      pendingUpload.current = { blob, name: `gravacao.${extension}` }; await saveRecording();
     };
     media.start(1000); setSeconds(0); timer.current = window.setInterval(() => setSeconds(value => value + 1), 1000); setPhase('recording');
   };
+  const pause = () => { recorder.current.pause(); window.clearInterval(timer.current); setPhase('paused'); };
+  const resume = () => { recorder.current.resume(); timer.current = window.setInterval(() => setSeconds(value => value + 1), 1000); setPhase('recording'); };
   const release = () => { stream.current?.getTracks().forEach(track => track.stop()); stream.current = null; setPhase('idle'); };
   return <span className="recorder">{error && <small className="missing" role="alert">{error}</small>}
     {phase === 'idle' && <button className="button quiet" onClick={allow}><Mic size={17}/> Permitir microfone</button>}
     {phase === 'ready' && <><button className="button primary" onClick={start}><Mic size={17}/> Gravar</button><button className="mini-button" onClick={release}>Desligar microfone</button></>}
-    {phase === 'recording' && <button className="button primary recording" onClick={() => recorder.current.stop()}><Square size={15}/> Parar · {clock(seconds)}</button>}
-    {phase === 'saving' && <span role="status">Salvando gravação…</span>}
+    {['recording', 'paused'].includes(phase) && <><RecordingWave stream={stream.current} paused={phase === 'paused'}/><button type="button" className="button quiet" onClick={phase === 'paused' ? resume : pause}>{phase === 'paused' ? <Play size={16}/> : <Pause size={16}/>} {phase === 'paused' ? 'Retomar gravação' : 'Pausar gravação'}</button><button className="button primary recording" onClick={() => recorder.current.stop()}><Square size={15}/> Parar e salvar · {clock(seconds)}</button><span role="status">{phase === 'paused' ? 'Gravação pausada' : 'Gravando'}</span></>}
+    {phase === 'saving' && <span role="status">Salvando gravação…</span>}{phase === 'unsaved' && <button type="button" className="button primary" onClick={saveRecording}>Tentar salvar gravação</button>}
   </span>;
 }
 
@@ -187,7 +198,7 @@ function TreatmentSection({ takeIds, projectPath, narration, previewSeconds, act
       </fieldset>
     </div>
     <div className="treat-actions"><button className="button quiet" disabled={!takeIds.length || busy} onClick={listen}><Headphones size={17} aria-hidden="true"/> {busy ? 'Preparando…' : `Ouvir preview (${previewSeconds} s)`}</button><button className="button primary" disabled={!takeIds.length} onClick={() => startJob(() => localApi.assembleNarration({ ...base, takeIds, treatment: effective }))}><Wand2 size={17}/> {narration.assembled ? 'Montar de novo' : 'Montar narração final'}</button></div>
-    {preview && <div className="ab-preview">{[['original', 'Sem tratamento'], ['treated', 'Com tratamento']].map(([key, label]) => <div key={key} className={key}><span className="ab-label"><AudioLines size={14} aria-hidden="true"/> {label}{key === 'treated' && preview.removedSeconds > 0 ? ` · ${seconds(preview.removedSeconds)} de pausas a menos` : ''}</span><audio controls src={fileUrl(projectPath, { preview: preview[key].file })} aria-label={`Preview ${label.toLowerCase()}`}/><small>{measureLine(preview[key].measures)}</small></div>)}</div>}
+    {preview && <div className="ab-preview">{[['original', 'Sem tratamento'], ['treated', 'Com tratamento']].map(([key, label]) => <div key={key} className={key}><span className="ab-label"><AudioLines size={14} aria-hidden="true"/> {label}{key === 'treated' && preview.removedSeconds > 0 ? ` · ${seconds(preview.removedSeconds)} de pausas a menos` : ''}</span><WaveAudioPlayer src={fileUrl(projectPath, { preview: preview[key].file })} label={`Preview ${label.toLowerCase()}`} duration={preview[key].measures.durationSeconds}/><small>{measureLine(preview[key].measures)}</small></div>)}</div>}
     <FinalNarration projectPath={projectPath} narration={narration}/>
   </section>;
 }
@@ -196,8 +207,8 @@ function TreatmentSection({ takeIds, projectPath, narration, previewSeconds, act
 function FinalNarration({ projectPath, narration }) {
   if (!narration.assembled) return null;
   return <div className="final-narration">
-    <div className="final-head"><span className="final-icon" aria-hidden="true"><Check size={16}/></span><div><strong>Narração final{narration.assembled.outdated ? ' · desatualizada' : ''}</strong><small>{narration.assembled.outdated ? 'Um take usado foi excluído: monte de novo.' : 'É o áudio que a edição usa. Já está nas mídias do projeto e entra na timeline.'}</small></div></div>
-    <audio controls preload="none" src={fileUrl(projectPath, { assembled: 1 })} aria-label="Ouvir narração final"/>
+    <div className="final-head"><span className="final-icon" aria-hidden="true"><Check size={16}/></span><div><strong>Narração final{narration.assembled.outdated ? ' · desatualizada' : ''}</strong><small>{narration.assembled.outdated ? 'Os takes foram alterados: monte de novo.' : 'É o áudio que a edição usa. Já está nas mídias do projeto e entra na timeline.'}</small></div></div>
+    <WaveAudioPlayer src={fileUrl(projectPath, { assembled: 1, version: narration.assembled.createdAt || narration.assembled.mediaId })} label="Ouvir narração final" duration={narration.assembled.measures.durationSeconds}/>
     <small>{measureLine(narration.assembled.measures)}</small>
   </div>;
 }
@@ -269,24 +280,12 @@ function ScriptToRead({ scenes, projectPath }) {
 }
 
 function TranscriptionStatus({ transcription, assembled, running, onRetry }) {
-  const ready = transcription?.status === 'ready';
+  const ready = transcription?.status === 'ready' && !assembled?.outdated;
   const working = running || transcription?.status === 'running';
   return <section className="workflow-card narration-transcription" aria-labelledby="narration-transcript-title"><h2 id="narration-transcript-title">Tempos para edição</h2>
     <p>Depois de montar a narração, o Whisper large-v3 completo transcreve automaticamente cada palavra com início e fim.</p>
     {ready ? <p role="status" className="ready">Transcrição pronta · {transcription.words} palavras com tempo. A IA já pode usá-las na edição.</p> : working ? <p role="status">Preparando a narração e a transcrição. Aguarde antes de avançar para a edição.</p> : assembled ? <><p role="status">{transcription?.error || 'A transcrição ainda não está pronta. Conclua-a antes de avançar para a edição.'}</p><button type="button" className="button quiet" disabled={assembled.outdated} onClick={onRetry}>Gerar transcrição palavra por palavra</button>{assembled.outdated && <p>Os takes mudaram. Monte a narração novamente.</p>}</> : <p>Grave ou gere os takes e monte a narração para preparar os tempos.</p>}
   </section>;
-}
-
-function TakeDialog({ take, onClose, onSave }) {
-  const [name, setName] = useState(take.name); const [start, setStart] = useState(take.trim?.start ?? 0); const [end, setEnd] = useState(take.trim?.end ?? take.durationSeconds);
-  return <div className="dialog-backdrop" role="presentation"><form className="dialog" aria-label="Editar take" onSubmit={event => { event.preventDefault(); onSave({ name, trim: Number(start) === 0 && Number(end) >= take.durationSeconds ? null : { start: Number(start), end: Number(end) } }); }}>
-    <div className="section-title"><h2>Editar take</h2><button type="button" className="icon-button" aria-label="Fechar" onClick={onClose}><X/></button></div>
-    <label>Nome<input required value={name} onChange={event => setName(event.target.value)}/></label>
-    <label>Início (s)<input type="number" min="0" step="0.1" max={take.durationSeconds} value={start} onChange={event => setStart(event.target.value)}/></label>
-    <label>Fim (s)<input type="number" min="0.1" step="0.1" max={take.durationSeconds} value={end} onChange={event => setEnd(event.target.value)}/></label>
-    <p className="plan-line">O corte só define o trecho usado na montagem; o arquivo original continua inteiro ({clock(take.durationSeconds)}).</p>
-    <div className="dialog-actions"><button type="button" className="button quiet" onClick={onClose}>Cancelar</button><button className="button primary">Salvar</button></div>
-  </form></div>;
 }
 
 export { ConfirmDialog } from './Dialogs.jsx';

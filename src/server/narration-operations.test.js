@@ -325,3 +325,26 @@ test('narração não fica pronta se o transcritor devolver somente trechos sem 
   expect(done).toMatchObject({ state: 'failed', code: 'WORD_TIMESTAMPS_MISSING' });
   expect((await service.narrationState({ path: project.path })).transcription.status).toBe('failed');
 });
+
+test('salva cortes internos sem destruir o take, aplica no preview e invalida a montagem anterior', async () => {
+  const { root, service, project } = await setup();
+  const source = tone(root, 'continuo.wav', { duration: 4 });
+  await service.narrationImport({ path: project.path, sources: [source] });
+  const { narration } = await service.narrationState({ path: project.path }); const take = narration.takes[0];
+  const original = await readFile(source);
+  // Uma montagem já existente deve ser refeita depois de alterar seus cortes.
+  const { NarrationStore } = await import('../audio/narration-service.js');
+  const store = new NarrationStore(project.path);
+  await store.mutate(narration.revision, value => { value.assembled = { takeIds: [take.id], file: 'assembled/old.wav' }; });
+  const input = { path: project.path, baseRevision: narration.revision + 1, takeId: take.id, segments: [{ start: 0, end: 1 }, { start: 3, end: 4 }] };
+  const updated = await service.narrationUpdateTake(input);
+  expect(updated.narration.assembled.outdated).toBe(true);
+  expect((await service.narrationState({ path: project.path })).narration.takes[0].segments).toEqual(input.segments);
+  await expect(service.narrationUpdateTake(input)).rejects.toMatchObject({ code: 'NARRATION_CONFLICT' });
+  const preview = await service.narrationPreview({ path: project.path, takeIds: [take.id], treatment: { aiDenoise: false, removeBreaths: false, trimPauses: false, compress: false, normalize: false } });
+  expect(preview.original.measures.durationSeconds).toBeCloseTo(2, 2);
+  expect(await readFile(source)).toEqual(original);
+  expect(await readFile(path.join(project.path, 'narration', take.original))).toEqual(original);
+  await expect(service.narrationUpdateTake({ ...input, baseRevision: updated.narration.revision, segments: [{ start: 0, end: 9 }] })).rejects.toThrow(/Trechos inválidos/);
+  expect((await store.read()).revision).toBe(updated.narration.revision);
+});

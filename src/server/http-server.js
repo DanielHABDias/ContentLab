@@ -1,3 +1,4 @@
+import { audioWaveform } from '../audio/waveform.js';
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { createServer } from 'node:http';
@@ -12,6 +13,13 @@ const repositoryRoot = path.resolve(here, '../..');
 const roots = serverRoots({ repositoryRoot });
 
 export function createContentLabServer({ dataDirectory = roots.dataDirectory, staticDirectory = path.join(repositoryRoot, 'dist'), toolsDirectory = roots.toolsDirectory, application = new LocalApplicationService({ dataDirectory, toolsDirectory, projectsDirectory: roots.projectsDirectory, renderCacheDirectory: roots.renderCacheDirectory, updater: UpdateService.fromEnvironment({ repositoryRoot }) }), onShutdown = () => {} } = {}) {
+  const serveAudioOrMedia = async (request, response, item) => {
+    if (new URL(request.url, 'http://127.0.0.1').searchParams.get('waveform') === '1') {
+      if (!/^(audio|video)\//.test(item.contentType)) throw new Error('Arquivo sem áudio para visualizar');
+      return json(response, 200, await audioWaveform(item.file, application.narrationOps.tools));
+    }
+    return serveMedia(request, response, item);
+  };
   let closing = false;
   const server = createServer(async (request, response) => {
     try {
@@ -43,7 +51,7 @@ export function createContentLabServer({ dataDirectory = roots.dataDirectory, st
       const setupRoutes = { install: 'setupInstall', pause: 'setupPause', resume: 'setupResume', cancel: 'setupCancel', onboarding: 'setupOnboarding' };
       const setupMatch = request.method === 'POST' && url.pathname.match(/^\/api\/v1\/setup\/([a-z]+)$/);
       if (setupMatch && setupRoutes[setupMatch[1]]) return json(response, 200, await application[setupRoutes[setupMatch[1]]](await readJson(request)));
-      if (request.method === 'GET' && url.pathname === '/api/v1/media/file') return await serveMedia(request, response, await application.mediaFile({ path: url.searchParams.get('path'), mediaId: url.searchParams.get('media'), cutId: url.searchParams.get('cut') || undefined }));
+      if (request.method === 'GET' && url.pathname === '/api/v1/media/file') return await serveAudioOrMedia(request, response, await application.mediaFile({ path: url.searchParams.get('path'), mediaId: url.searchParams.get('media'), cutId: url.searchParams.get('cut') || undefined }));
       if (request.method === 'GET' && url.pathname === '/api/v1/brand/docs') return json(response, 200, await application.brandDocs());
       if (request.method === 'GET' && url.pathname === '/api/v1/brand/file') return await serveMedia(request, response, await application.brandFile({ kind: url.searchParams.get('kind'), name: url.searchParams.get('name') }));
       if (request.method === 'GET' && url.pathname === '/api/v1/jobs') return json(response, 200, application.listJobs({ path: url.searchParams.get('path') || undefined }));
@@ -55,7 +63,7 @@ export function createContentLabServer({ dataDirectory = roots.dataDirectory, st
       const editRoutes = { state: 'editState', apply: 'editTimeline', undo: 'editUndo', redo: 'editRedo', 'add-media': 'editAddMedia', 'add-component': 'editAddComponent', components: 'editComponents', captions: 'editCaptions', aspect: 'editAspect', frame: 'editFrame', clip: 'editClip' };
       const editMatch = request.method === 'POST' && url.pathname.match(/^\/api\/v1\/edit\/([a-z-]+)$/);
       if (editMatch && editRoutes[editMatch[1]]) return json(response, 200, await application[editRoutes[editMatch[1]]](await readJson(request)));
-      if (request.method === 'GET' && url.pathname === '/api/v1/narration/file') return await serveMedia(request, response, await application.narrationFile({ path: url.searchParams.get('path'), takeId: url.searchParams.get('take') || undefined, preview: url.searchParams.get('preview') || undefined, assembled: url.searchParams.get('assembled') === '1', profileId: url.searchParams.get('profile') || undefined, check: url.searchParams.get('check') === '1', original: url.searchParams.get('original') === '1' }));
+      if (request.method === 'GET' && url.pathname === '/api/v1/narration/file') return await serveAudioOrMedia(request, response, await application.narrationFile({ path: url.searchParams.get('path'), takeId: url.searchParams.get('take') || undefined, preview: url.searchParams.get('preview') || undefined, assembled: url.searchParams.get('assembled') === '1', profileId: url.searchParams.get('profile') || undefined, check: url.searchParams.get('check') === '1', original: url.searchParams.get('original') === '1' }));
       if (request.method === 'POST' && url.pathname === '/api/v1/voice/sample') return json(response, 201, await application.voiceSampleUpload({ name: url.searchParams.get('name'), size: Number(request.headers['content-length']), stream: request }));
       if (request.method === 'GET' && url.pathname === '/api/v1/voice/studio') return json(response, 200, await application.voiceStudio());
       const voiceRoutes = { 'sample-discard': 'voiceSampleDiscard', 'profile-check': 'voiceProfileCheck' };

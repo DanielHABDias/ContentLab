@@ -1,6 +1,7 @@
+import { WaveAudioPlayer } from './WaveAudioPlayer.jsx';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Download, Film, Link2, Plus, Scissors, Search, Trash2, Upload, UserRound, X } from 'lucide-react';
-import { ConfirmDialog } from './Dialogs.jsx';
+import { ArrowLeft, AudioLines, Download, FileText, Film, Image as ImageIcon, Link2, Plus, Scissors, Search, Trash2, Upload, UserRound, X } from 'lucide-react';
+import { ConfirmDialog, useDialogFocus } from './Dialogs.jsx';
 import { localApi } from './local-api.js';
 import { DependencyNotice, FeatureList } from './DependencyGate.jsx';
 import { STAGE_REQUIREMENTS, featureBlock } from '../core/capabilities.js';
@@ -21,7 +22,7 @@ export const mediaUrl = (project, mediaId, cutId) => `/api/v1/media/file?path=${
 export function MediaLibrary({ details, onBack, onUpdated, setup, onOpenSetup }) {
   const { project, path: projectPath } = details;
   const [rights, setRights] = useState('pending'); const [error, setError] = useState(null); const [jobs, setJobs] = useState([]); const [uploads, setUploads] = useState([]);
-  const [selected, setSelected] = useState(project.media[0]?.id || null); const [dragging, setDragging] = useState(false); const [removing, setRemoving] = useState(null); const [seek, setSeek] = useState(null);
+  const [selected, setSelected] = useState(null); const [dragging, setDragging] = useState(false); const [removing, setRemoving] = useState(null); const [seek, setSeek] = useState(null);
   const availability = new Map((details.mediaStatus || []).map(item => [item.id, item.available]));
   const blocked = id => (setup ? featureBlock(id, setup.items) : []);
   const refresh = useCallback(async () => onUpdated(await localApi.openProject(projectPath)), [onUpdated, projectPath]);
@@ -61,16 +62,40 @@ export function MediaLibrary({ details, onBack, onUpdated, setup, onOpenSetup })
     <CharacterImport projectPath={projectPath} character={project.character} blocked={blocked('media.import')} onOpenSetup={onOpenSetup} onImported={refresh}/>
     <JobsPanel jobs={jobs} uploads={uploads} onCancel={jobId => act(async () => { await localApi.cancelJob(jobId); await loadJobs(); })}/>
     <TranscriptSearch projectPath={projectPath} onPick={result => { setSelected(result.mediaId); setSeek({ mediaId: result.mediaId, time: result.start, at: Date.now() }); }}/>
-    <section className="media-grid">
-      <div className="workflow-card">{project.media.length ? <ul className="media-list" aria-label="Mídias do projeto">{project.media.map(item => <li key={item.id} className={item.id === selected ? 'selected' : ''}>
-        <button className="media-pick" onClick={() => setSelected(item.id)} aria-pressed={item.id === selected}><strong>{item.name || item.uri.split('/').at(-1)}</strong><small>{KINDS[item.kind]} · {clock(item.metadata?.durationSeconds)}{item.metadata?.width ? ` · ${item.metadata.width}×${item.metadata.height}` : ''} · {formatBytes(item.metadata?.sizeBytes)} · direitos: {RIGHTS[item.rights]}{item.transcript ? ` · transcrição ${item.transcript.status === 'revised' ? 'revisada' : 'bruta'}` : ''}</small></button>
-        <span className={availability.get(item.id) === false ? 'missing' : 'available'}>{availability.get(item.id) === false ? 'Arquivo ausente' : 'Disponível'}</span>
-        <button className="icon-button" aria-label={`Remover ${item.name || item.id}`} onClick={() => act(async () => setRemoving({ media: item, usage: await localApi.mediaUsage({ path: projectPath, mediaId: item.id }) }))}><Trash2 size={16}/></button>
-      </li>)}</ul> : <div className="empty-state"><strong>Nenhuma mídia importada.</strong><span>Use “Importar arquivos”, arraste arquivos para esta tela ou importe por URL. O Content Lab copia o conteúdo, calcula o hash e registra os direitos.</span></div>}</div>
-      {current && <MediaDetail key={current.id} projectPath={projectPath} revision={project.revision} media={current} available={availability.get(current.id) !== false} setup={setup} onOpenSetup={onOpenSetup} seek={seek?.mediaId === current.id ? seek : null} onChanged={refresh} onJobs={loadJobs}/>}
+    <section className="workflow-card media-catalog" aria-label="Catálogo de mídias">
+      <div className="section-title"><h2>Mídias do projeto</h2><span>{project.media.length} arquivos · clique para ver</span></div>
+      {project.media.length ? <ul className="media-card-grid" aria-label="Mídias do projeto">{project.media.map(item => <li key={item.id} className="media-card">
+        <button className="media-card-pick" onClick={() => setSelected(item.id)} aria-label={`Visualizar ${item.name || item.id}`}>
+          <MediaThumbnail media={item} projectPath={projectPath} available={availability.get(item.id) !== false}/>
+          <strong>{item.name || item.uri.split('/').at(-1)}</strong><small>{KINDS[item.kind]}{item.metadata?.durationSeconds ? ` · ${clock(item.metadata.durationSeconds)}` : ''}{item.metadata?.width ? ` · ${item.metadata.width}×${item.metadata.height}` : ''}</small>
+          <small>{formatBytes(item.metadata?.sizeBytes)} · {RIGHTS[item.rights]}{item.transcript ? ` · transcrição ${item.transcript.status === 'revised' ? 'revisada' : 'bruta'}` : ''}</small>
+        </button>
+        <div className="media-card-footer"><span className={availability.get(item.id) === false ? 'missing' : 'available'}>{availability.get(item.id) === false ? 'Arquivo ausente' : 'Disponível'}</span><button className="icon-button" aria-label={`Remover ${item.name || item.id}`} onClick={() => act(async () => setRemoving({ media: item, usage: await localApi.mediaUsage({ path: projectPath, mediaId: item.id }) }))}><Trash2 size={16}/></button></div>
+      </li>)}</ul> : <div className="empty-state"><strong>Nenhuma mídia importada.</strong><span>Use “Importar arquivos”, arraste arquivos para esta tela ou importe por URL.</span></div>}
     </section>
+    {current && <MediaPreviewDialog title={current.name || current.id} onClose={() => setSelected(null)}><MediaDetail key={current.id} projectPath={projectPath} revision={project.revision} media={current} available={availability.get(current.id) !== false} setup={setup} onOpenSetup={onOpenSetup} seek={seek?.mediaId === current.id ? seek : null} onChanged={refresh} onJobs={loadJobs}/></MediaPreviewDialog>}
+
     {removing && <RemoveDialog removing={removing} onClose={() => setRemoving(null)} onConfirm={async detachUsages => { await localApi.removeMedia({ path: projectPath, baseRevision: project.revision, mediaId: removing.media.id, detachUsages }); setRemoving(null); if (selected === removing.media.id) setSelected(null); await refresh(); }}/>}
   </main>;
+}
+
+function MediaPreviewDialog({ title, onClose, children }) {
+  const ref = useDialogFocus(onClose);
+  return <div className="dialog-backdrop" role="presentation"><div ref={ref} className="dialog media-preview-dialog" role="dialog" aria-modal="true" aria-label={`Prévia de ${title}`}><div className="section-title"><h2>{title}</h2><button type="button" className="icon-button" aria-label="Fechar prévia" onClick={onClose} autoFocus><X/></button></div>{children}</div></div>;
+}
+
+function MediaThumbnail({ media, projectPath, available }) {
+  const ref = useRef(null); const [visible, setVisible] = useState(false); const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') { setVisible(true); return; }
+    const observer = new IntersectionObserver(entries => { if (entries.some(item => item.isIntersecting)) { setVisible(true); observer.disconnect(); } }, { rootMargin: '100px' });
+    observer.observe(ref.current); return () => observer.disconnect();
+  }, []);
+  const Icon = ({ audio: AudioLines, video: Film, image: ImageIcon })[media.kind] || FileText;
+  return <span ref={ref} className="media-thumbnail" aria-hidden="true">
+    {visible && available && !failed && media.kind === 'image' ? <img src={mediaUrl(projectPath, media.id)} alt="" loading="lazy" onError={() => setFailed(true)}/> : visible && available && !failed && media.kind === 'video' ? <video src={mediaUrl(projectPath, media.id)} muted playsInline preload="metadata" onLoadedMetadata={event => { const video = event.currentTarget; if (Number.isFinite(video.duration)) video.currentTime = Math.min(1, video.duration / 10); }} onError={() => setFailed(true)}/> : <Icon size={38}/>}
+    <span className="media-thumbnail-label">{KINDS[media.kind]} · Abrir prévia</span>
+  </span>;
 }
 
 /** Pacote de personagem: pasta com os PNGs das poses e o catalogo.json; vira mídia com papel “personagem”. */
@@ -135,11 +160,11 @@ function MediaDetail({ projectPath, revision, media, available, setup, onOpenSet
   const position = () => String(Math.round((player.current?.currentTime || 0) * 10) / 10);
   const cutBlocked = setup ? featureBlock('media.import', setup.items) : [];
   return <section className="workflow-card media-detail" aria-label={`Detalhes de ${media.name || media.id}`}>
-    <div className="preview">{!available ? <div className="empty-state">Arquivo ausente: reimporte ou relocalize o cache.</div> : media.kind === 'video' ? <video ref={player} src={source} controls preload="metadata"/> : media.kind === 'audio' ? <audio ref={player} src={source} controls preload="metadata"/> : <img src={source} alt={media.name || 'Imagem importada'}/>}</div>
+    <div className="preview">{!available ? <div className="empty-state">Arquivo ausente: reimporte ou relocalize o cache.</div> : media.kind === 'video' ? <video ref={player} src={source} controls preload="metadata"/> : media.kind === 'audio' ? <WaveAudioPlayer ref={player} src={source} label={`Ouvir ${media.name || media.id}`} duration={media.metadata?.durationSeconds}/> : <img src={source} alt={media.name || 'Imagem importada'}/>}</div>
     <dl className="target"><dt>Original</dt><dd><code>{media.source?.value || '—'}</code></dd><dt>Cache</dt><dd><code>{media.uri}</code></dd><dt>Formato</dt><dd>{[media.metadata?.videoCodec, media.metadata?.audioCodec, media.metadata?.sampleRate && `${media.metadata.sampleRate} Hz`].filter(Boolean).join(' · ') || '—'}</dd><dt>SHA-256</dt><dd><code>{media.sha256?.slice(0, 16)}…</code></dd></dl>
     <DependencyNotice error={error} onOpenSetup={onOpenSetup}/>
     {playable && <div className="cuts"><h3><Scissors size={16}/> Cortes</h3>
-      {media.cuts?.length ? <ul className="media-list">{media.cuts.map(cut => <li key={cut.id}><span><strong>{cut.name}</strong><small>{clock(cut.start)} → {clock(cut.end)} · arquivo em cache, original intacto</small></span><audio src={mediaUrl(projectPath, media.id, cut.id)} controls preload="none" aria-label={`Ouvir corte ${cut.name}`}/><button className="icon-button" aria-label={`Remover corte ${cut.name}`} disabled={busy} onClick={() => act(async () => { await localApi.removeCut({ path: projectPath, baseRevision: revision, mediaId: media.id, cutId: cut.id }); await onChanged(); })}><X size={14}/></button></li>)}</ul> : <p className="muted">Nenhum corte.</p>}
+      {media.cuts?.length ? <ul className="media-list">{media.cuts.map(cut => <li key={cut.id}><span><strong>{cut.name}</strong><small>{clock(cut.start)} → {clock(cut.end)} · arquivo em cache, original intacto</small></span><WaveAudioPlayer src={mediaUrl(projectPath, media.id, cut.id)} label={`Ouvir corte ${cut.name}`} duration={cut.end - cut.start}/><button className="icon-button" aria-label={`Remover corte ${cut.name}`} disabled={busy} onClick={() => act(async () => { await localApi.removeCut({ path: projectPath, baseRevision: revision, mediaId: media.id, cutId: cut.id }); await onChanged(); })}><X size={14}/></button></li>)}</ul> : <p className="muted">Nenhum corte.</p>}
       <form className="cut-form" onSubmit={event => { event.preventDefault(); act(async () => { await localApi.createCut({ path: projectPath, baseRevision: revision, mediaId: media.id, start: Number(start.replace(',', '.')), end: Number(end.replace(',', '.')), name }); await onChanged(); }); }}>
         <label>Nome<input value={name} onChange={event => setName(event.target.value)} required/></label>
         <label>Início (s)<input inputMode="decimal" value={start} onChange={event => setStart(event.target.value)} required/></label><button type="button" className="mini-button" onClick={() => setStart(position())}>Posição atual</button>

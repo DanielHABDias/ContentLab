@@ -169,10 +169,11 @@ export async function toWav(ffmpeg, source, target, { signal } = {}) {
  */
 export async function renderParts(ffmpeg, parts, output, { filters = [], limitSeconds = null, signal } = {}) {
   if (!parts.length) throw new Error('Selecione ao menos um take');
-  const inputs = parts.flatMap(part => ['-i', part.file]);
+  const files = [...new Set(parts.map(part => part.file))];
+  const inputs = files.flatMap(file => ['-i', file]);
   const chains = parts.map((part, index) => {
     const trim = part.end > 0 ? `atrim=start=${round(part.start || 0)}:end=${round(part.end)},` : part.start > 0 ? `atrim=start=${round(part.start)},` : '';
-    return `[${index}:a]${trim}asetpts=PTS-STARTPTS,aresample=48000,aformat=channel_layouts=mono[p${index}]`;
+    return `[${files.indexOf(part.file)}:a]${trim}asetpts=PTS-STARTPTS,aresample=48000,aformat=channel_layouts=mono[p${index}]`;
   });
   const joined = `${parts.map((_, index) => `[p${index}]`).join('')}concat=n=${parts.length}:v=0:a=1[joined]`;
   const tail = filters.length ? `;[joined]${filters.join(',')}[out]` : ';[joined]anull[out]';

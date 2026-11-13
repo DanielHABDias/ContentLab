@@ -317,8 +317,11 @@ async function openMedia(details) {
 test('mídias: importa vários arquivos e mostra detalhes reais da mídia', async () => {
   const details = mediaDetails(); localApi.chooseMedia.mockResolvedValue({ paths: ['/a.wav', '/b.mp4'] }); localApi.importFiles.mockResolvedValue({ id: 'job_1', state: 'running' });
   await openMedia(details);
-  expect(await screen.findByText(/Áudio · 0:03,0 · 2 KB · direitos: Própria · transcrição bruta/)).toBeInTheDocument();
+  expect(await screen.findByText(/Áudio · 0:03,0/)).toBeInTheDocument();
+  expect(screen.getByText(/2 KB · Própria · transcrição bruta/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Visualizar fala.wav' }));
   expect(screen.getByText('/home/fala.wav')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Fechar prévia' }));
   fireEvent.click(screen.getByRole('button', { name: /importar arquivos/i }));
   await waitFor(() => expect(localApi.importFiles).toHaveBeenCalledWith({ path: '/tmp/meu_projeto', sources: ['/a.wav', '/b.mp4'], rights: 'pending' }));
   expect(localApi.chooseMedia).toHaveBeenCalledWith('Importar mídias', true);
@@ -343,6 +346,7 @@ test('mídias: URL exige confirmar direitos; transcrição editada salva revisã
   const form = await screen.findByRole('form', { name: /importar por url/i });
   fireEvent.change(within(form).getByPlaceholderText(/https/), { target: { value: 'https://exemplo.com/v' } });
   expect(within(form).getByRole('button', { name: /baixar/i })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Visualizar fala.wav' }));
   const segment = await screen.findByLabelText('Trecho 1');
   expect(screen.getByRole('button', { name: /salvar revisão/i })).toBeDisabled();
   fireEvent.change(segment, { target: { value: 'Olá, mundo!' } });

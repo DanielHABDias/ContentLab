@@ -25,3 +25,7 @@ O resultado inclui JSON com alinhamento e SRT. Qualidade e tempo devem ser medid
 Montar a narração inicia automaticamente sua transcrição, tanto para takes gravados quanto para voz clonada. O job só conclui quando o áudio montado tem palavras com tempos reais de início/fim. Uma saída só com frases não conclui essa etapa. A aprovação da narração e a edição automática ficam bloqueadas enquanto a transcrição não estiver pronta; áudio sem fala deve usar o modo sem narração.
 
 A transcrição pertence ao arquivo final montado (hash, modelo e idioma). Remontar os takes muda a entrada e exige conferir a transcrição desse áudio; o cache não deve reutilizar tempos de outra mídia. Falhas preservam o áudio e permitem retomar com `narration_transcribe`. O MCP lê as palavras com `narration_transcript` (`offset`, `limit`), para posicionar mídia, cortes e legendas na fala real.
+
+## Biblioteca visual
+
+As mídias locais aparecem em uma grade adaptável de cartões, com miniaturas de imagens e vídeos, tipo, duração, tamanho e disponibilidade. Clique em um cartão para abrir a prévia ampliada, ouvir áudio no player de ondas, criar cortes ou revisar a transcrição. Feche a prévia para voltar à mesma grade; remover um arquivo é uma ação separada no cartão. Miniaturas e ondas são carregadas conforme aparecem na tela.

@@ -81,8 +81,9 @@ test('reordena, corta sem destruir e mostra preview A/B medido', async () => {
   fireEvent.click(screen.getAllByRole('button', { name: 'Editar' })[0]);
   fireEvent.change(screen.getByLabelText('Início (s)'), { target: { value: '1' } });
   fireEvent.change(screen.getByLabelText('Fim (s)'), { target: { value: '4' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Manter seleção' }));
   fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-  await waitFor(() => expect(localApi.updateTake).toHaveBeenCalledWith(expect.objectContaining({ takeId: 'take_aaaaaa1', trim: { start: 1, end: 4 } })));
+  await waitFor(() => expect(localApi.updateTake).toHaveBeenCalledWith(expect.objectContaining({ takeId: 'take_aaaaaa1', segments: [{ start: 1, end: 4 }] })));
   fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Pausas' })).getByRole('radio', { name: /curtas/i }));
   fireEvent.click(screen.getByRole('button', { name: /ouvir preview/i }));
   expect(await screen.findByText(/-16\.0 LUFS/)).toBeInTheDocument();
@@ -242,4 +243,35 @@ test('abre roteiro em outra aba ao lado da gravação, mantendo o projeto e a ca
   expect(stopTrack).not.toHaveBeenCalled();
   view.unmount();
   globalThis.MediaRecorder = previousRecorder;
+});
+
+test('pausar e retomar mantém um único take; falha de envio permite salvar a mesma gravação novamente', async () => {
+  const pause = vi.fn(); const resume = vi.fn(); const stopTrack = vi.fn();
+  Object.defineProperty(navigator, 'mediaDevices', { value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [{ stop: stopTrack }] }) }, configurable: true });
+  const previous = globalThis.MediaRecorder;
+  globalThis.MediaRecorder = class {
+    mimeType = 'audio/webm'; static isTypeSupported() { return true; }
+    pause = pause; resume = resume;
+    start() { this.ondataavailable({ data: new Blob(['primeira fala']) }); }
+    stop() { this.ondataavailable({ data: new Blob(['segunda fala']) }); this.onstop(); }
+  };
+  localApi.uploadTake.mockRejectedValueOnce(new Error('Falha de rede')).mockResolvedValueOnce({});
+  const view = render(<NarrationStudio details={details('creator')} setup={setup()}/>);
+  fireEvent.click(await screen.findByRole('button', { name: 'Permitir microfone' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Gravar' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Pausar gravação' }));
+  expect(pause).toHaveBeenCalledTimes(1);
+  expect(screen.getByText('Gravação pausada')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Retomar gravação' }));
+  expect(resume).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByRole('button', { name: /Parar e salvar/ }));
+  expect(await screen.findByRole('button', { name: 'Tentar salvar gravação' })).toBeInTheDocument();
+  const blob = localApi.uploadTake.mock.calls[0][0].blob;
+  expect(blob.size).toBe('primeira falasegunda fala'.length);
+  fireEvent.click(screen.getByRole('button', { name: 'Tentar salvar gravação' }));
+  await waitFor(() => expect(localApi.uploadTake).toHaveBeenCalledTimes(2));
+  expect(localApi.uploadTake.mock.calls[1][0].blob).toBe(blob);
+  expect(await screen.findByRole('button', { name: 'Gravar' })).toBeInTheDocument();
+  expect(stopTrack).not.toHaveBeenCalled();
+  view.unmount(); globalThis.MediaRecorder = previous;
 });

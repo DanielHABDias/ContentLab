@@ -1,3 +1,4 @@
+import { WaveAudioPlayer } from './WaveAudioPlayer.jsx';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, AudioLines, CheckCircle2, Headphones, Mic, Play, RotateCcw, ShieldCheck, Square, Trash2, Volume2, VolumeX, X } from 'lucide-react';
 import { localApi } from './local-api.js';
@@ -79,12 +80,12 @@ export function VoiceScreen({ setup, onOpenSetup, onBack, onProfilesChanged }) {
         <div className="voice-tracks">
           <div className="voice-track">
             <span className="voice-track-label"><Mic size={14} aria-hidden="true"/> Amostra gravada</span>
-            <audio controls preload="none" src={profileSampleUrl(profile.id)} aria-label={`Ouvir a amostra gravada de ${profile.name}`}/>
+            <WaveAudioPlayer src={profileSampleUrl(profile.id)} label={`Ouvir a amostra gravada de ${profile.name}`} duration={profile.measures?.durationSeconds}/>
           </div>
           <div className="voice-track">
             <span className="voice-track-label"><Headphones size={14} aria-hidden="true"/> Voz clonada</span>
             {profile.checkSample
-              ? <><audio controls preload="none" src={profileSampleUrl(profile.id, true)} aria-label={`Ouvir a voz clonada de ${profile.name}`}/><small>Gerada em {new Date(profile.checkSample.generatedAt).toLocaleDateString('pt-BR')}</small></>
+              ? <><WaveAudioPlayer src={`${profileSampleUrl(profile.id, true)}&version=${encodeURIComponent(profile.checkSample.generatedAt)}`} label={`Ouvir a voz clonada de ${profile.name}`}/><small>Gerada em {new Date(profile.checkSample.generatedAt).toLocaleDateString('pt-BR')}</small></>
               : <small className="field-hint">Ainda sem amostra da voz clonada.</small>}
             <button className="mini-button" disabled={resources.busy || running || Boolean(missing.length)} onClick={() => check(profile)}><Play size={15} aria-hidden="true"/> {profile.checkSample ? 'Gerar de novo' : 'Ouvir como ficou'}</button>
           </div>
@@ -205,7 +206,7 @@ function RecordProfileDialog({ sampleText, limitSeconds, onClose, onCreated }) {
           <span><AudioLines size={16} aria-hidden="true"/> Amostra gravada</span>
           <strong>{clock(sample.measures.durationSeconds)}</strong>
         </div>
-        <audio controls src={preview} aria-label="Ouvir amostra gravada"/>
+        <WaveAudioPlayer src={preview} label="Ouvir amostra gravada" duration={sample?.measures.durationSeconds}/>
         <small>Ouça antes de criar o perfil.</small>
       </div>
       {short && <p className="notice error" role="status">Amostra curta: com menos de 20 s a voz clonada tende a soar mais robótica. Vale gravar de novo lendo o texto inteiro.</p>}
