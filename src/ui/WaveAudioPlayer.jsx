@@ -28,7 +28,11 @@ async function readWaveform(src, signal) {
   const url = new URL(src, window.location.href); url.searchParams.set('waveform', '1');
   const response = await fetch(`${url.pathname}${url.search}`, { signal });
   if (!response.ok) throw new Error('Não foi possível carregar as ondas');
-  return response.json();
+  const type = response.headers?.get('content-type');
+  if (type && !type.includes('application/json')) throw new Error('Reinicie o Content Lab para carregar a atualização das ondas.');
+  const value = await response.json();
+  if (!(value.duration > 0) || !Array.isArray(value.peaks) || !value.peaks.length || value.peaks.some(peak => !Number.isFinite(peak))) throw new Error('O arquivo não retornou ondas válidas. Tente carregá-las novamente.');
+  return value;
 }
 
 function displayPeaks(wave, spans, duration, count) {
@@ -46,7 +50,7 @@ function displayPeaks(wave, spans, duration, count) {
 
 /** Mesmo player em takes, previews, biblioteca e amostras; áudio real, sem ondas decorativas. */
 export const WaveAudioPlayer = forwardRef(function WaveAudioPlayer({ src, label, duration: knownDuration = 0, segments, selection, onSelect, zoom = 1 }, forwardedRef) {
-  const audio = useRef(null); const root = useRef(null); const drag = useRef(null);
+  const audio = useRef(null); const root = useRef(null); const waveScroll = useRef(null); const drag = useRef(null);
   const [wave, setWave] = useState(null); const [waveError, setWaveError] = useState('');
   const [error, setError] = useState(''); const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(knownDuration); const [playing, setPlaying] = useState(false);
@@ -56,13 +60,25 @@ export const WaveAudioPlayer = forwardRef(function WaveAudioPlayer({ src, label,
     setWave(null); setWaveError(''); setError(''); setPlaying(false); setPosition(0); setDuration(knownDuration);
     const load = () => {
       if (started) return; started = true;
-      readWaveform(src, controller.signal).then(value => { if (active) { setWave(value); setDuration(value.duration); } }).catch(issue => { if (active && issue.name !== 'AbortError') setWaveError('Ondas indisponíveis. Você ainda pode ouvir o áudio.'); });
+      readWaveform(src, controller.signal).then(value => { if (active) { setWave(value); setDuration(value.duration); } }).catch(issue => { if (active && issue.name !== 'AbortError') setWaveError(`Ondas indisponíveis. ${issue.message || ''} Você ainda pode ouvir o áudio.`); });
     };
     let observer;
-    if (typeof IntersectionObserver !== 'undefined') { observer = new IntersectionObserver(entries => { if (entries.some(item => item.isIntersecting)) { load(); observer.disconnect(); } }, { rootMargin: '100px' }); observer.observe(root.current); }
+    if (!onSelect && typeof IntersectionObserver !== 'undefined') { observer = new IntersectionObserver(entries => { if (entries.some(item => item.isIntersecting)) { load(); observer.disconnect(); } }, { rootMargin: '100px' }); observer.observe(root.current); }
     else load();
     return () => { active = false; controller.abort(); observer?.disconnect(); };
-  }, [src, retry]);
+  }, [src, retry, Boolean(onSelect)]);
+  useEffect(() => {
+    if (!onSelect) return;
+    const node = waveScroll.current;
+    const pan = event => {
+      if (event.ctrlKey || event.metaKey) return;
+      event.preventDefault();
+      const step = event.deltaMode === 1 ? 20 : event.deltaMode === 2 ? node.clientWidth : 1;
+      node.scrollLeft += (Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY) * step;
+    };
+    node.addEventListener('wheel', pan, { passive: false });
+    return () => node.removeEventListener('wheel', pan);
+  }, [Boolean(onSelect)]);
   const signature = JSON.stringify(segments);
   const spans = useMemo(() => segments || [{ start: 0, end: duration }], [signature, duration]);
   const length = editDuration(spans);
@@ -100,7 +116,7 @@ export const WaveAudioPlayer = forwardRef(function WaveAudioPlayer({ src, label,
   }, [playing, signature, length]);
   return <div className={`wave-player ${onSelect ? 'wave-editable' : ''}`} ref={root} role="group" aria-label={label}>
     <audio ref={node => { audio.current = node; if (typeof forwardedRef === 'function') forwardedRef(node); else if (forwardedRef) forwardedRef.current = node; }} src={src} preload="metadata" onLoadedMetadata={event => { if (Number.isFinite(event.currentTarget.duration)) setDuration(event.currentTarget.duration); event.currentTarget.volume = volume; event.currentTarget.playbackRate = rate; }} onTimeUpdate={updatePlayback} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => { setPlaying(false); setPosition(length); }} onError={() => setError('Áudio indisponível ou em formato não suportado.')}/>
-    <div className="wave-scroll"><div className="wave-track" style={{ width: `${zoom * 100}%` }} aria-label={`Onda do áudio: ${label}`} role="group"
+    <div className="wave-scroll" ref={waveScroll} tabIndex={onSelect ? 0 : undefined} role={onSelect ? 'region' : undefined} aria-label={onSelect ? 'Navegação horizontal da onda' : undefined}><div className="wave-track" style={{ width: `${zoom * 100}%` }} aria-label={`Onda do áudio: ${label}`} role="group"
       onPointerDown={event => { if (event.button !== 0 || !length) return; const start = trackTime(event); drag.current = start; event.currentTarget.setPointerCapture?.(event.pointerId); if (onSelect) onSelect({ start, end: start }); else seek(start); }}
       onPointerMove={event => { if (drag.current === null) return; const end = trackTime(event); if (onSelect) onSelect({ start: Math.min(drag.current, end), end: Math.max(drag.current, end) }); else seek(end); }}
       onPointerUp={event => { if (drag.current === null) return; const start = drag.current; const end = trackTime(event); drag.current = null; event.currentTarget.releasePointerCapture?.(event.pointerId); if (Math.abs(end - start) < 0.025) seek(end); else if (onSelect) onSelect({ start: Math.min(start, end), end: Math.max(start, end) }); }}
@@ -110,7 +126,8 @@ export const WaveAudioPlayer = forwardRef(function WaveAudioPlayer({ src, label,
       {length > 0 && <div className="wave-playhead" style={{ left: `${Math.min(100, position / length * 100)}%` }}/>}
       {!wave && !waveError && <span className="wave-loading">Carregando ondas…</span>}
     </div></div>
-    <input className="wave-seek" type="range" aria-label={`Posição: ${label}`} min="0" max={length || 0} step="0.01" value={Math.min(length, position)} onChange={event => seek(Number(event.target.value))}/>
+    {onSelect && <p className="wave-pan-hint">Arraste para selecionar · Amplie no Zoom e use a roda do mouse para navegar</p>}
+    <input className={`wave-seek ${onSelect ? 'sr-only' : ''}`} type="range" aria-label={`Posição: ${label}`} min="0" max={length || 0} step="0.01" value={Math.min(length, position)} onChange={event => seek(Number(event.target.value))}/>
     <div className="wave-controls"><button type="button" className="icon-button" onClick={toggle} aria-label={playing ? `Pausar: ${label}` : `Reproduzir: ${label}`}>{playing ? <Pause size={17}/> : <Play size={17}/>}</button><output className="wave-clock">{timeLabel(position)} / {timeLabel(length)}</output>
       <label className="wave-volume"><Volume2 size={15} aria-hidden="true"/><span className="sr-only">Volume: {label}</span><input type="range" min="0" max="1" step="0.05" value={volume} onChange={event => { const value = Number(event.target.value); setVolume(value); audio.current.volume = value; }}/></label>
       <label><span className="sr-only">Velocidade: {label}</span><select aria-label={`Velocidade: ${label}`} value={rate} onChange={event => { const value = Number(event.target.value); setRate(value); audio.current.playbackRate = value; }}>{[0.75, 1, 1.25, 1.5, 2].map(value => <option key={value} value={value}>{value}×</option>)}</select></label>

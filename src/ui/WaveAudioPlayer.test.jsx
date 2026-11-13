@@ -59,3 +59,34 @@ test('falha das ondas não bloqueia reprodução e oferece tentar carregar novam
   await waitFor(() => expect(screen.queryByText(/Ondas indisponíveis/)).not.toBeInTheDocument());
   await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
 });
+
+test('editor carrega ondas imediatamente mesmo sem receber evento de visibilidade', async () => {
+  const observe = vi.fn();
+  vi.stubGlobal('IntersectionObserver', class { observe = observe; disconnect() {} });
+  render(<WaveAudioPlayer src={source} label="Editor" duration={10} onSelect={vi.fn()}/>);
+  await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+  expect(observe).not.toHaveBeenCalled();
+  await waitFor(() => expect(screen.queryByText('Carregando ondas…')).not.toBeInTheDocument());
+});
+
+test('roda do mouse navega horizontalmente pela onda sem mover o modal; zoom do navegador é preservado', () => {
+  render(<WaveAudioPlayer src={source} label="Editor" duration={10} zoom={4} onSelect={vi.fn()}/>);
+  const viewport = screen.getByRole('region', { name: 'Navegação horizontal da onda' });
+  Object.defineProperty(viewport, 'clientWidth', { value: 200 });
+  Object.defineProperty(viewport, 'scrollWidth', { value: 800 });
+  const wheel = new WheelEvent('wheel', { deltaY: 80, bubbles: true, cancelable: true });
+  viewport.dispatchEvent(wheel);
+  expect(wheel.defaultPrevented).toBe(true); expect(viewport.scrollLeft).toBe(80);
+  viewport.dispatchEvent(new WheelEvent('wheel', { deltaY: -2, deltaMode: 1, bubbles: true, cancelable: true }));
+  expect(viewport.scrollLeft).toBe(40);
+  const zoom = new WheelEvent('wheel', { deltaY: 80, ctrlKey: true, bubbles: true, cancelable: true });
+  viewport.dispatchEvent(zoom);
+  expect(zoom.defaultPrevented).toBe(false); expect(viewport.scrollLeft).toBe(40);
+});
+
+test('servidor antigo que devolve WAV em vez de ondas mostra como corrigir', async () => {
+  fetch.mockResolvedValueOnce({ ok: true, headers: new Headers({ 'content-type': 'audio/wav' }) });
+  render(<WaveAudioPlayer src={source} label="Teste" duration={10}/>);
+  expect(await screen.findByText(/Reinicie o Content Lab para carregar a atualização das ondas/)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Reproduzir: Teste' })).toBeEnabled();
+});

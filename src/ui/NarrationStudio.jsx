@@ -99,7 +99,9 @@ function TakesSection({ projectPath, narration, act, base }) {
   const importFiles = async () => { const choice = await act(() => localApi.chooseMedia('Importar áudio para a narração', true)); if (!choice?.paths?.length) return; const result = await act(() => localApi.narrationImport({ path: projectPath, sources: choice.paths })); if (result) await act(async () => null, result.failed ? `${result.imported} importado(s); falharam: ${result.results.filter(item => item.error).map(item => item.error).join('; ')}` : `${result.imported} take(s) importado(s).`); };
   const move = (index, delta) => { const order = narration.takes.map(take => take.id); const [item] = order.splice(index, 1); order.splice(index + delta, 0, item); return act(() => localApi.reorderTakes({ ...base, order })); };
   return <section className="workflow-card" aria-labelledby="takes-title">
-    <div className="section-title"><div><span className="eyebrow">Takes</span><h2 id="takes-title">Gravações e áudios</h2></div><div className="header-actions"><NarrationReaderLink projectPath={projectPath}/><Recorder projectPath={projectPath} onDone={async take => { await act(async () => null, 'Gravação salva como take.'); if (take) setEditing(take); }}/><button className="button quiet" onClick={importFiles}><Upload size={17}/> Importar áudio</button></div></div>
+    <div className="section-title"><div><span className="eyebrow">Takes</span><h2 id="takes-title">Gravações e áudios</h2></div><button className="button quiet" onClick={importFiles}><Upload size={17}/> Importar áudio</button></div>
+    <div className="recording-script-shortcut"><div><strong>Roteiro na segunda tela</strong><small>Deixe as falas abertas enquanto grava aqui.</small></div><NarrationReaderLink projectPath={projectPath}/></div>
+    <Recorder projectPath={projectPath} onDone={async take => { await act(async () => null, 'Gravação salva como take.'); if (take) setEditing(take); }}/>
     {narration.takes.length ? <ol className="media-list take-list">{narration.takes.map((take, index) => <li key={take.id}>
       <span><strong>{take.name}</strong><small>{ORIGINS[take.origin]} · {clock(editDuration(takeSegments(take)))}{take.trim ? ` · usa ${clock(take.trim.start)}–${clock(take.trim.end)}` : ''}{take.stale ? ' · texto da cena mudou' : ''}</small><WaveAudioPlayer src={fileUrl(projectPath, { take: take.id })} label={`Ouvir ${take.name}`} duration={take.durationSeconds} segments={takeSegments(take)}/></span>
       <span className="take-actions"><button className="icon-button" aria-label={`Subir ${take.name}`} disabled={index === 0} onClick={() => move(index, -1)}><ArrowUp size={16}/></button><button className="icon-button" aria-label={`Descer ${take.name}`} disabled={index === narration.takes.length - 1} onClick={() => move(index, 1)}><ArrowDown size={16}/></button><button className="mini-button" onClick={() => setEditing(take)}>Editar</button><button className="icon-button" aria-label={`Excluir ${take.name}`} onClick={() => setDeleting(take)}><Trash2 size={16}/></button></span>
@@ -138,12 +140,20 @@ function Recorder({ projectPath, onDone }) {
   const pause = () => { recorder.current.pause(); window.clearInterval(timer.current); setPhase('paused'); };
   const resume = () => { recorder.current.resume(); timer.current = window.setInterval(() => setSeconds(value => value + 1), 1000); setPhase('recording'); };
   const release = () => { stream.current?.getTracks().forEach(track => track.stop()); stream.current = null; setPhase('idle'); };
-  return <span className="recorder">{error && <small className="missing" role="alert">{error}</small>}
-    {phase === 'idle' && <button className="button quiet" onClick={allow}><Mic size={17}/> Permitir microfone</button>}
-    {phase === 'ready' && <><button className="button primary" onClick={start}><Mic size={17}/> Gravar</button><button className="mini-button" onClick={release}>Desligar microfone</button></>}
-    {['recording', 'paused'].includes(phase) && <><RecordingWave stream={stream.current} paused={phase === 'paused'}/><button type="button" className="button quiet" onClick={phase === 'paused' ? resume : pause}>{phase === 'paused' ? <Play size={16}/> : <Pause size={16}/>} {phase === 'paused' ? 'Retomar gravação' : 'Pausar gravação'}</button><button className="button primary recording" onClick={() => recorder.current.stop()}><Square size={15}/> Parar e salvar · {clock(seconds)}</button><span role="status">{phase === 'paused' ? 'Gravação pausada' : 'Gravando'}</span></>}
-    {phase === 'saving' && <span role="status">Salvando gravação…</span>}{phase === 'unsaved' && <button type="button" className="button primary" onClick={saveRecording}>Tentar salvar gravação</button>}
-  </span>;
+  const capturing = ['recording', 'paused'].includes(phase);
+  return <div className={`recorder recorder-${phase}`} aria-label="Gravador de narração" role="region">
+    <div className="recorder-monitor"><div className="recorder-heading"><span className={`recorder-indicator ${phase === 'recording' ? 'live' : ''}`} aria-hidden="true"/><strong role="status">{({ idle: 'Prepare o microfone', ready: 'Pronto para gravar', recording: 'Gravando', paused: 'Gravação pausada', saving: 'Salvando gravação…', unsaved: 'Gravação aguardando envio' })[phase]}</strong><output className="recorder-time" aria-label="Tempo gravado">{clock(seconds)}</output></div>
+      {capturing ? <RecordingWave stream={stream.current} paused={phase === 'paused'}/> : <p className="recorder-hint">{phase === 'idle' ? 'Permita o microfone para começar. Você poderá pausar e retomar o mesmo take.' : phase === 'ready' ? 'Grave no seu ritmo. Depois, selecione e corte os erros pela onda.' : phase === 'saving' ? 'O take será aberto no editor assim que terminar de salvar.' : 'O áudio está preservado nesta aba. Tente enviá-lo novamente.'}</p>}
+    </div>
+    {error && <p className="notice error" role="alert">{error}</p>}
+    <div className="recorder-actions">
+      {phase === 'idle' && <button className="button primary" onClick={allow}><Mic size={17}/> Permitir microfone</button>}
+      {phase === 'ready' && <><button className="button primary" onClick={start}><Mic size={17}/> Gravar</button><button className="button quiet" onClick={release}>Desligar microfone</button></>}
+      {capturing && <button type="button" className="button quiet" onClick={phase === 'paused' ? resume : pause}>{phase === 'paused' ? <Play size={16}/> : <Pause size={16}/>} {phase === 'paused' ? 'Retomar gravação' : 'Pausar gravação'}</button>}
+      {phase === 'unsaved' && <button type="button" className="button primary" onClick={saveRecording}>Tentar salvar gravação</button>}
+    </div>
+    {capturing && <div className="recorder-finish"><span>Terminou o take? Salve para ouvir e cortar.</span><button className="button recording" onClick={() => recorder.current.stop()}><Square size={15}/> Parar e salvar</button></div>}
+  </div>;
 }
 
 const CLEANUP = [
