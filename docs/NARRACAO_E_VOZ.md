@@ -30,11 +30,11 @@ Perfis ficam fora dos projetos, em `<dados>/voices/<id>/` (permissão 0700/0600)
 
 **Excluir perfil** primeiro mostra o relatório (projetos dos Recentes afetados, takes gerados, bytes e montagens que os usam) e só apaga com confirmação: remove a amostra, os takes gerados com esse perfil, a montagem que os usava e a mídia correspondente no catálogo. Projetos fora dos Recentes não são varridos.
 
-## Transcrição automática e gravação por capítulo
+## Transcrição e gravação por capítulo
 
 Na opção **Eu gravo**, o roteiro de leitura é agrupado por capítulos e contém somente o texto dos blocos de narração. Os títulos são orientação, identificados como não narrados; cenas, direção e fontes não aparecem na leitura. A voz clonada usa exatamente os mesmos blocos narráveis.
 
-Após montar os takes, o app transcreve o WAV final com Whisper `large-v3` completo em português. O job só conclui depois de salvar os tempos de início/fim de cada palavra; falha preserva o áudio e bloqueia a passagem à edição até retomar a transcrição. A interface mostra o estado e permite tentar novamente. Pelo MCP, `narration_transcript` fornece as palavras e tempos paginados para orientar cortes, mídia e legendas.
+Montar os takes não inicia a transcrição. Com o WAV final montado, o botão **Gerar transcrição palavra por palavra** fica liberado e transcreve com Whisper `large-v3` completo em português, mostrando fase, porcentagem, tempo decorrido e estimativa. Quem quiser tratar o áudio fora antes usa **Abrir pasta**, importa e monta a versão nova e só então transcreve. O job só conclui depois de salvar os tempos de início/fim de cada palavra; falha preserva o áudio e bloqueia a passagem à edição até retomar a transcrição. A interface mostra o estado e permite tentar novamente. Pelo MCP, `narration_transcript` fornece as palavras e tempos paginados para orientar cortes, mídia e legendas.
 
 ## Geração por cena
 

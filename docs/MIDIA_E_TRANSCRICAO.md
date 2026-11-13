@@ -22,7 +22,7 @@ O resultado inclui JSON com alinhamento e SRT. Qualidade e tempo devem ser medid
 
 ## Narração e edição
 
-Montar a narração inicia automaticamente sua transcrição, tanto para takes gravados quanto para voz clonada. O job só conclui quando o áudio montado tem palavras com tempos reais de início/fim. Uma saída só com frases não conclui essa etapa. A aprovação da narração e a edição automática ficam bloqueadas enquanto a transcrição não estiver pronta; áudio sem fala deve usar o modo sem narração.
+Montar a narração não inicia a transcrição: assim a pessoa pode tratar o áudio fora (por exemplo, num site) antes. Com a narração montada, o botão **Gerar transcrição palavra por palavra** fica liberado (ou `narration_transcribe` pelo MCP), para takes gravados e voz clonada. O job só conclui quando o áudio montado tem palavras com tempos reais de início/fim; uma saída só com frases não conclui. A Narração pode ser aprovada com o áudio montado; a edição automática e a conclusão da edição exigem a transcrição pronta. Áudio sem fala deve usar o modo sem narração.
 
 A transcrição pertence ao arquivo final montado (hash, modelo e idioma). Remontar os takes muda a entrada e exige conferir a transcrição desse áudio; o cache não deve reutilizar tempos de outra mídia. Falhas preservam o áudio e permitem retomar com `narration_transcribe`. O MCP lê as palavras com `narration_transcript` (`offset`, `limit`), para posicionar mídia, cortes e legendas na fala real.
 

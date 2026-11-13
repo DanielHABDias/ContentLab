@@ -516,7 +516,7 @@ export class ProductionOperations {
     const narration = project.media.find(item => item.id === session.assembled?.mediaId);
     if (!narration || session.assembled.outdated) throw Object.assign(new Error('Monte a narração atual antes de consultar os tempos'), { code: 'NARRATION_MISSING' });
     const words = await this.#narrationWords(directory, narration);
-    if (!words.length) throw Object.assign(new Error('Aguarde a transcrição automática ou use narration_transcribe'), { code: 'WORDS_MISSING' });
+    if (!words.length) throw Object.assign(new Error('Gere a transcrição com narration_transcribe (a montagem não transcreve)'), { code: 'WORDS_MISSING' });
     return { mediaId: narration.id, model: 'whisper-large-v3', language: 'pt', total: words.length, offset, nextOffset: offset + limit < words.length ? offset + limit : null, words: words.slice(offset, offset + limit) };
   }
 

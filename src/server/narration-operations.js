@@ -208,19 +208,8 @@ export class NarrationOperations {
       if (previous?.file && previous.file !== path.relative(store.root, output)) await rm(store.resolve(previous.file), { force: true });
       const current = await readProjectDirectory(directory);
       await this.app.runProjectAction({ path: directory, baseRevision: current.revision, action: { type: 'narration.set', mediaId: attached.mediaId } });
-      progress({ phase: 'Transcrevendo palavra por palavra com Whisper large-v3', done: 3, total: 4 });
-      const combined = AbortSignal.any([signal, activitySignal]);
-      const transcript = await this.app.productionOps.transcribeNarration({ path: directory });
-      if (transcript.jobId) {
-        const cancel = () => this.jobs.cancel(transcript.jobId);
-        combined.addEventListener('abort', cancel, { once: true });
-        if (combined.aborted) cancel();
-        let finished;
-        try { finished = await this.jobs.waitFor(transcript.jobId); }
-        finally { combined.removeEventListener('abort', cancel); }
-        if (finished.state !== 'completed') throw new LifecycleError(finished.code || 'TRANSCRIPTION_FAILED', finished.error || 'Transcrição cancelada; a narração montada foi preservada.');
-      }
-      progress({ phase: 'Narração e transcrição prontas', done: 4, total: 4 });
+      progress({ phase: 'Narração montada', done: 3, total: 3 });
+      // A transcrição não começa sozinha: a pessoa pode tratar o áudio fora antes e só então transcrever.
       return { mediaId: attached.mediaId, measures, transcription: await this.transcriptionState(directory, await readProjectDirectory(directory), await store.read()) };
     }, { cancellable: true }) });
   }

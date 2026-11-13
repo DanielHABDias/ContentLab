@@ -276,11 +276,14 @@ test('roteiro em capítulos persiste e entrega só a fala ao gerador de voz, man
 });
 
 
-test('montar narração transcreve automaticamente antes de concluir e expõe palavras paginadas', async () => {
+test('montar narração não transcreve sozinha; a transcrição pedida expõe palavras paginadas', async () => {
   const { root, service, project } = await setup();
   const imported = await service.narrationImport({ path: project.path, sources: [tone(root, 'fala.wav', { duration: 1 })] });
   const assembled = await service.mediaOps.jobs.waitFor((await service.narrationAssemble({ path: project.path, takeIds: (await service.narrationState({ path: project.path })).narration.takes.map(take => take.id), treatment: { aiDenoise: false, removeBreaths: false, trimPauses: false } })).id);
-  expect(assembled).toMatchObject({ state: 'completed', result: { transcription: { status: 'ready', model: 'whisper-large-v3', words: 3 } } });
+  expect(assembled).toMatchObject({ state: 'completed', result: { transcription: { status: 'pending', words: 0 } } });
+  expect(service.mediaOps.jobs.list({ projectPath: project.path }).some(job => job.kind === 'transcription')).toBe(false);
+  const started = await service.productionTranscribeNarration({ path: project.path });
+  expect((await service.mediaOps.jobs.waitFor(started.jobId)).state).toBe('completed');
   const details = await service.inspectProject(project.path);
   expect(details.project.narrationMediaId).toBe(assembled.result.mediaId);
   expect(details.project.media.find(item => item.id === assembled.result.mediaId).transcript).toMatchObject({ model: 'whisper-large-v3', words: 3 });
@@ -302,7 +305,9 @@ test('falha de transcrição preserva o áudio aprovado, bloqueia conclusão da 
   const { root, service, project } = await setup({ transcriber });
   const imported = await service.narrationImport({ path: project.path, sources: [tone(root, 'fala.wav', { duration: 1 })] });
   const done = await service.mediaOps.jobs.waitFor((await service.narrationAssemble({ path: project.path, takeIds: (await service.narrationState({ path: project.path })).narration.takes.map(take => take.id), treatment: { aiDenoise: false, removeBreaths: false, trimPauses: false } })).id);
-  expect(done.state).toBe('failed');
+  expect(done.state).toBe('completed');
+  const firstTry = await service.productionTranscribeNarration({ path: project.path });
+  expect((await service.mediaOps.jobs.waitFor(firstTry.jobId)).state).toBe('failed');
   let state = await service.narrationState({ path: project.path });
   expect(state.narration.assembled.mediaId).toBeTruthy();
   expect(state.transcription.status).toBe('failed');
@@ -328,7 +333,9 @@ test('narração não fica pronta se o transcritor devolver somente trechos sem 
   const { root, service, project } = await setup({ transcriber });
   const imported = await service.narrationImport({ path: project.path, sources: [tone(root, 'fala.wav', { duration: 1 })] });
   const done = await service.mediaOps.jobs.waitFor((await service.narrationAssemble({ path: project.path, takeIds: (await service.narrationState({ path: project.path })).narration.takes.map(take => take.id), treatment: { aiDenoise: false, removeBreaths: false, trimPauses: false } })).id);
-  expect(done).toMatchObject({ state: 'failed', code: 'WORD_TIMESTAMPS_MISSING' });
+  expect(done.state).toBe('completed');
+  const started = await service.productionTranscribeNarration({ path: project.path });
+  expect(await service.mediaOps.jobs.waitFor(started.jobId)).toMatchObject({ state: 'failed', code: 'WORD_TIMESTAMPS_MISSING' });
   expect((await service.narrationState({ path: project.path })).transcription.status).toBe('failed');
 });
 

@@ -117,7 +117,7 @@ Para 5 Shorts: repetir o fluxo com `type: short`, `mode: autonomous` e `stage_ap
 
 ## Tempos da narração para a edição
 
-`narration_assemble` monta o áudio e gera automaticamente a transcrição com Whisper `large-v3` completo em português. Espere `job_wait`: só conclui depois de salvar início/fim de cada palavra do WAV montado. O áudio montado já pode ser aprovado na etapa Narração enquanto a transcrição continua; a edição só pode ser concluída com esses tempos; o plano automático não estima a fala quando há narração montada sem transcrição.
+`narration_assemble` monta o áudio e não transcreve. Quando o áudio final estiver definido, rode `narration_transcribe` + `job_wait` (Whisper `large-v3` completo, em português): só conclui depois de salvar início/fim de cada palavra do WAV montado. O áudio montado já pode ser aprovado na etapa Narração sem a transcrição; a edição só pode ser concluída com esses tempos; o plano automático não estima a fala quando há narração montada sem transcrição.
 
 Use `narration_transcript({ path, offset: 0, limit: 500 })`. A resposta contém `mediaId`, `model`, `language`, `total`, `nextOffset` e `words: [{ text, start, end }]`, em segundos. Continue com `offset: nextOffset` até `null`. Leia antes de colocar imagens, cortes e legendas; use os tempos reais, não a duração estimada do roteiro.
 
