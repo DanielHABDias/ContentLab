@@ -5,7 +5,29 @@ export const idSchema = z.string().regex(/^[a-z][a-z0-9_-]{2,63}$/);
 export const aspectRatioSchema = z.enum(['16:9', '9:16', '1:1', '4:5']);
 export const stageStateSchema = z.enum(['pending', 'active', 'changes_requested', 'approved', 'invalidated']);
 
-export const FLOW_STAGES = ['brief', 'script', 'packaging', 'media', 'narration', 'edit', 'review'];
+// Embalagem (título e thumbnail) antes do roteiro: o roteiro cumpre o que eles prometem.
+export const FLOW_STAGES = ['brief', 'packaging', 'script', 'media', 'narration', 'edit', 'review'];
+
+/**
+ * Põe as etapas na ordem de FLOW_STAGES, refaz as dependências e deixa ativa só a primeira etapa
+ * não aprovada cujas dependências estão aprovadas. Migra projetos com a ordem antiga (roteiro antes
+ * da embalagem) sem perder aprovações.
+ */
+export function normalizeStages(stages) {
+  const byId = new Map(stages.map(stage => [stage.id, stage]));
+  const ordered = [...FLOW_STAGES.filter(id => byId.has(id)).map(id => byId.get(id)), ...stages.filter(stage => !FLOW_STAGES.includes(stage.id))];
+  const result = ordered.map((stage, index) => ({ ...stage, dependsOn: index ? [ordered[index - 1].id] : [] }));
+  const approved = id => result.find(stage => stage.id === id)?.state === 'approved';
+  let opened = false;
+  for (const stage of result) {
+    if (stage.state === 'approved') continue;
+    const ready = stage.dependsOn.every(approved);
+    if (!ready && ['active', 'changes_requested'].includes(stage.state)) stage.state = 'pending';
+    else if (ready && !opened && stage.state === 'pending') stage.state = 'active';
+    if (ready) opened = true;
+  }
+  return result;
+}
 
 export const workflowStageSchema = z.object({
   id: idSchema,
@@ -196,7 +218,7 @@ export const projectSchema = z.object({
   pauseAt: z.array(z.enum(FLOW_STAGES)).default([]),
   narrationBy: z.enum(['ai', 'creator']).default('ai'),
   revision: z.number().int().positive(),
-  stages: z.array(workflowStageSchema),
+  stages: z.array(workflowStageSchema).transform(normalizeStages),
   changeRequests: z.array(changeRequestSchema).default([]),
   workflowJobs: z.array(workflowJobSchema).default([]),
   media: z.array(mediaRefSchema),

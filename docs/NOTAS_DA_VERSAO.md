@@ -4,6 +4,7 @@ Primeira versão candidata completa. Ela vai da ideia ao vídeo final, roda loca
 
 ## O que entra
 
+- **Fluxo acompanhado:** etapas na ordem ideia → título e thumbnail → roteiro (projetos antigos migram sozinhos); o editor mostra só as partes já abertas e tem **Aprovar e seguir**; `contentlab_open` abre o projeto no navegador da pessoa, a tela se atualiza ao vivo e avisa quando a IA espera uma decisão.
 - **Content Lab neutro:** kit e cenas HQ próprios; personagem como mídia do projeto (`character_import`); aba Documentação com prévias ao vivo.
 - **Projetos:** criar, abrir, configurar, renomear, duplicar, excluir pela lixeira e restaurar. A lista de Recentes tem backup, as revisões são otimistas e o histórico é auditável (F12–F15).
 - **Dependências instaláveis pelo app:** tamanho, licença e consentimento aparecem antes de instalar, e cada recurso que depende de algo mostra o que falta (F14).

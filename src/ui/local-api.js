@@ -35,6 +35,7 @@ export const localApi = {
   productionMotionAuto: input => post('/production/motion-auto', input),
   productionTranscribeNarration: input => post('/production/transcribe-narration', input),
   productionSummary: input => post('/production/summary', input),
+  productionLive: input => post('/production/live', input),
   productionDeliverable: input => post('/production/deliverable', input),
   shutdown: (force = false) => post('/server/shutdown', { force }),
   updateStatus: () => request('/update/status'),

@@ -25,3 +25,12 @@ test('migração: componente HQ antigo com prefixo dv_ passa a hq_ na leitura', 
   const { clipSchema } = await import('./contracts.js');
   expect(clipSchema.parse({ id: 'clip_a', type: 'component', startFrame: 0, durationInFrames: 30, componentId: 'dv_texto_hq' }).componentId).toBe('hq_texto_hq');
 });
+
+test('migra a ordem antiga (roteiro antes da embalagem) sem perder aprovações', async () => {
+  const { normalizeStages } = await import('./contracts.js');
+  const old = ['brief', 'script', 'packaging', 'media'].map((id, index, all) => ({ id, state: index === 0 ? 'approved' : index === 1 ? 'active' : 'pending', revision: 0, approvedRevision: index === 0 ? 0 : null, dependsOn: index ? [all[index - 1]] : [] }));
+  const stages = normalizeStages(old);
+  expect(stages.map(stage => stage.id)).toEqual(['brief', 'packaging', 'script', 'media']);
+  expect(stages.map(stage => stage.state)).toEqual(['approved', 'active', 'pending', 'pending']);
+  expect(stages[2].dependsOn).toEqual(['packaging']);
+});

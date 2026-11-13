@@ -25,7 +25,7 @@ test('projeto persiste, reabre e mantém snapshots após nova instância', async
 test('reabertura invalida dependentes sem apagar histórico', async () => {
   let value = project();
   value = approveStage(value, 'brief', 0);
-  value = approveStage(value, 'script', 0);
+  value = approveStage(value, 'packaging', 0);
   value = reopenStage(value, 'brief', 'Tese mudou');
   expect(value.stages.find(stage => stage.id === 'brief').state).toBe('active');
   expect(value.stages.find(stage => stage.id === 'script').state).toBe('invalidated');

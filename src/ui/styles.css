@@ -119,3 +119,4 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-vi
 .docs-colors .check { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; }
 .background-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 12px; }
 .background-grid li { display: grid; gap: 6px; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel-2); min-width: 0; }
+.creative-editor > .approval-bar { margin-top: 28px; }.approval-bar small { color: var(--muted); font-size: 12px; }.approval-bar.agent-waiting { border-top-color: var(--lime); }.agent-note { display: flex; align-items: center; gap: 6px; color: var(--lime); font-size: 13px; max-width: 560px; }

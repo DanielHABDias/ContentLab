@@ -1,4 +1,6 @@
-const defaultStageIds = ['brief', 'script', 'packaging', 'media', 'narration', 'edit', 'review'];
+import { FLOW_STAGES } from './contracts.js';
+
+const defaultStageIds = FLOW_STAGES;
 
 export function createWorkflow() {
   return defaultStageIds.map((id, index) => ({ id, state: index === 0 ? 'active' : 'pending', revision: 0, approvedRevision: null, dependsOn: index ? [defaultStageIds[index - 1]] : [] }));
@@ -17,7 +19,8 @@ export function approveStage(project, stageId, expectedRevision) {
   if (missing.length) throw Object.assign(new Error(`A etapa ${stageId} não pode ser aprovada: faltam ${missing.join(', ')}`), { code: 'ARTIFACTS_MISSING', details: { stageId, missing } });
   stage.state = 'approved';
   stage.approvedRevision = stage.revision;
-  if (stages[index + 1]?.state === 'pending') stages[index + 1].state = 'active';
+  const next = stages.find(candidate => candidate.state === 'pending' && candidate.dependsOn.every(id => stages.find(item => item.id === id)?.state === 'approved'));
+  if (next) next.state = 'active';
   const now = new Date().toISOString();
   const changeRequests = (project.changeRequests || []).map(request => request.stageId === stageId && request.status === 'open' ? { ...request, status: 'resolved', resolution: 'Etapa aprovada após as alterações', resolvedRevision: project.revision + 1, resolvedAt: now } : request);
   return { ...project, revision: project.revision + 1, stages, changeRequests };
@@ -57,7 +60,8 @@ export function missingStageArtifacts(project, stageId) {
   const audioClips = project.timeline.tracks.filter(track => track.kind === 'audio').flatMap(track => track.clips);
   if (stageId === 'brief') return [['tese', creative.brief?.thesis], ['público', creative.brief?.audience], ['promessa', creative.brief?.promise]].filter(([, value]) => !filled(value)).map(([label]) => label);
   if (stageId === 'script') return [['abertura', creative.script?.hook], ['desenvolvimento', creative.script?.development], ['payoff', creative.script?.payoff]].filter(([, value]) => !filled(value)).map(([label]) => label);
-  if (stageId === 'packaging') return [['título A', creative.packaging?.titleA], ['descrição', creative.packaging?.description]].filter(([, value]) => !filled(value)).map(([label]) => label);
+  // A descrição depende do roteiro: é conferida na entrega, não nesta etapa.
+  if (stageId === 'packaging') return [['título A', creative.packaging?.titleA]].filter(([, value]) => !filled(value)).map(([label]) => label);
   if (stageId === 'media') return [...(!project.media.length ? ['mídia'] : []), ...(project.media.some(item => item.rights === 'pending') ? ['direitos das mídias'] : [])];
   // Modo composição (plano de motion): o vídeo é o plano; narração é opcional (vídeo só com som e texto).
   const motion = project.motion?.beats?.length ? project.motion : null;

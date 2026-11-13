@@ -415,6 +415,7 @@ export class LocalApplicationService {
   productionAssemble(input) { return this.productionOps.assemble(input); }
   productionSummary(input) { return this.productionOps.summary(input); }
   productionWait(input) { return this.productionOps.waitForDecision(input); }
+  productionLive(input) { return this.productionOps.live(input); }
   productionDeliverable(input) { return this.productionOps.deliverable(input); }
   productionAudio(input) { return this.productionOps.audioLibrary(input); }
   productionScenes(input) { return this.productionOps.sceneSuggestions(input); }

@@ -9,7 +9,7 @@ test('MCP expõe o fluxo completo e explica quando o app está fechado', async (
   const server = createMcpServer(); await server.connect(serverSide);
   const client = new Client({ name: 't', version: '1' }); await client.connect(clientSide);
   const names = (await client.listTools()).tools.map(tool => tool.name);
-  for (const name of ['contentlab_start', 'contentlab_stop', 'project_create', 'project_flow_set', 'creative_write', 'stage_wait_decision', 'stage_approve', 'media_generate_slides', 'narration_generate', 'narration_assemble', 'timeline_auto_assemble', 'thumbnails_generate', 'render_start', 'job_wait', 'deliverable_build', 'project_export']) expect(names).toContain(name);
+  for (const name of ['contentlab_start', 'contentlab_open', 'contentlab_stop', 'project_create', 'project_flow_set', 'creative_write', 'stage_wait_decision', 'stage_approve', 'media_generate_slides', 'narration_generate', 'narration_assemble', 'timeline_auto_assemble', 'thumbnails_generate', 'render_start', 'job_wait', 'deliverable_build', 'project_export']) expect(names).toContain(name);
   expect(client.getInstructions()).toMatch(/stage_wait_decision/);
   expect(client.getInstructions()).toMatch(/pauseAt/);
   const status = await client.callTool({ name: 'contentlab_status', arguments: {} });

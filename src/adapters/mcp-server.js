@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
+import { FLOW_STAGES } from '../core/contracts.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const port = Number(process.env.CONTENTLAB_PORT || 4173);
@@ -31,7 +32,6 @@ const failure = error => ({ isError: true, content: [{ type: 'text', text: JSON.
 const tool = (server, name, description, inputSchema, handler) => server.registerTool(name, { description, inputSchema }, async (args, extra) => { try { return text(await handler(args, extra)); } catch (error) { return failure(error); } });
 
 const projectPath = z.string().describe('Caminho da pasta do projeto (campo `path` de project_create/project_list).');
-const FLOW_STAGES = ['brief', 'script', 'packaging', 'media', 'narration', 'edit', 'review'];
 const stageId = z.enum(FLOW_STAGES);
 
 async function summary(path) { return api('/production/summary', { path }); }
@@ -46,10 +46,11 @@ async function findJob(path, jobId) {
 
 export function createMcpServer() {
   const server = new McpServer({ name: 'content-lab', version: '2.1.0' }, { instructions: [
-    'Content Lab produz vídeos localmente (ideia → roteiro → embalagem → mídia → narração → edição → render). Nunca publica nada.',
+    'Content Lab produz vídeos localmente (ideia → título e thumbnail → roteiro → mídia → narração → edição → render). Nunca publica nada.',
+    'A pessoa acompanha pelo app: logo depois de project_create (ou ao retomar um projeto), chame contentlab_open com o path do projeto. Ele abre o projeto no navegador padrão dela, e a tela se atualiza sozinha enquanto você trabalha.',
     'Modo composição (jeito principal): o vídeo inteiro é uma composição Remotion do kit de motion do Content Lab (troca a cada 1,5–3 s, câmera sempre em movimento, personagem do projeto em poses quando houver, palavras gigantes, cenas da obra em painéis HQ, som em cada troca). Leia motion_kit. Fluxo: importe CENAS DAS OBRAS citadas (imagens/vídeos com direitos confirmados, nomes de arquivo descritivos como batman-1940.jpg ajudam a casar com a fala) e uma trilha licenciada (media_import_files com role music); narração + narration_transcribe; motion_plan_auto; motion_preview e abra os PNG; ajuste com motion_plan_set (mais evidência da obra onde a fala cita algo, menos texto genérico); render_start. Vídeo sem narração: escreva os beats direto em motion_plan_set com narration=false. Não invente falas canônicas de personagens.',
-    'Fluxo típico: contentlab_start → project_create → creative_write (brief) → aprovar/aguardar → creative_write (script) → … → media_import_files (imagens do assunto; trilha licenciada com role music) → narration_generate + job_wait → narration_assemble + job_wait → narration_transcribe + job_wait → motion_plan_auto → motion_preview → motion_plan_set (ajustes) → thumbnails_generate → render_start + job_wait → deliverable_build → project_export.',
-    'Antes de project_create, combine o fluxo com a pessoa (uma pergunta só): tudo automático (mode autonomous), parar em etapas para revisar no app (autonomous + pauseAt, por exemplo ["script", "narration", "review"]) ou aprovar cada etapa (review); e se a narração é voz de IA ou a pessoa grava a própria voz (narrationBy creator). Nas pausas, avise no chat o que revisar e espere com stage_wait_decision. Com narrationBy creator, não gere voz: peça para gravar e montar no app, espere e rode narration_transcribe.',
+    'Fluxo típico: contentlab_start → project_create → contentlab_open → creative_write (brief) → aprovar/aguardar → creative_write (packaging: títulos) → aprovar/aguardar → creative_write (script) → … → media_import_files (imagens do assunto; trilha licenciada com role music) → narration_generate + job_wait → narration_assemble + job_wait → narration_transcribe + job_wait → motion_plan_auto → motion_preview → motion_plan_set (ajustes) → thumbnails_generate → render_start + job_wait → deliverable_build → project_export.',
+    'Antes de project_create, combine o fluxo com a pessoa (uma pergunta só): tudo automático (mode autonomous), parar em etapas para revisar no app (autonomous + pauseAt, por exemplo ["script", "narration", "review"]) ou aprovar cada etapa (review); e se a narração é voz de IA ou a pessoa grava a própria voz (narrationBy creator). Nas pausas, avise no chat o que revisar e espere com stage_wait_decision: enquanto você espera, o app mostra o aviso, e o botão Aprovar e seguir (ou Pedir mudanças) devolve a decisão para você. A espera não trava a conversa: se a pessoa aprovar pelo chat, use stage_approve com userApproved=true e siga. Com narrationBy creator, não gere voz: peça para gravar e montar no app, espere e rode narration_transcribe.',
     'Em cada etapa: preencha o que project_get indica como `missing`. Se o projeto está em modo `review`, chame stage_wait_decision e espere a pessoa aprovar no app; só use stage_approve com userApproved=true quando a pessoa aprovar no chat. Em modo `autonomous` (a pessoa pediu para não aprovar), use stage_approve direto.',
     'Trabalhos longos devolvem jobId: chame job_wait repetidamente (cada chamada espera até timeoutSeconds) e avise a pessoa do progresso. A voz clonada é lenta (~30 s por segundo de fala em CPU); a narração padrão é rápida.',
   ].join('\n') });
@@ -69,6 +70,21 @@ export function createMcpServer() {
     for (let attempt = 0; attempt < 40 && !(await running()); attempt += 1) await sleep(250);
     if (!(await running())) throw new AppError('O Content Lab não abriu; veja .contentlab/logs/server.log', 'START_FAILED');
     return { running: true, url: `http://127.0.0.1:${port}/` };
+  });
+
+  tool(server, 'contentlab_open', 'Abre o Content Lab no navegador padrão da pessoa, direto no projeto (path), para ela acompanhar o trabalho e aprovar etapas. Liga o app se ele estiver desligado.', { path: projectPath.optional() }, async ({ path: project }) => {
+    if (!(await running())) {
+      const child = spawn(process.execPath, [path.join(root, 'scripts', 'start.mjs'), '--no-browser'], { cwd: root, stdio: 'ignore', env: { ...process.env, CONTENTLAB_PORT: String(port) } });
+      await new Promise(resolve => child.on('exit', resolve));
+      for (let attempt = 0; attempt < 40 && !(await running()); attempt += 1) await sleep(250);
+      if (!(await running())) throw new AppError('O Content Lab não abriu; veja .contentlab/logs/server.log', 'START_FAILED');
+    }
+    const url = `http://127.0.0.1:${port}/${project ? `?project=${encodeURIComponent(project)}` : ''}`;
+    const [command, args] = process.platform === 'darwin' ? ['open', [url]] : process.platform === 'win32' ? ['cmd', ['/c', 'start', '', url]] : ['xdg-open', [url]];
+    const opener = spawn(command, args, { detached: true, stdio: 'ignore' });
+    const opened = await new Promise(resolve => { opener.once('error', () => resolve(false)); opener.once('spawn', () => resolve(true)); });
+    opener.unref();
+    return opened ? { opened: true, url } : { opened: false, url, hint: 'Não consegui abrir o navegador: passe este endereço para a pessoa abrir.' };
   });
 
   tool(server, 'contentlab_stop', 'Desliga o Content Lab. Sem force, recusa e lista o trabalho em andamento.', { force: z.boolean().default(false) }, async ({ force }) => api('/server/shutdown', { force }));

@@ -146,7 +146,7 @@ const clipId = () => `clip_${randomUUID().replaceAll('-', '').slice(0, 10)}`;
  * Tudo grava pelo núcleo (mídias com direitos `owned`, edições com histórico).
  */
 export class ProductionOperations {
-  constructor(app) { this.app = app; }
+  constructor(app) { this.app = app; this.waiters = new Map(); }
   get ffmpeg() { return this.app.media?.ffmpeg || 'ffmpeg'; }
 
   async #font() { const found = FONTS.find(candidate => existsSync(candidate)); if (found) return found; try { const { stdout } = await run('fc-match', ['-f', '%{file}', 'sans:bold'], { timeout: 5000 }); return stdout.trim() || null; } catch { return null; } }
@@ -544,6 +544,30 @@ export class ProductionOperations {
     const initial = await readProjectDirectory(directory);
     const target = stageId || initial.stages.find(stage => ['active', 'changes_requested', 'invalidated'].includes(stage.state))?.id;
     if (!target) return { stageId: null, decision: 'all_approved', waiting: false };
+    const key = path.resolve(directory);
+    const previous = this.waiters.get(key)?.stageId === target ? this.waiters.get(key) : null;
+    const waiter = { stageId: target, since: previous?.since || new Date().toISOString(), active: (previous?.active || 0) + 1, lastSeen: Date.now() };
+    this.waiters.set(key, waiter);
+    try { return await this.#pollDecision(directory, initial, target, until, signal); }
+    finally { waiter.active -= 1; waiter.lastSeen = Date.now(); }
+  }
+
+  /**
+   * O que a interface mostra ao vivo: revisão em disco (para recarregar quando o agente muda o
+   * projeto) e se o agente está esperando a decisão da pessoa numa etapa. Entre duas chamadas
+   * seguidas do agente há uma folga curta, então a espera vale por alguns segundos depois de cada uma.
+   */
+  async live({ path: directory }) {
+    const project = await readProjectDirectory(directory);
+    const waiter = this.waiters.get(path.resolve(directory));
+    const waiting = waiter && (waiter.active > 0 || Date.now() - waiter.lastSeen < 5000);
+    const stage = waiting && project.stages.find(item => item.id === waiter.stageId);
+    const agentWaiting = stage && stage.state !== 'approved' ? { stageId: waiter.stageId, since: waiter.since } : null;
+    if (!waiting && waiter) this.waiters.delete(path.resolve(directory));
+    return { revision: project.revision, agentWaiting };
+  }
+
+  async #pollDecision(directory, initial, target, until, signal) {
     const startState = initial.stages.find(stage => stage.id === target)?.state;
     const startRequests = (initial.changeRequests || []).filter(item => item.stageId === target).length;
     while (Date.now() < until && !signal?.aborted) {

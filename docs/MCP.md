@@ -29,6 +29,8 @@ env: CONTENTLAB_INSTALLED=1
 
 O agente não precisa que o app esteja aberto: `contentlab_start` o abre em segundo plano.
 
+Para você acompanhar, logo depois de criar ou retomar um projeto o agente chama `contentlab_open`, que abre o projeto no seu navegador padrão (`http://127.0.0.1:<porta>/?project=<pasta>`). A tela se atualiza sozinha a cada 2 s com o que o agente muda.
+
 ## Combinar o fluxo
 
 Antes de criar o projeto, o agente pergunta como você quer trabalhar e grava a resposta no projeto:
@@ -44,7 +46,7 @@ Para mudar no meio do caminho, o agente usa `project_flow_set`.
 
 Trabalhos longos devolvem um `jobId` **na hora**: narração, importação e render. O agente avisa você ("comecei a narração"), e então chama `job_wait`. Cada chamada espera até `timeoutSeconds` e responde com o progresso. Enquanto o job não termina, ela devolve `waiting: true`, e o agente chama de novo.
 
-Para aprovações vale o mesmo: `stage_wait_decision` fica esperando você **aprovar ou pedir mudança no app**. Quando você decide, ela responde, e o agente continua dali. Se você pediu mudança, ele também recebe o motivo.
+Para aprovações vale o mesmo: `stage_wait_decision` fica esperando você **aprovar ou pedir mudança no app**. Enquanto o agente espera, a barra da etapa mostra "A IA está esperando você revisar esta etapa". O botão **Aprovar e seguir** (ou **Pedir mudanças**) é o sinal: ela responde, e o agente continua dali. Se você pediu mudança, ele também recebe o motivo. O botão não trava o agente: se você aprovar pelo chat, ele usa `stage_approve` com `userApproved=true` e segue.
 
 Um servidor MCP não consegue iniciar uma mensagem no chat por conta própria; quem volta a perguntar é sempre o agente. Na prática, o efeito é o mesmo: ele espera e retoma sozinho.
 
@@ -52,7 +54,7 @@ Um servidor MCP não consegue iniciar uma mensagem no chat por conta própria; q
 
 | Ferramenta | O que faz |
 | --- | --- |
-| `contentlab_status`, `contentlab_start`, `contentlab_stop` | Mostram se o app está aberto e quais dependências estão prontas; abrem o app em segundo plano; desligam o app (sem `force`, recusam se houver trabalho em andamento) |
+| `contentlab_status`, `contentlab_start`, `contentlab_open`, `contentlab_stop` | Mostram se o app está aberto e quais dependências estão prontas; abrem o app em segundo plano; abrem o projeto no navegador da pessoa; desligam o app (sem `force`, recusam se houver trabalho em andamento) |
 | `project_list`, `project_create`, `project_get` | Projetos reais dos Recentes. O `mode` do projeto pode ser `review` (espera a sua aprovação) ou `autonomous` (o agente aprova). `project_get` mostra a etapa atual e o que falta nela |
 | `creative_write` | Ideia (brief), roteiro (abertura, desenvolvimento e payoff; cada parágrafo do desenvolvimento vira uma cena) e embalagem (títulos A/B, descrição, tags, SEO) |
 | `stage_wait_decision`, `stage_approve`, `stage_request_changes` | Aprovação humana ou do agente. Ver as regras abaixo |
@@ -80,10 +82,10 @@ Um servidor MCP não consegue iniciar uma mensagem no chat por conta própria; q
 ## Fluxo de exemplo
 
 1. `contentlab_start`
-2. `project_create` (`type: long`, `mode: review`)
+2. `project_create` (`type: long`, `mode: review`) → `contentlab_open`
 3. `creative_write` (brief) → `stage_wait_decision`
-4. `creative_write` (script) → `stage_wait_decision`. Se você pedir mudança, o agente reescreve e espera de novo.
-5. `creative_write` (packaging) → espera a decisão
+4. `creative_write` (packaging: títulos; thumbnail e descrição podem vir depois) → espera a decisão. Título e thumbnail vêm antes do roteiro: o roteiro cumpre o que eles prometem.
+5. `creative_write` (script) → `stage_wait_decision`. Se você pedir mudança, o agente reescreve e espera de novo.
 6. `media_generate_slides` ou `media_import_files` → espera a decisão
 7. `narration_generate` → `job_wait`
 8. `narration_assemble` → `job_wait`
