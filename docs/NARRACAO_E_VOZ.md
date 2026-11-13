@@ -17,7 +17,7 @@ Perfis ficam fora dos projetos, em `<dados>/voices/<id>/` (permissão 0700/0600)
 
 ## Geração por cena
 
-O roteiro vira cenas pelos parágrafos de Abertura, Desenvolvimento e Payoff (Direção visual e Fontes não são narradas). `voice.generate` exige `voice.synthetic` (VoxCPM2 instalado), roda uma geração por vez no computador (`VOICE_BUSY`), cena a cena, com fase, estimativa pela velocidade medida e cancelamento. Cada take gerado guarda `sceneId`, `profileId` e uma chave SHA-256 de modelo + perfil + amostra + texto de referência + texto da cena: gerar de novo reaproveita as cenas iguais e só refaz as que mudaram; takes cujo texto mudou aparecem como desatualizados.
+O [roteiro em capítulos e blocos](ROTEIRO.md) vira um take por bloco `narration`, na ordem dos capítulos e blocos. Só `text` é enviado à voz: títulos de capítulo/bloco, `scene` (cena/som original), `direction` e fontes nunca são narrados. IDs estáveis preservam o cache ao mover ou renomear. Projetos antigos continuam usando os parágrafos de Abertura, Desenvolvimento e Payoff até a primeira edição em blocos. `voice.generate` exige `voice.synthetic` (VoxCPM2 instalado), roda uma geração por vez no computador (`VOICE_BUSY`), cena a cena, com fase, estimativa pela velocidade medida e cancelamento. Cada take gerado guarda `sceneId`, `profileId` e uma chave SHA-256 de modelo + perfil + amostra + texto de referência + texto da cena: gerar de novo reaproveita as cenas iguais e só refaz as que mudaram; takes cujo texto mudou aparecem como desatualizados.
 
 ## Modelo escolhido: VoxCPM2
 

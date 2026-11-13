@@ -16,6 +16,14 @@ Pelo MCP (`docs/MCP.md`), o agente opera o app real. Antes de `project_create`, 
 5. Aprovação exige ordem explícita do usuário e `expectedRevision` da etapa. Não converta silêncio ou uma entrega do agente em aprovação humana. Exceção: projeto criado em modo `autonomous` a pedido da pessoa — aí o agente aprova (registrado como agente no histórico). Em modo `review`, espere com `stage_wait_decision`.
 6. Reinspecione após escrita. Em conflito de revisão, pare, leia o estado atual e recalcule; não force nem sobrescreva.
 
+## Roteiro em capítulos e blocos
+
+Use `creative_write` com `script.chapters` para a primeira versão; cada capítulo tem `id`, `title`, `blocks`. Cada bloco tem `id`, `type`, `title`, `text`: `narration` contém só fala, `scene` descreve cena/som original sem narrador e `direction` contém instruções visuais. Acrescente capítulos e alterne blocos conforme a história; não force três campos fixos. Preserve fontes em `script.sources`.
+
+Para alterações, `script_get` devolve roteiro e revisão; `script_edit` recebe `baseRevision`, `operations` e `dryRun` opcional. Operações: `chapter.add/update/remove/move`, `block.add/update/remove/move`; IDs estáveis e `beforeId` para posição (omitido = fim). Releia em conflito; não reenvie o roteiro inteiro para mudar uma frase. O contrato e exemplo estão em `docs/ROTEIRO.md`.
+
+A voz gera um take por bloco `narration` e lê somente `text`; nunca lê títulos, cenas, direção ou fontes. A ordem dos takes acompanha os capítulos/blocos. Cena é planejamento: descrevê-la não insere mídia, áudio original ou pausa na composição automaticamente. Confira a montagem desses trechos antes de aprovar o audiovisual. Os capítulos da descrição usam títulos editoriais e tempos da narração montada; inserções posteriores exigem rever os tempos.
+
 ## Edição no modo composição
 
 - **Personagem:** vem do pacote importado no projeto (`character_import`; `dryRun: true` valida). Sem personagem, o plano não tem `aparte` nem a cena `personagem`. Num aparte ou na cena `personagem`, a pose troca a cada ~0,85 s enquanto ele fala (`falas`/`poses` com 2–5 itens), a primeira no tom da frase e sem repetir em seguida. Todas as poses aparecem ao longo do vídeo longo: `motion_plan_auto` devolve `poses.posesFaltando`, e as que faltarem entram em apartes de tom compatível pelo `motion_plan_set`.

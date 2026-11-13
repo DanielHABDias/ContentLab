@@ -1,3 +1,4 @@
+import { scriptChapters } from '../core/script.js';
 import { copyFile, mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -199,6 +200,15 @@ export async function measureAudio({ ffmpeg = 'ffmpeg', ffprobe = 'ffprobe' }, f
 export const SCENE_SECTIONS = { hook: 'Abertura', development: 'Desenvolvimento', payoff: 'Payoff' };
 export function scenesFromScript(script = {}) {
   const scenes = [];
+  if (Array.isArray(script.chapters)) {
+    for (const chapter of scriptChapters(script)) for (const block of chapter.blocks) {
+      if (block.type !== 'narration') continue;
+      const lines = scriptLines(block.text);
+      const text = lines.map(line => line.text).join(' ');
+      if (text) scenes.push({ id: block.id, section: chapter.id, chapterId: chapter.id, chapterTitle: chapter.title, label: [chapter.title, block.title || 'Narração'].filter(Boolean).join(' · '), text, characters: text.length, lines });
+    }
+    return scenes;
+  }
   for (const [section, label] of Object.entries(SCENE_SECTIONS)) {
     const paragraphs = String(script[section] || '').split(/\n\s*\n/).map(scriptLines).filter(lines => lines.length);
     for (const [index, lines] of paragraphs.entries()) {

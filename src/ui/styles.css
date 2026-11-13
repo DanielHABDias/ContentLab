@@ -301,3 +301,28 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-vi
 .read-scenes li { border-left: 3px solid var(--blue); padding: 6px 0 6px 16px; }
 .read-scenes strong { display: block; color: var(--blue); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
 .read-scenes p { margin: 0 0 6px; font-size: 18px; line-height: 1.5; color: var(--ink); max-width: 70ch; }
+
+/* Roteiro em capítulos e blocos: fala separada das instruções de edição. */
+.script-layout { grid-template-columns: minmax(0, 960px); }
+.script-explanation, .script-empty { color: #5c5864; font-size: 14px; line-height: 1.6; }
+.script-chapter { margin-top: 32px; border-top: 2px solid #c7c1b6; padding-top: 22px; }
+.chapter-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.chapter-header > label { flex: 1; min-width: 0; display: grid; gap: 7px; }
+.chapter-header label > span { font-size: 11px; color: #625d69; }
+.chapter-header input { font: 700 24px/1.3 'Barlow Condensed', sans-serif; }
+.script-page input, .script-page select { width: 100%; min-width: 0; border: 1px solid #c9c3b9; border-radius: 6px; background: #fffaf3; color: #24212a; padding: 8px; }
+.script-card { margin: 12px 0; padding: 18px; border: 1px solid #d2ccc1; border-left: 4px solid #477768; background: #fffcf6; border-radius: 8px; }
+.script-card-scene { border-left-color: #97662b; background: #eee6d7; }
+.script-card-direction { border-left-color: #626ca5; background: #e8e8ef; }
+.block-header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 14px; }
+.block-header > span { display: flex; gap: 7px; align-items: center; font-size: 13px; font-weight: 800; }
+.block-header small { font-size: 11px; color: #68616e; }
+.script-actions { display: flex; gap: 4px; margin-left: auto; }
+.script-actions button, .add-script-block button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 36px; padding: 8px; color: #39343f; border: 1px solid #bfb7aa; background: #fffaf3; border-radius: 6px; cursor: pointer; }
+.script-actions button:disabled { opacity: .35; cursor: default; }
+.script-card label { display: grid; gap: 7px; font-size: 11px; color: #68616e; margin-top: 12px; }
+.script-card textarea { width: 100%; resize: vertical; padding: 10px; border: 1px solid #d2ccc1; border-radius: 6px; color: #24212a; background: #fffcf7; font: 16px/1.7 Georgia, serif; }
+.script-card-scene textarea, .script-card-direction textarea { font: 14px/1.6 Inter, sans-serif; }
+.add-script-block, .script-footer-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0; }
+.script-page :is(input, textarea, select, button):focus-visible { outline: 3px solid #346eaf; outline-offset: 3px; }
+@media (max-width: 600px) { .chapter-header { flex-wrap: wrap; }.chapter-header > label { flex-basis: 100%; }.script-card { padding: 12px; }.script-actions button { min-height: 42px; min-width: 42px; } }

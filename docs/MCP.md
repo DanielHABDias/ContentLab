@@ -61,7 +61,8 @@ Um servidor MCP não consegue iniciar uma mensagem no chat por conta própria; q
 | --- | --- |
 | `contentlab_status`, `contentlab_start`, `contentlab_open`, `contentlab_stop` | Mostram se o app está aberto e quais dependências estão prontas; abrem o app em segundo plano; abrem o projeto no navegador da pessoa; desligam o app (sem `force`, recusam se houver trabalho em andamento) |
 | `project_list`, `project_create`, `project_get` | Projetos reais dos Recentes. O `mode` do projeto pode ser `review` (espera a sua aprovação) ou `autonomous` (o agente aprova). `project_get` mostra a etapa atual e o que falta nela |
-| `creative_write` | Ideia (brief), roteiro (abertura, desenvolvimento e payoff; cada parágrafo do desenvolvimento vira uma cena) e embalagem (títulos A/B, descrição, tags, SEO) |
+| `creative_write` | Ideia (brief), roteiro (`script.chapters`: capítulos com blocos `narration`, `scene`, `direction`; só `narration.text` é falado) e embalagem (títulos A/B, descrição, tags, SEO) |
+| `script_get`, `script_edit` | Leitura só do roteiro e edição pontual por IDs, com revisão obrigatória, lote atômico e `dryRun`. [Contrato e exemplo](ROTEIRO.md) |
 | `stage_wait_decision`, `stage_approve`, `stage_request_changes` | Aprovação humana ou do agente. Ver as regras abaixo |
 | `media_import_files`, `media_import_url`, `media_generate_slides` | Mídias próprias ou licenciadas, ou um slide por cena do roteiro quando não há filmagem |
 | `voice_options`, `narration_generate`, `narration_assemble` | Perfis de voz clonada (gravados em Minha voz) e a geração e montagem tratada da narração. Lenta em CPU: ~30 s por segundo de fala |

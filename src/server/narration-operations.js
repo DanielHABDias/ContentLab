@@ -325,7 +325,7 @@ export class NarrationOperations {
     if (!profile.consent?.granted || !profile.consent?.holder) throw Object.assign(new Error('Perfil sem consentimento do titular'), { code: 'CONSENT_REQUIRED' });
     const all = scenesFromScript(project.creative?.script);
     const scenes = sceneIds?.length ? sceneIds.map(id => all.find(scene => scene.id === id) || (() => { throw new Error(`Cena desconhecida: ${id}`); })()) : all;
-    if (!scenes.length) throw new Error('O roteiro não tem texto para narrar (abertura, desenvolvimento ou payoff)');
+    if (!scenes.length) throw new Error('O roteiro não tem texto em blocos de narração');
     if (this.#voiceRunning()) throw new LifecycleError('VOICE_BUSY', 'Já existe uma geração de voz em andamento; aguarde ou cancele');
     // Uma geração por computador também entre processos (interface, CLI e MCP): cada uma pode usar a RAM quase toda.
     const lockDirectory = path.join(this.app.dataDirectory, 'voices', '.generation');

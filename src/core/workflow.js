@@ -59,6 +59,12 @@ export function missingStageArtifacts(project, stageId) {
   const visualClips = project.timeline.tracks.filter(track => track.kind === 'visual').flatMap(track => track.clips);
   const audioClips = project.timeline.tracks.filter(track => track.kind === 'audio').flatMap(track => track.clips);
   if (stageId === 'brief') return [['tese', creative.brief?.thesis], ['público', creative.brief?.audience], ['promessa', creative.brief?.promise]].filter(([, value]) => !filled(value)).map(([label]) => label);
+  if (stageId === 'script' && Array.isArray(creative.script?.chapters)) {
+    const blocks = creative.script.chapters.flatMap(chapter => chapter.blocks);
+    if (!blocks.length) return ['bloco de roteiro'];
+    if (blocks.some(block => !filled(block.text))) return ['texto dos blocos de roteiro'];
+    return [];
+  }
   if (stageId === 'script') return [['abertura', creative.script?.hook], ['desenvolvimento', creative.script?.development], ['payoff', creative.script?.payoff]].filter(([, value]) => !filled(value)).map(([label]) => label);
   // A descrição depende do roteiro: é conferida na entrega, não nesta etapa.
   if (stageId === 'packaging') return [['título A', creative.packaging?.titleA]].filter(([, value]) => !filled(value)).map(([label]) => label);

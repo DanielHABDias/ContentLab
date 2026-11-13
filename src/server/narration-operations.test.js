@@ -248,3 +248,28 @@ test('modo econômico selecionado exige sua instalação mesmo quando o padrão 
   service.setup.status = async () => ({ items: [...ALL.map(id => ({ id, label: id, ready: true })), { id: 'voxcpm2-q8', ready: false, selected: true }] });
   await expect(service.requireFeature('voice.synthetic')).rejects.toMatchObject({ code: 'DEPENDENCY_MISSING', details: { missing: ['voxcpm2-q8'] } });
 });
+
+
+test('roteiro em capítulos persiste e entrega só a fala ao gerador de voz, mantendo o cache após mover', async () => {
+  const { root, service, project, calls } = await setup();
+  const chapter = { id: 'origin', title: 'Título não narrado', blocks: [
+    { id: 'speech', type: 'narration', title: 'Rótulo não narrado', text: 'Só esta fala.' },
+    { id: 'clip', type: 'scene', title: '', text: 'Cena com som original.' },
+    { id: 'visual', type: 'direction', title: '', text: 'Aproximar a câmera.' },
+  ] };
+  await writeScript(service, project, { hook: 'Legado não deve vazar.', chapters: [chapter], sources: 'Fonte não narrada.' });
+  const profile = await makeProfile(service, project, root);
+  let done = await service.mediaOps.jobs.waitFor((await service.voiceGenerate({ path: project.path, profileId: profile.id })).id);
+  expect(done.state).toBe('completed');
+  expect(calls.map(call => call.text)).toEqual(['Só esta fala.']);
+  chapter.blocks.reverse(); chapter.title = 'Outro título';
+  await writeScript(service, project, { chapters: [chapter] });
+  done = await service.mediaOps.jobs.waitFor((await service.voiceGenerate({ path: project.path, profileId: profile.id })).id);
+  expect(done.result).toMatchObject({ generated: 0, cached: 1 });
+  const reopened = await service.inspectProject(project.path);
+  expect(reopened.project.creative.script.chapters[0].blocks[2].id).toBe('speech');
+  await service.productionDeliverable({ path: project.path });
+  const markdown = await readFile(path.join(project.path, 'output', 'entrega', 'roteiro.md'), 'utf8');
+  expect(markdown).toContain('Cena com som original.');
+  expect(markdown).toContain('Outro título');
+});

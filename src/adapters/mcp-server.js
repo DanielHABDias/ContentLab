@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { editScript, scriptChapters, scriptChaptersSchema, scriptEditSchema } from '../core/script.js';
 // MCP do Content Lab: o agente comanda o app real (mesmo núcleo, pastas e Recentes da interface)
 // pela API local. Trabalhos longos (narração, render, importação) devolvem um jobId na hora;
 // o agente chama `job_wait` até terminar, e a pessoa acompanha tudo no app.
@@ -49,6 +50,7 @@ export function createMcpServer() {
     'Content Lab produz vídeos localmente (ideia → título e thumbnail → roteiro → mídia → narração → edição → render). Nunca publica nada.',
     'A pessoa acompanha pelo app: logo depois de project_create (ou ao retomar um projeto), chame contentlab_open com o path do projeto. Ele abre o projeto no navegador padrão dela, e a tela se atualiza sozinha enquanto você trabalha.',
     'Modo composição (jeito principal): o vídeo inteiro é uma composição Remotion do kit de motion do Content Lab (troca a cada 1,5–3 s, câmera sempre em movimento, personagem do projeto em poses quando houver, palavras gigantes, cenas da obra em painéis HQ, som em cada troca). Leia motion_kit. Fluxo: importe CENAS DAS OBRAS citadas (imagens/vídeos com direitos confirmados, nomes de arquivo descritivos como batman-1940.jpg ajudam a casar com a fala) e uma trilha licenciada (media_import_files com role music); narração + narration_transcribe; motion_plan_auto; motion_preview e abra os PNG; ajuste com motion_plan_set (mais evidência da obra onde a fala cita algo, menos texto genérico); render_start. Vídeo sem narração: escreva os beats direto em motion_plan_set com narration=false. Não invente falas canônicas de personagens.',
+    'Roteiro: prefira creative_write com script.chapters para a primeira versão; depois script_get e script_edit para mudanças locais. Cada capítulo tem id, title e blocks; cada bloco tem id, type (narration, scene, direction), title e text. Só narration.text é falado; títulos, cenas, direção e fontes nunca entram na voz. scene descreve o trecho audiovisual: não insere sozinho áudio original nem pausa na composição. Confira e monte esses trechos explicitamente antes de certificar o render.',
     'Fluxo típico: contentlab_start → project_create → contentlab_open → creative_write (brief) → aprovar/aguardar → creative_write (packaging: títulos) → aprovar/aguardar → creative_write (script) → … → media_import_files (imagens do assunto; trilha licenciada com role music) → narration_generate + job_wait → narration_assemble + job_wait → narration_transcribe + job_wait → motion_plan_auto → motion_preview → motion_plan_set (ajustes) → thumbnails_generate → render_start + job_wait → deliverable_build → project_export.',
     'Antes de project_create, combine o fluxo com a pessoa (uma pergunta só): tudo automático até o render (mode autonomous) ou etapa por etapa, esperando o OK dela a cada uma (mode review). Nos dois casos ela pode voltar numa etapa depois. Nas esperas, avise no chat o que revisar e use stage_wait_decision: o app mostra o aviso, e o botão Aprovar e seguir (ou Pedir mudanças) devolve a decisão para você. A espera não trava a conversa: se a pessoa aprovar pelo chat, use stage_approve com userApproved=true e siga.',
     'Quem narra é decidido na ETAPA NARRAÇÃO, não ao criar o projeto: narrationBy começa null. Ao chegar nela, chame voice_options. Com perfil de voz gravado, confirme com a pessoa e use project_flow_set narrationBy="ai" antes de narration_generate. Sem perfil, a voz de IA fica bloqueada: narrationBy só pode ser "creator" — peça para ela gravar a própria voz na etapa Narração do app (ou gravar o perfil em “Minha voz”, cerca de 60 s de leitura, se quiser a voz clonada), espere e rode narration_transcribe. A narração por IA é sempre a voz clonada da própria pessoa; não existe voz genérica.',
@@ -114,7 +116,7 @@ export function createMcpServer() {
   tool(server, 'creative_write', 'Escreve/atualiza ideia (brief), roteiro (script) e embalagem (packaging). Campos omitidos são mantidos.', {
     path: projectPath,
     brief: z.object({ thesis: z.string(), audience: z.string(), promise: z.string(), notes: z.string() }).partial().optional(),
-    script: z.object({ hook: z.string().describe('Abertura'), development: z.string().describe('Desenvolvimento; parágrafos separados por linha em branco viram cenas'), payoff: z.string().describe('Fechamento') }).partial().optional(),
+    script: z.object({ chapters: scriptChaptersSchema.describe('Capítulos ordenados com blocos narration (só fala), scene (descrição de cena/som original, não narrada) e direction (instruções, não narradas). Títulos nunca são narrados.'), sources: z.string(), visual: z.string(), hook: z.string(), development: z.string(), payoff: z.string() }).partial().optional(),
     packaging: z.object({ titleA: z.string(), titleB: z.string(), description: z.string(), tags: z.string(), seo: z.string() }).partial().optional(),
   }, async ({ path, brief, script, packaging }) => {
     const { project } = await openProject(path);
@@ -124,6 +126,22 @@ export function createMcpServer() {
     if (packaging) creative.packaging = { ...creative.packaging, ...packaging };
     const updated = await api('/projects/action', { path, baseRevision: project.revision, action: { type: 'creative.update', creative } });
     return { revision: updated.project.revision, currentStage: (await summary(path)).currentStage };
+  });
+
+  tool(server, 'script_get', 'Lê só o roteiro em capítulos/blocos, fontes e revisão. Use antes de script_edit; evita buscar o projeto inteiro. Títulos não são fala.', { path: projectPath }, async ({ path }) => {
+    const { project } = await openProject(path);
+    return { revision: project.revision, chapters: scriptChapters(project.creative.script), sources: project.creative.script.sources };
+  });
+
+  tool(server, 'script_edit', 'Edita capítulos/blocos por IDs estáveis em lote atômico: adicionar, atualizar, remover ou mover (inclusive entre capítulos). beforeId omitido insere no fim. Só narration.text vai para a voz; scene e direction são instruções. Leia script_get antes; preserve blocos não alterados.', {
+    path: projectPath, baseRevision: z.number().int().positive(), dryRun: z.boolean().default(false), operations: z.array(scriptEditSchema).min(1).max(100),
+  }, async ({ path, baseRevision, dryRun, operations }) => {
+    const { project } = await openProject(path);
+    if (baseRevision !== project.revision) throw new AppError('O roteiro mudou; leia script_get e refaça a edição.', 'REVISION_CONFLICT', { expected: baseRevision, actual: project.revision });
+    const script = editScript(project.creative.script, operations);
+    if (dryRun) return { dryRun: true, revision: project.revision, chapters: script.chapters };
+    const updated = await api('/projects/action', { path, baseRevision, action: { type: 'creative.update', creative: { ...project.creative, script } } });
+    return { revision: updated.project.revision, chapters: script.chapters.map(chapter => ({ id: chapter.id, title: chapter.title, blocks: chapter.blocks.map(block => ({ id: block.id, type: block.type })) })) };
   });
 
   tool(server, 'stage_approve', 'Aprova a etapa atual (ou stageId). Permitido se o projeto está em modo "autonomous" ou se a pessoa aprovou explicitamente no chat (userApproved=true).', { path: projectPath, stageId: stageId.optional(), userApproved: z.boolean().default(false) }, async ({ path, stageId: wanted, userApproved }) => {

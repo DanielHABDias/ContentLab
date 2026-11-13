@@ -1,6 +1,6 @@
 # Content Lab — instruções para agentes
 
-Leia o `README.md` e a documentação do módulo afetado. Trabalhe na `main` somente quando o usuário pedir explicitamente; preserve alterações locais e valide antes de commitar.
+Leia o `README.md` e a documentação do módulo afetado. Trabalhe sempre na `main`, conforme orientação do criador; preserve alterações locais, sincronize com o remoto e valide antes de commitar e enviar.
 
 ## Operação do produto
 

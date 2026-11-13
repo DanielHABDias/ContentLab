@@ -1,3 +1,4 @@
+import { scriptMarkdown } from '../core/script.js';
 import { randomUUID } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { copyFile, link, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -512,7 +513,13 @@ export class ProductionOperations {
     if (!narration?.metadata?.durationSeconds) return { chapters: [], verified: false };
     const windows = this.#windows(project, session, narration.metadata.durationSeconds);
     const stamp = seconds => { const s = Math.floor(seconds); const h = Math.floor(s / 3600); const m = Math.floor(s / 60) % 60; return `${h ? `${h}:${String(m).padStart(2, '0')}` : m}:${String(s % 60).padStart(2, '0')}`; };
-    const chapters = windows.map((window, index) => ({ time: index === 0 ? 0 : window.start, stamp: stamp(index === 0 ? 0 : window.start), title: headline(window.scene.text, 48).replace(/[.!?…]+$/, '') }));
+    const seen = new Set();
+    const starts = windows.filter(window => {
+      if (!window.scene.chapterId) return true;
+      if (seen.has(window.scene.chapterId)) return false;
+      seen.add(window.scene.chapterId); return true;
+    });
+    const chapters = starts.map((window, index) => ({ time: index === 0 ? 0 : window.start, stamp: stamp(index === 0 ? 0 : window.start), title: window.scene.chapterTitle || headline(window.scene.text, 48).replace(/[.!?…]+$/, '') }));
     return { chapters, verified: true };
   }
 
@@ -587,7 +594,7 @@ export class ProductionOperations {
     const target = path.join(path.resolve(directory), 'output', 'entrega');
     await mkdir(target, { recursive: true });
     const { brief, script, packaging } = project.creative;
-    await writeFile(path.join(target, 'roteiro.md'), `# ${project.title}\n\n## Ideia\n\n- Tese: ${brief.thesis}\n- Público: ${brief.audience}\n- Promessa: ${brief.promise}\n\n## Abertura\n\n${script.hook}\n\n## Desenvolvimento\n\n${script.development}\n\n## Payoff\n\n${script.payoff}\n`);
+    await writeFile(path.join(target, 'roteiro.md'), `# ${project.title}\n\n## Ideia\n\n- Tese: ${brief.thesis}\n- Público: ${brief.audience}\n- Promessa: ${brief.promise}\n\n${scriptMarkdown(script)}\n`);
     const { chapters } = project.type === 'long' ? await this.chapters({ path: directory }) : { chapters: [] };
     const chapterText = chapters.length >= 3 ? `\n## Capítulos\n\n${chapters.map(item => `${item.stamp} ${item.title}`).join('\n')}\n` : '';
     await writeFile(path.join(target, 'embalagem.md'), `# Embalagem\n\n- Título A: ${packaging.titleA}\n- Título B: ${packaging.titleB}\n\n## Descrição\n\n${packaging.description}\n${chapterText}\n## Tags\n\n${packaging.tags}\n\n## SEO\n\n${packaging.seo}\n`);
