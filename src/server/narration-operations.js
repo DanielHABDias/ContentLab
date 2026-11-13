@@ -49,7 +49,8 @@ export class NarrationOperations {
     });
     return {
       narration: { ...session, takes },
-      scenes: scenes.map(scene => ({ ...scene, generated: Object.fromEntries(profiles.map(profile => [profile.id, takes.find(take => take.origin === 'generated' && take.cacheKey === generationKey({ model: voiceMode(this.app.settings.voice?.mode).model, profile, text: scene.text }))?.id || null])) })),
+      // Por cena: duas cenas com o mesmo texto têm a mesma chave, mas cada uma precisa do próprio take.
+      scenes: scenes.map(scene => ({ ...scene, generated: Object.fromEntries(profiles.map(profile => [profile.id, takes.find(take => take.origin === 'generated' && take.sceneId === scene.id && take.cacheKey === generationKey({ model: voiceMode(this.app.settings.voice?.mode).model, profile, text: scene.text }))?.id || null])) })),
       profiles: profiles.map(publicProfile),
       previewSeconds: PREVIEW_SECONDS,
     };
@@ -341,18 +342,28 @@ export class NarrationOperations {
       for (const [index, scene] of scenes.entries()) {
         if (combined.aborted) throw Object.assign(new Error('Cancelado'), { code: 'CANCELLED' });
         const cacheKey = generationKey({ model: voice.model || VoxCPMVoice.model, profile, text: scene.text });
-        const existing = (await store.read()).takes.find(take => take.cacheKey === cacheKey);
+        const sameKey = (await store.read()).takes.filter(take => take.origin === 'generated' && take.cacheKey === cacheKey);
+        const existing = sameKey.find(take => take.sceneId === scene.id);
         if (existing) { results.push({ sceneId: scene.id, status: 'cached', takeId: existing.id }); continue; }
+        const extra = { sceneId: scene.id, profileId: profile.id, cacheKey, model: voice.model || VoxCPMVoice.model };
+        // Mesmo texto já gerado em outra cena: reaproveita o áudio, mas a cena ganha o próprio take.
+        const twin = sameKey.find(take => take.original || take.file);
+        if (twin) {
+          const take = await store.createTake({ source: store.resolve(twin.original || twin.file), name: `Voz · ${scene.label}`, origin: 'generated', signal: combined, extra, ...this.tools });
+          await store.mutate(undefined, value => { value.takes.push(take); });
+          results.push({ sceneId: scene.id, status: 'cached', takeId: take.id });
+          continue;
+        }
         const estimateSeconds = factor ? Math.round(estimateSpeech(scene.text) * factor) : null;
-        progress({ done: index, total: scenes.length, phase: `${scene.label}${estimateSeconds ? ` · cerca de ${minutes(estimateSeconds)}` : ''}` });
+        progress({ done: index, total: scenes.length, sceneId: scene.id, sceneStartedAt: new Date().toISOString(), estimateSeconds, phase: `${scene.label}${estimateSeconds ? ` · cerca de ${minutes(estimateSeconds)}` : ''}` });
         const cacheFile = path.join(store.root, 'generated', `${cacheKey}.wav`);
         if (!(await stat(cacheFile).catch(() => null))) { await mkdir(path.dirname(cacheFile), { recursive: true }); await voice.generate({ text: scene.text, profile, output: cacheFile, signal: combined }); }
-        const take = await store.createTake({ source: cacheFile, name: `Voz · ${scene.label}`, origin: 'generated', signal: combined, extra: { sceneId: scene.id, profileId: profile.id, cacheKey, model: voice.model || VoxCPMVoice.model }, ...this.tools });
+        const take = await store.createTake({ source: cacheFile, name: `Voz · ${scene.label}`, origin: 'generated', signal: combined, extra, ...this.tools });
         await store.mutate(undefined, value => { value.takes.push(take); });
         await rm(cacheFile, { force: true });
         results.push({ sceneId: scene.id, status: 'generated', takeId: take.id });
       }
-      progress({ done: scenes.length, total: scenes.length });
+      progress({ done: scenes.length, total: scenes.length, sceneId: null, sceneStartedAt: null, estimateSeconds: null });
       return { results, generated: results.filter(item => item.status === 'generated').length, cached: results.filter(item => item.status === 'cached').length };
     }).catch(error => { throw error.code === 'PROJECT_LOCKED' ? voiceBusy(error.details.owner) : error; }), { cancellable: true }) });
   }

@@ -145,6 +145,23 @@ test('gera por cena em fila, reaproveita cache e só refaz cenas cujo texto mudo
   expect(state.narration.takes.filter(take => take.origin === 'generated').every(take => take.durationSeconds > 0.5)).toBe(true);
 });
 
+test('cenas com o mesmo texto: gerar uma não marca as outras e o áudio é reaproveitado', async () => {
+  const { root, service, project, calls } = await setup();
+  await writeScript(service, project, { hook: 'Teste.', development: 'Teste.', payoff: 'Teste.' });
+  const profile = await makeProfile(service, project, root);
+  await service.mediaOps.jobs.waitFor((await service.voiceGenerate({ path: project.path, profileId: profile.id, sceneIds: ['hook-1'] })).id);
+  let state = await service.narrationState({ path: project.path });
+  expect(state.scenes.map(scene => Boolean(scene.generated[profile.id]))).toEqual([true, false, false]);
+  const done = await service.mediaOps.jobs.waitFor((await service.voiceGenerate({ path: project.path, profileId: profile.id })).id);
+  expect(done.result).toMatchObject({ generated: 0, cached: 3 });
+  expect(done.progress).toMatchObject({ done: 3, total: 3, sceneId: null });
+  expect(calls).toHaveLength(1);
+  state = await service.narrationState({ path: project.path });
+  const takes = state.narration.takes.filter(take => take.origin === 'generated');
+  expect(takes.map(take => take.sceneId).sort()).toEqual(['development-1', 'hook-1', 'payoff-1']);
+  expect(new Set(state.scenes.map(scene => scene.generated[profile.id])).size).toBe(3);
+});
+
 test('geração pode ser cancelada e não roda duas ao mesmo tempo', async () => {
   const calls = [];
   const { root, service, project } = await setup({ voice: fakeVoice(calls, { delay: 2000 }) });

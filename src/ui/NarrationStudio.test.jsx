@@ -96,6 +96,15 @@ test('geração pede só as cenas pendentes do perfil escolhido', async () => {
   await waitFor(() => expect(localApi.generateVoice).toHaveBeenCalledWith({ path: '/p', profileId: 'voice_abc123', sceneIds: ['development-1'] }));
 });
 
+test('mostra a voz sendo criada: cena atual, tempo e estimativa', async () => {
+  const job = { id: 'job_1', kind: 'voice.generate', label: 'Gerar voz: 1 cena', state: 'running', startedAt: new Date().toISOString(), progress: { phase: 'Desenvolvimento 1', done: 0, total: 1, sceneId: 'development-1', sceneStartedAt: new Date().toISOString(), estimateSeconds: 300 } };
+  localApi.jobs.mockResolvedValue({ jobs: [job] });
+  render(<NarrationStudio details={details()} setup={setup()} onOpenSetup={vi.fn()}/>);
+  expect(await screen.findByText('Criando sua voz: Desenvolvimento 1')).toBeInTheDocument();
+  expect(screen.getByText(/de ~5:00/)).toBeInTheDocument();
+  expect(screen.getByText('Criando…')).toBeInTheDocument();
+});
+
 test('inventário: estúdio de narração sem controles anônimos', async () => {
   const { auditControls } = await import('./a11y-audit.js');
   const { container } = render(<NarrationStudio details={details()} setup={setup(true)} onOpenSetup={vi.fn()}/>);

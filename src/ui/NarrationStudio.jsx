@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, AudioLines, Check, Gauge, Headphones, Lock, Mic, Scissors, Sparkles, Square, Trash2, Upload, Volume2, Wand2, Wind, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, AudioLines, Check, Loader2, Gauge, Headphones, Lock, Mic, Scissors, Sparkles, Square, Trash2, Upload, Volume2, Wand2, Wind, X } from 'lucide-react';
 import { ConfirmDialog } from './Dialogs.jsx';
 import { localApi } from './local-api.js';
 import { JobsPanel, clock } from './MediaLibrary.jsx';
@@ -209,6 +209,7 @@ function VoiceSection({ projectPath, narration, finalTakeIds, base, state, setup
   const generating = running || resources.busy;
   useEffect(() => { if (!state.profiles.some(profile => profile.id === profileId)) setProfileId(state.profiles[0]?.id || ''); }, [state.profiles]);
   const pending = state.scenes.filter(scene => !scene.generated[profileId]);
+  const voiceJob = jobs.find(job => job.kind === 'voice.generate' && job.state === 'running');
   const generate = sceneIds => startJob(() => resources.attempt(() => localApi.generateVoice({ path: projectPath, profileId, sceneIds })));
   return <section className="workflow-card" aria-labelledby="voice-title">
     <div className="section-title"><div><span className="eyebrow">Voz clonada · VoxCPM2</span><h2 id="voice-title">Narração com a sua voz</h2></div>{onOpenVoice && <span className="header-actions"><button className="button quiet" onClick={onOpenVoice}><Mic size={17} aria-hidden="true"/> Minha voz</button></span>}</div>
@@ -219,7 +220,8 @@ function VoiceSection({ projectPath, narration, finalTakeIds, base, state, setup
         <DependencyNotice error={resources.error} onOpenSetup={onOpenSetup}/>
         {resources.status && <p className="notice" role="status">{resources.status}</p>}
         {resources.plan && <MemoryPanel plan={resources.plan} onChanged={resources.refresh} onRetry={() => startJob(resources.retry)} onUseEconomy={resources.useEconomy} busy={resources.busy}/>}
-        {state.scenes.length ? <ol className="media-list">{state.scenes.map(scene => <li key={scene.id}><span><strong>{scene.label}</strong><small>{scene.text.length > 140 ? `${scene.text.slice(0, 140)}…` : scene.text}</small></span>{scene.generated[profileId] ? <span className="available">Gerada</span> : <button className="mini-button" disabled={generating} onClick={() => generate([scene.id])}>Gerar</button>}</li>)}</ol> : <div className="empty-state"><span>Escreva abertura, desenvolvimento ou payoff no roteiro para gerar cenas.</span></div>}
+        {voiceJob && <VoiceProgress job={voiceJob} scenes={state.scenes}/>}
+        {state.scenes.length ? <ol className="media-list">{state.scenes.map(scene => <li key={scene.id} className={voiceJob?.progress.sceneId === scene.id ? 'scene-generating' : undefined}><span><strong>{scene.label}</strong><small>{scene.text.length > 140 ? `${scene.text.slice(0, 140)}…` : scene.text}</small></span>{voiceJob?.progress.sceneId === scene.id ? <span className="scene-status"><Loader2 size={14} className="spin" aria-hidden="true"/> Criando…</span> : scene.generated[profileId] ? <span className="available">Gerada</span> : <button className="mini-button" disabled={generating} onClick={() => generate([scene.id])}>Gerar</button>}</li>)}</ol> : <div className="empty-state"><span>Escreva abertura, desenvolvimento ou payoff no roteiro para gerar cenas.</span></div>}
         <div className="voice-final">
           <div><strong>Narração final</strong><small>{pending.length ? `Faltam ${pending.length} cena${pending.length === 1 ? '' : 's'} para gerar. ` : ''}Junta as cenas geradas, na ordem do roteiro, num único áudio no volume padrão do YouTube. A voz de IA já sai limpa: não passa por tratamento.</small></div>
           <button className="button primary" disabled={!finalTakeIds.length || running} onClick={() => startJob(() => localApi.assembleNarration({ ...base, takeIds: finalTakeIds, treatment: AI_FINAL_TREATMENT }))}><Wand2 size={17} aria-hidden="true"/> {narration.assembled ? 'Montar de novo' : 'Montar narração final'}</button>
@@ -228,6 +230,28 @@ function VoiceSection({ projectPath, narration, finalTakeIds, base, state, setup
       </>}
     </>}
   </section>;
+}
+
+const mmss = seconds => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
+
+/** Indicação viva de que a voz está sendo criada: cena atual, tempo decorrido e estimativa. */
+function VoiceProgress({ job, scenes }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 1000); return () => window.clearInterval(timer); }, []);
+  const { sceneId, sceneStartedAt, estimateSeconds, done = 0, total } = job.progress;
+  const scene = scenes.find(item => item.id === sceneId);
+  const elapsed = Math.max(0, (now - Date.parse(sceneStartedAt || job.startedAt)) / 1000);
+  const share = estimateSeconds ? Math.min(0.95, elapsed / estimateSeconds) : null;
+  const over = estimateSeconds && elapsed > estimateSeconds;
+  return <div className="voice-progress" role="status" aria-live="polite">
+    <div className="voice-progress-head">
+      <span className="voice-wave" aria-hidden="true"><i/><i/><i/><i/><i/></span>
+      <div><strong>{scene ? `Criando sua voz: ${scene.label}` : 'Preparando a geração da voz…'}</strong>
+        <small>{total > 1 ? `Cena ${Math.min(done + 1, total)} de ${total} · ` : ''}{mmss(elapsed)}{estimateSeconds ? (over ? ' · passou da estimativa, ainda processando' : ` de ~${mmss(estimateSeconds)}`) : ''}</small></div>
+    </div>
+    <span className={`voice-progress-bar${share == null || over ? ' indeterminate' : ''}`}><i style={share != null && !over ? { width: `${Math.round(share * 100)}%` } : undefined}/></span>
+    <small className="voice-progress-hint">Pode continuar usando o app. Feche programas pesados para acelerar.</small>
+  </div>;
 }
 
 function TakeDialog({ take, onClose, onSave }) {

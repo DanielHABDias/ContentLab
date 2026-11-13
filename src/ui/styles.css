@@ -253,3 +253,22 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-vi
 .choice-card small { color: var(--muted); font-size: 13px; line-height: 1.45; }
 .settings-note { display: flex; gap: 10px; align-items: flex-start; margin: 16px 0 0; padding: 12px 14px; border: 1px solid #2f4a6a; border-radius: 10px; background: #131c28; color: #c4d6ea; font-size: 13px; line-height: 1.5; }
 .settings-note svg { flex-shrink: 0; margin-top: 2px; color: var(--blue); }
+.voice-progress { margin-top: 18px; padding: 16px 18px; border: 1px solid #2f4a6a; border-radius: 12px; background: #121a25; display: grid; gap: 12px; }
+.voice-progress-head { display: flex; align-items: center; gap: 14px; }
+.voice-progress-head > div { display: grid; gap: 4px; min-width: 0; }
+.voice-progress-head strong { font-size: 14px; }
+.voice-progress small { color: #a9b8ca; font-size: 12px; }
+.voice-progress-hint { color: var(--muted) !important; }
+.voice-wave { display: flex; align-items: center; gap: 3px; height: 26px; flex-shrink: 0; }
+.voice-wave i { width: 4px; height: 100%; border-radius: 2px; background: linear-gradient(var(--lime), var(--blue)); animation: voice-wave 1.1s ease-in-out infinite; transform-origin: center; }
+.voice-wave i:nth-child(2) { animation-delay: -.9s; }.voice-wave i:nth-child(3) { animation-delay: -.7s; }.voice-wave i:nth-child(4) { animation-delay: -.5s; }.voice-wave i:nth-child(5) { animation-delay: -.3s; }
+@keyframes voice-wave { 0%, 100% { transform: scaleY(.25); } 50% { transform: scaleY(1); } }
+.voice-progress-bar { position: relative; display: block; height: 5px; border-radius: 999px; background: #26323f; overflow: hidden; }
+.voice-progress-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--blue), var(--lime)); transition: width 1s linear; }
+.voice-progress-bar.indeterminate i { position: absolute; width: 35%; animation: voice-slide 1.4s ease-in-out infinite; }
+@keyframes voice-slide { from { left: -35%; } to { left: 100%; } }
+.scene-generating { background: rgba(39,168,255,.06); }
+.scene-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--blue); white-space: nowrap; }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .voice-wave i, .spin, .voice-progress-bar.indeterminate i { animation: none; } .voice-wave i { transform: scaleY(.6); } .voice-progress-bar.indeterminate i { left: 0; width: 100%; opacity: .5; } }
