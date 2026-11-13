@@ -4,13 +4,13 @@ import { VoiceScreen } from './VoiceScreen.jsx';
 import { localApi } from './local-api.js';
 import { VOICE_SAMPLE_TEXT } from '../audio/narration-service.js';
 
-vi.mock('./local-api.js', () => ({ localApi: { voiceStudio: vi.fn(), jobs: vi.fn(), cancelJob: vi.fn(), uploadVoiceSample: vi.fn(), discardVoiceSample: vi.fn(), createVoiceProfile: vi.fn(), generateVoiceCheck: vi.fn(), voiceProfileReport: vi.fn(), deleteVoiceProfile: vi.fn() } }));
+vi.mock('./local-api.js', () => ({ localApi: { voicePlan: vi.fn(), systemApps: vi.fn(), closeApp: vi.fn(), voiceStudio: vi.fn(), jobs: vi.fn(), cancelJob: vi.fn(), uploadVoiceSample: vi.fn(), discardVoiceSample: vi.fn(), createVoiceProfile: vi.fn(), generateVoiceCheck: vi.fn(), voiceProfileReport: vi.fn(), deleteVoiceProfile: vi.fn() } }));
 
 const setup = (voice = true) => ({ items: [{ id: 'ffmpeg', label: 'FFmpeg', ready: true }, { id: 'ffprobe', label: 'FFprobe', ready: true }, { id: 'voxcpm2', label: 'VoxCPM2 (voz clonada)', ready: voice }] });
 const profile = (extra = {}) => ({ id: 'voice_abc123', name: 'Minha voz', consent: { granted: true, holder: 'Daniel', grantedAt: '2026-11-11T00:00:00Z' }, durationSeconds: 57.6, checkSample: null, ...extra });
 const studio = (profiles = []) => ({ profiles, sampleText: VOICE_SAMPLE_TEXT, sampleLimitSeconds: 58, checkPhrase: 'Testando a minha voz clonada no Content Lab.' });
 
-beforeEach(() => { vi.clearAllMocks(); localApi.voiceStudio.mockResolvedValue(studio()); localApi.jobs.mockResolvedValue({ jobs: [] }); });
+beforeEach(() => { vi.resetAllMocks(); localApi.voicePlan.mockResolvedValue({ plan: { status: 'ready' } }); localApi.systemApps.mockResolvedValue({ apps: [] }); localApi.voiceStudio.mockResolvedValue(studio()); localApi.jobs.mockResolvedValue({ jobs: [] }); });
 
 test('sem perfil, explica que a voz de IA fica bloqueada nos projetos', async () => {
   render(<VoiceScreen setup={setup()} onOpenSetup={vi.fn()} onBack={vi.fn()}/>);
@@ -92,4 +92,46 @@ test('inventário: tela de voz sem controles anônimos', async () => {
   const { container } = render(<VoiceScreen setup={setup()} onOpenSetup={vi.fn()} onBack={vi.fn()}/>);
   expect(await screen.findByLabelText('Ouvir a amostra gravada de Minha voz')).toBeInTheDocument();
   expect(auditControls(container)).toEqual([]);
+});
+
+const lowMemory = () => ({ status: 'needs-free-memory', requiredBytes: 11.5 * 1024 ** 3, availableBytes: 9 * 1024 ** 3 });
+
+test.each([false, true])('sem RAM, conferir voz mostra o painel e permite liberar memória e tentar de novo (amostra existente: %s)', async existing => {
+  localApi.voiceStudio.mockResolvedValue(studio([profile(existing ? { checkSample: { generatedAt: '2026-11-13', durationSeconds: 6 } } : {})]));
+  localApi.voicePlan.mockResolvedValue({ plan: lowMemory() });
+  localApi.systemApps.mockResolvedValue({ apps: [{ name: 'Editor', bytes: 3 * 1024 ** 3, processes: 2, kind: 'app' }] });
+  localApi.closeApp.mockResolvedValue({ closed: true, freedBytes: 3 * 1024 ** 3 });
+  localApi.generateVoiceCheck.mockResolvedValue({ id: 'job_retry', kind: 'voice.check', state: 'completed' });
+  render(<VoiceScreen setup={setup()} onOpenSetup={vi.fn()}/>);
+  const button = await screen.findByRole('button', { name: existing ? /gerar de novo/i : /ouvir como ficou/i });
+  fireEvent.click(button);
+  const panel = await screen.findByRole('region', { name: /libere 2,5 gb/i });
+  expect(localApi.generateVoiceCheck).not.toHaveBeenCalled();
+  fireEvent.click(await within(panel).findByRole('button', { name: 'Fechar Editor' }));
+  const dialog = await screen.findByRole('alertdialog', { name: /fechar editor/i });
+  expect(localApi.closeApp).not.toHaveBeenCalled();
+  localApi.voicePlan.mockResolvedValue({ plan: { status: 'ready' } });
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Fechar Editor' }));
+  await waitFor(() => expect(localApi.closeApp).toHaveBeenCalledWith({ name: 'Editor', force: false }));
+  await waitFor(() => expect(screen.queryByRole('region', { name: /libere/i })).not.toBeInTheDocument());
+  expect(localApi.generateVoiceCheck).not.toHaveBeenCalled();
+  fireEvent.click(button);
+  await waitFor(() => expect(localApi.generateVoiceCheck).toHaveBeenCalledWith('voice_abc123'));
+});
+
+test('falha ao verificar recursos impede a geração', async () => {
+  localApi.voiceStudio.mockResolvedValue(studio([profile()]));
+  localApi.voicePlan.mockRejectedValue(new Error('Não foi possível verificar a memória.'));
+  render(<VoiceScreen setup={setup()} onOpenSetup={vi.fn()}/>);
+  fireEvent.click(await screen.findByRole('button', { name: /ouvir como ficou/i }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível verificar a memória.');
+  expect(localApi.generateVoiceCheck).not.toHaveBeenCalled();
+});
+
+test('falha de memória no job de conferência também mostra o painel', async () => {
+  localApi.voiceStudio.mockResolvedValue(studio([profile()]));
+  localApi.jobs.mockResolvedValue({ jobs: [{ id: 'job_failed', kind: 'voice.check', label: 'Amostra', state: 'failed', code: 'NEEDS_FREE_MEMORY', error: 'Falta memória', progress: { phase: 'Falhou' } }] });
+  localApi.voicePlan.mockResolvedValue({ plan: lowMemory() });
+  render(<VoiceScreen setup={setup()} onOpenSetup={vi.fn()}/>);
+  expect(await screen.findByRole('region', { name: /libere 2,5 gb/i })).toBeInTheDocument();
 });
