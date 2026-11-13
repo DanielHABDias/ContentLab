@@ -15,6 +15,12 @@ Perfis ficam fora dos projetos, em `<dados>/voices/<id>/` (permissão 0700/0600)
 
 **Excluir perfil** primeiro mostra o relatório (projetos dos Recentes afetados, takes gerados, bytes e montagens que os usam) e só apaga com confirmação: remove a amostra, os takes gerados com esse perfil, a montagem que os usava e a mídia correspondente no catálogo. Projetos fora dos Recentes não são varridos.
 
+## Transcrição automática e gravação por capítulo
+
+Na opção **Eu gravo**, o roteiro de leitura é agrupado por capítulos e contém somente o texto dos blocos de narração. Os títulos são orientação, identificados como não narrados; cenas, direção e fontes não aparecem na leitura. A voz clonada usa exatamente os mesmos blocos narráveis.
+
+Após montar os takes, o app transcreve o WAV final com Whisper `large-v3` completo em português. O job só conclui depois de salvar os tempos de início/fim de cada palavra; falha preserva o áudio e bloqueia a passagem à edição até retomar a transcrição. A interface mostra o estado e permite tentar novamente. Pelo MCP, `narration_transcript` fornece as palavras e tempos paginados para orientar cortes, mídia e legendas.
+
 ## Geração por cena
 
 O [roteiro em capítulos e blocos](ROTEIRO.md) vira um take por bloco `narration`, na ordem dos capítulos e blocos. Só `text` é enviado à voz: títulos de capítulo/bloco, `scene` (cena/som original), `direction` e fontes nunca são narrados. IDs estáveis preservam o cache ao mover ou renomear. Projetos antigos continuam usando os parágrafos de Abertura, Desenvolvimento e Payoff até a primeira edição em blocos. `voice.generate` exige `voice.synthetic` (VoxCPM2 instalado), roda uma geração por vez no computador (`VOICE_BUSY`), cena a cena, com fase, estimativa pela velocidade medida e cancelamento. Cada take gerado guarda `sceneId`, `profileId` e uma chave SHA-256 de modelo + perfil + amostra + texto de referência + texto da cena: gerar de novo reaproveita as cenas iguais e só refaz as que mudaram; takes cujo texto mudou aparecem como desatualizados.
@@ -22,18 +28,6 @@ O [roteiro em capítulos e blocos](ROTEIRO.md) vira um take por bloco `narration
 ## Modelo escolhido: VoxCPM2
 
 `VoxCPM2` (OpenBMB, Apache-2.0, uso comercial permitido) é a única integração de voz clonada. Ele usa a amostra **e o texto exato lido nela** ("ultimate cloning"), por isso o perfil exige `referenceText`.
-
-### Como foi escolhido (2026-11-11)
-
-Candidatos locais com licença comercial e português: VoxCPM2, Qwen3-TTS 1.7B (Apache-2.0) e Chatterbox Multilingual (MIT). Fish S2 Pro e Voxtral foram descartados porque a licença não concede uso comercial (canal monetizado) e não cabem nesta máquina. Teste às cegas com a voz do usuário (referência de 32 s, 3 frases novas, notas 1–5 "parece comigo / natural"):
-
-| Motor | Parece comigo | Natural | WER | Pico de RAM | s por s de áudio (CPU) |
-|---|---|---|---|---|---|
-| **VoxCPM2** | **4,7** | **4,3** | 0 | 11,1 GB | ~29 |
-| Qwen3-TTS 1.7B | 4,3 | 3,7 | 0 | 10,2 GB | ~10 |
-| Chatterbox | 3,0 | 2,3 | 0 | 6,7 GB | ~6 |
-
-Limitações: um ouvinte, três frases; os testes públicos em português (relatórios do VoxCPM2 e do ZONOS2) apontam na mesma direção em similaridade. O Chatterbox foi removido.
 
 ### Recursos dinâmicos
 
@@ -44,7 +38,7 @@ Limitações: um ouvinte, três frases; os testes públicos em português (relat
 - teto de memória: entre o necessário (11,5 GB em CPU) e a RAM livre menos 0,5 GB, sem passar de RAM total − reserva;
 - `unsupported` quando a RAM total não comporta; `needs-free-memory` quando falta RAM livre agora.
 
-`VoxCPMVoice` executa cada geração via `systemd-run --user --scope -p MemoryMax=… -p MemorySwapMax=0 nice -n 15` no Linux. Sem esse limite, a primeira tentativa congelou o sistema; com ele, o processo é encerrado e o usuário recebe `MEMORY_LIMIT`. A velocidade real medida recalibra a estimativa por máquina (`setup-state.json`).
+`VoxCPMVoice` executa cada geração via `systemd-run --user --scope -p MemoryMax=… -p MemorySwapMax=0 nice -n 15` no Linux. Se o processo exceder o limite, ele é encerrado e o usuário recebe `MEMORY_LIMIT`. A velocidade real medida recalibra a estimativa por máquina (`setup-state.json`).
 
 ### Marca d'água
 
@@ -92,7 +86,7 @@ Em **Configurações → Voz de IA**, a pessoa escolhe um modo global, usado tan
 | Padrão | VoxCPM2 original, PyTorch/BF16 | 11,5 GiB |
 | Econômico | VoxCPM2 com BaseLM Q8 e parte acústica F16, llama.cpp-omni em CPU | 10,5 GiB |
 
-O modo econômico mantém o perfil e o texto completo da referência. Não encurta a amostra nem reduz os passos de difusão. A saída é decodificada em streaming com contexto e só é promovida depois de validar duração e WAV 48 kHz mono. A margem de 10,5 GiB é conservadora: um teste real em 2026-11-13, com referência de 56,16 s e frase nova em português, gerou 3,04 s de áudio em cerca de 95 s totais; o pico RSS reportado foi 10,04 GiB. A transcrição com Whisper large-v3 reproduziu todas as palavras pedidas. É uma verificação de integração em uma máquina, não uma avaliação auditiva de equivalência dos modos nem garantia de consumo para todo roteiro. O teste com limite de 6 GiB falhou: o tamanho dos pesos não representa a RAM total necessária.
+O modo econômico mantém o perfil e o texto completo da referência. Não encurta a amostra nem reduz os passos de difusão. A saída é decodificada em streaming com contexto e só é promovida depois de validar duração e WAV 48 kHz mono. A reserva de memória é de 10,5 GiB no modo econômico; falta de memória encerra a geração sem recorrer a swap.
 
 O modo econômico tem instalação própria em Dependências: motor compilado do commit `e1047e121ee83cfa70865c0e4d7ebfb858c2cc69` de `tc-mb/llama.cpp-omni`, com bibliotecas estáticas e CPU, e dois pesos do repositório `DennisHuang648/VoxCPM2-GGUF`, revisão `169f64d8b98bbaab1761e4ca3a83e6af653456cc`. Os downloads somam 3.552.406.272 bytes, possuem SHA-256 fixado no catálogo e passam pelo mesmo instalador com consentimento, progresso, retomada e verificação. O modo Padrão continua disponível.
 

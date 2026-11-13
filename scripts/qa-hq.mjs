@@ -122,7 +122,8 @@ try {
   await call('contentlab_stop', { force: true }).catch(() => {});
   await client.close();
   const report = ['# QA das cenas HQ via MCP', '', `Executado em ${new Date().toISOString()} · ${os.platform()} ${os.arch()} · legenda palavra a palavra (Whisper) · cenas HQ do Content Lab · imagens próprias (personagem de teste e ícones) · SFX originais e trilha de rascunho`, '', 'Teste técnico do fluxo com imagens próprias; a qualidade editorial final depende das imagens reais dos personagens e de uma trilha licenciada, escolhidas pelo criador.', '', '| Projeto | Formato | Duração | Cenas HQ | Loudness | Capítulos | Verificação |', '| --- | --- | --- | --- | --- | --- | --- |', ...results.map(item => `| ${item.title} | ${item.size} | ${item.duration.toFixed(1)} s | ${item.sceneClips} | ${item.lufs} LUFS | ${item.chapters.length} | ${item.delivery.checks.filter(check => check.ok).length}/${item.delivery.checks.length} |`), '', '## Registro', '', '```text', ...log, '```', ''].join('\n');
-  await writeFile(path.join(root, 'docs', 'QA_HQ.md'), report);
-  console.log(`\nRelatório: docs/QA_HQ.md · artefatos: ${process.argv.includes('--keep') ? work : '(removidos)'}`);
+  await mkdir(path.join(root, '.contentlab', 'qa'), { recursive: true });
+  await writeFile(path.join(root, '.contentlab', 'qa', 'QA_HQ.md'), report);
+  console.log(`\nRelatório: .contentlab/qa/QA_HQ.md · artefatos: ${process.argv.includes('--keep') ? work : '(removidos)'}`);
   if (!process.argv.includes('--keep')) await rm(work, { recursive: true, force: true });
 }

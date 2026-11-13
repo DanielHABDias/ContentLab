@@ -55,6 +55,7 @@ export function createMcpServer() {
     'Antes de project_create, combine o fluxo com a pessoa (uma pergunta só): tudo automático até o render (mode autonomous) ou etapa por etapa, esperando o OK dela a cada uma (mode review). Nos dois casos ela pode voltar numa etapa depois. Nas esperas, avise no chat o que revisar e use stage_wait_decision: o app mostra o aviso, e o botão Aprovar e seguir (ou Pedir mudanças) devolve a decisão para você. A espera não trava a conversa: se a pessoa aprovar pelo chat, use stage_approve com userApproved=true e siga.',
     'Quem narra é decidido na ETAPA NARRAÇÃO, não ao criar o projeto: narrationBy começa null. Ao chegar nela, chame voice_options. Com perfil de voz gravado, confirme com a pessoa e use project_flow_set narrationBy="ai" antes de narration_generate. Sem perfil, a voz de IA fica bloqueada: narrationBy só pode ser "creator" — peça para ela gravar a própria voz na etapa Narração do app (ou gravar o perfil em “Minha voz”, cerca de 60 s de leitura, se quiser a voz clonada), espere e rode narration_transcribe. A narração por IA é sempre a voz clonada da própria pessoa; não existe voz genérica.',
     'Em cada etapa: preencha o que project_get indica como `missing`. Se o projeto está em modo `review`, chame stage_wait_decision e espere a pessoa aprovar no app; só use stage_approve com userApproved=true quando a pessoa aprovar no chat. Em modo `autonomous` (a pessoa pediu para não aprovar), use stage_approve direto.',
+    'Ao montar a narração, o app transcreve automaticamente com Whisper large-v3 completo; job_wait só conclui depois dos tempos por palavra. Leia narration_transcript (paginado) antes de editar. Se a transcrição falhar ou faltar dependência, o áudio é preservado; corrija e retome com narration_transcribe. Não aprove Narração sem a transcrição pronta.',
     'Trabalhos longos devolvem jobId: chame job_wait repetidamente (cada chamada espera até timeoutSeconds) e avise a pessoa do progresso. A voz clonada é lenta (~30 s por segundo de fala em CPU): avise antes de começar e dê o tempo estimado.',
   ].join('\n') });
 
@@ -211,7 +212,7 @@ export function createMcpServer() {
     if (treatment.aiDenoise && !ready('deepfilternet')) { treatment.aiDenoise = false; off.push('limpeza por IA (instale deepfilternet)'); }
     if ((treatment.removeBreaths || treatment.trimPauses) && !(ready('whisper-cli') && ready('silero-vad'))) { treatment.removeBreaths = false; treatment.trimPauses = false; off.push('pausas e respiros (instale whisper-cli com silero-vad)'); }
     const job = await api('/narration/assemble', { path, baseRevision: state.narration.revision, takeIds, treatment });
-    return { jobId: job.id, scenes: takeIds.length, treatment, ...(off.length ? { disabled: off } : {}), hint: 'Use job_wait; depois timeline_auto_assemble.' };
+    return { jobId: job.id, scenes: takeIds.length, treatment, ...(off.length ? { disabled: off } : {}), hint: 'Use job_wait: a montagem inclui a transcrição automática Whisper large-v3. Depois leia narration_transcript para editar.' };
   });
 
   tool(server, 'motion_kit', 'Kit de motion do Content Lab (modo composição, o jeito principal de montar vídeos): regras de ritmo, cenas com props e exemplos, humores, formato do pacote de personagem, SFX e fundos. Leia antes de escrever ou ajustar beats.', {}, async () => api('/production/motion-kit', {}));
@@ -229,7 +230,9 @@ export function createMcpServer() {
 
   tool(server, 'motion_preview', 'Renderiza frames de prévia (PNG) do plano atual em output/previas/ — por padrão um por beat; ou nos segundos pedidos. Abra as imagens para conferir legibilidade, sobreposição e se cada cena mostra o assunto, antes do render final.', { path: projectPath, seconds: z.array(z.number().min(0)).max(24).optional() }, async args => api('/production/motion-preview', args));
 
-  tool(server, 'narration_transcribe', 'Transcreve a narração montada com Whisper (local) para legendas palavra a palavra. Devolve jobId (use job_wait); leva cerca de 3× a duração do áudio em CPU.', { path: projectPath, force: z.boolean().default(false) }, async args => api('/production/transcribe-narration', args));
+  tool(server, 'narration_transcript', 'Lê palavras com início/fim reais em segundos da narração montada (Whisper large-v3 completo, pt). Use antes de editar para posicionar imagens, cortes e legendas; títulos, descrições de cena e direção não entram na voz. Paginação por offset/limit; nextOffset=null termina.', { path: projectPath, offset: z.number().int().min(0).default(0), limit: z.number().int().min(1).max(1000).default(500) }, async args => api('/production/narration-transcript', args));
+
+  tool(server, 'narration_transcribe', 'Refaz ou retoma a transcrição automática da narração com Whisper large-v3 completo (local). Só conclui com tempos reais por palavra. Devolve jobId (use job_wait); leva cerca de 3× a duração do áudio em CPU.', { path: projectPath, force: z.boolean().default(false) }, async args => api('/production/transcribe-narration', args));
 
   tool(server, 'scene_list', 'Cenas HQ do modo clips disponíveis (props e uso) e um plano sugerido: um beat visual por frase, cada um com imagem do assunto (media:<id>). Mostra as imagens do projeto que podem entrar e avisos. Use antes de timeline_auto_assemble.', { path: projectPath.optional() }, async ({ path }) => {
     const { components } = await api('/edit/components', {});

@@ -175,7 +175,8 @@ try {
   const keep = path.join(root, '.tools/qa-f29'); await mkdir(keep, { recursive: true });
   for (const item of results) { const dir = path.join(keep, item.key); await rm(dir, { recursive: true, force: true }); await mkdir(dir, { recursive: true }); await copyFile(item.output, path.join(dir, 'video.mp4')); await copyFile(item.frames, path.join(dir, 'frames.png')); for (const file of item.previews || []) await copyFile(file, path.join(dir, path.basename(file))); for (const file of await readdir(item.delivery.directory)) if (file.endsWith('.md')) await copyFile(path.join(item.delivery.directory, file), path.join(dir, file)); }
   const report = ['# QA do modo composição via MCP', '', `Executado em ${new Date().toISOString()} · ${os.platform()} ${os.arch()} · kit de motion do Content Lab · personagem de teste neutro (3 poses)`, '', 'Mídias próprias com nomes descritivos fazem o papel das cenas das obras; num vídeo real entram imagens e trechos das obras citadas, com direitos confirmados.', '', '| Produção | Formato | Duração | Loudness | Pico | Verificação |', '| --- | --- | --- | --- | --- | --- |', ...results.map(item => `| ${item.label} | ${item.size} | ${item.duration.toFixed(1)} s | ${item.lufs} LUFS | ${item.peak} dBTP | ${item.delivery.checks.filter(check => check.ok).length}/${item.delivery.checks.length} |`), '', '## Registro', '', '```text', ...log, '```', ''].join('\n');
-  await writeFile(path.join(root, 'docs', 'QA_MOTION.md'), report);
-  console.log(`\nRelatório: docs/QA_MOTION.md · amostras: .tools/qa-f29 · artefatos: ${process.argv.includes('--keep') ? work : '(removidos)'}`);
+  await mkdir(path.join(root, '.contentlab', 'qa'), { recursive: true });
+  await writeFile(path.join(root, '.contentlab', 'qa', 'QA_MOTION.md'), report);
+  console.log(`\nRelatório: .contentlab/qa/QA_MOTION.md · amostras: .tools/qa-f29 · artefatos: ${process.argv.includes('--keep') ? work : '(removidos)'}`);
   if (!process.argv.includes('--keep')) await rm(work, { recursive: true, force: true });
 }

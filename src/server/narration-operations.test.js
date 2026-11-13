@@ -1,3 +1,4 @@
+import { fakeWordTranscriber } from '../test/transcription-fixture.js';
 import { execFileSync } from 'node:child_process';
 import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import os from 'node:os';
@@ -25,10 +26,10 @@ function fakeVoice(calls, { delay = 0 } = {}) {
     return { path: output };
   } });
 }
-async function setup({ ready, voice } = {}) {
+async function setup({ ready, voice, transcriber = fakeWordTranscriber } = {}) {
   const root = await mkdtemp(path.join(os.tmpdir(), 'contentlab-narration-')); roots.push(root);
   const calls = [];
-  const service = new LocalApplicationService({ dataDirectory: path.join(root, 'data'), setup: fakeSetup({ ready }), voice: voice || fakeVoice(calls) });
+  const service = new LocalApplicationService({ dataDirectory: path.join(root, 'data'), setup: fakeSetup({ ready }), transcriber, voice: voice || fakeVoice(calls) });
   const project = await service.createProject({ title: 'Narração', type: 'long', aspectRatio: '16:9' });
   return { root, service, project, calls };
 }
@@ -272,4 +273,55 @@ test('roteiro em capítulos persiste e entrega só a fala ao gerador de voz, man
   const markdown = await readFile(path.join(project.path, 'output', 'entrega', 'roteiro.md'), 'utf8');
   expect(markdown).toContain('Cena com som original.');
   expect(markdown).toContain('Outro título');
+});
+
+
+test('montar narração transcreve automaticamente antes de concluir e expõe palavras paginadas', async () => {
+  const { root, service, project } = await setup();
+  const imported = await service.narrationImport({ path: project.path, sources: [tone(root, 'fala.wav', { duration: 1 })] });
+  const assembled = await service.mediaOps.jobs.waitFor((await service.narrationAssemble({ path: project.path, takeIds: (await service.narrationState({ path: project.path })).narration.takes.map(take => take.id), treatment: { aiDenoise: false, removeBreaths: false, trimPauses: false } })).id);
+  expect(assembled).toMatchObject({ state: 'completed', result: { transcription: { status: 'ready', model: 'whisper-large-v3', words: 3 } } });
+  const details = await service.inspectProject(project.path);
+  expect(details.project.narrationMediaId).toBe(assembled.result.mediaId);
+  expect(details.project.media.find(item => item.id === assembled.result.mediaId).transcript).toMatchObject({ model: 'whisper-large-v3', words: 3 });
+  const first = await service.productionNarrationTranscript({ path: project.path, limit: 2 });
+  expect(first).toMatchObject({ model: 'whisper-large-v3', total: 3, nextOffset: 2, words: [{ text: 'Fala', start: 0, end: 0.3 }, { text: 'de', start: 0.3, end: 0.45 }] });
+  expect(await service.productionNarrationTranscript({ path: project.path, offset: 2 })).toMatchObject({ nextOffset: null, words: [{ text: 'teste.', start: 0.45, end: 0.8 }] });
+  const retry = await service.productionTranscribeNarration({ path: project.path });
+  expect(retry.status).toBe('unchanged');
+  const current = await service.inspectProject(project.path);
+  await service.runProjectAction({ path: project.path, baseRevision: current.project.revision, action: { type: 'media.transcript.set', mediaId: assembled.result.mediaId, transcript: null } });
+  expect((await service.narrationState({ path: project.path })).transcription.status).toBe('pending');
+  await service.productionTranscribeNarration({ path: project.path });
+  expect((await service.narrationState({ path: project.path })).transcription.status).toBe('ready');
+});
+
+test('falha de transcrição preserva a narração, bloqueia aprovação e permite retomar sem gravar novamente', async () => {
+  let fail = true;
+  const transcriber = async () => ({ transcribe: async (...args) => { if (fail) throw new Error('Falha de teste no Whisper'); return (await fakeWordTranscriber()).transcribe(...args); } });
+  const { root, service, project } = await setup({ transcriber });
+  const imported = await service.narrationImport({ path: project.path, sources: [tone(root, 'fala.wav', { duration: 1 })] });
+  const done = await service.mediaOps.jobs.waitFor((await service.narrationAssemble({ path: project.path, takeIds: (await service.narrationState({ path: project.path })).narration.takes.map(take => take.id), treatment: { aiDenoise: false, removeBreaths: false, trimPauses: false } })).id);
+  expect(done.state).toBe('failed');
+  let state = await service.narrationState({ path: project.path });
+  expect(state.narration.assembled.mediaId).toBeTruthy();
+  expect(state.transcription.status).toBe('failed');
+  const details = await service.inspectProject(project.path);
+  await expect(service.runProjectAction({ path: project.path, baseRevision: details.project.revision, action: { type: 'stage.approve', stageId: 'narration', expectedRevision: 0 } })).rejects.toMatchObject({ code: 'WORDS_MISSING' });
+  await expect(service.productionNarrationTranscript({ path: project.path })).rejects.toMatchObject({ code: 'WORDS_MISSING' });
+  fail = false;
+  const retried = await service.productionTranscribeNarration({ path: project.path });
+  expect((await service.mediaOps.jobs.waitFor(retried.jobId)).state).toBe('completed');
+  state = await service.narrationState({ path: project.path });
+  expect(state.transcription).toMatchObject({ status: 'ready', words: 3 });
+  expect(state.narration.assembled.mediaId).toBe(details.project.narrationMediaId);
+});
+
+test('narração não fica pronta se o transcritor devolver somente trechos sem palavras', async () => {
+  const transcriber = async () => ({ transcribe: async () => ({ json: { transcription: [{ text: 'Sem tempos por palavra', offsets: { from: 0, to: 1000 } }] }, srt: '' }) });
+  const { root, service, project } = await setup({ transcriber });
+  const imported = await service.narrationImport({ path: project.path, sources: [tone(root, 'fala.wav', { duration: 1 })] });
+  const done = await service.mediaOps.jobs.waitFor((await service.narrationAssemble({ path: project.path, takeIds: (await service.narrationState({ path: project.path })).narration.takes.map(take => take.id), treatment: { aiDenoise: false, removeBreaths: false, trimPauses: false } })).id);
+  expect(done).toMatchObject({ state: 'failed', code: 'WORD_TIMESTAMPS_MISSING' });
+  expect((await service.narrationState({ path: project.path })).transcription.status).toBe('failed');
 });

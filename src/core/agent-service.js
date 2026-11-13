@@ -48,6 +48,10 @@ function applyActions(project, actions, operationId) {
       if (action.pauseAt !== undefined) draft.pauseAt = [...new Set(action.pauseAt)];
       if (action.narrationBy !== undefined) draft.narrationBy = action.narrationBy;
     }
+    else if (action.type === 'narration.set') {
+      if (!draft.media.some(item => item.id === action.mediaId && item.kind === 'audio' && item.role === 'narration')) throw new Error('Narração montada não encontrada');
+      draft.narrationMediaId = action.mediaId;
+    }
     else if (action.type === 'creative.update') draft.creative = structuredClone(action.creative);
     else if (action.type === 'motion.set') draft.motion = action.motion ? structuredClone(action.motion) : null;
     else if (action.type === 'character.set') {
@@ -61,6 +65,7 @@ function applyActions(project, actions, operationId) {
       else draft.media.push(action.media);
     }
     else if (action.type === 'media.remove') {
+      if (draft.narrationMediaId === action.mediaId) draft.narrationMediaId = null;
       const usages = mediaUsages(draft, action.mediaId);
       if (!draft.media.some(item => item.id === action.mediaId)) throw new Error(`Mídia desconhecida: ${action.mediaId}`);
       if (usages.total && !action.detachUsages) throw Object.assign(new Error(`Mídia em uso: ${describeUsages(usages)}. Confirme para desassociar.`), { code: 'MEDIA_IN_USE', details: { usages } });

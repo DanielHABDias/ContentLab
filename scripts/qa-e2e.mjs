@@ -4,7 +4,7 @@
 // Inclui recuperação após `kill -9` durante render. Mídia de teste é gerada aqui (sem direitos de terceiros).
 //   node scripts/qa-e2e.mjs [--keep]
 import { execFileSync, spawn } from 'node:child_process';
-import { mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -147,8 +147,9 @@ try {
   await stop();
   const failed = results.filter(item => item.status !== 'ok');
   const report = ['# QA E2E — release candidate', '', `Executado em ${new Date().toISOString()} · Node ${process.version} · ${os.platform()} ${os.arch()}`, '', '| Etapa | Resultado | Tempo | Detalhe |', '| --- | --- | --- | --- |', ...results.map(item => `| ${item.name} | ${item.status} | ${(item.ms / 1000).toFixed(1)} s | ${String(item.detail).replaceAll('|', '/')} |`), '', `**${results.length - failed.length}/${results.length} etapas ok.**`, ''].join('\n');
-  await writeFile(path.join(root, 'docs', 'QA_E2E_RC.md'), report);
-  console.log(`\n${results.length - failed.length}/${results.length} ok · relatório docs/QA_E2E_RC.md · artefatos ${process.argv.includes('--keep') ? work : '(removidos)'}`);
+  await mkdir(path.join(root, '.contentlab', 'qa'), { recursive: true });
+  await writeFile(path.join(root, '.contentlab', 'qa', 'QA_E2E_RC.md'), report);
+  console.log(`\n${results.length - failed.length}/${results.length} ok · relatório .contentlab/qa/QA_E2E_RC.md · artefatos ${process.argv.includes('--keep') ? work : '(removidos)'}`);
   if (!process.argv.includes('--keep')) await rm(work, { recursive: true, force: true });
   process.exitCode = failed.length ? 1 : 0;
 }

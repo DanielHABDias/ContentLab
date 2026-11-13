@@ -33,6 +33,7 @@ export const localApi = {
   productionScenes: input => post('/production/scenes', input),
   productionChapters: input => post('/production/chapters', input),
   productionMotionAuto: input => post('/production/motion-auto', input),
+  productionNarrationTranscript: input => post('/production/narration-transcript', input),
   productionTranscribeNarration: input => post('/production/transcribe-narration', input),
   productionSummary: input => post('/production/summary', input),
   productionLive: input => post('/production/live', input),

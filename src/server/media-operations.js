@@ -5,7 +5,7 @@ import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { mediaUsages } from '../core/agent-service.js';
 import { PortugueseTranscriber } from '../media/media-service.js';
-import { TranscriptStore, searchSegments, segmentsFromWhisper, wordsFromWhisper } from '../media/transcript-store.js';
+import { TranscriptStore, searchSegments, segmentsFromWhisper, wordsFromWhisper, validWordTimings } from '../media/transcript-store.js';
 import { JobQueue } from './job-queue.js';
 import { LifecycleError } from './project-lifecycle.js';
 import { readProjectDirectory } from './project-registry.js';
@@ -154,7 +154,7 @@ export class MediaOperations {
     return { file: target, size: info.size, contentType };
   }
 
-  async transcribe({ path: directory, mediaId, force = false }) {
+  async transcribe({ path: directory, mediaId, force = false, requireWords = false }) {
     await this.app.requireFeature('transcription');
     const project = await readProjectDirectory(directory);
     const media = mediaOf(project, mediaId);
@@ -162,7 +162,11 @@ export class MediaOperations {
     const store = new TranscriptStore(directory);
     const key = { sha256: media.sha256, model: PortugueseTranscriber.model, language: 'pt' };
     const meta = await store.meta(mediaId);
-    if (!force && meta && meta.sha256 === key.sha256 && meta.model === key.model && meta.language === key.language) return { status: 'unchanged', segments: meta.segments };
+    if (!force && meta && meta.sha256 === key.sha256 && meta.model === key.model && meta.language === key.language && (!requireWords || (meta.words > 0 && validWordTimings((await store.read(mediaId))?.words)))) {
+      // Recuperar uma gravação de metadados que falhou depois de salvar o resultado em disco.
+      if (!media.transcript || media.transcript.model !== key.model || media.transcript.words !== (meta.words || 0)) await this.app.runProjectAction({ path: directory, baseRevision: project.revision, action: { type: 'media.transcript.set', mediaId, transcript: { status: 'raw', model: key.model, language: key.language, segments: meta.segments, words: meta.words || 0, updatedAt: new Date().toISOString() } } });
+      return { status: 'unchanged', segments: meta.segments };
+    }
     if (this.jobs.list({ projectPath: directory }).some(job => job.kind === 'transcription' && job.state === 'running' && job.result === null && job.label.endsWith(mediaId))) throw new LifecycleError('TRANSCRIPTION_RUNNING', 'Esta mídia já está sendo transcrita');
     const source = await this.app.resolveMediaPath(media);
     if (!source) throw new Error('Arquivo da mídia não encontrado');
@@ -170,9 +174,11 @@ export class MediaOperations {
     return this.jobs.start({ kind: 'transcription', projectPath: directory, label: `Transcrever ${mediaId}`, run: ({ signal, progress }) => this.app.activities.track(directory, 'transcrição', async activitySignal => {
       const output = await transcriber.transcribe(source, { signal: AbortSignal.any([signal, activitySignal]), onProgress: value => progress({ phase: value.phase, done: value.percent, total: 100 }) });
       const segments = segmentsFromWhisper(output.json);
-      await store.saveRaw(mediaId, { segments, srt: output.srt, key, words: wordsFromWhisper(output.json) });
+      const words = wordsFromWhisper(output.json);
+      if (requireWords && !validWordTimings(words)) throw new LifecycleError('WORD_TIMESTAMPS_MISSING', 'O Whisper não devolveu tempos válidos por palavra. Tente transcrever novamente.');
+      await store.saveRaw(mediaId, { segments, srt: output.srt, key, words });
       const current = await readProjectDirectory(directory);
-      await this.app.runProjectAction({ path: directory, baseRevision: current.revision, action: { type: 'media.transcript.set', mediaId, transcript: { status: 'raw', model: key.model, language: key.language, segments: segments.length, updatedAt: new Date().toISOString() } } });
+      await this.app.runProjectAction({ path: directory, baseRevision: current.revision, action: { type: 'media.transcript.set', mediaId, transcript: { status: 'raw', model: key.model, language: key.language, segments: segments.length, words: words.length, updatedAt: new Date().toISOString() } } });
       return { segments: segments.length };
     }, { cancellable: true }) });
   }

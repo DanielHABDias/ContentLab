@@ -2,7 +2,7 @@
 
 O editor permite adicionar, renomear, remover e reordenar capítulos. Em cada capítulo, adicione blocos de **Narração**, **Cena / som original** e **Direção visual**, repetindo e alternando conforme a história. Use as setas para reordenar, o seletor para mover um bloco a outro capítulo e **Desfazer** para recuperar uma alteração. Fontes ficam ao final, fora da fala. Projetos antigos são exibidos sem perda de texto e passam a capítulos ao editar os blocos.
 
-Um bloco de narração pode ter vários períodos e parágrafos naturais. Só seu texto é enviado à voz, como um take; título do vídeo, títulos de capítulos/blocos, descrições de cenas, direção e fontes nunca são falados. Renomear ou mover mantém o ID e o áudio em cache; mudar a fala exige nova geração. Remover todos os capítulos deixa o roteiro vazio, sem recuperar a fala antiga.
+Um bloco de narração pode ter vários períodos e parágrafos naturais. Só seu texto é enviado à voz, como um take; título do vídeo, títulos de capítulos/blocos, descrições de cenas, direção e fontes nunca são falados. Na tela de gravação, essas falas ficam agrupadas por capítulo, com títulos apenas de orientação. A montagem inclui transcrição automática por palavra com Whisper `large-v3`; consulte `narration_transcript` antes de editar. Renomear ou mover mantém o ID e o áudio em cache; mudar a fala exige nova geração. Remover todos os capítulos deixa o roteiro vazio, sem recuperar a fala antiga.
 
 Cena é uma descrição editorial, não uma mídia pronta: informe a função narrativa, duração estimada, obra/trecho e o som pretendido. O bloco não baixa nem insere vídeo ou áudio, nem interrompe sozinho a narração no modo composição. A seleção, direitos e montagem precisam ser conferidos na edição.
 

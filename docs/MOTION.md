@@ -137,5 +137,3 @@ O kit é código do Content Lab: cenas em `src/motion/kit/`, catálogo em `src/m
 
 - **Mídia:** o Content Lab não busca nem baixa cenas das obras. Escolher a mídia e confirmar os direitos é com você.
 - **Plano automático:** é um ponto de partida. O resultado melhora quando o agente revisa as prévias e ajusta os beats.
-
-O teste real é `npm run qa:motion`, com relatório em [QA_MOTION.md](QA_MOTION.md).

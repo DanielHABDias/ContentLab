@@ -1,9 +1,10 @@
+import { scenesFromScript } from '../audio/narration-service.js';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
 import { NarrationStudio } from './NarrationStudio.jsx';
 import { localApi } from './local-api.js';
 
-vi.mock('./local-api.js', () => ({ localApi: { getSettings: vi.fn(), updateSettings: vi.fn(), setupStatus: vi.fn(), narration: vi.fn(), jobs: vi.fn(), cancelJob: vi.fn(), chooseMedia: vi.fn(), narrationImport: vi.fn(), updateTake: vi.fn(), reorderTakes: vi.fn(), deleteTake: vi.fn(), narrationPreview: vi.fn(), assembleNarration: vi.fn(), generateVoice: vi.fn(), voicePlan: vi.fn(), uploadTake: vi.fn(), runProjectAction: vi.fn(), systemApps: vi.fn(), closeApp: vi.fn() } }));
+vi.mock('./local-api.js', () => ({ localApi: { getSettings: vi.fn(), updateSettings: vi.fn(), setupStatus: vi.fn(), narration: vi.fn(), jobs: vi.fn(), cancelJob: vi.fn(), chooseMedia: vi.fn(), narrationImport: vi.fn(), updateTake: vi.fn(), reorderTakes: vi.fn(), deleteTake: vi.fn(), narrationPreview: vi.fn(), assembleNarration: vi.fn(), generateVoice: vi.fn(), voicePlan: vi.fn(), productionTranscribeNarration: vi.fn(), uploadTake: vi.fn(), runProjectAction: vi.fn(), systemApps: vi.fn(), closeApp: vi.fn() } }));
 
 const setup = (voice = true) => ({ items: [{ id: 'ffmpeg', label: 'FFmpeg', ready: true }, { id: 'ffprobe', label: 'FFprobe', ready: true }, { id: 'voxcpm2', label: 'VoxCPM2 (voz clonada)', ready: voice }] });
 const measures = (lufs) => ({ durationSeconds: 20, integratedLufs: lufs, truePeakDb: -1.5, sampleRate: 48000, channels: 1, wav48kMono: true });
@@ -53,7 +54,7 @@ test('com perfil, escolher a voz de IA grava narrationBy no projeto', async () =
 
 test('quando a pessoa grava, a seção de voz clonada some da etapa', async () => {
   render(<NarrationStudio details={details('creator')} setup={setup()} onOpenSetup={vi.fn()}/>);
-  expect(await screen.findByText('Abertura')).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { name: 'Abertura', exact: true })).toBeInTheDocument();
   expect(screen.queryByRole('region', { name: /narração com a sua voz/i })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: /permitir microfone/i })).toBeInTheDocument();
 });
@@ -63,7 +64,7 @@ test('microfone só é pedido depois do clique explícito', async () => {
   Object.defineProperty(navigator, 'mediaDevices', { value: { getUserMedia }, configurable: true });
   globalThis.MediaRecorder = class { static isTypeSupported() { return true; } };
   render(<NarrationStudio details={details('creator')} setup={setup()} onOpenSetup={vi.fn()}/>);
-  await screen.findByText('Abertura');
+  await screen.findByRole('heading', { name: 'Abertura', exact: true });
   expect(getUserMedia).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: /permitir microfone/i }));
   expect(await screen.findByRole('button', { name: /^gravar$/i })).toBeInTheDocument();
@@ -183,8 +184,38 @@ test('projeto só mostra o painel após tentar gerar e a nova tentativa executa 
 
 test('quem grava vê o roteiro falado, uma frase por linha, sem a direção visual', async () => {
   render(<NarrationStudio details={details('creator')} setup={setup(true)} onOpenSetup={vi.fn()}/>);
-  const script = await screen.findByRole('region', { name: 'Roteiro' });
+  const script = await screen.findByRole('region', { name: 'Roteiro de narração' });
   expect(within(script).getByText('Primeiro ponto.')).toBeInTheDocument();
   expect(within(script).getByText('Segundo.')).toBeInTheDocument();
   expect(within(script).queryByText(/titulo/)).not.toBeInTheDocument();
+});
+
+
+test('gravação mostra só falas, agrupadas por capítulos, sem cenas, direção ou títulos de blocos', async () => {
+  const scenes = scenesFromScript({ sources: 'Fonte que não se lê', chapters: [
+    { id: 'origin', title: 'Origem', blocks: [
+      { id: 'speech1', type: 'narration', title: 'Rótulo de produção', text: 'Primeira fala.' },
+      { id: 'clip', type: 'scene', title: 'Cena do filme', text: 'Som original da transformação.' },
+      { id: 'speech2', type: 'narration', title: '', text: 'Segunda fala.' },
+    ] },
+    { id: 'ending', title: 'Conclusão', blocks: [{ id: 'speech3', type: 'narration', title: '', text: 'Fala final.' }, { id: 'direction', type: 'direction', title: '', text: 'Mover a câmera.' }] },
+  ] });
+  localApi.narration.mockResolvedValue(state({ scenes }));
+  render(<NarrationStudio details={details('creator')} setup={setup()}/>);
+  const script = await screen.findByRole('region', { name: 'Roteiro de narração' });
+  const origin = within(script).getByRole('region', { name: 'Origem' });
+  expect(within(origin).getByText('Primeira fala.')).toBeInTheDocument();
+  expect(within(origin).getByText('Segunda fala.')).toBeInTheDocument();
+  expect(within(within(script).getByRole('region', { name: 'Conclusão' })).getByText('Fala final.')).toBeInTheDocument();
+  expect(script).not.toHaveTextContent(/Som original|Mover a câmera|Fonte que|Rótulo de produção/);
+});
+
+test('mostra transcrição pronta e permite retomar a falha sem remontar os takes', async () => {
+  localApi.narration.mockResolvedValueOnce(state({ narration: { ...state().narration, assembled: { mediaId: 'media_voice', measures: measures(-16) } }, transcription: { status: 'failed', error: 'O Whisper falhou.' } })).mockResolvedValue(state({ narration: { ...state().narration, assembled: { mediaId: 'media_voice', measures: measures(-16) } }, transcription: { status: 'ready', words: 3 } }));
+  localApi.productionTranscribeNarration.mockResolvedValue({ jobId: 'transcription_retry' });
+  render(<NarrationStudio details={details('creator')} setup={setup()}/>);
+  fireEvent.click(await screen.findByRole('button', { name: 'Gerar transcrição palavra por palavra' }));
+  expect(await screen.findByText(/Transcrição pronta · 3 palavras/)).toBeInTheDocument();
+  expect(localApi.productionTranscribeNarration).toHaveBeenCalledWith({ path: '/p' });
+  expect(localApi.assembleNarration).not.toHaveBeenCalled();
 });

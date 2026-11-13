@@ -8,7 +8,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { readProjectDirectory } from './project-registry.js';
 import { NarrationStore, scenesFromScript } from '../audio/narration-service.js';
-import { TranscriptStore } from '../media/transcript-store.js';
+import { TranscriptStore, validWordTimings } from '../media/transcript-store.js';
 import { impact, planMotion } from './motion-planner.js';
 import { MotionRenderer, mediaRefs as mediaRefsPlan } from '../render/motion-renderer.js';
 import { motionPlanSchema } from '../core/contracts.js';
@@ -491,8 +491,9 @@ export class ProductionOperations {
   async #narrationWords(directory, narration) {
     const store = new TranscriptStore(directory);
     const meta = await store.meta(narration.id).catch(() => null);
-    if (!meta || meta.sha256 !== narration.sha256) return [];
-    return (await store.read(narration.id))?.words || [];
+    if (!meta || meta.sha256 !== narration.sha256 || meta.model !== 'whisper-large-v3') return [];
+    const words = (await store.read(narration.id))?.words;
+    return validWordTimings(words) ? words : [];
   }
 
   /** Transcreve a narração montada (Whisper) para legendas palavra a palavra. Devolve jobId. */
@@ -500,9 +501,23 @@ export class ProductionOperations {
     const project = await readProjectDirectory(directory);
     const session = await new NarrationStore(directory).read();
     const narration = session.assembled?.mediaId && project.media.find(item => item.id === session.assembled.mediaId);
-    if (!narration) throw Object.assign(new Error('Monte a narração antes'), { code: 'NARRATION_MISSING' });
-    const result = await this.app.mediaOps.transcribe({ path: directory, mediaId: narration.id, force });
+    if (!narration || session.assembled.outdated) throw Object.assign(new Error('Monte a narração atual antes de transcrever'), { code: 'NARRATION_MISSING' });
+    const running = this.app.mediaOps.jobs.list({ projectPath: directory }).find(job => job.kind === 'transcription' && job.state === 'running' && job.label.endsWith(narration.id));
+    if (running) return { jobId: running.id, mediaId: narration.id };
+    const result = await this.app.mediaOps.transcribe({ path: directory, mediaId: narration.id, force, requireWords: true });
     return result?.id ? { jobId: result.id, mediaId: narration.id } : { status: result.status, mediaId: narration.id };
+  }
+
+  /** Leitura paginada das palavras e tempos reais do áudio montado, para o agente editar. */
+  async narrationTranscript({ path: directory, offset = 0, limit = 500 }) {
+    if (!Number.isInteger(offset) || offset < 0 || !Number.isInteger(limit) || limit < 1 || limit > 1000) throw new Error('Use offset ≥ 0 e limit entre 1 e 1000');
+    const project = await readProjectDirectory(directory);
+    const session = await new NarrationStore(directory).read();
+    const narration = project.media.find(item => item.id === session.assembled?.mediaId);
+    if (!narration || session.assembled.outdated) throw Object.assign(new Error('Monte a narração atual antes de consultar os tempos'), { code: 'NARRATION_MISSING' });
+    const words = await this.#narrationWords(directory, narration);
+    if (!words.length) throw Object.assign(new Error('Aguarde a transcrição automática ou use narration_transcribe'), { code: 'WORDS_MISSING' });
+    return { mediaId: narration.id, model: 'whisper-large-v3', language: 'pt', total: words.length, offset, nextOffset: offset + limit < words.length ? offset + limit : null, words: words.slice(offset, offset + limit) };
   }
 
   /** Capítulos (um por trecho do roteiro) a partir dos tempos reais da narração montada. */
@@ -653,7 +668,11 @@ export class ProductionOperations {
     const session = await new NarrationStore(directory).read().catch(() => ({}));
     const narration = session.assembled?.mediaId && project.media.find(item => item.id === session.assembled.mediaId);
     let windows; let words = [];
-    if (narration?.metadata?.durationSeconds) { windows = this.#windows(project, session, narration.metadata.durationSeconds); words = await this.#narrationWords(directory, narration); }
+    if (narration?.metadata?.durationSeconds) {
+      if (session.assembled.outdated) throw Object.assign(new Error('A narração mudou; monte e transcreva novamente antes da edição'), { code: 'NARRATION_MISSING' });
+      windows = this.#windows(project, session, narration.metadata.durationSeconds); words = await this.#narrationWords(directory, narration);
+      if (!words.length) throw Object.assign(new Error('Conclua a transcrição palavra por palavra da narração antes de editar'), { code: 'WORDS_MISSING' });
+    }
     else { let cursor = 0; windows = scenes.map(scene => { const window = { scene, start: cursor, length: Math.max(2, scene.text.length / 15) }; cursor += window.length; return window; }); }
     const media = project.media.filter(item => ['image', 'video'].includes(item.kind) && !['slide', 'thumbnail', 'background', 'character'].includes(item.role) && item.rights !== 'pending').map(item => ({ id: item.id, name: item.name, kind: item.kind }));
     const poses = project.character?.poses || null; const report = {};

@@ -21,12 +21,12 @@ export function NarrationStudio({ details, setup, onOpenSetup, onUpdated, onOpen
   const projectPath = details.path;
   const [state, setState] = useState(null); const [jobs, setJobs] = useState([]); const [error, setError] = useState(null); const [status, setStatus] = useState('');
   const load = async () => { try { setState(await localApi.narration(projectPath)); } catch (issue) { setError(issue); } };
-  const refreshJobs = async () => { const { jobs: list } = await localApi.jobs(projectPath).catch(() => ({ jobs: [] })); const mine = list.filter(job => job.kind.startsWith('narration') || job.kind === 'voice.generate'); setJobs(previous => { if (previous.some(job => job.state === 'running') && !mine.some(job => job.state === 'running')) load(); return mine; }); };
+  const refreshJobs = async () => { const { jobs: list } = await localApi.jobs(projectPath).catch(() => ({ jobs: [] })); const mine = list.filter(job => job.kind.startsWith('narration') || job.kind === 'voice.generate' || job.kind === 'transcription'); setJobs(previous => { if (previous.some(job => job.state === 'running') && !mine.some(job => job.state === 'running')) load(); return mine; }); };
   useEffect(() => { load(); refreshJobs(); }, [projectPath]);
   const running = jobs.some(job => job.state === 'running');
   useEffect(() => { if (!running) return undefined; const timer = window.setInterval(refreshJobs, 1500); return () => window.clearInterval(timer); }, [running]);
   const act = async (task, done) => { setError(null); setStatus(''); try { const result = await task(); if (result?.narration) setState(previous => ({ ...previous, narration: result.narration })); else await load(); if (done) setStatus(done); return result; } catch (issue) { setError(issue); if (issue.code === 'NARRATION_CONFLICT') await load(); return null; } };
-  const startJob = async task => { const job = await act(task); if (job?.id) { setJobs(previous => [job, ...previous]); refreshJobs(); } };
+  const startJob = async task => { const job = await act(task); if (job?.id) setJobs(previous => [job, ...previous]); if (job?.id || job?.jobId) refreshJobs(); };
   if (!state) return <section className="workflow-card"><p className="empty-state">{error ? error.message : 'Carregando narração…'}</p></section>;
   const { narration } = state; const base = { path: projectPath, baseRevision: narration.revision };
   const mode = details.project.narrationBy === 'ai' ? 'ai' : details.project.narrationBy === 'creator' ? 'creator' : null;
@@ -43,6 +43,7 @@ export function NarrationStudio({ details, setup, onOpenSetup, onUpdated, onOpen
     {mode === 'creator' && <ScriptToRead scenes={state.scenes}/>}
     {mode === 'creator' && <TakesSection projectPath={projectPath} narration={narration} act={act} base={base}/>}
     {mode === 'creator' && <TreatmentSection takeIds={finalTakeIds} projectPath={projectPath} narration={narration} previewSeconds={state.previewSeconds} act={act} startJob={startJob} base={base} setup={setup} onOpenSetup={onOpenSetup}/>}
+    {mode && <TranscriptionStatus transcription={state.transcription} assembled={narration.assembled} running={running} onRetry={() => startJob(() => localApi.productionTranscribeNarration({ path: projectPath }))}/>}
   </div>;
 }
 
@@ -255,13 +256,29 @@ function VoiceProgress({ job, scenes }) {
   </div>;
 }
 
-/** O roteiro para ler ao gravar: só o que é falado, uma frase por linha, cena a cena (sem a direção visual). */
+/** Somente fala, agrupada pelos capítulos editoriais; títulos são orientação, nunca locução. */
 function ScriptToRead({ scenes }) {
+  const chapters = [];
+  for (const scene of scenes) {
+    const id = scene.chapterId || scene.section || scene.id;
+    let chapter = chapters.find(item => item.id === id);
+    if (!chapter) { chapter = { id, title: scene.chapterTitle || ({ hook: 'Abertura', development: 'Desenvolvimento', payoff: 'Encerramento' }[scene.section]) || scene.label.replace(/ \d+$/, ''), scenes: [] }; chapters.push(chapter); }
+    chapter.scenes.push(scene);
+  }
   return <section className="workflow-card script-to-read" aria-labelledby="script-read-title">
     <details open>
-      <summary><span className="eyebrow">Para gravar</span><h2 id="script-read-title">Roteiro</h2><small>{scenes.length} {scenes.length === 1 ? 'cena' : 'cenas'} · grave uma cena por take</small></summary>
-      {scenes.length ? <ol className="read-scenes">{scenes.map(scene => <li key={scene.id}><strong>{scene.label}</strong>{(scene.lines || [{ text: scene.text }]).map((line, index) => <p key={index}>{line.text}</p>)}</li>)}</ol> : <p className="empty-state">O roteiro ainda não tem texto para narrar.</p>}
+      <summary><span className="eyebrow">Para gravar</span><h2 id="script-read-title">Roteiro de narração</h2><small>Leia somente os textos abaixo. Os títulos dos capítulos não são narrados.</small></summary>
+      {chapters.length ? chapters.map((chapter, index) => <section className="read-chapter" key={chapter.id} aria-labelledby={`read-chapter-${index}`}><h3 id={`read-chapter-${index}`}>{chapter.title}</h3><small>Título de orientação · não narrar</small><ol className="read-scenes">{chapter.scenes.map(scene => <li key={scene.id}>{(scene.lines || [{ text: scene.text }]).map((line, i) => <p key={i}>{line.text}</p>)}</li>)}</ol></section>) : <p className="empty-state">O roteiro ainda não tem texto para narrar.</p>}
     </details>
+  </section>;
+}
+
+function TranscriptionStatus({ transcription, assembled, running, onRetry }) {
+  const ready = transcription?.status === 'ready';
+  const working = running || transcription?.status === 'running';
+  return <section className="workflow-card narration-transcription" aria-labelledby="narration-transcript-title"><h2 id="narration-transcript-title">Tempos para edição</h2>
+    <p>Depois de montar a narração, o Whisper large-v3 completo transcreve automaticamente cada palavra com início e fim.</p>
+    {ready ? <p role="status" className="ready">Transcrição pronta · {transcription.words} palavras com tempo. A IA já pode usá-las na edição.</p> : working ? <p role="status">Preparando a narração e a transcrição. Aguarde antes de avançar para a edição.</p> : assembled ? <><p role="status">{transcription?.error || 'A transcrição ainda não está pronta. Conclua-a antes de avançar para a edição.'}</p><button type="button" className="button quiet" disabled={assembled.outdated} onClick={onRetry}>Gerar transcrição palavra por palavra</button>{assembled.outdated && <p>Os takes mudaram. Monte a narração novamente.</p>}</> : <p>Grave ou gere os takes e monte a narração para preparar os tempos.</p>}
   </section>;
 }
 

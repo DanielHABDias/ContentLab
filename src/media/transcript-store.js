@@ -23,7 +23,7 @@ export class TranscriptStore {
     await mkdir(directory, { recursive: true });
     await atomic(path.join(directory, 'raw.json'), `${JSON.stringify({ schema: 'contentlab-transcript-v1', segments, words }, null, 2)}\n`);
     await atomic(path.join(directory, 'raw.srt'), srt);
-    await atomic(path.join(directory, 'meta.json'), `${JSON.stringify({ ...key, segments: segments.length, createdAt: new Date().toISOString() }, null, 2)}\n`);
+    await atomic(path.join(directory, 'meta.json'), `${JSON.stringify({ ...key, segments: segments.length, words: words.length, createdAt: new Date().toISOString() }, null, 2)}\n`);
   }
 
   async read(mediaId) {
@@ -70,12 +70,15 @@ export function segmentsFromWhisper(json) {
  */
 export function wordsFromWhisper(json) {
   const words = [];
-  for (const item of json.transcription || []) for (const token of item.tokens || []) {
-    const text = String(token.text || ''); const from = (token.offsets?.from ?? 0) / 1000; const to = (token.offsets?.to ?? 0) / 1000;
-    if (!text.trim() || /^\s*\[_/.test(text)) continue;
-    const last = words.at(-1);
-    if (last && !/^\s/.test(text)) { last.text += text; last.end = round(Math.max(last.end, to)); continue; }
-    words.push({ start: round(from), end: round(Math.max(from, to)), text: text.trim() });
+  for (const item of json.transcription || []) {
+    let last = null;
+    for (const token of item.tokens || []) {
+      const text = String(token.text || ''); const from = (token.offsets?.from ?? 0) / 1000; const to = (token.offsets?.to ?? 0) / 1000;
+      if (!text.trim() || /^\s*\[_/.test(text)) continue;
+      if (last && !/^\s/.test(text)) { last.text += text; last.end = round(Math.max(last.end, to)); continue; }
+      last = { start: round(from), end: round(Math.max(from, to)), text: text.trim() };
+      words.push(last);
+    }
   }
   return words.filter(word => /[\p{L}\p{N}]/u.test(word.text));
 }
@@ -128,4 +131,9 @@ export function parseSrt(text) {
   }
   if (!segments.length) throw new Error('SRT sem legendas válidas');
   return validateSegments(segments.sort((a, b) => a.start - b.start));
+}
+
+/** Tempos reais utilizáveis: nenhum intervalo ausente, negativo ou de duração nula. */
+export function validWordTimings(words) {
+  return Array.isArray(words) && words.length > 0 && words.every((word, index) => word.text?.trim() && Number.isFinite(word.start) && Number.isFinite(word.end) && word.start >= 0 && word.end > word.start && (!index || word.start >= words[index - 1].start));
 }

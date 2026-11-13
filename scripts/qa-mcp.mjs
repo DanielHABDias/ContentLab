@@ -7,7 +7,7 @@
 // e reabertura do app para provar que tudo persiste. Usa pastas temporárias e porta própria.
 //   node scripts/qa-mcp.mjs [--keep] [--shorts N]
 import { execFileSync } from 'node:child_process';
-import { mkdtemp, readdir, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -142,7 +142,8 @@ try {
   await call('contentlab_stop', { force: true }).catch(() => {});
   await client.close();
   const report = ['# QA do fluxo de agente via MCP', '', `Executado em ${new Date().toISOString()} · ${os.platform()} ${os.arch()}`, '', '| Projeto | Formato | Duração | Entrega | Persistiu após reabrir |', '| --- | --- | --- | --- | --- |', ...results.map(item => `| ${item.title} | ${item.size} | ${item.duration.toFixed(1)} s | ${item.delivery.files.length} arquivos | ${item.persisted ? 'sim' : 'não'} |`), '', '## Log', '', '```', ...log, '```', ''].join('\n');
-  await writeFile(path.join(root, 'docs', 'QA_MCP_AGENTE.md'), report);
-  console.log(`\nRelatório: docs/QA_MCP_AGENTE.md · artefatos: ${process.argv.includes('--keep') ? work : '(removidos)'}`);
+  await mkdir(path.join(root, '.contentlab', 'qa'), { recursive: true });
+  await writeFile(path.join(root, '.contentlab', 'qa', 'QA_MCP_AGENTE.md'), report);
+  console.log(`\nRelatório: .contentlab/qa/QA_MCP_AGENTE.md · artefatos: ${process.argv.includes('--keep') ? work : '(removidos)'}`);
   if (!process.argv.includes('--keep')) await rm(work, { recursive: true, force: true });
 }

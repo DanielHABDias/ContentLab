@@ -48,3 +48,18 @@ test('primeira edição de roteiro antigo preserva fala, fontes, direção e IDs
   project.creative.script = script();
   expect(missingStageArtifacts(project, 'script')).toEqual([]);
 });
+
+
+test('narração exige palavras do large-v3 antes da edição e o plano não substitui a voz escolhida', () => {
+  const project = { narrationBy: 'creator', narrationMediaId: null, media: [], creative: {}, timeline: { tracks: [] }, motion: { beats: [{}], narration: true } };
+  expect(missingStageArtifacts(project, 'narration')).toEqual(['narração montada']);
+  project.media = [{ id: 'voice', kind: 'audio', role: 'narration', transcript: { model: 'whisper-large-v3', words: 0 } }];
+  project.narrationMediaId = 'voice';
+  expect(missingStageArtifacts(project, 'narration')).toEqual(['transcrição palavra por palavra da narração']);
+  expect(missingStageArtifacts(project, 'edit')).toEqual(['transcrição palavra por palavra da narração']);
+  project.media[0].transcript.words = 7;
+  expect(missingStageArtifacts(project, 'narration')).toEqual([]);
+  expect(missingStageArtifacts(project, 'edit')).toEqual([]);
+  project.media[0].transcript.model = 'whisper-tiny';
+  expect(missingStageArtifacts(project, 'narration')).toEqual(['transcrição palavra por palavra da narração']);
+});

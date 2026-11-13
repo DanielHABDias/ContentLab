@@ -106,7 +106,6 @@ Modo antigo, de clips na timeline ([ESTILO_HQ.md](ESTILO_HQ.md)): no passo 6 imp
 
 Para 5 Shorts: repetir o fluxo com `type: short`, `mode: autonomous` e `stage_approve` no lugar das esperas.
 
-O teste real desse fluxo está em `npm run qa:mcp`, com relatório em [QA_MCP_AGENTE.md](QA_MCP_AGENTE.md). O estilo HQ é testado por `npm run qa:hq` ([QA_HQ.md](QA_HQ.md)).
 
 ## Tempos nesta máquina (Ryzen 5 5500, CPU)
 
@@ -115,3 +114,11 @@ O teste real desse fluxo está em `npm run qa:mcp`, com relatório em [QA_MCP_AG
 | Narração padrão | cerca de 5× mais rápida que o tempo real (1 min de fala ≈ 12 s) |
 | Voz clonada | cerca de 30 s de processamento por segundo de fala (1 min de fala ≈ 30 min) |
 | Render 1080p | segundos por minuto de vídeo com slides |
+
+## Tempos da narração para a edição
+
+`narration_assemble` monta o áudio e gera automaticamente a transcrição com Whisper `large-v3` completo em português. Espere `job_wait`: só conclui depois de salvar início/fim de cada palavra do WAV montado. A narração não é aprovada sem esses tempos; o plano automático não estima a fala quando há narração montada sem transcrição.
+
+Use `narration_transcript({ path, offset: 0, limit: 500 })`. A resposta contém `mediaId`, `model`, `language`, `total`, `nextOffset` e `words: [{ text, start, end }]`, em segundos. Continue com `offset: nextOffset` até `null`. Leia antes de colocar imagens, cortes e legendas; use os tempos reais, não a duração estimada do roteiro.
+
+Se o Whisper falhar ou faltar dependência, a montagem de áudio permanece salva. Resolva a dependência e use `narration_transcribe` + `job_wait` para retomar, sem gerar ou gravar tudo novamente. Títulos, cenas e direção não são narrados; a tela de gravação apresenta só as falas organizadas por capítulo.

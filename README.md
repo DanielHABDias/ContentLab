@@ -6,11 +6,11 @@ Ferramenta audiovisual local para organizar um vídeo da ideia ao pacote final. 
 
 ## Requisitos e instalação
 
-**Para usar (Linux x64, sem npm):** baixe `contentlab-<versão>-linux-x64.tar.gz`, extraia e rode `./install.sh`. Atualizar, voltar versão e desinstalar sem perder projetos: [docs/DISTRIBUICAO.md](docs/DISTRIBUICAO.md). As instruções abaixo são para desenvolvimento.
+**Para usar (Linux x64, sem npm):** baixe `contentlab-<versão>-linux-x64.tar.gz`, extraia e rode `./install.sh`. Atualizar, voltar versão e desinstalar sem perder projetos: [docs/DISTRIBUICAO.md](docs/DISTRIBUICAO.md). Para executar a pasta do projeto, use as instruções abaixo.
 
 - Node.js 22 ou superior
 - FFmpeg/FFprobe 6 ou superior e, no Linux, `zenity` (seletores nativos)
-- Opcional: `yt-dlp` para URLs, whisper.cpp + `large-v3` para transcrição, VoxCPM2 para voz clonada (recomendado: 16 GB de RAM ou GPU NVIDIA com 8 GB)
+- Opcional: `yt-dlp` para URLs, whisper.cpp + `large-v3` completo para transcrição obrigatória da narração, VoxCPM2 para voz clonada (recomendado: 16 GB de RAM ou GPU NVIDIA com 8 GB)
 
 ```bash
 npm install
@@ -25,7 +25,7 @@ Na primeira execução abre o assistente **Prepare seu computador** (também dis
 - Etapas e recursos que dependem de algo ausente ficam bloqueados: Mídia, Narração, Edição e Revisão exigem FFmpeg/FFprobe; URL exige yt-dlp; transcrição exige whisper.cpp e os pesos; voz clonada exige VoxCPM2 e hardware compatível. O aviso de bloqueio tem um botão que abre Dependências com os itens necessários já marcados, e o servidor recusa a operação com `DEPENDENCY_MISSING`.
 - Tudo vai para `.tools/` (ou `CONTENTLAB_TOOLS_DIR`), sem alterar Python/Node globais. Downloads usam arquivo `.partial`, podem ser pausados, retomados (HTTP Range), cancelados ou repetidos, e só são promovidos após conferir o SHA-256. O estado fica em `.tools/setup-state.json`; a segunda inicialização não baixa de novo, e uma mudança de versão/checksum no catálogo pede atualização.
 - “Agora não” é lembrado; a interface básica funciona sem voz e transcrição.
-- Narração: grave (com permissão explícita do microfone) ou importe takes, corte e reordene sem alterar originais, ouça o preview A/B do tratamento e monte um WAV 48 kHz mono medido. A voz clonada exige perfil com consentimento do titular e gera o roteiro cena a cena, reaproveitando o que não mudou.
+- Narração: grave (com permissão explícita do microfone) ou importe takes, corte e reordene sem alterar originais, ouça o preview A/B do tratamento e monte um WAV 48 kHz mono medido. A voz clonada exige perfil com consentimento do titular e gera somente os blocos de narração, reaproveitando o que não mudou. A tela de gravação mostra só a fala por capítulo. Montar os takes também transcreve automaticamente com Whisper `large-v3` completo; a edição só segue com os tempos de cada palavra prontos.
 
 Pelo terminal: `npm run doctor` (JSON), `npm run doctor -- --text` (legível) e `npm run doctor -- --install whisper-large-v3 --accept` (sem `--accept`, apenas mostra origem, licença e tamanho).
 
@@ -91,7 +91,7 @@ O [editor de roteiro](docs/ROTEIRO.md) organiza capítulos livres com blocos adi
 
 ## CLI e MCP
 
-**Produzir com um agente de IA:** o MCP deixa o Claude/Codex operar o app real — escrever, narrar (voz padrão ou clonada), montar, gerar thumbnails A/B, renderizar e entregar, esperando sua aprovação a cada etapa ou em modo autônomo. Configuração e ferramentas: [docs/MCP.md](docs/MCP.md).
+**Produzir com um agente de IA:** o MCP deixa o Claude/Codex operar o app real — escrever, narrar (gravação própria ou voz clonada), montar, gerar thumbnails A/B, renderizar e entregar, esperando sua aprovação a cada etapa ou em modo autônomo. Configuração e ferramentas: [docs/MCP.md](docs/MCP.md).
 
 ```bash
 CONTENTLAB_DATA_DIR=/caminho/projetos npm run contentlab -- project.inspect project_id
@@ -119,25 +119,15 @@ Modelo de ameaças, retenção e licenças: [docs/SEGURANCA_E_PRIVACIDADE.md](do
 
 Tudo funciona localmente. A aplicação não publica em redes sociais nem exige hospedagem ou API paga. URLs e mídias dependem dos direitos do usuário. Clonagem de voz exige consentimento registrado. Componentes TSX passam por validação e devem renderizar em processo isolado.
 
-## Desenvolvimento e documentação
+## Documentação de uso
 
-Versão atual: **2.1.0-rc.1** — [notas](docs/NOTAS_DA_VERSAO.md) e [validação](docs/VALIDACAO_FINAL.md). QA ponta a ponta: `npm run qa:e2e`.
-
-```bash
-npm test
-npm run build
-npm run check
-npm audit --omit=dev
-```
-
-- [Arquitetura](docs/ARCHITECTURE.md)
-- [Design system](docs/DESIGN_SYSTEM.md)
-- [Checklist de interface](docs/UX_INTERFACE.md)
+- [Produção com IA pelo MCP](docs/MCP.md)
+- [Roteiro em capítulos e blocos](docs/ROTEIRO.md)
 - [Mídia e transcrição](docs/MIDIA_E_TRANSCRICAO.md)
 - [Narração e voz](docs/NARRACAO_E_VOZ.md)
+- [Motion e composição](docs/MOTION.md)
 - [Timeline e componentes](docs/TIMELINE_E_COMPONENTES.md)
 - [Preview e render](docs/RENDER_E_PREVIEW.md)
-- [Benchmark técnico](docs/BENCHMARK_TECNICO.md)
 
 ## Solução de problemas
 

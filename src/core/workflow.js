@@ -71,7 +71,15 @@ export function missingStageArtifacts(project, stageId) {
   if (stageId === 'media') return [...(!project.media.length ? ['mídia'] : []), ...(project.media.some(item => item.rights === 'pending') ? ['direitos das mídias'] : [])];
   // Modo composição (plano de motion): o vídeo é o plano; narração é opcional (vídeo só com som e texto).
   const motion = project.motion?.beats?.length ? project.motion : null;
-  if (stageId === 'narration') return audioClips.length || motion ? [] : ['narração na timeline'];
+  const narration = project.narrationMediaId ? project.media?.find(item => item.id === project.narrationMediaId) : project.media?.filter(item => item.role === 'narration').at(-1);
+  const needsTranscript = narration && (narration.transcript?.model !== 'whisper-large-v3' || !(narration.transcript?.words > 0));
+  if (stageId === 'narration') {
+    if (needsTranscript) return ['transcrição palavra por palavra da narração'];
+    if (narration) return [];
+    if (project.narrationBy && motion?.narration !== false) return ['narração montada'];
+    return audioClips.length || motion ? [] : ['narração montada'];
+  }
+  if (stageId === 'edit' && needsTranscript) return ['transcrição palavra por palavra da narração'];
   if (stageId === 'edit') return visualClips.length || motion ? [] : ['conteúdo visual na timeline'];
   if (stageId === 'review') return motion ? [] : [...(!visualClips.length ? ['conteúdo visual'] : []), ...(!audioClips.length ? ['áudio'] : [])];
   return ['etapa desconhecida'];

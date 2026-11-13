@@ -6,11 +6,11 @@ URLs exigem HTTPS e `yt-dlp`; playlists e downloads acima de 4 GiB são bloquead
 
 ## Transcrição escolhida
 
-O único perfil suportado é Whisper `large-v3`, executado localmente por `whisper.cpp`, idioma fixado em português. A escolha prioriza precisão e timestamps; nesta máquina de validação há 15 GiB de RAM e 12 CPUs, mas binário/pesos ainda não estão instalados. O Content Lab diagnostica essa ausência e não baixa silenciosamente um modelo grande nem substitui por versão inferior. O assistente de dependências (F14) prepara `whisper-cli` (whisper.cpp v1.9.5, commit `d1be6fde11ac`) e `ggml-large-v3.bin` (3 095 033 483 bytes, SHA-256 `64d182b4…94d1e2`) em `.tools/`, com consentimento, retomada e verificação.
+O perfil de transcrição é Whisper `large-v3` completo, executado localmente por `whisper.cpp`, em português. Ele prioriza qualidade; não há troca automática para versões menores ou turbo. A tela Dependências verifica o motor e os pesos e oferece instalação com origem, tamanho, licença e consentimento.
 
 O resultado inclui JSON com alinhamento e SRT. Qualidade e tempo devem ser medidos com amostra PT-BR licenciada no hardware final antes de declarar o modelo pronto para produção.
 
-## Fluxo na interface (F16)
+## Fluxo na interface
 
 - **Importar arquivos** (seleção múltipla) e **arrastar e soltar** (envio com progresso) criam jobs com progresso e cancelamento. Conteúdo repetido (mesmo SHA-256) não é duplicado; arquivos inválidos são relatados sem interromper os demais.
 - Cada mídia guarda nome, origem (arquivo, upload ou URL), metadados do FFprobe (duração, resolução, codecs, taxa), direitos, cortes e estado da transcrição.
@@ -18,5 +18,10 @@ O resultado inclui JSON com alinhamento e SRT. Qualidade e tempo devem ser medid
 - **Preview** real (vídeo/áudio/imagem) via `/api/v1/media/file` com suporte a Range, restrito às mídias do projeto e a extensões de mídia.
 - **Remover** mostra os usos (thumbnail e clips) e só desassocia com confirmação; o original nunca é apagado.
 - **Cortes** não destrutivos (hash + intervalo) ficam no cache e são validados contra a duração.
-- **Transcrição** em fila (WAV 16 kHz → `whisper-cli -l pt -pp -ojf -osrt`), com progresso e cancelamento; idempotente por SHA-256 + modelo + idioma. Saída bruta em `transcripts/<mídia>/raw.*`; correções em `revised.json` com revisão otimista, sem sobrescrever a saída bruta; SRT exportável; busca por texto (sem acento) ou timecode (`1:23`).
-- Pendência: whisper.cpp + `large-v3` reais não foram executados nesta máquina (testes usam binário simulado com o mesmo formato de saída).
+- **Transcrição** em fila (WAV 16 kHz → `whisper-cli -l pt -pp -ml 1 -sow -ojf -osrt`), com progresso e cancelamento; idempotente por SHA-256 + modelo + idioma. Saída bruta em `transcripts/<mídia>/raw.*`; correções em `revised.json` com revisão otimista, sem sobrescrever a saída bruta; SRT exportável; busca por texto (sem acento) ou timecode (`1:23`).
+
+## Narração e edição
+
+Montar a narração inicia automaticamente sua transcrição, tanto para takes gravados quanto para voz clonada. O job só conclui quando o áudio montado tem palavras com tempos reais de início/fim. Uma saída só com frases não conclui essa etapa. A aprovação da narração e a edição automática ficam bloqueadas enquanto a transcrição não estiver pronta; áudio sem fala deve usar o modo sem narração.
+
+A transcrição pertence ao arquivo final montado (hash, modelo e idioma). Remontar os takes muda a entrada e exige conferir a transcrição desse áudio; o cache não deve reutilizar tempos de outra mídia. Falhas preservam o áudio e permitem retomar com `narration_transcribe`. O MCP lê as palavras com `narration_transcript` (`offset`, `limit`), para posicionar mídia, cortes e legendas na fala real.

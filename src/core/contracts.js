@@ -94,7 +94,7 @@ export const mediaRefSchema = z.object({
     sampleRate: z.number().int().positive().nullable(),
   }).optional(),
   cuts: z.array(mediaCutSchema).default([]),
-  transcript: z.object({ status: z.enum(['raw', 'revised']), model: z.string(), language: z.string(), segments: z.number().int().nonnegative(), updatedAt: z.string() }).nullable().default(null),
+  transcript: z.object({ status: z.enum(['raw', 'revised']), model: z.string(), language: z.string(), segments: z.number().int().nonnegative(), words: z.number().int().nonnegative().default(0), updatedAt: z.string() }).nullable().default(null),
 });
 
 const keyframeSchema = z.object({
@@ -219,6 +219,7 @@ export const projectSchema = z.object({
   pauseAt: z.array(z.enum(FLOW_STAGES)).default([]),
   // Decidido na etapa Narração, não ao criar o projeto: `null` = ainda não escolhido.
   narrationBy: z.enum(['ai', 'creator']).nullable().default(null),
+  narrationMediaId: idSchema.nullable().default(null),
   revision: z.number().int().positive(),
   stages: z.array(workflowStageSchema).transform(normalizeStages),
   changeRequests: z.array(changeRequestSchema).default([]),
@@ -253,6 +254,7 @@ export const operationSchema = z.object({
     z.object({ type: z.literal('stage.request_changes'), stageId: idSchema, reason: z.string().min(1), author: z.string().min(1).max(120).default('usuário'), requestId: idSchema.optional() }),
     z.object({ type: z.literal('workflow.run'), stageId: idSchema.optional(), jobId: idSchema, author: z.string().min(1).max(120).default('Content Lab') }),
     z.object({ type: z.literal('project.update'), title: z.string().min(1).optional(), projectType: z.enum(['long', 'short', 'custom']).optional(), aspectRatio: aspectRatioSchema.optional(), mode: z.enum(['review', 'autonomous']).optional(), pauseAt: z.array(z.enum(FLOW_STAGES)).optional(), narrationBy: z.enum(['ai', 'creator']).nullable().optional() }),
+    z.object({ type: z.literal('narration.set'), mediaId: idSchema }),
     z.object({ type: z.literal('creative.update'), creative: projectSchema.shape.creative }),
     z.object({ type: z.literal('motion.set'), motion: motionPlanSchema.nullable() }),
     z.object({ type: z.literal('character.set'), character: characterSchema.nullable() }),

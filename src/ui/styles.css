@@ -326,3 +326,10 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-vi
 .add-script-block, .script-footer-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0; }
 .script-page :is(input, textarea, select, button):focus-visible { outline: 3px solid #346eaf; outline-offset: 3px; }
 @media (max-width: 600px) { .chapter-header { flex-wrap: wrap; }.chapter-header > label { flex-basis: 100%; }.script-card { padding: 12px; }.script-actions button { min-height: 42px; min-width: 42px; } }
+
+.read-chapter { padding: 20px 0; border-top: 1px solid var(--line); margin-top: 18px; }
+.read-chapter h3 { margin: 0 0 5px; font-size: 20px; }
+.read-chapter > small { color: var(--muted); font-size: 12px; }
+.read-chapter .read-scenes { margin: 12px 0 0; }
+.narration-transcription p { font-size: 14px; line-height: 1.6; }
+.narration-transcription .ready { color: #a7dfc8; }

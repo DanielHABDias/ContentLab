@@ -1,21 +1,18 @@
-# Content Lab — instruções para agentes
+# Usar o Content Lab
 
-Leia o `README.md` e a documentação do módulo afetado. Trabalhe sempre na `main`, conforme orientação do criador; preserve alterações locais, sincronize com o remoto e valide antes de commitar e enviar.
+O Content Lab é uma ferramenta audiovisual local. O agente opera o mesmo projeto que a pessoa acompanha na interface. Leia `skills/contentlab-control/SKILL.md` para produzir por MCP/CLI e `skills/contentlab-packages/SKILL.md` para importar ou exportar pacotes. Não edite `project.json` diretamente.
 
-## Operação do produto
+## Fluxo
 
-- Use `skills/contentlab-control/SKILL.md` para controlar projetos por CLI/MCP.
-- Use `skills/contentlab-packages/SKILL.md` para `.contentlab` e ZIP.
-- Interface, CLI e MCP devem chamar o mesmo núcleo; não edite manifestos diretamente.
-- Mantenha contratos versionados, operações idempotentes, dry-run e revisões otimistas.
-- Não implemente publicação automática nem banco de mídia social.
-- O Content Lab é uma ferramenta neutra: não traz marca, canal nem personagem de ninguém. O kit de motion (`src/motion/kit/`, `assets/kit/`) e as cenas HQ do modo clips (`src/timeline/components/hq/`) são código próprio; a montagem principal é o modo composição (`docs/MOTION.md`).
-- A narração por voz de IA é sempre a voz clonada do próprio criador, gravada em “Minha voz” (`src/ui/VoiceScreen.jsx`, perfis em `<dados>/voices/`). Não existe voz sintética genérica. Sem nenhum perfil, `narrationBy: 'ai'` é recusado com `VOICE_PROFILE_REQUIRED` na interface, na CLI e no MCP.
-- Quem narra é escolhido na etapa Narração, não ao criar o projeto. “Como produzir” tem só dois modos: `autonomous` (vai até o render e entrega) e `review` (espera o OK a cada etapa).
-- Personagem é mídia do projeto: entra por `character_import` (pasta com PNGs de poses + `catalogo.json`, direitos confirmados). Não coloque personagem, poses ou marca de terceiros no repositório; nos testes e no QA use o personagem de teste de `src/test/character-fixture.js`.
+1. Confira `contentlab_status`; use `contentlab_start` se necessário. Combine modo automático ou revisão antes de criar e abra o projeto com `contentlab_open`.
+2. Siga ideia → título/thumbnail → roteiro → mídia → narração → edição → revisão. Use `project_get` para pendências; em revisão, espere `stage_wait_decision` ou aprovação explícita no chat.
+3. Escreva o roteiro em capítulos e blocos (`docs/ROTEIRO.md`); para ajustes locais, use `script_get` e `script_edit` com revisão atual e IDs estáveis.
+4. Só o texto dos blocos `narration` é falado. Títulos de capítulos/blocos, `scene`, `direction` e fontes ficam fora da voz. A tela de gravação mostra apenas a fala, agrupada por capítulo.
+5. Na etapa Narração, escolha a pessoa gravando ou sua voz clonada com consentimento. Voz de IA exige perfil em Minha voz; sem perfil, use a gravação própria. Não existe voz sintética genérica.
+6. Monte a narração e acompanhe `job_wait`: o app transcreve automaticamente com Whisper `large-v3` completo, em português, com tempos de início/fim de cada palavra. A etapa não está pronta até a transcrição terminar. Se faltar dependência ou houver falha, preserve o áudio, corrija e retome com `narration_transcribe`.
+7. Leia `narration_transcript` (paginado) antes de posicionar imagens, cortes, beats e legendas. Depois use `motion_kit`, `motion_plan_auto`, `motion_preview`, `motion_plan_set` e `render_start`, conferindo os arquivos reais.
+8. Termine com `deliverable_build` e `project_export`. Publicação é manual.
 
-## Qualidade
+## Conteúdo e verificação
 
-Execute `npm run check`, testes proporcionais do módulo e `npm audit --omit=dev`. Para mídia/render, valide arquivos reais com FFmpeg/ffprobe. Não declare transcrição, voz ou render prontos se dependências/artefatos reais não foram verificados.
-
-Mensagens da interface são curtas e acionáveis. Preserve acessibilidade, layouts 16:9/9:16, histórico, consentimento de voz, direitos de mídia e extração segura de pacotes.
+O Content Lab é neutro: marca, regras editoriais e personagens vêm do projeto ou plugin do criador. Importe mídias e trilha com direitos confirmados; personagem entra por `character_import`. Cena no roteiro é planejamento, não clipe/áudio pronto. Confira imagem, som, sincronismo e legibilidade no render antes de declarar a entrega concluída. Em conflito de revisão, releia e recalcule; não sobrescreva mudanças da pessoa.

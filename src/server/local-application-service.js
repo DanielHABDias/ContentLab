@@ -264,6 +264,12 @@ export class LocalApplicationService {
     return await this.activities.track(absolute, 'escrita', async () => {
       const project = await readProjectDirectory(absolute);
       if (project.revision !== baseRevision) throw Object.assign(new Error(`Conflito de revisão: esperado ${baseRevision}, atual ${project.revision}`), { code: 'REVISION_CONFLICT', details: { expected: baseRevision, actual: project.revision, compare: { title: project.title, stageStates: project.stages.map(({ id, state, revision }) => ({ id, state, revision })) } } });
+      for (const item of actions || [action]) {
+        if (item?.type === 'stage.approve' && ['narration', 'edit'].includes(item.stageId) && (project.narrationMediaId || project.media.some(media => media.role === 'narration'))) {
+          const { transcription } = await this.narrationOps.state({ path: absolute });
+          if (transcription.status !== 'ready') throw new LifecycleError('WORDS_MISSING', 'Conclua a montagem e a transcrição palavra por palavra antes de seguir para a edição');
+        }
+      }
       const store = new ProjectStore(path.dirname(absolute));
       const agent = new AgentService(store);
       await agent.run({ schema: 'contentlab-operation-v1', operationId: `op_${randomUUID().replaceAll('-', '')}`, projectId: project.id, baseRevision, dryRun: false, actions: actions || [action] });
@@ -444,6 +450,7 @@ export class LocalApplicationService {
   productionAudio(input) { return this.productionOps.audioLibrary(input); }
   productionScenes(input) { return this.productionOps.sceneSuggestions(input); }
   productionChapters(input) { return this.productionOps.chapters(input); }
+  productionNarrationTranscript(input) { return this.productionOps.narrationTranscript(input); }
   productionTranscribeNarration(input) { return this.productionOps.transcribeNarration(input); }
   productionMotionKit() { return this.productionOps.motionKit(); }
   brandDocs() { return (this.brand ||= new BrandDocs()).docs(); }

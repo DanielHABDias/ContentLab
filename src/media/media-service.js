@@ -103,7 +103,7 @@ export class PortugueseTranscriber {
       await runAbortable(this.ffmpeg, ['-hide_banner', '-loglevel', 'error', '-i', path.resolve(mediaPath), '-vn', '-ac', '1', '-ar', '16000', '-c:a', 'pcm_s16le', wav], { signal });
       onProgress({ phase: 'Transcrevendo', percent: 0 });
       const prefix = path.join(work, 'transcript');
-      await runAbortable(this.binary, ['-m', this.modelPath, '-f', wav, '-l', 'pt', '-t', String(this.threads), '-pp', '-ojf', '-osrt', '-of', prefix], { signal, onStderr: text => { const match = [...text.matchAll(/progress\s*=\s*(\d+)%/g)].at(-1); if (match) onProgress({ phase: 'Transcrevendo', percent: Number(match[1]) }); } });
+      await runAbortable(this.binary, ['-m', this.modelPath, '-f', wav, '-l', 'pt', '-t', String(this.threads), '-pp', '-ml', '1', '-sow', '-ojf', '-osrt', '-of', prefix], { signal, onStderr: text => { const match = [...text.matchAll(/progress\s*=\s*(\d+)%/g)].at(-1); if (match) onProgress({ phase: 'Transcrevendo', percent: Number(match[1]) }); } });
       const json = JSON.parse(await readFile(`${prefix}.json`, 'utf8'));
       return { model: PortugueseTranscriber.model, language: 'pt', json, srt: await readFile(`${prefix}.srt`, 'utf8') };
     } finally { await rm(work, { recursive: true, force: true }); }

@@ -63,5 +63,3 @@ Na interface, o caminho é Produção assistida → *Montar no estilo HQ*. No pa
 - **Imagens:** o Content Lab não busca nem baixa imagens de personagens. Escolher a imagem e confirmar os direitos é com você (ou com o agente, com a sua aprovação).
 - **Transcrição:** a legenda vem do Whisper e pode errar nomes próprios. Corrija na timeline antes do render final.
 - **Gosto:** escuta, visual e ritmo final continuam com você. A verificação só marca o que foi conferido.
-
-O teste real está em `npm run qa:hq`, com relatório em [QA_HQ.md](QA_HQ.md).

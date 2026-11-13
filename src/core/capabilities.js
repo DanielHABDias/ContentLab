@@ -17,7 +17,7 @@ export const FEATURES = {
 /** `requires`: sem eles a etapa não abre. `features`: recursos bloqueados individualmente. */
 export const STAGE_REQUIREMENTS = {
   media: { requires: ['ffmpeg', 'ffprobe'], features: ['media.import', 'media.url', 'transcription'] },
-  narration: { requires: ['ffmpeg', 'ffprobe'], features: ['narration.treatment', 'narration.ai', 'narration.pauses', 'voice.synthetic'] },
+  narration: { requires: ['ffmpeg', 'ffprobe'], features: ['narration.treatment', 'narration.ai', 'narration.pauses', 'voice.synthetic', 'transcription'] },
   edit: { requires: ['ffmpeg', 'ffprobe'], features: [] },
   review: { requires: ['ffmpeg', 'ffprobe'], features: ['render'] },
 };
