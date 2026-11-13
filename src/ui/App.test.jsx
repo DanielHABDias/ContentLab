@@ -3,6 +3,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { App } from './App.jsx';
 import { localApi } from './local-api.js';
 
+vi.mock('./KitPreview.jsx', () => ({ ScenePlayer: ({ scene, vertical }) => <div data-testid="scene-player">{scene} {vertical ? '9:16' : '16:9'}</div>, BackgroundPlayer: ({ kind, tint }) => <div data-testid="background-player">{[kind, tint].filter(Boolean).join(' ')}</div> }));
 vi.mock('./local-api.js', () => ({ OFFLINE_EVENT: 'contentlab:connection', localApi: { listProjects: vi.fn(), openProject: vi.fn(), createProject: vi.fn(), chooseDirectory: vi.fn(), choosePackage: vi.fn(), chooseMedia: vi.fn(), inspectPackage: vi.fn(), importPackage: vi.fn(), importMedia: vi.fn(), runProjectAction: vi.fn(), renderPresets: vi.fn(), renderJobs: vi.fn(), enqueueRender: vi.fn(), cancelRender: vi.fn(), retryRender: vi.fn(), revealRender: vi.fn(), renderLog: vi.fn(), forgetProject: vi.fn(), revealProject: vi.fn(), renameProject: vi.fn(), changeProjectId: vi.fn(), duplicateProject: vi.fn(), exportProject: vi.fn(), deleteProject: vi.fn(), restoreProject: vi.fn(), projectActivities: vi.fn(), cancelProjectActivities: vi.fn(), setupStatus: vi.fn(), setupJobs: vi.fn(), setupInstall: vi.fn(), setupPause: vi.fn(), setupResume: vi.fn(), setupCancel: vi.fn(), setupOnboarding: vi.fn(), relocateProject: vi.fn(), getSettings: vi.fn(), about: vi.fn(), serverWork: vi.fn(), productionSlides: vi.fn(), productionAssemble: vi.fn(), productionThumbnails: vi.fn(), productionDeliverable: vi.fn(), shutdown: vi.fn(), updateStatus: vi.fn(), updateCheck: vi.fn(), updateApply: vi.fn(), updateRollback: vi.fn(), updateConfigure: vi.fn(), validateFolder: vi.fn(), updateSettings: vi.fn(), storageUsage: vi.fn(), storageOrphans: vi.fn(), storageCleanup: vi.fn(), planMigration: vi.fn(), startMigration: vi.fn(), storageJobs: vi.fn(), cancelMigration: vi.fn(), backupRegistry: vi.fn(), registryBackups: vi.fn(), restoreRegistry: vi.fn(), importFiles: vi.fn(), importUrl: vi.fn(), mediaUsage: vi.fn(), removeMedia: vi.fn(), createCut: vi.fn(), removeCut: vi.fn(), transcribe: vi.fn(), transcript: vi.fn(), saveTranscript: vi.fn(), searchTranscripts: vi.fn(), jobs: vi.fn(), cancelJob: vi.fn(), upload: vi.fn(), brandDocs: vi.fn(), brandFileUrl: (kind, name) => `/api/v1/brand/file?kind=${kind}&name=${name}` } }));
 
 function setupStatus(overrides = {}) {
@@ -426,10 +427,10 @@ test('novo projeto: combina fluxo e narração, Esc fecha e título vazio avisa'
   fireEvent.keyDown(document, { key: 'Escape' }); expect(screen.queryByRole('dialog', { name: 'Novo vídeo' })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /novo projeto/i })); fireEvent.click(screen.getByRole('button', { name: /criar projeto/i }));
   expect(await screen.findByText(/dê um título ao vídeo/i)).toBeInTheDocument(); expect(localApi.createProject).not.toHaveBeenCalled();
-  fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Short do Nox' } }); fireEvent.click(screen.getByLabelText(/short · 9:16/i));
+  fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Short do herói' } }); fireEvent.click(screen.getByLabelText(/short · 9:16/i));
   fireEvent.click(screen.getByLabelText(/automático com pausas/i)); fireEvent.click(screen.getByLabelText('Edição')); fireEvent.click(screen.getByLabelText(/eu gravo/i));
   fireEvent.click(screen.getByRole('button', { name: /criar projeto/i }));
-  await waitFor(() => expect(localApi.createProject).toHaveBeenCalledWith(expect.objectContaining({ title: 'Short do Nox', type: 'short', aspectRatio: '9:16', mode: 'autonomous', pauseAt: ['script', 'narration', 'review', 'edit'], narrationBy: 'creator' })));
+  await waitFor(() => expect(localApi.createProject).toHaveBeenCalledWith(expect.objectContaining({ title: 'Short do herói', type: 'short', aspectRatio: '9:16', mode: 'autonomous', pauseAt: ['script', 'narration', 'review', 'edit'], narrationBy: 'creator' })));
 });
 
 test('abas do editor andam com as setas', async () => {
@@ -439,15 +440,20 @@ test('abas do editor andam com as setas', async () => {
   expect(screen.getByRole('tab', { name: /roteiro/i })).toHaveAttribute('aria-selected', 'true'); expect(screen.getByRole('tabpanel')).toBeInTheDocument();
 });
 
-test('documentação toca os sons do kit e mostra as poses do Nox', async () => {
+test('documentação toca os sons do kit, mostra cenas e fundos com cor e não tem poses', async () => {
   const play = vi.fn().mockResolvedValue(); const pause = vi.fn(); const created = [];
   vi.stubGlobal('Audio', vi.fn(function Audio(src) { this.src = src; this.play = play; this.pause = pause; created.push(this); }));
-  localApi.brandDocs.mockResolvedValue({ scenes: [{ id: 'titulo', use: 'Gancho' }], moods: ['feliz'], backgrounds: ['estrelas'], rules: ['Regra'], captions: ['Short (9:16): legenda o tempo todo.'], sound: ['Um som por evento.'], tones: { abertura: 'oi' }, sfx: [{ name: 'whoosh', use: 'Corte', origin: 'Original (procedural)', available: true }, { name: 'sino', use: 'Sininho', origin: 'CC0', available: true }], poses: [{ id: 'acenando', files: ['acenando.png'], gesture: 'Acena', eyes: 'Felizes', tones: ['abertura'] }] });
+  localApi.brandDocs.mockResolvedValue({ scenes: [{ id: 'titulo', use: 'Gancho', example: { palavras: ['OI'] } }, { id: 'aparte', use: 'Aparte' }], moods: ['feliz'], backgrounds: ['estrelas', 'meio-tom'], colors: ['amarelo', 'azul'], rules: ['Regra'], captions: ['Short (9:16): legenda o tempo todo.'], sound: ['Um som por evento.'], sfx: [{ name: 'whoosh', use: 'Corte', origin: 'Original (procedural)', available: true }, { name: 'sino', use: 'Sininho', origin: 'CC0', available: true }] });
   render(<App/>); fireEvent.click(screen.getByRole('button', { name: /documentação/i }));
   fireEvent.click(await screen.findByRole('button', { name: 'sino' }));
   expect(created[0].src).toBe('/api/v1/brand/file?kind=sfx&name=sino'); expect(play).toHaveBeenCalled();
   expect(screen.getByRole('button', { name: 'sino' })).toHaveAttribute('aria-pressed', 'true');
-  expect(screen.getByRole('img', { name: /nox, pose acenando/i })).toHaveAttribute('src', '/api/v1/brand/file?kind=pose&name=acenando');
+  expect(screen.getByRole('button', { name: 'titulo' })).toHaveAttribute('aria-pressed', 'true');
+  expect(await screen.findByTestId('scene-player')).toHaveTextContent('titulo 16:9');
+  fireEvent.click(screen.getByLabelText(/short \(9:16\)/i)); expect(await screen.findByTestId('scene-player')).toHaveTextContent('titulo 9:16');
+  fireEvent.click(screen.getByLabelText('Azul')); expect(screen.getAllByTestId('background-player').map(item => item.textContent)).toEqual(['estrelas', 'meio-tom azul']);
+  expect(screen.queryByRole('button', { name: 'aparte' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('img')).not.toBeInTheDocument(); // sem galeria de poses
   expect(screen.getByText(/legenda o tempo todo/i)).toBeInTheDocument();
   vi.unstubAllGlobals();
 });

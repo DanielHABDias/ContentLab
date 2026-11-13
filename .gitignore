@@ -35,5 +35,3 @@ coverage/
 .contentlab-data/
 release/
 
-# Nox (mascote do Diazverso) não faz parte do Content Lab: o app lê do plugin (src/core/nox-pack.js)
-assets/brand/nox/

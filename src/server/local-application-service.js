@@ -370,6 +370,8 @@ export class LocalApplicationService {
   importMediaFiles(input) { return this.mediaOps.importFiles(input); }
   importMediaUrl(input) { return this.mediaOps.importUrl(input); }
   importMediaUpload(input) { return this.mediaOps.importUpload(input); }
+  /** Pacote de personagem (poses PNG + catalogo.json) para o projeto; o mesmo para interface, CLI e MCP. */
+  characterImport(input) { return this.mediaOps.importCharacter(input); }
   mediaUsage(input) { return this.mediaOps.usage(input); }
   removeMedia(input) { return this.mediaOps.remove(input); }
   createMediaCut(input) { return this.mediaOps.createCut(input); }

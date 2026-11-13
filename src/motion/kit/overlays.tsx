@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
 import { Img, random, useCurrentFrame, useVideoConfig } from 'remotion';
 import { ANTON, C } from './fx';
-import { boil } from './Nox';
+import { boil } from './Personagem';
 import { Assets } from './scenes';
 
 /**

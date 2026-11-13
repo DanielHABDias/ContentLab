@@ -1,6 +1,6 @@
 # Content Lab
 
-**Content Lab — criado por Daniel Dias** · [Diazverso](https://www.youtube.com/@DiazVerso)
+**Content Lab — criado por Daniel Dias**
 
 Ferramenta audiovisual local para organizar um vídeo da ideia ao pacote final. A interface e agentes trabalham sobre o mesmo projeto versionado: roteiro, títulos A/B, thumbnails, mídia, narração, timeline, revisão e render.
 
@@ -64,7 +64,11 @@ A tela inicial cria, abre, importa e retoma projetos locais reais. Não são ins
 
 ### Documentação
 
-A aba **Documentação**, na barra lateral, mostra o que todo projeto traz do kit Diazverso. Nela você ouve cada SFX com um clique, vê as 21 poses do Nox (lidas do plugin Diazverso no computador; o Nox não faz parte do Content Lab) (com gesto, olhos e tons) e consulta as cenas, os humores, os fundos e as regras de legenda e de som. Os arquivos vêm de `GET /api/v1/brand/docs` e `GET /api/v1/brand/file?kind=sfx|pose&name=…`, que só servem nomes do catálogo. Pelo MCP, use `kit_docs`.
+A aba **Documentação**, na barra lateral, mostra o que todo projeto traz do kit de motion do Content Lab. Nela as cenas de exemplo tocam ao vivo no navegador (16:9 ou 9:16), os fundos (estrelas, meio-tom, explosão, papel…) aparecem com seletor de cor, cada SFX toca com um clique e há as regras de legenda e de som. Os dados vêm de `GET /api/v1/brand/docs` e os arquivos de `GET /api/v1/brand/file?kind=sfx|font&name=…`, que só servem nomes do kit. Pelo MCP, use `kit_docs`.
+
+### Personagem do projeto
+
+Um projeto pode ter um personagem (mascote, apresentador desenhado): em **Mídias → Importar personagem**, escolha a pasta com os PNGs das poses e o `catalogo.json` e confirme os direitos. Pelo MCP é `character_import`; pela CLI, `character.inspect` e `character.import`. Com personagem, o modo composição ganha apartes e a cena `personagem`; sem ele, o vídeo sai sem os dois. Formato do pacote em [docs/MOTION.md](docs/MOTION.md#personagem-do-projeto).
 
 ### Gerenciar projetos
 

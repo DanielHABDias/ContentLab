@@ -50,6 +50,11 @@ function applyActions(project, actions, operationId) {
     }
     else if (action.type === 'creative.update') draft.creative = structuredClone(action.creative);
     else if (action.type === 'motion.set') draft.motion = action.motion ? structuredClone(action.motion) : null;
+    else if (action.type === 'character.set') {
+      const missing = Object.values(action.character?.files || {}).filter(id => draft.media.find(item => item.id === id)?.role !== 'character');
+      if (missing.length) throw new Error(`Pose sem mídia de personagem no projeto: ${missing.join(', ')}`);
+      draft.character = action.character ? structuredClone(action.character) : null;
+    }
     else if (action.type === 'media.add') {
       const existing = draft.media.findIndex(item => item.id === action.media.id);
       if (existing >= 0) draft.media[existing] = action.media;
@@ -62,6 +67,7 @@ function applyActions(project, actions, operationId) {
       if (usages.thumbnail) draft.creative.packaging.thumbnailMediaId = null;
       for (const track of draft.timeline.tracks) track.clips = track.clips.filter(clip => clip.sourceId !== action.mediaId);
       draft.media = draft.media.filter(item => item.id !== action.mediaId);
+      if (draft.character) draft.character = withoutCharacterMedia(draft.character, action.mediaId);
     }
     else if (action.type === 'media.cut.add' || action.type === 'media.cut.remove' || action.type === 'media.transcript.set') {
       const media = draft.media.find(item => item.id === action.mediaId);
@@ -127,4 +133,12 @@ function compactProject(project) {
 
 function revisionConflict(expected, actual, current) {
   return Object.assign(new Error(`Conflito de revisão: esperado ${expected}, atual ${actual}`), { code: 'REVISION_CONFLICT', details: { expected, actual, compare: { title: current.title, stageStates: current.stages.map(({ id, state, revision }) => ({ id, state, revision })) } } });
+}
+
+/** Tira do personagem os arquivos de uma mídia removida; pose sem arquivo sai do catálogo e personagem vazio vira null. */
+function withoutCharacterMedia(character, mediaId) {
+  const files = Object.fromEntries(Object.entries(character.files).filter(([, id]) => id !== mediaId));
+  if (Object.keys(files).length === Object.keys(character.files).length) return character;
+  const poses = Object.fromEntries(Object.entries(character.poses).map(([name, pose]) => [name, { ...pose, arquivos: pose.arquivos.filter(file => files[file]) }]).filter(([, pose]) => pose.arquivos.length));
+  return Object.keys(poses).length ? { ...character, files, poses } : null;
 }

@@ -4,11 +4,11 @@ import { ANTON, C, Film, Flash, resolvePublic, useAnton } from './fx';
 import { Thumbnail, calculateThumb } from './Thumbnail';
 import { SCENES_3D } from './three';
 import { Extra, Extras } from './overlays';
-import { NoxPoses, PoseInfo } from './Nox';
+import { Character, PersonagemCtx } from './Personagem';
 import { Asset, Assets, SCENES } from './scenes';
 
 /**
- * Composição única do roteiro em beats (contrato `diazverso-motion-v1`).
+ * Composição única do roteiro em beats (contrato `contentlab-motion-v1`).
  * Tempos em segundos; o editor resolve `media:<id>` em `assets` (caminhos da pasta pública).
  */
 export type Beat = { id: string; scene: string; at: number; duration: number; props?: Record<string, unknown>; sfx?: Array<{ name: string; at?: number; volume?: number }>; flash?: boolean; legenda?: boolean; extras?: Extra[] };
@@ -17,8 +17,8 @@ export type MotionProps = {
   plan: { fps: number; width: number; height: number; duration: number; beats: Beat[]; captions?: boolean; musicVolume?: number; duck?: number };
   assets: Record<string, Asset>;
   narration?: string | null; music?: string | null; words?: Word[];
-  /** Poses do Nox disponíveis: nome do arquivo → PNG pronto (`pose` = nome sem o sufixo da variante). */
-  poses?: Record<string, string | PoseInfo>;
+  /** Personagem do projeto: arquivo da pose → PNG pronto (`pose` = nome sem o sufixo da variante) e os tons de cada pose. */
+  personagem?: Character;
 };
 
 const NO_CAPTION = new Set(['titulo', 'cta']);
@@ -50,7 +50,7 @@ const Captions: React.FC<{ words: Word[]; fps: number; hidden: (t: number) => bo
 
 export const MotionVideo: React.FC<MotionProps> = (raw) => {
   useAnton();
-  const { plan, assets, narration, music, words = [], poses = {} } = resolvePublic(raw) as MotionProps;
+  const { plan, assets, narration, music, words = [], personagem = { poses: {} } } = resolvePublic(raw) as MotionProps;
   const { fps, beats } = plan;
   const frames = (s: number) => Math.max(0, Math.round(s * fps));
   const speaking = (t: number) => words.some(w => t >= w.start - 0.15 && t <= w.end + 0.25);
@@ -58,7 +58,7 @@ export const MotionVideo: React.FC<MotionProps> = (raw) => {
   const captionHidden = (t: number) => beats.some(b => b.legenda === false || NO_CAPTION.has(b.scene) ? t >= b.at && t < b.at + b.duration && (b.legenda !== true) : false);
   return (
     <Assets.Provider value={assets}>
-      <NoxPoses.Provider value={poses}>
+      <PersonagemCtx.Provider value={personagem}>
       <AbsoluteFill style={{ background: '#000' }}>
         {beats.map(beat => {
           const Scene = ALL_SCENES[beat.scene];
@@ -74,7 +74,7 @@ export const MotionVideo: React.FC<MotionProps> = (raw) => {
           <Sequence key={`${beat.id}-${i}`} from={frames(beat.at + (cue.at || 0))} durationInFrames={frames(3)}><Audio src={staticFile(`sfx/${cue.name}.wav`)} volume={cue.volume ?? 0.5} /></Sequence>
         )))}
       </AbsoluteFill>
-      </NoxPoses.Provider>
+      </PersonagemCtx.Provider>
     </Assets.Provider>
   );
 };
@@ -85,9 +85,9 @@ const calculateMetadata: CalculateMetadataFunction<MotionProps> = ({ props }) =>
 
 export const Root: React.FC = () => (
   <>
-    <Composition id="DiazversoMotion" component={MotionVideo} calculateMetadata={calculateMetadata} durationInFrames={1} fps={30} width={1920} height={1080}
-      defaultProps={{ plan: { fps: 30, width: 1920, height: 1080, duration: 3, beats: [{ id: 'b1', scene: 'titulo', at: 0, duration: 3, props: { palavras: ['DIAZVERSO'] } }] }, assets: {} }} />
-    <Composition id="DiazversoThumb" component={Thumbnail} calculateMetadata={calculateThumb} durationInFrames={1} fps={30} width={1280} height={720}
+    <Composition id="KitMotion" component={MotionVideo} calculateMetadata={calculateMetadata} durationInFrames={1} fps={30} width={1920} height={1080}
+      defaultProps={{ plan: { fps: 30, width: 1920, height: 1080, duration: 3, beats: [{ id: 'b1', scene: 'titulo', at: 0, duration: 3, props: { palavras: ['CONTENT LAB'] } }] }, assets: {} }} />
+    <Composition id="KitThumb" component={Thumbnail} calculateMetadata={calculateThumb} durationInFrames={1} fps={30} width={1280} height={720}
       defaultProps={{ assets: {}, texto: 'O HERÓI *CHATO*' }} />
   </>
 );

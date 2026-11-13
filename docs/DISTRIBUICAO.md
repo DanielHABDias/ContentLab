@@ -89,6 +89,8 @@ Máquina de referência: Ryzen 5 5500 (12 threads), 15,5 GB de RAM e GPU AMD int
 - **Instaladores para Windows e macOS.**
 - **Teste em VM** com outra distribuição.
 
-## Marca Diazverso fora do pacote
+## Personagem e marca fora do pacote
 
-O Nox (mascote do Diazverso) não vai no app nem no repositório. No computador do criador, o app o encontra no plugin Diazverso: `DIAZVERSO_PLUGIN_DIR` (ou `CONTENTLAB_NOX_DIR`), a pasta `DiazVerso-Plugin` ao lado do Content Lab, `~/Documentos/Projects/DiazVerso-Plugin` ou `~/DiazVerso-Plugin`.
+O app não traz personagem. Cada projeto importa o seu com `character_import` (MCP), "Mídias → Importar personagem" (interface) ou `character.import` (CLI): uma pasta com PNGs de poses e `catalogo.json`, com os direitos confirmados. O personagem fica como mídia do projeto e vai junto no pacote `.contentlab` desse projeto.
+
+O kit de motion (código, Anton OFL, SFX e ícones em `assets/kit/`) é do Content Lab e vai no pacote.

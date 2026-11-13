@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// QA do estilo Diazverso pelo MCP real (como um chat faria): imagens do assunto importadas (Nox e
-// ícones do Diazverso, direitos próprios), narração transcrita para legenda palavra a palavra, cenas
-// HQ do plugin com um beat visual por frase, SFX e trilha de rascunho com ducking, capítulos; Short
-// 1080×1920 com um diálogo do Nox escolhido pelo agente. Extrai frames e mede o áudio.
+// QA do modo clips com cenas HQ pelo MCP real (como um chat faria): imagens do assunto importadas (um
+// personagem de teste e ícones do kit, direitos próprios), narração transcrita para legenda palavra a palavra, cenas
+// HQ com um beat visual por frase, SFX e trilha de rascunho com ducking, capítulos; Short
+// 1080×1920 com um diálogo do personagem escolhido pelo agente. Extrai frames e mede o áudio.
 //   node scripts/qa-hq.mjs [--keep]
 import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -11,7 +11,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { requireNoxDir } from '../src/core/nox-pack.js';
+import { makeCharacterPack } from '../src/test/character-fixture.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const work = await mkdtemp(path.join(os.tmpdir(), 'contentlab-hq-'));
@@ -65,48 +65,48 @@ async function produce({ title, type, brief, script, packaging, voice, scenes, s
   return { title, type, projectPath, output: rendered.output, duration: Number(info.format.duration), size: `${video.width}x${video.height}`, lufs, delivery, chapters, frames, sceneClips: timeline.sceneClips };
 }
 
-// Imagens com direitos próprios: Nox (fornecido pelo criador) e ícones originais do Diazverso rasterizados.
-const brand = path.join(root, 'assets/brand');
+// Imagens com direitos próprios: um personagem de teste (formas simples) e os ícones originais do kit rasterizados.
+const brand = path.join(root, 'assets/kit');
 const imageDir = path.join(work, 'imagens'); await mkdir(imageDir, { recursive: true });
 const icons = ['escudo', 'lampada', 'balanca', 'caminho', 'mascara', 'raio'].map(name => { const out = path.join(imageDir, `${name}.png`); execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-c:v', 'librsvg', '-width', '900', '-i', path.join(brand, 'graphics', `${name}.svg`), '-frames:v', '1', out]); return out; });
-const nox = path.join(requireNoxDir(), 'Nox.png');
+const heroi = path.join(await makeCharacterPack(path.join(work, 'personagem')), 'parado.png');
 
 const results = [];
 try {
   await call('contentlab_start');
   results.push(await produce({
-    title: 'O escudo que pesava demais', type: 'long', voice: 'pm_alex', scenes: 'auto', images: [nox, ...icons],
+    title: 'O escudo que pesava demais', type: 'long', voice: 'pm_alex', scenes: 'auto', images: [heroi, ...icons],
     shots: duration => Array.from({ length: 10 }, (_, index) => ((index + 0.5) * duration) / 10),
-    brief: { thesis: 'Proteger tudo o tempo todo impede o herói de escolher o que realmente importa', audience: 'Fãs de heróis que gostam de entender escolhas', promise: 'Entender por que um herói precisa escolher o que proteger', notes: 'Nox participa da explicação' },
+    brief: { thesis: 'Proteger tudo o tempo todo impede o herói de escolher o que realmente importa', audience: 'Fãs de heróis que gostam de entender escolhas', promise: 'Entender por que um herói precisa escolher o que proteger', notes: 'O herói participa da explicação' },
     script: {
-      hook: 'O Nox carregava um escudo enorme. Ele protegia tudo. E justamente por isso, não protegia nada direito.',
-      development: 'Todo herói começa assim. Quer salvar todo mundo, ao mesmo tempo, sem perder ninguém. Parece nobre. Na prática, é uma promessa impossível.\n\nO escudo pesa. Cada pessoa nova é mais um peso. E um dia o Nox percebeu que estava sempre atrasado, sempre cansado, sempre um passo atrás.\n\nFoi aí que veio a lâmpada. Ele não precisava de um escudo maior. Precisava escolher onde estar. Uma balança, não uma muralha.\n\nEscolher dói. Quem fica de fora cobra. Mas um herói que escolhe chega a tempo. Um herói que tenta tudo chega tarde em todo lugar.',
+      hook: 'O herói carregava um escudo enorme. Ele protegia tudo. E justamente por isso, não protegia nada direito.',
+      development: 'Todo herói começa assim. Quer salvar todo mundo, ao mesmo tempo, sem perder ninguém. Parece nobre. Na prática, é uma promessa impossível.\n\nO escudo pesa. Cada pessoa nova é mais um peso. E um dia o herói percebeu que estava sempre atrasado, sempre cansado, sempre um passo atrás.\n\nFoi aí que veio a lâmpada. Ele não precisava de um escudo maior. Precisava escolher onde estar. Uma balança, não uma muralha.\n\nEscolher dói. Quem fica de fora cobra. Mas um herói que escolhe chega a tempo. Um herói que tenta tudo chega tarde em todo lugar.',
       payoff: 'Proteger não é segurar o mundo inteiro. É decidir o que vale o seu peso. E você, o que está carregando que não precisava?',
     },
-    packaging: { titleA: 'O escudo que pesava demais', titleB: 'Por que herói precisa escolher', description: 'O Nox aprende que proteger tudo é não proteger nada.', tags: 'nox, heróis, escolhas, diazverso', seo: 'herói escolhas responsabilidade' },
+    packaging: { titleA: 'O escudo que pesava demais', titleB: 'Por que herói precisa escolher', description: 'O herói aprende que proteger tudo é não proteger nada.', tags: 'heróis, escolhas', seo: 'herói escolhas responsabilidade' },
   }));
   results.push(await produce({
-    title: 'Nox e a regra quebrada', type: 'short', voice: 'pf_dora', images: [nox, icons[0], icons[4], icons[1], icons[5]],
+    title: 'O herói e a regra quebrada', type: 'short', voice: 'pf_dora', images: [heroi, icons[0], icons[4], icons[1], icons[5]],
     shots: duration => Array.from({ length: 8 }, (_, index) => Math.min(duration - 0.3, 0.6 + (index * duration) / 8)),
-    // O agente troca o 3º beat por um diálogo: Nox × a regra (ícone da máscara), com tempos dentro do beat.
+    // O agente troca o 3º beat por um diálogo: herói × a regra (ícone da máscara), com tempos dentro do beat.
     scenes: (suggestion, evidence) => suggestion.map((item, index) => index !== 2 ? item : { ...item, componentId: 'dv_dialogo_hq', props: {
-      backgroundStyle: 'halftone', left: { asset: 'nox', name: 'NOX', color: '#2676E8' }, right: { asset: 'regra', name: 'A REGRA', color: '#EF3F49' },
+      backgroundStyle: 'halftone', left: { asset: 'heroi', name: 'HERÓI', color: '#2676E8' }, right: { asset: 'regra', name: 'A REGRA', color: '#EF3F49' },
       turns: [{ speaker: 'left', text: 'POR QUE EU SIGO VOCÊ?', at: 0, duration: Math.floor(item.length * 10 / 2) / 10, animation: 'escrita', writeDuration: 0.6 }, { speaker: 'right', text: 'PORQUE SEMPRE FOI ASSIM.', at: Math.floor(item.length * 10 / 2) / 10, duration: Math.floor(item.length * 10 / 2) / 10 - 0.05, animation: 'none' }],
-      assets: { nox: evidence[0].ref, regra: evidence[2].ref, anton: 'brand:anton' } } }),
-    brief: { thesis: 'Regras ajudam, mas seguir sem perguntar também é uma escolha', audience: 'Público de Shorts', promise: 'Uma ideia sobre regras e escolhas em um minuto', notes: 'Nox participa' },
+      assets: { heroi: evidence[0].ref, regra: evidence[2].ref, anton: 'brand:anton' } } }),
+    brief: { thesis: 'Regras ajudam, mas seguir sem perguntar também é uma escolha', audience: 'Público de Shorts', promise: 'Uma ideia sobre regras e escolhas em um minuto', notes: 'Herói participa' },
     script: {
       hook: 'Toda regra que você segue foi a escolha de alguém. A pergunta é: ela ainda faz sentido?',
-      development: 'O Nox seguia uma regra antiga. Ninguém lembrava quem tinha criado. Todo mundo só obedecia, porque sempre foi assim.\n\nUm dia ele perguntou por quê. Silêncio. A regra protegia um problema que nem existia mais.\n\nSeguir é confortável. Você não erra sozinho. Escolher dá trabalho, porque o erro passa a ser seu. Mas é o único jeito de alguma coisa mudar.',
+      development: 'O herói seguia uma regra antiga. Ninguém lembrava quem tinha criado. Todo mundo só obedecia, porque sempre foi assim.\n\nUm dia ele perguntou por quê. Silêncio. A regra protegia um problema que nem existia mais.\n\nSeguir é confortável. Você não erra sozinho. Escolher dá trabalho, porque o erro passa a ser seu. Mas é o único jeito de alguma coisa mudar.',
       payoff: 'Regra boa aguenta uma pergunta. Qual regra na sua vida você nunca questionou? Me conta nos comentários.',
     },
-    packaging: { titleA: 'A regra que ninguém questionava', titleB: 'Seguir ou escolher?', description: 'Um minuto sobre regras e escolhas, com o Nox.', tags: 'shorts, escolhas, nox, diazverso', seo: 'regras escolhas' },
+    packaging: { titleA: 'A regra que ninguém questionava', titleB: 'Seguir ou escolher?', description: 'Um minuto sobre regras e escolhas, com o herói.', tags: 'shorts, escolhas', seo: 'regras escolhas' },
   }));
 } catch (error) {
   note(`✘ ${error.stack || error.message}`); process.exitCode = 1;
 } finally {
   await call('contentlab_stop', { force: true }).catch(() => {});
   await client.close();
-  const report = ['# QA do estilo Diazverso via MCP', '', `Executado em ${new Date().toISOString()} · ${os.platform()} ${os.arch()} · narração padrão Kokoro · legenda palavra a palavra (Whisper) · cenas HQ do plugin Diazverso · imagens próprias (Nox e ícones) · SFX originais e trilha de rascunho`, '', 'Teste técnico do fluxo com imagens próprias; a qualidade editorial final depende das imagens reais dos personagens e de uma trilha licenciada, escolhidas pelo criador.', '', '| Projeto | Formato | Duração | Cenas HQ | Loudness | Capítulos | Verificação |', '| --- | --- | --- | --- | --- | --- | --- |', ...results.map(item => `| ${item.title} | ${item.size} | ${item.duration.toFixed(1)} s | ${item.sceneClips} | ${item.lufs} LUFS | ${item.chapters.length} | ${item.delivery.checks.filter(check => check.ok).length}/${item.delivery.checks.length} |`), '', '## Registro', '', '```text', ...log, '```', ''].join('\n');
+  const report = ['# QA das cenas HQ via MCP', '', `Executado em ${new Date().toISOString()} · ${os.platform()} ${os.arch()} · narração padrão Kokoro · legenda palavra a palavra (Whisper) · cenas HQ do Content Lab · imagens próprias (personagem de teste e ícones) · SFX originais e trilha de rascunho`, '', 'Teste técnico do fluxo com imagens próprias; a qualidade editorial final depende das imagens reais dos personagens e de uma trilha licenciada, escolhidas pelo criador.', '', '| Projeto | Formato | Duração | Cenas HQ | Loudness | Capítulos | Verificação |', '| --- | --- | --- | --- | --- | --- | --- |', ...results.map(item => `| ${item.title} | ${item.size} | ${item.duration.toFixed(1)} s | ${item.sceneClips} | ${item.lufs} LUFS | ${item.chapters.length} | ${item.delivery.checks.filter(check => check.ok).length}/${item.delivery.checks.length} |`), '', '## Registro', '', '```text', ...log, '```', ''].join('\n');
   await writeFile(path.join(root, 'docs', 'QA_HQ.md'), report);
   console.log(`\nRelatório: docs/QA_HQ.md · artefatos: ${process.argv.includes('--keep') ? work : '(removidos)'}`);
   if (!process.argv.includes('--keep')) await rm(work, { recursive: true, force: true });

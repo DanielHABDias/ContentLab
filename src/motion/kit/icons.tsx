@@ -2,7 +2,7 @@ import React from 'react';
 import { ANTON, C } from './fx';
 
 /**
- * Ícones HQ (traço de tinta, preenchimento chapado) para representar o que o Nox fala:
+ * Ícones HQ (traço de tinta, preenchimento chapado) para representar o que o personagem fala:
  * aparecem no balão acima dele na cena `aparte`. Desenho original, sem fonte de emoji.
  */
 export const ICONS = ['lampada', 'interrogacao', 'exclamacao', 'coracao', 'caveira', 'dinheiro', 'relogio', 'raio', 'certo', 'errado', 'fogo', 'coroa', 'escudo', 'olho', 'cerebro', 'trofeu'] as const;

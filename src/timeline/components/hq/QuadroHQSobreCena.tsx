@@ -1,5 +1,4 @@
-// Cena QuadroHQSobreCena do plugin Diazverso 1.3.0, compilada por scripts/build-diazverso-scenes.mjs. Não editar à mão.
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/scenes/HQMotion.tsx
+// Cena HQ QuadroHQSobreCena do Content Lab (arquivo único, imports só de React/Remotion).
 function fitLabelHQ(text, family, width, height, maximum, lineHeight = 1.08) {
   const ctx = document.createElement("canvas").getContext("2d");
   if (!ctx) throw new Error("Canvas indispon\xEDvel.");
@@ -27,15 +26,13 @@ function fitLabelHQ(text, family, width, height, maximum, lineHeight = 1.08) {
   return { lines: wrap(lo), size: lo };
 }
 
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/scenes/HQComicPage.tsx
 import { AbsoluteFill, Img, staticFile } from "remotion";
 import { jsx } from "react/jsx-runtime";
-function HQComicPage({ opacity = 100, src = staticFile("assets/brand/backgrounds/comic-page.png") }) {
+function HQComicPage({ opacity = 100, src = staticFile("assets/kit/backgrounds/comic-page.png") }) {
   if (!Number.isFinite(opacity) || opacity < 0 || opacity > 100) throw Error("opacity must be 0\u2013100");
   return /* @__PURE__ */ jsx(AbsoluteFill, { style: { pointerEvents: "none", opacity: opacity / 100, overflow: "hidden" }, children: /* @__PURE__ */ jsx(Img, { src, style: { width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" } }) });
 }
 
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/scenes/QuadroHQSobreCena.tsx
 import React from "react";
 import {
   AbsoluteFill as AbsoluteFill2,
@@ -46,7 +43,6 @@ import {
   useVideoConfig
 } from "remotion";
 
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/scenes/load-font.ts
 var cache = /* @__PURE__ */ new Map();
 function loadFont({ family, url }) {
   if (!family?.trim() || !url?.trim() || url.length > 4096) return Promise.reject(new Error("Provide a licensed local font URL and family"));
@@ -66,7 +62,6 @@ function loadFont({ family, url }) {
   return promise;
 }
 
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/scenes/QuadroHQSobreCena.tsx
 import { jsx as jsx2, jsxs } from "react/jsx-runtime";
 var clamp = (value) => Math.max(0, Math.min(1, value));
 var ease = (value) => {

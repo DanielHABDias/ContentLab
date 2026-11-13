@@ -4,12 +4,11 @@ import { spawn } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { requireNoxDir } from '../core/nox-pack.js';
 
 const here = import.meta.url.startsWith('file:') ? path.dirname(fileURLToPath(import.meta.url)) : path.join(process.cwd(), 'src/render');
-export const BRAND_ROOT = path.resolve(here, '../../assets/brand');
-const BRAND_FILES = { anton: 'fonts/Anton-Regular.ttf', nox: 'nox/Nox.png', 'comic-page': 'backgrounds/comic-page.png' };
-const BRAND_VERSION = 'diazverso-1.2.0';
+export const BRAND_ROOT = path.resolve(here, '../../assets/kit');
+const BRAND_FILES = { anton: 'fonts/Anton-Regular.ttf', 'comic-page': 'backgrounds/comic-page.png' };
+const BRAND_VERSION = 'kit-2';
 const worker = import.meta.url.startsWith('file:') ? path.join(path.dirname(fileURLToPath(import.meta.url)), 'remotion-worker.js') : path.join(process.cwd(), 'src/render/remotion-worker.js');
 
 /** Renderiza TSX validado fora do processo principal e guarda o WebM transparente por fingerprint. */
@@ -92,7 +91,7 @@ export function sanitizeProps(schema, values = {}) {
 }
 
 /**
- * Referências de arquivo nas props: `brand:<nome>` (Anton, Nox, página HQ, ícones do Diazverso) e
+ * Referências de arquivo nas props: `brand:<nome>` (Anton, página HQ, ícones do kit) e
  * `media:<id>` (mídia do projeto). Copia só o necessário para a pasta pública do render e troca
  * por `public:<caminho>`, que o worker resolve com staticFile.
  */
@@ -104,7 +103,7 @@ export async function stageAssets(props, media, publicDir) {
     if (ref.startsWith('brand:')) {
       const name = ref.slice(6); const file = BRAND_FILES[name] || (/^[a-z-]{2,32}$/.test(name) ? `graphics/${name}.svg` : null);
       if (!file) throw new Error(`Asset de marca desconhecido: ${name}`);
-      source = name === 'nox' ? path.join(requireNoxDir(), 'Nox.png') : path.join(BRAND_ROOT, file); target = `brand/${file}`;
+      source = path.join(BRAND_ROOT, file); target = `brand/${file}`;
     } else {
       const item = media[ref.slice(6)];
       if (!item?.source) throw new Error(`Mídia não encontrada no projeto: ${ref.slice(6)}`);
@@ -121,9 +120,9 @@ export async function stageAssets(props, media, publicDir) {
     if (value && typeof value === 'object') return Object.fromEntries(await Promise.all(Object.entries(value).map(async ([key, item]) => [key, await walk(item)])));
     return value;
   };
-  await mkdir(path.join(publicDir, 'assets/brand/backgrounds'), { recursive: true });
-  // HQComicPage (dentro das cenas Diazverso) lê a página HQ deste caminho fixo.
-  await copyFile(path.join(BRAND_ROOT, BRAND_FILES['comic-page']), path.join(publicDir, 'assets/brand/backgrounds/comic-page.png'));
+  await mkdir(path.join(publicDir, 'assets/kit/backgrounds'), { recursive: true });
+  // A página HQ (dentro das cenas HQ) é lida deste caminho fixo.
+  await copyFile(path.join(BRAND_ROOT, BRAND_FILES['comic-page']), path.join(publicDir, 'assets/kit/backgrounds/comic-page.png'));
   return walk(props);
 }
 

@@ -1,13 +1,11 @@
-// Cena ImagemFrasesHQ do plugin Diazverso 1.3.0, compilada por scripts/build-diazverso-scenes.mjs. Não editar à mão.
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/scenes/HQComicPage.tsx
+// Cena HQ DialogoHQ do Content Lab (arquivo único, imports só de React/Remotion).
 import { AbsoluteFill, Img, staticFile } from "remotion";
 import { jsx } from "react/jsx-runtime";
-function HQComicPage({ opacity = 100, src = staticFile("assets/brand/backgrounds/comic-page.png") }) {
+function HQComicPage({ opacity = 100, src = staticFile("assets/kit/backgrounds/comic-page.png") }) {
   if (!Number.isFinite(opacity) || opacity < 0 || opacity > 100) throw Error("opacity must be 0\u2013100");
   return /* @__PURE__ */ jsx(AbsoluteFill, { style: { pointerEvents: "none", opacity: opacity / 100, overflow: "hidden" }, children: /* @__PURE__ */ jsx(Img, { src, style: { width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" } }) });
 }
 
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/motion/hq-background.tsx
 import React from "react";
 import { AbsoluteFill as AbsoluteFill2, useCurrentFrame, useVideoConfig } from "remotion";
 import { Fragment, jsx as jsx2, jsxs } from "react/jsx-runtime";
@@ -120,11 +118,9 @@ var HQBackground = (props) => /* @__PURE__ */ jsxs(Fragment, { children: [
   props.children
 ] });
 
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/scenes/SceneBackground.tsx
 import { jsx as jsx3 } from "react/jsx-runtime";
 var SceneBackground = ({ backgroundStyle = "halftone", backgroundColor = "#162034", backgroundOpacity = 100, paperTone = "dark", gridBackgroundColor = "#10101A", gridLineColor = "#858595", children }) => /* @__PURE__ */ jsx3(HQBackground, { mode: backgroundStyle, baseColor: backgroundColor, opacity: backgroundOpacity, paperTone, gridBaseColor: gridBackgroundColor, gridColor: gridLineColor, children });
 
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/scenes/HQMotion.tsx
 var boundsCache = /* @__PURE__ */ new Map();
 function imageBoundsHQ(src) {
   if (boundsCache.has(src)) return boundsCache.get(src);
@@ -161,11 +157,9 @@ function imageBoundsHQ(src) {
   return pending;
 }
 
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/scenes/ImagemFrasesHQ.tsx
 import React2 from "react";
 import { AbsoluteFill as AbsoluteFill3, Img as Img2, cancelRender, continueRender, delayRender, useCurrentFrame as useCurrentFrame2, useVideoConfig as useVideoConfig2 } from "remotion";
 
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/scenes/load-font.ts
 var cache = /* @__PURE__ */ new Map();
 function loadFont({ family, url }) {
   if (!family?.trim() || !url?.trim() || url.length > 4096) return Promise.reject(new Error("Provide a licensed local font URL and family"));
@@ -185,106 +179,105 @@ function loadFont({ family, url }) {
   return promise;
 }
 
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/scenes/ImagemFrasesHQ.tsx
-import { Fragment as Fragment2, jsx as jsx4, jsxs as jsxs2 } from "react/jsx-runtime";
-function phraseVisible(at, frame, fps) {
-  return frame >= Math.ceil(at * fps - 1e-8);
+import { jsx as jsx4, jsxs as jsxs2 } from "react/jsx-runtime";
+var clampDialogue = (x) => Math.max(0, Math.min(1, x));
+var easeDialogue = (x) => {
+  const p = clampDialogue(x);
+  return p * p * (3 - 2 * p);
+};
+function validateDialogue(turns, duration, motionDuration) {
+  if (!Array.isArray(turns) || !turns.length) throw new Error("Informe turns com pelo menos uma fala.");
+  if (!Number.isFinite(motionDuration) || motionDuration < 0) throw new Error("motionDuration deve ser n\xE3o negativo.");
+  turns.forEach((turn, i) => {
+    if (!["left", "right"].includes(turn.speaker) || !turn.text?.trim() || !Number.isFinite(turn.at) || turn.at < 0 || !Number.isFinite(turn.duration) || turn.duration <= 0 || turn.at + turn.duration > duration + 1e-7 || i > 0 && turn.at < turns[i - 1].at + turns[i - 1].duration - 1e-7) throw new Error("Falas: speaker left/right, text, at/duration dentro da cena, ordenados e sem sobreposi\xE7\xE3o.");
+    if (!["escrita", "none"].includes(turn.animation ?? "escrita")) throw new Error("animation deve ser escrita ou none.");
+    const delay = turn.textDelay ?? 0, write = turn.writeDuration ?? Math.min(1.2, Math.max(0.01, (turn.duration - delay) * 0.55));
+    if (!Number.isFinite(delay) || delay < 0 || delay >= turn.duration || !Number.isFinite(write) || write <= 0 || (turn.animation ?? "escrita") === "escrita" && delay + write > turn.duration + 1e-7) throw new Error("textDelay e writeDuration precisam caber na fala.");
+    if (turn.textColor && !/^#[a-f\d]{6}$/i.test(turn.textColor)) throw new Error("textColor deve usar #RRGGBB.");
+  });
 }
-function phraseColor(index, muted, white, accent) {
-  return [muted, white, accent][index % 3];
+function dialogueEvents(turns) {
+  return turns.flatMap((turn) => [{ at: turn.at, order: 1, left: turn.speaker === "left" ? 1 : 0, right: turn.speaker === "right" ? 1 : 0 }, { at: turn.at + turn.duration, order: 0, left: 0, right: 0 }]).sort((a, b) => a.at - b.at || a.order - b.order);
 }
-function wrap(text, size, width, ctx, fontFamily = "Bangers") {
-  ctx.font = `${size}px ${fontFamily}`;
-  const lines = [];
-  let line = "";
-  for (const word of text.split(/\s+/)) {
-    if (ctx.measureText(word).width > width) {
-      if (line) {
-        lines.push(line);
-        line = "";
-      }
-      for (const char of Array.from(word)) {
-        if (line && ctx.measureText(line + char).width > width) {
-          lines.push(line);
-          line = "";
-        }
-        line += char;
-      }
-    } else if (line && ctx.measureText(line + " " + word).width > width) {
-      lines.push(line);
-      line = word;
-    } else line += (line ? " " : "") + word;
+function dialogueWeights(turns, time, motionDuration, events = dialogueEvents(turns)) {
+  let origin = { left: 0, right: 0 }, target = { left: 0, right: 0 }, start = 0;
+  const sample = (at) => {
+    const p = motionDuration === 0 ? 1 : easeDialogue((at - start) / motionDuration);
+    return { left: origin.left + (target.left - origin.left) * p, right: origin.right + (target.right - origin.right) * p };
+  };
+  for (const event of events) {
+    if (event.at > time) break;
+    origin = sample(event.at);
+    target = { left: event.left, right: event.right };
+    start = event.at;
   }
-  if (line) lines.push(line);
-  return lines;
+  return sample(time);
 }
-function textLayout(phrases, width, height, maximum, gap, fontFamily = "Bangers") {
+function dialogueTurnIndex(turns, frame, fps) {
+  return turns.findIndex((turn) => frame >= Math.ceil(turn.at * fps - 1e-8) && frame < Math.ceil((turn.at + turn.duration) * fps - 1e-8));
+}
+var dialogueImageBounds = imageBoundsHQ;
+function dialogueTextLayout(text, family, width, height, maximum) {
   const ctx = document.createElement("canvas").getContext("2d");
   if (!ctx) throw new Error("Canvas indispon\xEDvel.");
-  const calculate = (base) => phrases.map((phrase) => {
-    const size = base * (phrase.size ?? 1);
-    const lines = wrap(phrase.text.normalize("NFC").toLocaleUpperCase("pt-BR").trim(), size, width, ctx, fontFamily);
-    return { text: lines.join("\n"), size, height: lines.length * size * 1.04 };
-  });
+  const wrap = (size) => {
+    ctx.font = `${size}px ${family}`;
+    const lines = [];
+    for (const paragraph of text.split("\n")) {
+      let line = "";
+      for (const word of paragraph.split(/\s+/).filter(Boolean)) {
+        if (line && ctx.measureText(line + " " + word).width > width) {
+          lines.push(line);
+          line = word;
+        } else line += (line ? " " : "") + word;
+      }
+      lines.push(line);
+    }
+    return lines;
+  };
   let low = 1, high = maximum;
   for (let i = 0; i < 18; i++) {
-    const base = (low + high) / 2;
-    const lines = calculate(base);
-    if (lines.reduce((sum, line) => sum + line.height, 0) + Math.max(0, phrases.length - 1) * gap <= height) low = base;
-    else high = base;
+    const size = (low + high) / 2, lines = wrap(size);
+    if (lines.length * size * 1.15 <= height && lines.every((line) => ctx.measureText(line).width <= width)) low = size;
+    else high = size;
   }
-  return calculate(low);
+  return { lines: wrap(low), size: low };
 }
-var imageBounds = imageBoundsHQ;
-function ImagemFrasesHQ({
+function DialogoHQ({
+  left,
+  right,
+  turns,
   fontFamily = "Anton",
+  textColor = "#FFFFFF",
+  motionDuration = 0.45,
+  highlightOpacity = 85,
   backgroundStyle = "halftone",
+  backgroundColor = "#10131E",
   backgroundOpacity = 100,
   paperTone = "light",
   gridBackgroundColor = "#10101A",
   gridLineColor = "#858595",
-  phrases,
-  imageSide = "right",
-  label = "",
-  backgroundColor = "#111522",
-  textColor = "#FFFFFF",
-  mutedColor = "#A6A9B1",
-  accentColor = "#EF3F49",
-  glowColor,
-  glowIntensity = 0.65,
-  imageScale = 1,
   assets = {}
 }) {
-  const fontUrl = resolveHQFont(fontFamily, assets);
   const { width: w, height: h, fps, durationInFrames } = useVideoConfig2();
-  const frame = useCurrentFrame2();
-  const horizontal = w > h;
-  const u = Math.min(w, h) / 1080;
-  if (!Array.isArray(phrases) || !phrases.length) throw new Error("Informe ao menos uma frase.");
-  if (!assets.image || !fontUrl) throw new Error("Informe assets.image e fontUrl.");
-  if (!["left", "right"].includes(imageSide)) throw new Error("imageSide deve ser left ou right.");
-  const glow = glowColor ?? accentColor;
-  if (![backgroundColor, textColor, mutedColor, accentColor, glow, ...phrases.map((p) => p.color ?? textColor)].every((c) => /^#[a-f\d]{6}$/i.test(c))) throw new Error("Cores devem usar #RRGGBB.");
-  if (!Number.isFinite(imageScale) || imageScale < 0.25 || imageScale > 1 || !Number.isFinite(glowIntensity) || glowIntensity < 0 || glowIntensity > 1) throw new Error("imageScale deve ser 0.25\u20131; glowIntensity 0\u20131.");
-  phrases.forEach((phrase, i) => {
-    if (!phrase.text?.trim() || !Number.isFinite(phrase.at) || phrase.at < 0 || Math.ceil(phrase.at * fps - 1e-8) >= durationInFrames || i > 0 && phrase.at < phrases[i - 1].at) throw new Error("Frases precisam de text e at ordenado dentro da cena.");
-    if (!Number.isFinite(phrase.size ?? 1) || (phrase.size ?? 1) < 0.4 || (phrase.size ?? 1) > 1.5) throw new Error("size relativo da frase deve ser 0.4\u20131.5.");
-  });
-  const picture = horizontal ? { x: w * (imageSide === "right" ? 0.59 : 0.07), y: h * 0.16, width: w * 0.34, height: h * 0.69 } : { x: w * 0.16, y: h * 0.13, width: w * 0.68, height: h * 0.35 };
-  const textBox = horizontal ? { x: w * (imageSide === "right" ? 0.07 : 0.47), y: h * 0.23, width: w * 0.46, height: h * 0.57 } : { x: w * 0.1, y: h * 0.55, width: w * 0.8, height: h * 0.34 };
-  const gap = Math.min(18 * u, textBox.height * 0.18 / phrases.length);
+  const frame = useCurrentFrame2(), time = frame / fps, portrait = h > w, u = Math.min(w, h) / 1080;
+  validateDialogue(turns, durationInFrames / fps, motionDuration);
+  const fontUrl = resolveHQFont(fontFamily, assets);
+  if (!left?.asset || !right?.asset || !assets[left.asset] || !assets[right.asset]) throw new Error("Informe left/right.asset e os arquivos em assets.");
+  const colors = [left.color ?? "#2676E8", right.color ?? "#EF3F49"];
+  if (![...colors, textColor].every((c) => /^#[a-f\d]{6}$/i.test(c))) throw new Error("Cores devem usar #RRGGBB.");
+  if (!Number.isFinite(highlightOpacity) || highlightOpacity < 0 || highlightOpacity > 100) throw new Error("highlightOpacity: 0\u2013100%.");
+  if (!Number.isFinite(backgroundOpacity) || backgroundOpacity < 0 || backgroundOpacity > 100) throw new Error("backgroundOpacity: 0\u2013100%.");
+  for (const p of [left, right]) if (!Number.isFinite(p.scale ?? 1) || (p.scale ?? 1) < 0.5 || (p.scale ?? 1) > 1) throw new Error("scale de participante: 0.5\u20131.");
+  const textWidth = w * (portrait ? 0.78 : 0.4), textHeight = h * (portrait ? 0.29 : 0.52);
   const [prepared, setPrepared] = React2.useState(null);
-  const [handle] = React2.useState(() => delayRender("Preparando imagem e frases HQ"));
-  const signature = JSON.stringify({ phrases, assets, w, h, label, imageSide });
+  const [handle] = React2.useState(() => delayRender("Preparando Di\xE1logo HQ"));
+  const signature = JSON.stringify({ left, right, turns, fontFamily, fontUrl, w, h, assets });
   React2.useEffect(() => {
     let live = true;
-    Promise.all([loadFont({ family: fontFamily, url: fontUrl }), imageBounds(assets.image)]).then(([, bounds]) => {
+    Promise.all([loadFont({ family: fontFamily, url: fontUrl }), dialogueImageBounds(assets[left.asset]), dialogueImageBounds(assets[right.asset])]).then(([, a, b]) => {
       if (!live) return;
-      setPrepared({
-        bounds,
-        lines: textLayout(phrases, textBox.width, textBox.height, horizontal ? 140 * u : 122 * u, gap, fontFamily),
-        label: label.trim() ? textLayout([{ text: label, at: 0 }], w * 0.86, h * 0.04, 34 * u, 0, fontFamily) : []
-      });
+      setPrepared({ bounds: [a, b], texts: turns.map((t) => dialogueTextLayout(t.text.normalize("NFC").toLocaleUpperCase("pt-BR"), fontFamily, textWidth, textHeight, (portrait ? 95 : 110) * u)), names: [left, right].map((p) => dialogueTextLayout((p.name ?? "").toLocaleUpperCase("pt-BR"), fontFamily, textWidth, h * 0.05, 38 * u)) });
       continueRender(handle);
     }).catch((error) => {
       if (live) cancelRender(error);
@@ -292,49 +285,31 @@ function ImagemFrasesHQ({
     return () => {
       live = false;
     };
-  }, [signature, fontFamily, fontUrl, handle]);
-  const scale = prepared ? Math.min(picture.width / prepared.bounds.width, picture.height / prepared.bounds.height) * imageScale : 1;
-  const iw = prepared ? prepared.bounds.width * scale : 0, ih = prepared ? prepared.bounds.height * scale : 0;
-  let lineY = 0;
-  return /* @__PURE__ */ jsxs2(AbsoluteFill3, { style: { overflow: "hidden", fontFamily }, children: [
-    /* @__PURE__ */ jsx4(SceneBackground, { ...{ backgroundStyle, backgroundColor, backgroundOpacity, paperTone, gridBackgroundColor, gridLineColor }, children: /* @__PURE__ */ jsx4(AbsoluteFill3, { style: { opacity: 0.1, backgroundImage: `radial-gradient(#FFFFFF ${2.3 * u}px, transparent ${3 * u}px)`, backgroundSize: `${18 * u}px ${18 * u}px` } }) }),
-    /* @__PURE__ */ jsx4("div", { style: {
-      position: "absolute",
-      left: picture.x - picture.width * 0.12,
-      top: picture.y - picture.height * 0.08,
-      width: picture.width * 1.24,
-      height: picture.height * 1.16,
-      opacity: glowIntensity,
-      background: `radial-gradient(ellipse at center, ${glow}70 0%, ${glow}30 38%, ${glow}00 72%)`
-    } }),
-    prepared && /* @__PURE__ */ jsxs2(Fragment2, { children: [
-      prepared.label.length > 0 && /* @__PURE__ */ jsx4("div", { style: { position: "absolute", left: "7%", top: "6%", color: accentColor, fontSize: prepared.label[0].size, whiteSpace: "pre", lineHeight: 1.04 }, children: prepared.label[0].text }),
-      /* @__PURE__ */ jsx4("div", { style: { position: "absolute", left: picture.x + (picture.width - iw) / 2, top: picture.y + (picture.height - ih) / 2, width: iw, height: ih, overflow: "hidden" }, children: /* @__PURE__ */ jsx4(Img2, { src: assets.image, style: {
-        position: "absolute",
-        left: -prepared.bounds.x * scale,
-        top: -prepared.bounds.y * scale,
-        width: prepared.bounds.sourceWidth * scale,
-        height: prepared.bounds.sourceHeight * scale,
-        maxWidth: "none"
-      } }) }),
-      /* @__PURE__ */ jsx4("div", { style: { position: "absolute", left: textBox.x, top: textBox.y, width: textBox.width, height: textBox.height }, children: phrases.map((phrase, i) => {
-        const line = prepared.lines[i];
-        const top = lineY;
-        lineY += line.height + gap;
-        return /* @__PURE__ */ jsx4("div", { style: {
-          position: "absolute",
-          top,
-          left: 0,
-          width: "100%",
-          height: line.height,
-          fontSize: line.size,
-          whiteSpace: "pre",
-          lineHeight: 1.04,
-          color: phrase.color ?? phraseColor(i, mutedColor, textColor, accentColor),
-          textShadow: fontFamily === "Anton" ? "none" : `${4 * u}px ${6 * u}px 0 #080A11`,
-          opacity: phraseVisible(phrase.at, frame, fps) ? 1 : 0
-        }, children: line.text }, i);
-      }) })
+  }, [signature, handle]);
+  const events = React2.useMemo(() => dialogueEvents(turns), [turns]);
+  const index = dialogueTurnIndex(turns, frame, fps), turn = index < 0 ? void 0 : turns[index], weights = dialogueWeights(turns, time, motionDuration, events);
+  const isRight = turn?.speaker === "right", layout = index < 0 ? void 0 : prepared?.texts[index];
+  const delay = turn?.textDelay ?? 0, local = turn ? time - turn.at : 0;
+  const write = turn?.writeDuration ?? Math.min(1.2, Math.max(0.01, ((turn?.duration ?? 1) - delay) * 0.55));
+  const progress = turn ? turn.animation === "none" ? local >= delay ? 1 : 0 : clampDialogue((local - delay) / write) : 0;
+  const total = layout?.lines.reduce((a, line) => a + Array.from(line).length, 0) ?? 0;
+  const visible = turn?.animation === "none" ? total : Math.floor(progress * total);
+  let letter = 0;
+  return /* @__PURE__ */ jsxs2(AbsoluteFill3, { style: { overflow: "hidden" }, children: [
+    /* @__PURE__ */ jsxs2(AbsoluteFill3, { style: { opacity: backgroundOpacity / 100, pointerEvents: "none" }, children: [
+      /* @__PURE__ */ jsx4(SceneBackground, { ...{ backgroundStyle, backgroundColor, paperTone, gridBackgroundColor, gridLineColor } }),
+      colors.map((color, i) => /* @__PURE__ */ jsx4(AbsoluteFill3, { style: { opacity: (i === 0 ? weights.left : weights.right) * highlightOpacity / 100, background: `linear-gradient(to ${i === 0 ? "right" : "left"}, ${color} 0%, ${color}B8 24%, ${color}00 72%)` } }, i))
+    ] }),
+    prepared && [left, right].map((participant, i) => {
+      const active = i === 0 ? weights.left : weights.right, b = prepared.bounds[i];
+      const fit = Math.min(w * (portrait ? 0.59 : 0.38) / b.width, h * (portrait ? 0.48 : 0.92) / b.height) * (participant.scale ?? 1) * (0.88 + 0.12 * active);
+      const iw = b.width * fit, ih = b.height * fit;
+      const idleX = i === 0 ? 0 : w, activeX = w * (portrait ? i === 0 ? 0.29 : 0.71 : i === 0 ? 0.19 : 0.81), cx = idleX + (activeX - idleX) * active;
+      return /* @__PURE__ */ jsx4("div", { style: { position: "absolute", left: cx - iw / 2, top: h * 0.98 - ih, width: iw, height: ih, overflow: "hidden", zIndex: active > 0.5 ? 2 : 1, filter: `grayscale(${1 - active}) brightness(${0.55 + 0.45 * active})`, opacity: 0.45 + 0.55 * active }, children: /* @__PURE__ */ jsx4(Img2, { src: assets[participant.asset], style: { position: "absolute", left: -b.x * fit, top: -b.y * fit, width: b.sourceWidth * fit, height: b.sourceHeight * fit, maxWidth: "none" } }) }, i);
+    }),
+    turn && layout && progress > 0 && /* @__PURE__ */ jsxs2("div", { style: { position: "absolute", zIndex: 3, left: portrait ? w * 0.11 : w * (isRight ? 0.17 : 0.43), top: h * (portrait ? 0.11 : 0.18), width: textWidth, fontFamily, textAlign: portrait ? "center" : "left", color: turn.textColor ?? textColor, textShadow: fontFamily === "Anton" ? "none" : `${4 * u}px ${6 * u}px 0 #080A11`, WebkitTextStroke: fontFamily === "Anton" ? "0px transparent" : `${1.2 * u}px #080A11` }, children: [
+      prepared?.names[isRight ? 1 : 0].lines.some((l) => l.length > 0) && /* @__PURE__ */ jsx4("div", { style: { fontSize: prepared.names[isRight ? 1 : 0].size, lineHeight: 1.1, marginBottom: h * 0.035, color: colors[isRight ? 1 : 0], whiteSpace: "pre" }, children: prepared.names[isRight ? 1 : 0].lines.join("\n") }),
+      /* @__PURE__ */ jsx4("div", { style: { fontSize: layout.size, lineHeight: 1.15 }, children: layout.lines.map((line, i) => /* @__PURE__ */ jsx4("div", { style: { whiteSpace: "pre" }, children: Array.from(line).map((c, j) => /* @__PURE__ */ jsx4("span", { style: { opacity: letter++ < visible ? 1 : 0 }, children: c }, j)) }, i)) })
     ] })
   ] });
 }
@@ -344,4 +319,4 @@ function resolveHQFont(family, assets) {
   if (!assets[key]) throw new Error(`Informe assets.${key} para a fonte ${family}.`);
   return assets[key];
 }
-export const ImagemFrasesHQCena = ImagemFrasesHQ;
+export const DialogoHQCena = DialogoHQ;

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { execFile } from 'node:child_process';
-import { copyFile, link, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { copyFile, link, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -17,10 +17,6 @@ import { mediaRefs, sanitizeProps } from '../render/remotion-component-runtime.j
 import { missingStageArtifacts } from '../core/workflow.js';
 import { SCENES_TRACK, scenesTrack } from './edit-operations.js';
 import { BUNDLED_COMPONENTS } from '../timeline/components/catalog.js';
-import { noxDir } from '../core/nox-pack.js';
-
-/** Catálogo de poses do Nox (pacote do plugin Diazverso no computador): nome → { arquivos, gesto, olhos, tons }. */
-export const loadPoseCatalog = (file = noxDir() && path.join(noxDir(), 'poses', 'catalogo.json')) => (file ? readFile(file, 'utf8') : Promise.reject(new Error('sem pacote do Nox'))).then(text => JSON.parse(text).poses || null).catch(() => null);
 
 const run = promisify(execFile);
 const FONTS = ['/usr/share/fonts/truetype/inter-zorin-os/Inter-Bold.ttf', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', '/usr/share/fonts/TTF/DejaVuSans-Bold.ttf', '/Library/Fonts/Arial Bold.ttf', '/System/Library/Fonts/Supplemental/Arial Bold.ttf', 'C:\\Windows\\Fonts\\arialbd.ttf'];
@@ -46,7 +42,7 @@ export function captionChunks(sentence) {
 }
 /** Áreas seguras de Shorts 9:16 (margens conservadoras; a legenda termina em ~78% da altura). */
 /**
- * Legenda palavra a palavra (padrão Diazverso): blocos de até 3 palavras e 18 caracteres, quebrando
+ * Legenda palavra a palavra (padrão do kit): blocos de até 3 palavras e 18 caracteres, quebrando
  * depois de pontuação; cada bloco fica até a próxima palavra (sem piscar entre blocos curtos).
  */
 export function wordCues(words, total = Infinity) {
@@ -68,9 +64,9 @@ export const SHORTS_SAFE_AREA = { top: 0.125, right: 0.148, bottom: 0.224, left:
 const YEAR = /\b(1[0-9]{3}|20[0-9]{2})\b/;
 const fxId = () => `fx_${randomUUID().replaceAll('-', '').slice(0, 10)}`;
 /** Imagens que mostram o assunto (não slides de texto nem thumbnails), com direitos resolvidos, na ordem de importação. */
-export const evidenceImages = project => project.media.filter(item => item.kind === 'image' && !['slide', 'thumbnail', 'background'].includes(item.role) && item.rights !== 'pending');
+export const evidenceImages = project => project.media.filter(item => item.kind === 'image' && !['slide', 'thumbnail', 'background', 'character'].includes(item.role) && item.rights !== 'pending');
 
-/** Duração máxima de um beat visual (padrão Diazverso: troca a cada 2–5 s em Shorts, 4–8 s no longo). */
+/** Duração máxima de um beat visual (padrão do kit: troca a cada 2–5 s em Shorts, 4–8 s no longo). */
 export const MAX_BEAT_SECONDS = { vertical: 4.5, horizontal: 7 };
 
 /** Divide cada trecho do roteiro em beats visuais por frase, sem passar da duração máxima. */
@@ -103,9 +99,9 @@ const round = value => Math.round(value * 100) / 100;
 const ANTON = 'brand:anton';
 
 /**
- * Plano automático no estilo Diazverso com as cenas do plugin: um beat visual por frase (ou grupo
- * curto de frases), cada um com imagem do assunto (`media:<id>` das imagens do projeto, ou o Nox
- * quando não há imagem). Alterna imagem com frases, página HQ com dois painéis e galeria de cartas
+ * Plano automático do modo clips com as cenas HQ: um beat visual por frase (ou grupo
+ * curto de frases), cada um com imagem do assunto (`media:<id>` das imagens do projeto, ou a página HQ
+ * do kit quando não há imagem). Alterna imagem com frases, página HQ com dois painéis e galeria de cartas
  * para não repetir o mesmo componente. É ponto de partida: o agente ou a pessoa pode trocar cenas.
  */
 export function planScenes(windows, { title = '', images = [], vertical = false } = {}) {
@@ -113,7 +109,7 @@ export function planScenes(windows, { title = '', images = [], vertical = false 
   let next = 0; let recent = new Set();
   // Imagem citada no texto do beat (pelo nome do arquivo) vem primeiro; depois rodízio, evitando repetir o beat anterior.
   const pickFor = text => {
-    if (!pool.length) return 'brand:nox';
+    if (!pool.length) return 'brand:comic-page';
     const words = new Set(fold(text).split(/[^a-z0-9]+/).filter(word => word.length >= 3));
     const named = pool.find(item => item.key && !recent.has(item.id) && item.key.split(/[^a-z0-9]+/).some(word => word.length >= 3 && words.has(word)));
     let chosen = named;
@@ -127,16 +123,16 @@ export function planScenes(windows, { title = '', images = [], vertical = false 
     const words = impactWords(beat.text, 3);
     const phrases = words.map((text, position) => ({ text, at: round(0.15 + (beat.length * 0.6 * position) / Math.max(1, words.length)), size: position === 0 ? 1.1 : 0.85 }));
     const base = { sceneId: beat.sceneId, start: beat.start, length: beat.length, text: beat.text };
-    const imageScene = side => ({ ...base, componentId: 'dv_imagem_frases_hq', props: { label: index === 0 ? headline(title, 28).toUpperCase() : '', imageSide: side, phrases, fontFamily: 'Anton', assets: { image: take(1, beat.text)[0], anton: ANTON } } });
+    const imageScene = side => ({ ...base, componentId: 'hq_imagem_frases_hq', props: { label: index === 0 ? headline(title, 28).toUpperCase() : '', imageSide: side, phrases, fontFamily: 'Anton', assets: { image: take(1, beat.text)[0], anton: ANTON } } });
     const kind = index === 0 || index === beats.length - 1 ? 0 : index % 4;
     if ((kind === 1 || (vertical && kind === 3)) && images.length >= 2 && beat.length >= (vertical ? 1.6 : 2.6)) {
       const half = round(beat.length / 2); const [a, b] = take(2, beat.text); const labels = impactWords(beat.text, 2);
-      return { ...base, componentId: 'dv_pagina_hq_cenas', props: { panelLayout: 'parallax', panels: [{ asset: 'a', mediaType: 'image', label: labels[0] || '' }, { asset: 'b', mediaType: 'image', label: labels[1] || '' }], focus: [{ panel: 1, at: 0, until: half }, { panel: 2, at: half, until: round(beat.length) }], fontFamily: 'Anton', assets: { a, b, anton: ANTON } } };
+      return { ...base, componentId: 'hq_pagina_hq_cenas', props: { panelLayout: 'parallax', panels: [{ asset: 'a', mediaType: 'image', label: labels[0] || '' }, { asset: 'b', mediaType: 'image', label: labels[1] || '' }], focus: [{ panel: 1, at: 0, until: half }, { panel: 2, at: half, until: round(beat.length) }], fontFamily: 'Anton', assets: { a, b, anton: ANTON } } };
     }
     if (kind === 3 && images.length >= 3 && beat.length >= 3.2 && !vertical) {
-      const cards = take(3, beat.text); const titles = impactWords(beat.text, 3); while (titles.length < 3) titles.push(titles.at(-1) || 'DIAZVERSO');
+      const cards = take(3, beat.text); const titles = impactWords(beat.text, 3); while (titles.length < 3) titles.push(titles.at(-1) || 'HQ');
       const step = Math.min(0.9, (beat.length - 1) / 3);
-      return { ...base, componentId: 'dv_galeria_cartas_hq', props: { title: headline(beat.text, 40).toUpperCase(), subtitle: '', columns: 3, items: cards.map((_, position) => ({ asset: `c${position}`, title: titles[position], caption: '', at: round(0.2 + position * step) })), fontFamily: 'Anton', assets: { ...Object.fromEntries(cards.map((card, position) => [`c${position}`, card])), anton: ANTON } } };
+      return { ...base, componentId: 'hq_galeria_cartas_hq', props: { title: headline(beat.text, 40).toUpperCase(), subtitle: '', columns: 3, items: cards.map((_, position) => ({ asset: `c${position}`, title: titles[position], caption: '', at: round(0.2 + position * step) })), fontFamily: 'Anton', assets: { ...Object.fromEntries(cards.map((card, position) => [`c${position}`, card])), anton: ANTON } } };
     }
     return imageScene(index % 2 === 0 ? 'right' : 'left');
   });
@@ -227,7 +223,7 @@ export class ProductionOperations {
     const list = (variants?.length ? variants : [{ label: 'A', title: packaging.titleA }, { label: 'B', title: packaging.titleB || packaging.titleA }]).slice(0, 2);
     if (list.some(item => !String(item.title || '').trim())) throw new Error('Escreva os títulos A/B (ou informe o texto de cada thumbnail)');
     const [width, height] = THUMB_SIZES[project.aspectRatio] || THUMB_SIZES['16:9'];
-    const content = project.media.filter(item => ['video', 'image'].includes(item.kind) && !['thumbnail', 'background'].includes(item.role));
+    const content = project.media.filter(item => ['video', 'image'].includes(item.kind) && !['thumbnail', 'background', 'character'].includes(item.role));
     const staging = await mkdtemp(path.join(os.tmpdir(), 'contentlab-thumbs-'));
     const result = {};
     try {
@@ -252,15 +248,16 @@ export class ProductionOperations {
 
   /**
    * Thumbnails do kit de motion: mídia da obra dominante, até 4 palavras em Anton (*palavra* em amarelo),
-   * Nox com a expressão do vídeo e selo opcional. Gera também a versão do tamanho do celular para conferir.
+   * o personagem do projeto (se houver) na pose do humor e selo opcional. Gera também a versão do tamanho do celular para conferir.
    */
   async #kitThumbnails(directory, variants) {
     const project = await readProjectDirectory(directory);
     const packaging = project.creative.packaging;
-    const content = project.media.filter(item => ['video', 'image'].includes(item.kind) && !['thumbnail', 'background', 'slide'].includes(item.role));
+    const content = project.media.filter(item => ['video', 'image'].includes(item.kind) && !['thumbnail', 'background', 'slide', 'character'].includes(item.role));
     // Sem variantes: as palavras de impacto de cada título (até 3), a última em amarelo.
     const fromTitle = title => { const words = impact(title || '', 3); return words.length ? [...words.slice(0, -1), `*${words.at(-1)}*`].join(' ') : ''; };
-    const list = (variants?.length ? variants : [{ label: 'A', text: fromTitle(packaging.titleA), humor: 'surpreso' }, { label: 'B', text: fromTitle(packaging.titleB || packaging.titleA), humor: 'determinado', side: 'direita' }]).slice(0, 2);
+    const humor = mood => (project.character ? mood : undefined);
+    const list = (variants?.length ? variants : [{ label: 'A', text: fromTitle(packaging.titleA), humor: humor('surpreso') }, { label: 'B', text: fromTitle(packaging.titleB || packaging.titleA), humor: humor('determinado'), side: 'direita' }]).slice(0, 2);
     const kit = list.map((variant, index) => {
       const text = String(variant.text || variant.title || '').trim();
       if (!text) throw new Error('Informe o texto curto de cada thumbnail (até 4 palavras)');
@@ -360,7 +357,7 @@ export class ProductionOperations {
       scenes: plan.map(item => ({ ...item, start: round(item.start), length: round(item.length), label: scenes.find(scene => scene.id === item.sceneId)?.label })),
       evidence: evidence.map(item => ({ id: item.id, name: item.name, ref: `media:${item.id}` })),
       timing: narration ? 'narration' : 'estimated',
-      warnings: evidence.length ? [] : ['Sem imagens do assunto: o plano usa o Nox em todas as cenas. Importe imagens dos personagens/obra antes de montar.'],
+      warnings: evidence.length ? [] : ['Sem imagens do assunto: as cenas usam a página HQ do kit. Importe imagens do assunto antes de montar.'],
       components: BUNDLED_COMPONENTS.map(({ id, label, use, propsSchema }) => ({ id, label, use, props: Object.keys(propsSchema) })),
     };
   }
@@ -379,7 +376,7 @@ export class ProductionOperations {
     if (!(total > 0)) throw new Error('Duração da narração desconhecida');
     const fps = project.timeline.fps; const totalFrames = Math.round(total * fps);
     const windows = this.#windows(project, session, total);
-    const all = project.media.filter(item => ['video', 'image'].includes(item.kind) && !['thumbnail', 'background'].includes(item.role));
+    const all = project.media.filter(item => ['video', 'image'].includes(item.kind) && !['thumbnail', 'background', 'character'].includes(item.role));
     const evidence = evidenceImages(project);
     if ((scenes === 'auto' || scenes === true) && !evidence.length) throw Object.assign(new Error('O estilo HQ precisa de imagens do assunto: importe imagens dos personagens/obra com direitos confirmados (slides de texto não contam)'), { code: 'VISUAL_EVIDENCE_MISSING' });
     const plan = scenes === 'auto' || scenes === true ? planScenes(windows, { title: project.creative?.packaging?.titleA || project.title, images: evidence.map(item => ({ id: item.id, name: item.name })), vertical: project.aspectRatio === '9:16' }) : Array.isArray(scenes) ? scenes : [];
@@ -395,7 +392,7 @@ export class ProductionOperations {
     for (const track of project.timeline.tracks) if (['visual_main', 'audio_main', SCENES_TRACK, 'audio_music', 'audio_sfx'].includes(track.id)) for (const clip of track.clips) commands.push({ op: 'clip.remove', trackId: track.id, clipId: clip.id });
     const base = { fit: 'cover', anchor: 'center', keyframes: {}, sourceInFrame: 0, style: 'legenda' };
     commands.push({ op: 'clip.add', trackId: 'audio_main', clip: { ...base, id: clipId(), type: 'media', sourceId: narration.id, name: 'Narração', startFrame: 0, durationInFrames: totalFrames, effects: [], volume: 1 } });
-    // Short com cenas: a cena ocupa a parte de cima e o terço de baixo fica livre para a legenda (padrão Diazverso).
+    // Short com cenas: a cena ocupa a parte de cima e o terço de baixo fica livre para a legenda.
     const sceneLayout = project.aspectRatio === '9:16' && plan.length ? { '9:16': SHORTS_SCENE_BOX } : undefined;
     if (sceneLayout) {
       const band = await this.#captionBand(directory, project);
@@ -471,7 +468,7 @@ export class ProductionOperations {
   }
 
   /**
-   * Fundo do Short com cenas: tinta da paleta Diazverso, meio-tom que cresce para baixo e linha amarela
+   * Fundo do Short com cenas: tinta da paleta do kit, meio-tom que cresce para baixo e linha amarela
    * na borda da cena, para a faixa da legenda não ficar lisa. Gerado localmente (direitos próprios), uma vez por projeto.
    */
   async #captionBand(directory, project) {
@@ -597,7 +594,7 @@ export class ProductionOperations {
     } catch { return null; }
   }
 
-  // ---- Modo composição (kit de motion Diazverso) ----
+  // ---- Modo composição (kit de motion do Content Lab) ----
 
   /** Narração, tempos das palavras e trilha para o render da composição (caminhos já resolvidos). */
   async motionInputs(directory, project) {
@@ -608,7 +605,7 @@ export class ProductionOperations {
     return { narration: narration ? (await this.app.resolveMediaPath(narration)) || narration.uri : null, narrationSeconds: narration?.metadata?.durationSeconds || 0, words, music: music ? (await this.app.resolveMediaPath(music)) || music.uri : null };
   }
 
-  /** Catálogo do kit para o agente: cenas, props, humores do Nox e SFX. */
+  /** Catálogo do kit para o agente: cenas, props, humores, pacote de personagem e SFX. */
   motionKit() { return MOTION_KIT; }
 
   async motionPlan({ path: directory }) { const project = await readProjectDirectory(directory); return { plan: project.motion, revision: project.revision }; }
@@ -627,17 +624,18 @@ export class ProductionOperations {
     let windows; let words = [];
     if (narration?.metadata?.durationSeconds) { windows = this.#windows(project, session, narration.metadata.durationSeconds); words = await this.#narrationWords(directory, narration); }
     else { let cursor = 0; windows = scenes.map(scene => { const window = { scene, start: cursor, length: Math.max(2, scene.text.length / 15) }; cursor += window.length; return window; }); }
-    const media = project.media.filter(item => ['image', 'video'].includes(item.kind) && !['slide', 'thumbnail', 'background'].includes(item.role) && item.rights !== 'pending').map(item => ({ id: item.id, name: item.name, kind: item.kind }));
-    const poses = await loadPoseCatalog(); const report = {};
+    const media = project.media.filter(item => ['image', 'video'].includes(item.kind) && !['slide', 'thumbnail', 'background', 'character'].includes(item.role) && item.rights !== 'pending').map(item => ({ id: item.id, name: item.name, kind: item.kind }));
+    const poses = project.character?.poses || null; const report = {};
     const plan = planMotion({ windows, words, media, title: project.creative?.packaging?.titleA || project.title, end: narration?.metadata?.durationSeconds ? narration.metadata.durationSeconds + 0.8 : null, vertical: project.aspectRatio === '9:16', poses, report });
     plan.narration = Boolean(narration);
     plan.music = music && project.media.some(item => item.role === 'music') ? { volume: 0.5, duck: 0.25 } : null;
     const warnings = [
       ...(!narration ? ['Sem narração montada: tempos estimados e vídeo sem narração.'] : []),
       ...(narration && !words.length ? ['Narração sem transcrição: rode narration_transcribe para sincronizar beats e legenda por palavra.'] : []),
-      ...(!media.length ? ['Sem imagens/vídeos da obra: o plano usa Nox e texto. Importe cenas das obras citadas (direitos confirmados).'] : []),
+      ...(!media.length ? ['Sem imagens/vídeos da obra: o plano usa texto. Importe cenas das obras citadas (direitos confirmados).'] : []),
+      ...(!poses ? ['Sem personagem no projeto: o plano não tem apartes nem a cena personagem. Se o vídeo tiver um, importe o pacote com character_import.'] : []),
       ...(!plan.music ? ['Sem trilha: importe uma faixa licenciada com papel music.'] : []),
-      ...(project.aspectRatio !== '9:16' && report.posesFaltando?.length ? [`Poses do Nox que não apareceram: ${report.posesFaltando.join(', ')}. Encaixe-as em apartes de tom compatível (motion_plan_set).`] : []),
+      ...(project.aspectRatio !== '9:16' && report.posesFaltando?.length ? [`Poses do personagem que não apareceram: ${report.posesFaltando.join(', ')}. Encaixe-as em apartes de tom compatível (motion_plan_set).`] : []),
     ];
     if (!apply) return { plan, warnings, poses: report };
     const saved = await this.motionPlanSet({ path: directory, plan, source: 'auto' });
@@ -673,14 +671,14 @@ export class ProductionOperations {
     return { revision: result.project.revision, beats: beats.length, durationSeconds: round2(end), averageBeat: round2(beats.reduce((sum, beat) => sum + beat.duration, 0) / beats.length), scenes: Object.fromEntries([...new Set(beats.map(beat => beat.scene))].map(scene => [scene, beats.filter(beat => beat.scene === scene).length])), media: refs.length, plan: parsed.data };
   }
 
-  /** Padrão Diazverso: toda cena HQ mostra uma imagem do assunto (imagem do projeto ou Nox), não só texto. */
+  /** Toda cena HQ mostra uma imagem do assunto (mídia do projeto ou personagem), não só texto. */
   #visualCheck(project) {
     if (project.motion?.beats?.length) {
-      const beats = project.motion.beats; const SUBJECT = new Set(['evidencia', 'pagina', 'nox', 'ficha', 'comparacao', 'cta', 'numero', 'lista', 'formula']);
+      const beats = project.motion.beats; const SUBJECT = new Set(['evidencia', 'pagina', 'personagem', 'ficha', 'comparacao', 'cta', 'numero', 'lista', 'formula']);
       const withSubject = beats.filter(beat => SUBJECT.has(beat.scene) || /"media:/.test(JSON.stringify(beat.props || {})) || beat.props?.humor);
       const distinct = new Set(beats.flatMap(beat => mediaRefs(beat.props || {}))).size;
       const longest = Math.max(...beats.map(beat => beat.duration)); const average = beats.reduce((sum, beat) => sum + beat.duration, 0) / beats.length;
-      return { id: 'visual', label: 'Ritmo e imagem do assunto', ok: withSubject.length >= beats.length * 0.6 && longest <= 10 && average <= 6, detail: `${beats.length} beats (média ${average.toFixed(1)} s, maior ${longest.toFixed(1)} s); ${withSubject.length} com assunto ou Nox; ${distinct} mídia(s) da obra` };
+      return { id: 'visual', label: 'Ritmo e imagem do assunto', ok: withSubject.length >= beats.length * 0.6 && longest <= 10 && average <= 6, detail: `${beats.length} beats (média ${average.toFixed(1)} s, maior ${longest.toFixed(1)} s); ${withSubject.length} com assunto ou personagem; ${distinct} mídia(s) da obra` };
     }
     const scenes = project.timeline.tracks.find(track => track.id === SCENES_TRACK)?.clips || [];
     if (!scenes.length) return { id: 'visual', label: 'Imagem do assunto em cada cena', ok: false, detail: 'sem cenas HQ na timeline' };

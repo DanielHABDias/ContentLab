@@ -185,3 +185,37 @@ printf '1\\n00:00:00,000 --> 00:00:01,500\\nOlá mundo\\n' > "$out.srt"
     await expect(running).rejects.toMatchObject({ code: 'CANCELLED' });
   } finally { delete process.env.WHISPER_SLOW; }
 });
+
+test('personagem: importa a pasta de poses com direitos confirmados, guarda o catálogo e alimenta o plano', async () => {
+  const { makeCharacterPack } = await import('../test/character-fixture.js');
+  const { root, service, project } = await setup();
+  const pack = await makeCharacterPack(path.join(root, 'boneco'));
+  const dry = await service.characterImport({ path: project.path, folder: pack, dryRun: true });
+  expect(dry).toMatchObject({ dryRun: true, name: 'Boneco de teste', poses: 3, files: 4 });
+  expect((await inspect(service, project)).media).toHaveLength(0); // dry-run não importa
+  await expect(service.characterImport({ path: project.path, folder: pack, rights: 'owned' })).rejects.toMatchObject({ code: 'RIGHTS_REQUIRED' });
+  await expect(service.characterImport({ path: project.path, folder: root, rights: 'owned', rightsConfirmed: true })).rejects.toMatchObject({ code: 'CHARACTER_INVALID' });
+  const result = await service.characterImport({ path: project.path, folder: pack, rights: 'owned', rightsConfirmed: true });
+  expect(result).toMatchObject({ name: 'Boneco de teste', poses: 3, files: 4 });
+  const stored = await inspect(service, project);
+  expect(stored.media.filter(item => item.role === 'character')).toHaveLength(4);
+  expect(stored.character).toMatchObject({ schema: 'contentlab-character-v1', name: 'Boneco de teste', poses: { apontando: { arquivos: ['apontando.png', 'apontando-b.png'] } } });
+  expect(Object.keys(stored.character.files).sort()).toEqual(['apontando-b.png', 'apontando.png', 'parado.png', 'pensando.png']);
+  // Remover a mídia de uma variante tira o arquivo do catálogo; importar de novo é idempotente.
+  const variant = stored.character.files['apontando-b.png'];
+  await service.removeMedia({ path: project.path, baseRevision: stored.revision, mediaId: variant, detachUsages: true });
+  expect((await inspect(service, project)).character.poses.apontando.arquivos).toEqual(['apontando.png']);
+  await service.characterImport({ path: project.path, folder: pack, rights: 'owned', rightsConfirmed: true });
+  const again = await inspect(service, project);
+  expect(again.media.filter(item => item.role === 'character')).toHaveLength(4);
+  // O plano automático usa as poses do personagem do projeto.
+  await service.runProjectAction({ path: project.path, baseRevision: again.revision, action: { type: 'creative.update', creative: { ...again.creative, script: { hook: 'O herói nunca perdeu. E esse é o problema.', development: 'Pra mim, isso mata a história. Sério, que absurdo! Ele perdeu tudo e ninguém ligou?', payoff: 'Qual herói te ensinou isso?', visual: '', sources: '' } } } });
+  const image = path.join(root, 'escudo.png'); execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc2=s=640x360', '-frames:v', '1', image]);
+  const imported = await service.importMediaFiles({ path: project.path, sources: [image], rights: 'owned' }); await service.mediaOps.jobs.waitFor(imported.id);
+  const auto = await service.productionMotionAuto({ path: project.path, apply: false, music: false });
+  const poses = new Set(auto.plan.beats.flatMap(beat => [...(beat.props.falas || []), ...(beat.props.poses || [])].map(item => item.pose)));
+  expect([...poses].every(name => ['parado', 'pensando', 'apontando'].includes(name))).toBe(true);
+  expect(poses.size).toBeGreaterThan(0);
+  // As poses não viram cena da obra.
+  expect(auto.plan.beats.flatMap(beat => JSON.stringify(beat.props).match(/media:[\w-]+/g) || []).every(ref => !Object.values(again.character.files).includes(ref.slice(6)))).toBe(true);
+}, 60_000);

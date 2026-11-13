@@ -11,7 +11,7 @@ import { mkdtemp } from 'node:fs/promises';
 
 const window = (id, text, start, length) => ({ scene: { id, label: id, text }, start, length });
 
-test('plano Diazverso: um beat por frase com imagem do assunto e sem repetir componente', () => {
+test('plano HQ do modo clips: um beat por frase com imagem do assunto e sem repetir componente', () => {
   const windows = [
     window('hook-1', 'Em 1996 a Marvel estava falida. O que aconteceu?', 0, 6),
     window('development-1', 'Em 1939 nasce a Timely. Em 1962 surge o Homem-Aranha. Stan Lee e Steve Ditko mudam tudo.', 6, 12),
@@ -22,12 +22,12 @@ test('plano Diazverso: um beat por frase com imagem do assunto e sem repetir com
   expect(beats.at(-1).start + beats.at(-1).length).toBeCloseTo(24, 5);
   const plan = planScenes(windows, { title: 'A escolha', images: ['img1', 'img2', 'img3'] });
   expect(plan.length).toBe(beats.length);
-  expect(plan[0]).toMatchObject({ componentId: 'dv_imagem_frases_hq', props: { assets: { image: 'media:img1', anton: 'brand:anton' } } });
-  expect(plan.map(item => item.componentId)).toContain('dv_pagina_hq_cenas');
+  expect(plan[0]).toMatchObject({ componentId: 'hq_imagem_frases_hq', props: { assets: { image: 'media:img1', anton: 'brand:anton' } } });
+  expect(plan.map(item => item.componentId)).toContain('hq_pagina_hq_cenas');
   for (const item of plan) expect(JSON.stringify(item.props)).toMatch(/media:img\d/);
   for (let index = 2; index < plan.length; index += 1) expect(new Set(plan.slice(index - 2, index + 1).map(item => item.componentId)).size).toBeGreaterThan(1);
-  const nox = planScenes(windows, { images: [] });
-  expect(nox.every(item => JSON.stringify(item.props).includes('brand:nox'))).toBe(true);
+  const semImagem = planScenes(windows, { images: [] });
+  expect(semImagem.every(item => JSON.stringify(item.props).includes('brand:comic-page'))).toBe(true);
 });
 
 test('palavras de impacto: nomes, números e palavras fortes, sem artigos', () => {
@@ -55,7 +55,7 @@ test('legendas ficam por cima das cenas mesmo quando a trilha de cenas é adicio
   const plan = compileRenderPlan(timeline([
     { id: 'visual_main', kind: 'visual', name: 'V', muted: false, locked: false, clips: [] },
     { id: 'captions_main', kind: 'caption', name: 'L', muted: false, locked: false, clips: [clip('cap', { type: 'caption', text: 'Oi' })] },
-    { id: 'visual_scenes', kind: 'visual', name: 'Cenas', muted: false, locked: false, clips: [clip('scene', { type: 'component', componentId: 'dv_texto_hq' })] },
+    { id: 'visual_scenes', kind: 'visual', name: 'Cenas', muted: false, locked: false, clips: [clip('scene', { type: 'component', componentId: 'hq_texto_hq' })] },
   ]));
   expect(plan.layers.map(layer => layer.id)).toEqual(['scene', 'cap']);
 });

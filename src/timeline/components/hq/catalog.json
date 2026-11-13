@@ -1,11 +1,10 @@
 {
-  "plugin": "1.3.0",
   "components": [
     {
-      "id": "dv_barra_loading_hq",
-      "file": "diazverso/BarraLoadingHQ.tsx",
+      "id": "hq_barra_loading_hq",
+      "file": "hq/BarraLoadingHQ.tsx",
       "exportName": "BarraLoadingHQCena",
-      "label": "Diazverso · BarraLoadingHQ",
+      "label": "HQ · BarraLoadingHQ",
       "use": "Barra de progresso para orientar capítulos",
       "propsSchema": {
         "position": {
@@ -116,10 +115,10 @@
       }
     },
     {
-      "id": "dv_brainstorm_hq",
-      "file": "diazverso/BrainstormHQ.tsx",
+      "id": "hq_brainstorm_hq",
+      "file": "hq/BrainstormHQ.tsx",
       "exportName": "BrainstormHQCena",
-      "label": "Diazverso · BrainstormHQ",
+      "label": "HQ · BrainstormHQ",
       "use": "Grafo de ideias, evidências e percurso entre casos",
       "propsSchema": {
         "backgroundColor": {
@@ -255,10 +254,10 @@
       }
     },
     {
-      "id": "dv_caixinha_hq",
-      "file": "diazverso/CaixinhaHQ.tsx",
+      "id": "hq_caixinha_hq",
+      "file": "hq/CaixinhaHQ.tsx",
       "exportName": "CaixinhaHQCena",
-      "label": "Diazverso · CaixinhaHQ",
+      "label": "HQ · CaixinhaHQ",
       "use": "Caixa contextual de informação",
       "propsSchema": {
         "preset": {
@@ -357,10 +356,10 @@
       }
     },
     {
-      "id": "dv_carrossel_frases_hq",
-      "file": "diazverso/CarrosselFrasesHQ.tsx",
+      "id": "hq_carrossel_frases_hq",
+      "file": "hq/CarrosselFrasesHQ.tsx",
       "exportName": "CarrosselFrasesHQCena",
-      "label": "Diazverso · CarrosselFrasesHQ",
+      "label": "HQ · CarrosselFrasesHQ",
       "use": "Carrossel de frases-chave",
       "propsSchema": {
         "phrases": {
@@ -471,11 +470,11 @@
       }
     },
     {
-      "id": "dv_comic_page_cta",
-      "file": "diazverso/ComicPageCTA.tsx",
+      "id": "hq_comic_page_cta",
+      "file": "hq/ComicPageCTA.tsx",
       "exportName": "ComicPageCTACena",
-      "label": "Diazverso · ComicPageCTA",
-      "use": "CTA de encerramento em página HQ com o Nox",
+      "label": "HQ · ComicPageCTA",
+      "use": "CTA de encerramento em página HQ com um personagem",
       "propsSchema": {
         "headline": {
           "type": "string",
@@ -496,8 +495,8 @@
           "type": "json",
           "label": "assets",
           "default": {
-            "thumbnail": "brand:nox",
-            "character": "brand:nox",
+            "thumbnail": "brand:comic-page",
+            "character": "brand:comic-page",
             "anton": "brand:anton"
           }
         },
@@ -548,10 +547,10 @@
       }
     },
     {
-      "id": "dv_comparativo_ideias_hq",
-      "file": "diazverso/ComparativoIdeiasHQ.tsx",
+      "id": "hq_comparativo_ideias_hq",
+      "file": "hq/ComparativoIdeiasHQ.tsx",
       "exportName": "ComparativoIdeiasHQCena",
-      "label": "Diazverso · ComparativoIdeiasHQ",
+      "label": "HQ · ComparativoIdeiasHQ",
       "use": "Comparação visual de duas ideias ou consequências, com imagens",
       "propsSchema": {
         "title": {
@@ -635,11 +634,11 @@
       }
     },
     {
-      "id": "dv_dialogo_hq",
-      "file": "diazverso/DialogoHQ.tsx",
+      "id": "hq_dialogo_hq",
+      "file": "hq/DialogoHQ.tsx",
       "exportName": "DialogoHQCena",
-      "label": "Diazverso · DialogoHQ",
-      "use": "Diálogo contextual entre dois personagens/ideias (Nox pode participar)",
+      "label": "HQ · DialogoHQ",
+      "use": "Diálogo contextual entre dois personagens/ideias",
       "propsSchema": {
         "fontFamily": {
           "type": "string",
@@ -746,10 +745,10 @@
       }
     },
     {
-      "id": "dv_galeria_cartas_hq",
-      "file": "diazverso/GaleriaCartasHQ.tsx",
+      "id": "hq_galeria_cartas_hq",
+      "file": "hq/GaleriaCartasHQ.tsx",
       "exportName": "GaleriaCartasHQCena",
-      "label": "Diazverso · GaleriaCartasHQ",
+      "label": "HQ · GaleriaCartasHQ",
       "use": "Galeria de cartas com imagem, título e legenda (evidências em sequência)",
       "propsSchema": {
         "title": {
@@ -905,10 +904,10 @@
       }
     },
     {
-      "id": "dv_imagem_frases_hq",
-      "file": "diazverso/ImagemFrasesHQ.tsx",
+      "id": "hq_imagem_frases_hq",
+      "file": "hq/ImagemFrasesHQ.tsx",
       "exportName": "ImagemFrasesHQCena",
-      "label": "Diazverso · ImagemFrasesHQ",
+      "label": "HQ · ImagemFrasesHQ",
       "use": "Imagem do assunto com frases de impacto reveladas junto da fala",
       "propsSchema": {
         "label": {
@@ -1017,10 +1016,10 @@
       }
     },
     {
-      "id": "dv_linha_do_tempo_hq",
-      "file": "diazverso/LinhaDoTempoHQ.tsx",
+      "id": "hq_linha_do_tempo_hq",
+      "file": "hq/LinhaDoTempoHQ.tsx",
       "exportName": "LinhaDoTempoHQCena",
-      "label": "Diazverso · LinhaDoTempoHQ",
+      "label": "HQ · LinhaDoTempoHQ",
       "use": "Linha do tempo com clipes por marco",
       "propsSchema": {
         "direction": {
@@ -1102,9 +1101,9 @@
           "type": "json",
           "label": "assets",
           "default": {
-            "clip1": "brand:nox",
-            "clip2": "brand:nox",
-            "clip3": "brand:nox",
+            "clip1": "brand:comic-page",
+            "clip2": "brand:comic-page",
+            "clip3": "brand:comic-page",
             "anton": "brand:anton"
           }
         },
@@ -1131,10 +1130,10 @@
       }
     },
     {
-      "id": "dv_pagina_hq_cenas",
-      "file": "diazverso/PaginaHQCenas.tsx",
+      "id": "hq_pagina_hq_cenas",
+      "file": "hq/PaginaHQCenas.tsx",
       "exportName": "PaginaHQCenasCena",
-      "label": "Diazverso · PaginaHQCenas",
+      "label": "HQ · PaginaHQCenas",
       "use": "Página HQ multipainel com imagens ou clipes e foco por painel",
       "propsSchema": {
         "backgroundColor": {
@@ -1225,10 +1224,10 @@
           "type": "json",
           "label": "assets",
           "default": {
-            "clip1": "brand:nox",
-            "clip2": "brand:nox",
-            "clip3": "brand:nox",
-            "clip4": "brand:nox",
+            "clip1": "brand:comic-page",
+            "clip2": "brand:comic-page",
+            "clip3": "brand:comic-page",
+            "clip4": "brand:comic-page",
             "anton": "brand:anton"
           }
         },
@@ -1283,10 +1282,10 @@
       }
     },
     {
-      "id": "dv_personagem_espiral_legenda",
-      "file": "diazverso/PersonagemEspiralLegenda.tsx",
+      "id": "hq_personagem_espiral_legenda",
+      "file": "hq/PersonagemEspiralLegenda.tsx",
       "exportName": "PersonagemEspiralLegendaCena",
-      "label": "Diazverso · PersonagemEspiralLegenda",
+      "label": "HQ · PersonagemEspiralLegenda",
       "use": "Personagem recortado com espiral e legenda",
       "propsSchema": {
         "backgroundVariant": {
@@ -1406,7 +1405,7 @@
           "type": "json",
           "label": "assets",
           "default": {
-            "character": "brand:nox",
+            "character": "brand:comic-page",
             "anton": "brand:anton"
           }
         },
@@ -1425,10 +1424,10 @@
       }
     },
     {
-      "id": "dv_quadro_hq_sobre_cena",
-      "file": "diazverso/QuadroHQSobreCena.tsx",
+      "id": "hq_quadro_hq_sobre_cena",
+      "file": "hq/QuadroHQSobreCena.tsx",
       "exportName": "QuadroHQSobreCenaCena",
-      "label": "Diazverso · QuadroHQSobreCena",
+      "label": "HQ · QuadroHQSobreCena",
       "use": "Quadro de texto sobre a cena (tese, pergunta)",
       "propsSchema": {
         "upperText": {
@@ -1481,10 +1480,10 @@
       }
     },
     {
-      "id": "dv_texto_hq",
-      "file": "diazverso/TextoHQ.tsx",
+      "id": "hq_texto_hq",
+      "file": "hq/TextoHQ.tsx",
       "exportName": "TextoHQCena",
-      "label": "Diazverso · TextoHQ",
+      "label": "HQ · TextoHQ",
       "use": "Texto/palavras cinéticas de ênfase curta (até 3 s)",
       "propsSchema": {
         "text": {

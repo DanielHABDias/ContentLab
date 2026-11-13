@@ -91,6 +91,7 @@ export const localApi = {
   registryBackups: () => request('/registry/backups'),
   restoreRegistry: name => post('/registry/restore', { name }),
   importFiles: input => post('/media/import-files', input),
+  characterImport: input => post('/character/import', input),
   importUrl: input => post('/media/import-url', input),
   mediaUsage: input => post('/media/usage', input),
   removeMedia: input => post('/media/remove', input),

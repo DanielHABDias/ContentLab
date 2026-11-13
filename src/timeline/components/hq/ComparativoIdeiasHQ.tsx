@@ -1,13 +1,11 @@
-// Cena CarrosselFrasesHQ do plugin Diazverso 1.3.0, compilada por scripts/build-diazverso-scenes.mjs. Não editar à mão.
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/scenes/HQComicPage.tsx
+// Cena HQ ComparativoIdeiasHQ do Content Lab (arquivo único, imports só de React/Remotion).
 import { AbsoluteFill, Img, staticFile } from "remotion";
 import { jsx } from "react/jsx-runtime";
-function HQComicPage({ opacity = 100, src = staticFile("assets/brand/backgrounds/comic-page.png") }) {
+function HQComicPage({ opacity = 100, src = staticFile("assets/kit/backgrounds/comic-page.png") }) {
   if (!Number.isFinite(opacity) || opacity < 0 || opacity > 100) throw Error("opacity must be 0\u2013100");
   return /* @__PURE__ */ jsx(AbsoluteFill, { style: { pointerEvents: "none", opacity: opacity / 100, overflow: "hidden" }, children: /* @__PURE__ */ jsx(Img, { src, style: { width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" } }) });
 }
 
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/motion/hq-background.tsx
 import React from "react";
 import { AbsoluteFill as AbsoluteFill2, useCurrentFrame, useVideoConfig } from "remotion";
 import { Fragment, jsx as jsx2, jsxs } from "react/jsx-runtime";
@@ -120,15 +118,51 @@ var HQBackground = (props) => /* @__PURE__ */ jsxs(Fragment, { children: [
   props.children
 ] });
 
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/scenes/SceneBackground.tsx
 import { jsx as jsx3 } from "react/jsx-runtime";
 var SceneBackground = ({ backgroundStyle = "halftone", backgroundColor = "#162034", backgroundOpacity = 100, paperTone = "dark", gridBackgroundColor = "#10101A", gridLineColor = "#858595", children }) => /* @__PURE__ */ jsx3(HQBackground, { mode: backgroundStyle, baseColor: backgroundColor, opacity: backgroundOpacity, paperTone, gridBaseColor: gridBackgroundColor, gridColor: gridLineColor, children });
 
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/scenes/CarrosselFrasesHQ.tsx
-import React2 from "react";
-import { AbsoluteFill as AbsoluteFill3, cancelRender, continueRender, delayRender, useCurrentFrame as useCurrentFrame2, useVideoConfig as useVideoConfig2 } from "remotion";
+var boundsCache = /* @__PURE__ */ new Map();
+function imageBoundsHQ(src) {
+  if (boundsCache.has(src)) return boundsCache.get(src);
+  const pending = (async () => {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    await new Promise((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error("Imagem inv\xE1lida: " + src));
+      image.src = src;
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas indispon\xEDvel.");
+    ctx.drawImage(image, 0, 0);
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    let x0 = canvas.width, y0 = canvas.height, x1 = -1, y1 = -1;
+    for (let y = 0; y < canvas.height; y++) for (let x = 0; x < canvas.width; x++) if (data[(y * canvas.width + x) * 4 + 3] > 12) {
+      x0 = Math.min(x0, x);
+      y0 = Math.min(y0, y);
+      x1 = Math.max(x1, x);
+      y1 = Math.max(y1, y);
+    }
+    if (x1 < 0) throw new Error("Imagem totalmente transparente.");
+    return { x: x0, y: y0, width: x1 - x0 + 1, height: y1 - y0 + 1, sourceWidth: canvas.width, sourceHeight: canvas.height };
+  })();
+  boundsCache.set(src, pending);
+  if (boundsCache.size > 32) boundsCache.delete(boundsCache.keys().next().value);
+  pending.catch(() => {
+    if (boundsCache.get(src) === pending) boundsCache.delete(src);
+  });
+  return pending;
+}
+function edgeTravelHQ(position, size, viewport, direction, margin = 30) {
+  return direction < 0 ? position + size + margin : direction > 0 ? viewport - position + margin : 0;
+}
 
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/scenes/load-font.ts
+import React2 from "react";
+import { AbsoluteFill as AbsoluteFill3, Img as Img2, cancelRender, continueRender, delayRender, useCurrentFrame as useCurrentFrame2, useVideoConfig as useVideoConfig2 } from "remotion";
+
 var cache = /* @__PURE__ */ new Map();
 function loadFont({ family, url }) {
   if (!family?.trim() || !url?.trim() || url.length > 4096) return Promise.reject(new Error("Provide a licensed local font URL and family"));
@@ -148,147 +182,197 @@ function loadFont({ family, url }) {
   return promise;
 }
 
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/scenes/CarrosselFrasesHQ.tsx
 import { jsx as jsx4, jsxs as jsxs2 } from "react/jsx-runtime";
-var clampCarousel = (v) => Math.max(0, Math.min(1, v));
-var smoothCarousel = (v) => {
-  const t = clampCarousel(v);
-  return t * t * (3 - 2 * t);
+var clamp = (v) => Math.max(0, Math.min(1, v));
+var ease = (v) => {
+  const p = clamp(v);
+  return 1 - Math.pow(1 - p, 3);
 };
-function validateCarousel(phrases, duration, motionDuration) {
-  if (!Number.isFinite(duration) || duration <= 0) throw new Error("Dura\xE7\xE3o da cena deve ser positiva.");
-  if (!Number.isFinite(motionDuration) || motionDuration < 0) throw new Error("motionDuration deve ser n\xE3o negativo.");
-  if (!Array.isArray(phrases) || !phrases.length) throw new Error("Informe phrases com pelo menos uma frase.");
-  phrases.forEach((p, i) => {
-    if (typeof p.text !== "string" || !p.text.trim() || !Number.isFinite(p.at) || p.at < 0 || p.at >= duration) throw new Error("Frase precisa de text e at dentro da cena.");
-    if (i && p.at <= phrases[i - 1].at) throw new Error("at deve ser estritamente crescente.");
-    if (i && p.at - phrases[i - 1].at < motionDuration - 1e-7) throw new Error("Intervalo entre chegadas deve ser >= motionDuration.");
-    if (!i && p.at > 0 && p.at < motionDuration - 1e-7) throw new Error("Primeiro at deve ser 0 ou >= motionDuration.");
-    if (p.color && !/^#[a-f\d]{6}$/i.test(p.color)) throw new Error("Cor da frase deve usar #RRGGBB.");
-  });
-}
-function carouselPosition(phrases, time, motionDuration) {
-  let current = -1;
-  for (let i = 0; i < phrases.length; i++) {
-    const at = phrases[i].at;
-    if (time >= at) {
-      current = i;
-      continue;
-    }
-    if (motionDuration > 0 && time >= at - motionDuration) return i - 1 + smoothCarousel((time - at + motionDuration) / motionDuration);
-    break;
+function comparisonLayout(count, w, h, hasTitle = false) {
+  if (![2, 3, 4].includes(count)) throw new Error("Comparativo requer de 2 a 4 itens.");
+  const horizontal = w > h;
+  const top = hasTitle ? 0.2 : 0.09;
+  const bottom = 0.91;
+  const make = (x, y, width, height2, fromX, fromY) => ({ x: x * w, y: y * h, width: width * w, height: height2 * h, fromX, fromY });
+  if (horizontal && count < 4) {
+    const gap = 0.045;
+    const width = (0.86 - gap * (count - 1)) / count;
+    return Array.from({ length: count }, (_, i) => make(
+      0.07 + i * (width + gap),
+      top,
+      width,
+      bottom - top,
+      i === 0 ? -1 : i === count - 1 ? 1 : 0,
+      count === 3 && i === 1 ? -1 : 0
+    ));
   }
-  return current;
+  if (!horizontal && count === 2) {
+    const height2 = (bottom - top - 0.045) / 2;
+    return [make(0.09, top, 0.82, height2, 0, -1), make(0.09, top + height2 + 0.045, 0.82, height2, 0, 1)];
+  }
+  const height = (bottom - top - 0.055) / 2;
+  if (!horizontal && count === 3) return [
+    make(0.2, top, 0.6, height, 0, -1),
+    make(0.07, top + height + 0.055, 0.4, height, -1, 1),
+    make(0.53, top + height + 0.055, 0.4, height, 1, 1)
+  ];
+  return Array.from({ length: 4 }, (_, i) => make(
+    i % 2 ? 0.53 : 0.07,
+    top + Math.floor(i / 2) * (height + 0.055),
+    0.4,
+    height,
+    i % 2 ? 1 : -1,
+    i < 2 ? -1 : 1
+  ));
 }
-function carouselTextLayout(ctx, text, family, width, height, maximum) {
+function fitText(text, width, height, maximum, fontFamily = "Bangers") {
+  const ctx = document.createElement("canvas").getContext("2d");
+  if (!ctx) throw new Error("Canvas indispon\xEDvel.");
   const wrap = (size) => {
-    ctx.font = `${size}px ${family}`;
-    const lines2 = [];
-    for (const paragraph of text.normalize("NFC").toLocaleUpperCase("pt-BR").split("\n")) {
-      let line = "";
-      for (const word of paragraph.split(/\s+/).filter(Boolean)) {
-        if (line && ctx.measureText(line + " " + word).width > width) {
-          lines2.push(line);
-          line = word;
-        } else line += (line ? " " : "") + word;
-      }
-      lines2.push(line);
+    ctx.font = `${size}px ${fontFamily}`;
+    const lines = [];
+    let line = "";
+    for (const word of text.split(/\s+/)) {
+      if (ctx.measureText(word).width > width) {
+        if (line) {
+          lines.push(line);
+          line = "";
+        }
+        for (const char of Array.from(word)) {
+          if (line && ctx.measureText(line + char).width > width) {
+            lines.push(line);
+            line = "";
+          }
+          line += char;
+        }
+      } else if (line && ctx.measureText(line + " " + word).width > width) {
+        lines.push(line);
+        line = word;
+      } else line += (line ? " " : "") + word;
     }
-    return lines2;
+    if (line) lines.push(line);
+    return lines;
   };
-  let lo = 1, hi = maximum;
-  for (let i = 0; i < 20; i++) {
-    const size = (lo + hi) / 2, lines2 = wrap(size);
-    if (lines2.length <= 2 && lines2.length * size * 1.12 <= height && lines2.every((l) => ctx.measureText(l).width <= width)) lo = size;
-    else hi = size;
+  let low = 1, high = maximum;
+  for (let i = 0; i < 18; i++) {
+    const size = (low + high) / 2;
+    const lines = wrap(size);
+    if (lines.length <= 3 && lines.length * size * 1.08 <= height && lines.every((line) => ctx.measureText(line).width <= width)) low = size;
+    else high = size;
   }
-  const lines = wrap(lo);
-  if (lines.length > 2) throw new Error("Use frases curtas: no m\xE1ximo duas linhas por frase.");
-  return { lines, size: lo, height: lines.length * lo * 1.12 };
+  return { lines: wrap(low), size: low };
 }
-function CarrosselFrasesHQ({
-  phrases,
+var imageBounds = imageBoundsHQ;
+function ComparativoIdeiasHQ({
   fontFamily = "Anton",
-  align = "left",
-  activeColor = "#F4C542",
-  inactiveColor = "#9698A2",
-  inactiveOpacity = 0.38,
-  inactiveScale = 0.6,
-  activeBandColor = "#A0A0A0",
-  activeBandOpacity = 0.12,
-  motionDuration = 0.45,
-  textScale = 1,
   backgroundStyle = "halftone",
-  backgroundColor = "#10131E",
   backgroundOpacity = 100,
   paperTone = "light",
   gridBackgroundColor = "#10101A",
   gridLineColor = "#858595",
+  items,
+  title = "",
+  backgroundColor = "#D6AD42",
+  textColor = "#FFFFFF",
+  startDelay = 0.15,
+  stagger = 0.45,
+  entryDuration = 0.6,
+  textDuration = 0.25,
   assets = {}
 }) {
-  const { width: w, height: h, fps, durationInFrames } = useVideoConfig2(), frame = useCurrentFrame2();
-  validateCarousel(phrases, durationInFrames / fps, motionDuration);
-  if (!["left", "right"].includes(align)) throw new Error("align: left ou right.");
-  if (![activeColor, inactiveColor].every((c) => /^#[a-f\d]{6}$/i.test(c))) throw new Error("Cores devem usar #RRGGBB.");
-  if (!/^#[a-f\d]{6}$/i.test(activeBandColor)) throw new Error("activeBandColor deve usar #RRGGBB.");
-  if (!Number.isFinite(activeBandOpacity) || activeBandOpacity < 0 || activeBandOpacity > 1) throw new Error("activeBandOpacity: 0\u20131.");
-  if (!Number.isFinite(inactiveOpacity) || inactiveOpacity < 0 || inactiveOpacity > 1) throw new Error("inactiveOpacity: 0\u20131.");
-  if (!Number.isFinite(inactiveScale) || inactiveScale < 0.3 || inactiveScale > 0.85) throw new Error("inactiveScale: 0.3\u20130.85.");
-  if (!Number.isFinite(textScale) || textScale < 0.25 || textScale > 1) throw new Error("textScale: 0.25\u20131.");
-  const url = resolveHQFont(fontFamily, assets), textW = w * 0.84, maximum = Math.min(h * 0.2, w * 0.19) * textScale;
+  const fontUrl = resolveHQFont(fontFamily, assets);
+  const { width: w, height: h, fps, durationInFrames } = useVideoConfig2();
+  const t = useCurrentFrame2() / fps;
+  if (!Array.isArray(items) || ![2, 3, 4].includes(items.length)) throw new Error("Informe items com 2, 3 ou 4 imagens.");
+  if (!fontUrl) throw new Error("Informe fontUrl.");
+  if (![backgroundColor, textColor].every((c) => /^#[a-f\d]{6}$/i.test(c))) throw new Error("Cores devem usar #RRGGBB.");
+  if (![startDelay, stagger, entryDuration, textDuration].every(Number.isFinite) || startDelay < 0 || stagger < 0 || entryDuration <= 0 || textDuration <= 0) throw new Error("Tempos inv\xE1lidos.");
+  const starts = items.map((item, i) => item.at ?? startDelay + i * stagger);
+  items.forEach((item, i) => {
+    if (!item.text?.trim() || !assets[item.asset]) throw new Error("Cada item precisa de text e uma chave asset existente.");
+    if (!Number.isFinite(starts[i]) || starts[i] < 0 || starts[i] + entryDuration + textDuration > durationInFrames / fps + 1e-8) throw new Error("Imagem e texto devem terminar de entrar antes do fim da cena.");
+  });
+  const slots = comparisonLayout(items.length, w, h, Boolean(title.trim()));
+  const unit = Math.min(w, h) / 1080;
   const [prepared, setPrepared] = React2.useState(null);
-  const [handle] = React2.useState(() => delayRender("Preparando Carrossel de Frases HQ"));
-  const signature = JSON.stringify({ phrases, fontFamily, url, w, h, textScale });
+  const [handle] = React2.useState(() => delayRender("Preparando comparativo de ideias"));
+  const signature = JSON.stringify({ items, assets, w, h, title });
   React2.useEffect(() => {
     let live = true;
-    loadFont({ family: fontFamily, url }).then(() => {
-      const ctx = document.createElement("canvas").getContext("2d");
-      if (!ctx) throw new Error("Canvas indispon\xEDvel.");
-      const layouts = phrases.map((p) => carouselTextLayout(ctx, p.text, fontFamily, textW, h * 0.24, maximum));
-      if (live) setPrepared({ signature, layouts });
+    Promise.all([loadFont({ family: fontFamily, url: fontUrl }), Promise.all(items.map((item) => imageBounds(assets[item.asset])))]).then(([, bounds]) => {
+      if (!live) return;
+      const labels = items.map((item, i) => fitText(
+        item.text.normalize("NFC").toLocaleUpperCase("pt-BR").trim(),
+        slots[i].width * 0.94,
+        slots[i].height * 0.25,
+        Math.min(88 * unit, slots[i].width * 0.16),
+        fontFamily
+      ));
+      const heading = title.trim() ? fitText(title.toLocaleUpperCase("pt-BR"), w * 0.84, h * 0.1, 94 * unit, fontFamily) : null;
+      setPrepared({ bounds, labels, heading });
       continueRender(handle);
-    }).catch(cancelRender);
+    }).catch((error) => {
+      if (live) cancelRender(error);
+    });
     return () => {
       live = false;
     };
-  }, [signature, handle]);
-  const cursor = carouselPosition(phrases, frame / fps, motionDuration);
-  const blendColor = (from, to, p) => {
-    const a = from.slice(1).match(/../g).map((x) => parseInt(x, 16)), b = to.slice(1).match(/../g).map((x) => parseInt(x, 16));
-    return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * p)).join(",")})`;
+  }, [signature, fontFamily, fontUrl, handle]);
+  const textStyle = {
+    fontFamily,
+    color: textColor,
+    lineHeight: 1.08,
+    whiteSpace: "pre",
+    WebkitTextStroke: fontFamily === "Anton" ? "0px transparent" : `${1.5 * unit}px #080A11`,
+    textShadow: fontFamily === "Anton" ? "none" : `${5 * unit}px ${7 * unit}px 0 #080A11`
   };
-  return /* @__PURE__ */ jsxs2(AbsoluteFill3, { style: { overflow: "hidden", pointerEvents: "none" }, children: [
-    /* @__PURE__ */ jsx4(SceneBackground, { backgroundStyle, backgroundColor, backgroundOpacity, paperTone, gridBackgroundColor, gridLineColor }),
-    /* @__PURE__ */ jsx4("div", { "data-active-band": true, style: { position: "absolute", left: 0, top: h * 0.36, width: w, height: h * 0.28, backgroundColor: activeBandColor, opacity: activeBandOpacity } }),
-    prepared?.signature === signature && phrases.slice(Math.max(0, Math.floor(cursor) - 2), Math.ceil(cursor) + 3).map((phrase, offset) => {
-      const i = Math.max(0, Math.floor(cursor) - 2) + offset;
-      const slot = i - cursor;
-      if (slot > 2 || slot < -2) return null;
-      const layout = prepared.layouts[i], focus = clampCarousel(1 - Math.abs(slot)), scale = inactiveScale + (1 - inactiveScale) * focus;
-      const gap = h * 0.045, smallH = layout.height * inactiveScale;
-      const yAt = (n) => n >= 2 ? -smallH : n === 1 ? h / 3 - gap - smallH / 2 : n === 0 ? h / 2 : n === -1 ? 2 * h / 3 + gap + smallH / 2 : h + smallH;
-      const lower = Math.floor(slot), mix = slot - lower, cy = yAt(lower) + (yAt(lower + 1) - yAt(lower)) * mix;
-      const edge = clampCarousel(2 - Math.abs(slot)), opacity = (inactiveOpacity + (1 - inactiveOpacity) * focus) * edge;
-      const ink = blendColor(inactiveColor, phrase.color ?? activeColor, focus);
-      return /* @__PURE__ */ jsx4("div", { "data-phrase": i, style: {
-        position: "absolute",
-        left: w * 0.08,
-        top: cy - layout.height / 2,
-        width: textW,
-        height: layout.height,
-        scale,
-        transformOrigin: align === "left" ? "left center" : "right center",
-        fontFamily,
-        fontSize: layout.size,
-        lineHeight: 1.12,
-        textAlign: align,
-        color: ink,
-        opacity,
-        whiteSpace: "pre",
-        textShadow: fontFamily === "Anton" ? "none" : `0 ${Math.min(w, h) * 5e-3}px 0 #080A11`,
-        WebkitTextStroke: fontFamily === "Anton" ? void 0 : `${Math.min(w, h) * 12e-4}px #080A11`,
-        paintOrder: "stroke fill"
-      }, children: layout.lines.join("\n") }, i);
+  return /* @__PURE__ */ jsxs2(AbsoluteFill3, { style: { overflow: "hidden" }, children: [
+    /* @__PURE__ */ jsx4(SceneBackground, { ...{ backgroundStyle, backgroundColor, backgroundOpacity, paperTone, gridBackgroundColor, gridLineColor }, children: /* @__PURE__ */ jsx4(AbsoluteFill3, { style: { opacity: 0.17, backgroundImage: `radial-gradient(#080A11 ${3.2 * unit}px, transparent ${3.8 * unit}px)`, backgroundSize: `${19 * unit}px ${19 * unit}px` } }) }),
+    prepared?.heading && /* @__PURE__ */ jsx4("div", { style: { ...textStyle, position: "absolute", left: "8%", top: "6%", width: "84%", textAlign: "center", fontSize: prepared.heading.size }, children: prepared.heading.lines.join("\n") }),
+    prepared && items.map((item, i) => {
+      const slot = slots[i];
+      const box = prepared.bounds[i];
+      const label = prepared.labels[i];
+      const progress = ease((t - starts[i]) / entryDuration);
+      const labelP = ease((t - starts[i] - entryDuration) / textDuration);
+      const imageH = slot.height * 0.69;
+      const size = Math.min(slot.width * 0.92 / box.width, imageH / box.height);
+      const imageW = box.width * size;
+      const visibleH = box.height * size;
+      return /* @__PURE__ */ jsxs2(React2.Fragment, { children: [
+        /* @__PURE__ */ jsx4("div", { style: {
+          position: "absolute",
+          left: slot.x + (slot.width - imageW) / 2,
+          top: slot.y + (imageH - visibleH) / 2,
+          width: imageW,
+          height: visibleH,
+          overflow: "hidden",
+          opacity: t < starts[i] ? 0 : 1,
+          translate: `${slot.fromX * edgeTravelHQ(slot.x + (slot.width - imageW) / 2, imageW, w, slot.fromX, 30 * unit) * (1 - progress)}px ${slot.fromY * edgeTravelHQ(slot.y + (imageH - visibleH) / 2, visibleH, h, slot.fromY, 30 * unit) * (1 - progress)}px`
+        }, children: /* @__PURE__ */ jsx4(Img2, { src: assets[item.asset], style: {
+          position: "absolute",
+          left: -box.x * size,
+          top: -box.y * size,
+          width: box.sourceWidth * size,
+          height: box.sourceHeight * size,
+          maxWidth: "none"
+        } }) }),
+        /* @__PURE__ */ jsx4("div", { style: {
+          ...textStyle,
+          position: "absolute",
+          left: slot.x + slot.width * 0.03,
+          top: slot.y + slot.height * 0.74,
+          width: slot.width * 0.94,
+          height: slot.height * 0.25,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          textAlign: "center",
+          fontSize: label.size,
+          opacity: labelP,
+          translate: `0 ${(1 - labelP) * 12 * unit}px`
+        }, children: label.lines.join("\n") })
+      ] }, i);
     })
   ] });
 }
@@ -298,4 +382,4 @@ function resolveHQFont(family, assets) {
   if (!assets[key]) throw new Error(`Informe assets.${key} para a fonte ${family}.`);
   return assets[key];
 }
-export const CarrosselFrasesHQCena = CarrosselFrasesHQ;
+export const ComparativoIdeiasHQCena = ComparativoIdeiasHQ;

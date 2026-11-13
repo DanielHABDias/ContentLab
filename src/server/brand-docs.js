@@ -1,16 +1,15 @@
-import { readFile, stat } from 'node:fs/promises';
+import { stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { MOTION_KIT } from '../motion/kit-catalog.js';
-import { NOX_MISSING, noxDir } from '../core/nox-pack.js';
 
 /**
- * Documentação do padrão do canal (aba Documentação da interface, mesmo núcleo para CLI/MCP).
- * Lê o catálogo do kit e as poses do Nox direto do pacote do plugin Diazverso no computador; nada aqui escreve arquivos.
+ * Documentação do kit de motion (aba Documentação da interface, mesmo núcleo para CLI/MCP):
+ * cenas com exemplos tocáveis, fundos, regras de legenda e som e os SFX. Só lê arquivos do próprio kit.
  */
-export const BRAND_ROOT = import.meta.url.startsWith('file:') ? path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../assets/brand') : path.join(process.cwd(), 'assets/brand');
+export const KIT_ROOT = import.meta.url.startsWith('file:') ? path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../assets/kit') : path.join(process.cwd(), 'assets/kit');
 
-/** Onde cada som entra (resumo de skills/diazverso-motion/references/som.md do plugin). */
+/** Onde cada som entra. */
 const SFX_USE = {
   whoosh: 'Corte seco para cena nova (alterna com swish).',
   swish: 'Corte seco para cena nova (alterna com whoosh).',
@@ -18,7 +17,7 @@ const SFX_USE = {
   'whoosh-lento': 'Transição longa, voo de câmera, entrada de capítulo (~1 s antes).',
   impact: 'Palavra gigante, título ou virada, no quadro em que bate.',
   sub: 'Camada grave junto do impact, só nas viradas fortes.',
-  pop: 'Nox entra no aparte, balão estala, caixinha ou recorte aparece.',
+  pop: 'Personagem entra no aparte, balão estala, caixinha ou recorte aparece.',
   tick: 'Cada degrau de um número subindo.',
   ding: 'Valor final de um número.',
   type: 'Texto sendo digitado.',
@@ -35,10 +34,13 @@ const SFX_USE = {
 
 const SFX_ORIGIN = new Set(['clique', 'sino', 'explosao', 'tapa', 'tapa-eco', 'whoosh-rapido', 'whoosh-lento']);
 const NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+/** Cenas que dependem de mídia do projeto, do personagem ou de WebGL ficam fora das prévias da documentação. */
+const NO_PREVIEW = new Set(['evidencia', 'aparte', 'personagem', 'paineis3d']);
+const FILES = { font: { anton: 'fonts/Anton-Regular.ttf' } };
 
 export const CAPTION_RULES = [
   'Short (9:16): legenda palavra a palavra o tempo todo, acima da interface do Shorts.',
-  'Vídeo longo (16:9): legenda só no gancho dos primeiros segundos e nos apartes do Nox.',
+  'Vídeo longo (16:9): legenda só no gancho dos primeiros segundos e nos apartes do personagem.',
 ];
 
 export const SOUND_RULES = [
@@ -48,34 +50,27 @@ export const SOUND_RULES = [
   'O render final sai sem metadados.',
 ];
 
+/** Tira as referências `media:<id>` do exemplo (a prévia não tem mídia de projeto). */
+const withoutMedia = value => (Array.isArray(value) ? value.map(withoutMedia) : value && typeof value === 'object'
+  ? Object.fromEntries(Object.entries(value).filter(([, item]) => !(typeof item === 'string' && item.startsWith('media:'))).map(([key, item]) => [key, withoutMedia(item)]))
+  : value);
+
 export class BrandDocs {
-  constructor({ root = BRAND_ROOT, nox = undefined, kit = MOTION_KIT } = {}) { this.root = root; this.noxRoot = nox; this.kit = kit; }
-
-  /** Pacote do Nox no plugin Diazverso (fora do Content Lab); null se não houver. */
-  nox() { return this.noxRoot === undefined ? noxDir() : this.noxRoot; }
-
-  async poseCatalog() {
-    if (!this.poses) { const dir = this.nox(); this.poses = dir ? JSON.parse(await readFile(path.join(dir, 'poses', 'catalogo.json'), 'utf8').catch(() => '{}')) : {}; }
-    return this.poses;
-  }
+  constructor({ root = KIT_ROOT, kit = MOTION_KIT } = {}) { this.root = root; this.kit = kit; }
 
   async docs() {
-    const catalog = await this.poseCatalog();
     const sfx = await Promise.all((this.kit.sfx || []).map(async name => ({ name, use: SFX_USE[name] || '', origin: SFX_ORIGIN.has(name) ? 'CC0 (Freesound/Openverse)' : 'Original (procedural)', available: await exists(path.join(this.root, 'sfx', `${name}.wav`)) })));
-    const poses = (this.kit.poses?.lista || Object.keys(catalog.poses || {})).map(id => { const pose = catalog.poses?.[id] || {}; return { id, files: (pose.arquivos || []).filter(file => NAME.test(file.replace(/\.png$/, ''))), gesture: pose.gesto || '', eyes: pose.olhos || '', tones: pose.tons || [] }; });
     return {
-      schema: 'contentlab-brand-docs-v1',
-      scenes: Object.entries(this.kit.cenas || {}).map(([id, scene]) => ({ id, use: scene.uso })),
+      schema: 'contentlab-brand-docs-v2',
+      scenes: Object.entries(this.kit.cenas || {}).map(([id, scene]) => ({ id, use: scene.uso, ...(NO_PREVIEW.has(id) || !scene.exemplo ? {} : { example: withoutMedia(scene.exemplo) }) })),
       moods: this.kit.humores || [],
       backgrounds: this.kit.fundos || [],
+      colors: ['amarelo', 'vermelho', 'azul', 'branco', 'tinta'],
       rules: this.kit.regras || [],
       captions: CAPTION_RULES,
       sound: SOUND_RULES,
       sfx,
-      tones: catalog.tons || {},
-      poses,
-      poseUse: this.kit.poses?.uso || '',
-      noxPack: this.nox() ? 'conectado' : NOX_MISSING,
+      character: this.kit.poses || null,
     };
   }
 
@@ -87,16 +82,11 @@ export class BrandDocs {
     if (kind === 'sfx') {
       if (!(this.kit.sfx || []).includes(value)) throw new Error('Som fora do catálogo do kit');
       file = path.join(this.root, 'sfx', `${value}.wav`);
-    } else if (kind === 'pose') {
-      const catalog = await this.poseCatalog();
-      const known = Object.values(catalog.poses || {}).some(pose => (pose.arquivos || []).includes(`${value}.png`));
-      if (!known) throw new Error('Pose fora do catálogo');
-      if (!this.nox()) throw new Error(NOX_MISSING);
-      file = path.join(this.nox(), 'poses', `${value}.png`);
-    } else throw new Error('Tipo de arquivo inválido');
+    } else if (kind === 'font' && FILES.font[value]) file = path.join(this.root, FILES.font[value]);
+    else throw new Error('Tipo de arquivo inválido');
     const info = await stat(file).catch(() => null);
-    if (!info?.isFile()) throw new Error('Arquivo do kit não encontrado; rode npm run scenes:diazverso');
-    return { file, size: info.size, contentType: kind === 'sfx' ? 'audio/wav' : 'image/png' };
+    if (!info?.isFile()) throw new Error('Arquivo do kit não encontrado em assets/kit');
+    return { file, size: info.size, contentType: kind === 'sfx' ? 'audio/wav' : 'font/ttf' };
   }
 }
 

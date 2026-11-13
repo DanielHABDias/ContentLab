@@ -1,13 +1,11 @@
-// Cena TextoHQ do plugin Diazverso 1.3.0, compilada por scripts/build-diazverso-scenes.mjs. Não editar à mão.
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/scenes/HQComicPage.tsx
+// Cena HQ CarrosselFrasesHQ do Content Lab (arquivo único, imports só de React/Remotion).
 import { AbsoluteFill, Img, staticFile } from "remotion";
 import { jsx } from "react/jsx-runtime";
-function HQComicPage({ opacity = 100, src = staticFile("assets/brand/backgrounds/comic-page.png") }) {
+function HQComicPage({ opacity = 100, src = staticFile("assets/kit/backgrounds/comic-page.png") }) {
   if (!Number.isFinite(opacity) || opacity < 0 || opacity > 100) throw Error("opacity must be 0\u2013100");
   return /* @__PURE__ */ jsx(AbsoluteFill, { style: { pointerEvents: "none", opacity: opacity / 100, overflow: "hidden" }, children: /* @__PURE__ */ jsx(Img, { src, style: { width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" } }) });
 }
 
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/motion/hq-background.tsx
 import React from "react";
 import { AbsoluteFill as AbsoluteFill2, useCurrentFrame, useVideoConfig } from "remotion";
 import { Fragment, jsx as jsx2, jsxs } from "react/jsx-runtime";
@@ -120,15 +118,12 @@ var HQBackground = (props) => /* @__PURE__ */ jsxs(Fragment, { children: [
   props.children
 ] });
 
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/scenes/SceneBackground.tsx
 import { jsx as jsx3 } from "react/jsx-runtime";
 var SceneBackground = ({ backgroundStyle = "halftone", backgroundColor = "#162034", backgroundOpacity = 100, paperTone = "dark", gridBackgroundColor = "#10101A", gridLineColor = "#858595", children }) => /* @__PURE__ */ jsx3(HQBackground, { mode: backgroundStyle, baseColor: backgroundColor, opacity: backgroundOpacity, paperTone, gridBaseColor: gridBackgroundColor, gridColor: gridLineColor, children });
 
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/scenes/TextoHQ.tsx
 import React2 from "react";
 import { AbsoluteFill as AbsoluteFill3, cancelRender, continueRender, delayRender, useCurrentFrame as useCurrentFrame2, useVideoConfig as useVideoConfig2 } from "remotion";
 
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/scenes/load-font.ts
 var cache = /* @__PURE__ */ new Map();
 function loadFont({ family, url }) {
   if (!family?.trim() || !url?.trim() || url.length > 4096) return Promise.reject(new Error("Provide a licensed local font URL and family"));
@@ -148,125 +143,147 @@ function loadFont({ family, url }) {
   return promise;
 }
 
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/scenes/TextoHQ.tsx
 import { jsx as jsx4, jsxs as jsxs2 } from "react/jsx-runtime";
-var clampText = (x) => Math.max(0, Math.min(1, x));
-var easeText = (x) => {
-  const p = clampText(x);
-  return p * p * (3 - 2 * p);
+var clampCarousel = (v) => Math.max(0, Math.min(1, v));
+var smoothCarousel = (v) => {
+  const t = clampCarousel(v);
+  return t * t * (3 - 2 * t);
 };
-function prepareTextSteps(props, duration, fps) {
-  if (props.text !== void 0 && props.texts !== void 0) throw new Error("Use text OU texts, n\xE3o os dois.");
-  const sequence = props.texts !== void 0;
-  const raw = sequence ? props.texts : [{ text: props.text ?? "", at: 0, duration }];
-  if (!Array.isArray(raw) || !raw.length) throw new Error("TextoHQ requer text ou texts n\xE3o vazio.");
-  return raw.map((item, i) => {
-    if (!item.text?.trim() || !Number.isFinite(item.at) || item.at < 0 || !Number.isFinite(item.duration) || item.duration <= 0 || item.at + item.duration > duration + 1e-7 || i > 0 && item.at < raw[i - 1].at + raw[i - 1].duration - 1e-7) throw new Error("Cada texto exige text, at e duration dentro da cena, ordenados e sem sobreposi\xE7\xE3o.");
-    const s = { ...props, ...item };
-    const entrance = s.entryAnimation === null ? "none" : s.entryAnimation ?? "escrita", exit = s.exitAnimation ?? "none";
-    const delay = s.entryDelay ?? (sequence || entrance === "none" ? 0 : Math.min(0.12, item.duration * 0.1));
-    const exitTime = exit === "fechar" ? s.exitDuration ?? 0.5 : 0;
-    const available = item.duration - delay - exitTime;
-    const write = s.writeDuration ?? 1.8;
-    if (!["abrir", "escrita", "kinetic", "none"].includes(entrance) || !["fechar", "none"].includes(exit)) throw new Error("Entrada: abrir/escrita/kinetic/none; sa\xEDda: fechar/none.");
-    if (entrance === "kinetic" && !["letter", "word"].includes(s.kineticUnit ?? "letter")) throw Error("kineticUnit: letter ou word.");
-    if (entrance === "kinetic" && (!["up", "down", "left", "right"].includes(s.kineticDirection ?? "up") || !Number.isFinite(s.kineticStagger ?? 0.035) || (s.kineticStagger ?? 0.035) < 0 || (s.kineticStagger ?? 0.035) > 0.15 || s.kineticAccentColor !== void 0 && !/^#[a-f\d]{6}$/i.test(s.kineticAccentColor))) throw new Error("Kinetic: direction up/down/left/right; stagger 0\u20130.15 s; accentColor #RRGGBB.");
-    if (!Number.isFinite(delay) || delay < 0 || !Number.isFinite(write) || write <= 0 || !Number.isFinite(exitTime) || exitTime < 0 || available < 1 / fps || exit === "fechar" && exitTime < 1 / fps || s.entryDuration !== void 0 && (!Number.isFinite(s.entryDuration) || s.entryDuration <= 0)) throw new Error("Tempos de anima\xE7\xE3o inv\xE1lidos ou maiores que o intervalo do texto.");
-    const entryTime = s.entryDuration ?? Math.min(write, Math.max(1 / fps, available - Math.min(0.35, item.duration * 0.15)));
-    if (entrance !== "none" && entryTime > available + 1e-7) throw new Error("Entrada e sa\xEDda n\xE3o cabem no intervalo do texto.");
-    const family = s.fontFamily ?? "Bangers", color = s.textColor ?? "#FFFFFF", scale = s.textScale ?? 1;
-    if (!["Bangers", "Anton"].includes(family) || !/^#[a-f\d]{6}$/i.test(color) || !Number.isFinite(scale) || scale < 0.2 || scale > 1) throw new Error("Fonte: Bangers/Anton; textColor: #RRGGBB; textScale: 0.2\u20131.");
-    return {
-      ...s,
-      text: item.text.normalize("NFC").toLocaleUpperCase("pt-BR").trim(),
-      at: item.at,
-      duration: item.duration,
-      fontFamily: family,
-      textColor: color,
-      textScale: scale,
-      entryAnimation: entrance,
-      exitAnimation: exit,
-      entryDelay: delay,
-      entryDuration: entryTime,
-      exitDuration: exitTime
-    };
+function validateCarousel(phrases, duration, motionDuration) {
+  if (!Number.isFinite(duration) || duration <= 0) throw new Error("Dura\xE7\xE3o da cena deve ser positiva.");
+  if (!Number.isFinite(motionDuration) || motionDuration < 0) throw new Error("motionDuration deve ser n\xE3o negativo.");
+  if (!Array.isArray(phrases) || !phrases.length) throw new Error("Informe phrases com pelo menos uma frase.");
+  phrases.forEach((p, i) => {
+    if (typeof p.text !== "string" || !p.text.trim() || !Number.isFinite(p.at) || p.at < 0 || p.at >= duration) throw new Error("Frase precisa de text e at dentro da cena.");
+    if (i && p.at <= phrases[i - 1].at) throw new Error("at deve ser estritamente crescente.");
+    if (i && p.at - phrases[i - 1].at < motionDuration - 1e-7) throw new Error("Intervalo entre chegadas deve ser >= motionDuration.");
+    if (!i && p.at > 0 && p.at < motionDuration - 1e-7) throw new Error("Primeiro at deve ser 0 ou >= motionDuration.");
+    if (p.color && !/^#[a-f\d]{6}$/i.test(p.color)) throw new Error("Cor da frase deve usar #RRGGBB.");
   });
 }
-function activeTextIndex(steps, frame, fps) {
-  return steps.findIndex((s) => frame >= Math.ceil(s.at * fps - 1e-8) && frame < Math.ceil((s.at + s.duration) * fps - 1e-8));
+function carouselPosition(phrases, time, motionDuration) {
+  let current = -1;
+  for (let i = 0; i < phrases.length; i++) {
+    const at = phrases[i].at;
+    if (time >= at) {
+      current = i;
+      continue;
+    }
+    if (motionDuration > 0 && time >= at - motionDuration) return i - 1 + smoothCarousel((time - at + motionDuration) / motionDuration);
+    break;
+  }
+  return current;
 }
-function kineticGlyph(local, index, count, duration, stagger = 0.035) {
-  const gap = Math.min(stagger, duration * 0.65 / Math.max(1, count - 1));
-  const progress = clampText((local - index * gap) / Math.max(1e-6, duration - (count - 1) * gap));
-  const p = easeText(progress);
-  return { opacity: p, offset: 1 - p, scale: (0.65 + 0.35 * p) * (1 + 0.12 * Math.sin(Math.PI * p)), rotation: -12 * (1 - p) };
-}
-function fitHQText(text, family, width, height, scale) {
-  const ctx = document.createElement("canvas").getContext("2d");
-  if (!ctx) throw new Error("Canvas indispon\xEDvel.");
+function carouselTextLayout(ctx, text, family, width, height, maximum) {
   const wrap = (size) => {
     ctx.font = `${size}px ${family}`;
-    const lines = [];
-    for (const paragraph of text.split("\n")) {
+    const lines2 = [];
+    for (const paragraph of text.normalize("NFC").toLocaleUpperCase("pt-BR").split("\n")) {
       let line = "";
       for (const word of paragraph.split(/\s+/).filter(Boolean)) {
         if (line && ctx.measureText(line + " " + word).width > width) {
-          lines.push(line);
+          lines2.push(line);
           line = word;
         } else line += (line ? " " : "") + word;
       }
-      lines.push(line);
+      lines2.push(line);
     }
-    return lines;
+    return lines2;
   };
-  let low = 1, high = Math.max(width, height);
+  let lo = 1, hi = maximum;
   for (let i = 0; i < 20; i++) {
-    const size = (low + high) / 2, lines = wrap(size);
-    if (lines.length * size * 1.16 <= height && lines.every((l) => ctx.measureText(l).width <= width)) low = size;
-    else high = size;
+    const size = (lo + hi) / 2, lines2 = wrap(size);
+    if (lines2.length <= 2 && lines2.length * size * 1.12 <= height && lines2.every((l) => ctx.measureText(l).width <= width)) lo = size;
+    else hi = size;
   }
-  return { lines: wrap(low), fontSize: low * scale };
+  const lines = wrap(lo);
+  if (lines.length > 2) throw new Error("Use frases curtas: no m\xE1ximo duas linhas por frase.");
+  return { lines, size: lo, height: lines.length * lo * 1.12 };
 }
-function TextoHQ(props) {
-  const { width, height, fps, durationInFrames } = useVideoConfig2();
-  const frame = useCurrentFrame2();
-  const inputKey = JSON.stringify(props);
-  const steps = React2.useMemo(() => prepareTextSteps(props, durationInFrames / fps, fps), [inputKey, durationInFrames, fps]), assets = props.assets ?? {};
-  const urls = steps.map((s2) => resolveHQFont(s2.fontFamily, assets));
-  const [layouts, setLayouts] = React2.useState(null);
-  const [handle] = React2.useState(() => delayRender("Preparando Texto HQ"));
-  const signature = JSON.stringify({ steps, urls, width, height });
+function CarrosselFrasesHQ({
+  phrases,
+  fontFamily = "Anton",
+  align = "left",
+  activeColor = "#F4C542",
+  inactiveColor = "#9698A2",
+  inactiveOpacity = 0.38,
+  inactiveScale = 0.6,
+  activeBandColor = "#A0A0A0",
+  activeBandOpacity = 0.12,
+  motionDuration = 0.45,
+  textScale = 1,
+  backgroundStyle = "halftone",
+  backgroundColor = "#10131E",
+  backgroundOpacity = 100,
+  paperTone = "light",
+  gridBackgroundColor = "#10101A",
+  gridLineColor = "#858595",
+  assets = {}
+}) {
+  const { width: w, height: h, fps, durationInFrames } = useVideoConfig2(), frame = useCurrentFrame2();
+  validateCarousel(phrases, durationInFrames / fps, motionDuration);
+  if (!["left", "right"].includes(align)) throw new Error("align: left ou right.");
+  if (![activeColor, inactiveColor].every((c) => /^#[a-f\d]{6}$/i.test(c))) throw new Error("Cores devem usar #RRGGBB.");
+  if (!/^#[a-f\d]{6}$/i.test(activeBandColor)) throw new Error("activeBandColor deve usar #RRGGBB.");
+  if (!Number.isFinite(activeBandOpacity) || activeBandOpacity < 0 || activeBandOpacity > 1) throw new Error("activeBandOpacity: 0\u20131.");
+  if (!Number.isFinite(inactiveOpacity) || inactiveOpacity < 0 || inactiveOpacity > 1) throw new Error("inactiveOpacity: 0\u20131.");
+  if (!Number.isFinite(inactiveScale) || inactiveScale < 0.3 || inactiveScale > 0.85) throw new Error("inactiveScale: 0.3\u20130.85.");
+  if (!Number.isFinite(textScale) || textScale < 0.25 || textScale > 1) throw new Error("textScale: 0.25\u20131.");
+  const url = resolveHQFont(fontFamily, assets), textW = w * 0.84, maximum = Math.min(h * 0.2, w * 0.19) * textScale;
+  const [prepared, setPrepared] = React2.useState(null);
+  const [handle] = React2.useState(() => delayRender("Preparando Carrossel de Frases HQ"));
+  const signature = JSON.stringify({ phrases, fontFamily, url, w, h, textScale });
   React2.useEffect(() => {
     let live = true;
-    Promise.all(steps.map((s2, i) => loadFont({ family: s2.fontFamily, url: urls[i] }))).then(() => {
-      if (!live) return;
-      setLayouts(steps.map((s2) => fitHQText(s2.text, s2.fontFamily, width * (width > height ? 0.84 : 0.8) * (s2.entryAnimation === "kinetic" ? 0.88 : 1), height * (width > height ? 0.64 : 0.66) * (s2.entryAnimation === "kinetic" ? 0.82 : 1), s2.textScale)));
+    loadFont({ family: fontFamily, url }).then(() => {
+      const ctx = document.createElement("canvas").getContext("2d");
+      if (!ctx) throw new Error("Canvas indispon\xEDvel.");
+      const layouts = phrases.map((p) => carouselTextLayout(ctx, p.text, fontFamily, textW, h * 0.24, maximum));
+      if (live) setPrepared({ signature, layouts });
       continueRender(handle);
-    }).catch((error) => {
-      if (live) cancelRender(error);
-    });
+    }).catch(cancelRender);
     return () => {
       live = false;
     };
   }, [signature, handle]);
-  const index = activeTextIndex(steps, frame, fps), s = index < 0 ? void 0 : steps[index], layout = index < 0 ? void 0 : layouts?.[index];
-  const bg = s ?? props, unit = Math.min(width, height) / 1080;
-  const local = s ? frame / fps - s.at : 0;
-  const p = s ? s.entryAnimation === "none" ? local >= s.entryDelay ? 1 : 0 : clampText((local - s.entryDelay) / s.entryDuration) : 0;
-  const opening = easeText(p), closing = s?.exitAnimation === "fechar" ? easeText((local - (s.duration - s.exitDuration)) / Math.max(1 / fps, s.exitDuration - 1 / fps)) : 0;
-  const openMask = s?.entryAnimation === "abrir" && opening < 1 ? `linear-gradient(to right, transparent ${50 - opening * 55 - 5}%, black ${50 - opening * 55}%, black ${50 + opening * 55}%, transparent ${50 + opening * 55 + 5}%)` : void 0;
-  const closeMask = closing > 0 ? `linear-gradient(to right, black ${50 - closing * 60 - 5}%, transparent ${50 - closing * 60}%, transparent ${50 + closing * 60}%, black ${50 + closing * 60 + 5}%)` : void 0;
-  const units = (line) => s?.entryAnimation === "kinetic" && s.kineticUnit === "word" ? line.split(/(\s+)/).filter(Boolean) : Array.from(line);
-  const total = layout?.lines.reduce((a, l) => a + units(l).length, 0) ?? 0, visible = s?.entryAnimation === "escrita" ? Math.floor(p * total) : total;
-  let letter = 0;
-  return /* @__PURE__ */ jsxs2(AbsoluteFill3, { style: { overflow: "hidden", justifyContent: "center", alignItems: "center" }, children: [
-    /* @__PURE__ */ jsx4(SceneBackground, { ...bg, children: /* @__PURE__ */ jsx4(AbsoluteFill3, { style: { pointerEvents: "none", opacity: 0.28, backgroundImage: `radial-gradient(circle, #080A11 ${3.2 * unit}px, transparent ${3.8 * unit}px)`, backgroundSize: `${18 * unit}px ${18 * unit}px` } }) }),
-    s && layout && /* @__PURE__ */ jsx4("div", { style: { position: "relative", width: width > height ? "84%" : "80%", textAlign: "center", opacity: (s.entryAnimation === "abrir" ? opening : p > 0 ? 1 : 0) * (1 - closing), maskImage: closeMask, WebkitMaskImage: closeMask }, children: /* @__PURE__ */ jsx4("div", { style: { fontFamily: s.fontFamily, fontSize: layout.fontSize, lineHeight: 1.16, color: s.textColor, WebkitTextStroke: s.fontFamily === "Anton" ? "0px transparent" : `${2 * unit}px #080A11`, textShadow: s.fontFamily === "Anton" ? "none" : `${9 * unit}px ${12 * unit}px 0 #080A11`, maskImage: openMask, WebkitMaskImage: openMask }, children: layout.lines.map((line, i) => /* @__PURE__ */ jsx4("div", { style: { whiteSpace: "pre" }, children: units(line).map((char, j) => {
-      const n = letter++;
-      if (s.entryAnimation !== "kinetic") return /* @__PURE__ */ jsx4("span", { style: { opacity: n < visible ? 1 : 0 }, children: char }, j);
-      const k = kineticGlyph(local - s.entryDelay, n, total, s.entryDuration, s.kineticStagger), direction = s.kineticDirection ?? "up", distance = Math.min(layout.fontSize * 0.55, 100 * unit);
-      return /* @__PURE__ */ jsx4("span", { style: { display: "inline-block", opacity: k.opacity, color: s.kineticAccentColor && n % 5 === 0 ? s.kineticAccentColor : void 0, translate: `${direction === "left" ? k.offset * distance : direction === "right" ? -k.offset * distance : 0}px ${direction === "up" ? k.offset * distance : direction === "down" ? -k.offset * distance : 0}px`, rotate: `${k.rotation}deg`, scale: k.scale }, children: char }, j);
-    }) }, i)) }) })
+  const cursor = carouselPosition(phrases, frame / fps, motionDuration);
+  const blendColor = (from, to, p) => {
+    const a = from.slice(1).match(/../g).map((x) => parseInt(x, 16)), b = to.slice(1).match(/../g).map((x) => parseInt(x, 16));
+    return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * p)).join(",")})`;
+  };
+  return /* @__PURE__ */ jsxs2(AbsoluteFill3, { style: { overflow: "hidden", pointerEvents: "none" }, children: [
+    /* @__PURE__ */ jsx4(SceneBackground, { backgroundStyle, backgroundColor, backgroundOpacity, paperTone, gridBackgroundColor, gridLineColor }),
+    /* @__PURE__ */ jsx4("div", { "data-active-band": true, style: { position: "absolute", left: 0, top: h * 0.36, width: w, height: h * 0.28, backgroundColor: activeBandColor, opacity: activeBandOpacity } }),
+    prepared?.signature === signature && phrases.slice(Math.max(0, Math.floor(cursor) - 2), Math.ceil(cursor) + 3).map((phrase, offset) => {
+      const i = Math.max(0, Math.floor(cursor) - 2) + offset;
+      const slot = i - cursor;
+      if (slot > 2 || slot < -2) return null;
+      const layout = prepared.layouts[i], focus = clampCarousel(1 - Math.abs(slot)), scale = inactiveScale + (1 - inactiveScale) * focus;
+      const gap = h * 0.045, smallH = layout.height * inactiveScale;
+      const yAt = (n) => n >= 2 ? -smallH : n === 1 ? h / 3 - gap - smallH / 2 : n === 0 ? h / 2 : n === -1 ? 2 * h / 3 + gap + smallH / 2 : h + smallH;
+      const lower = Math.floor(slot), mix = slot - lower, cy = yAt(lower) + (yAt(lower + 1) - yAt(lower)) * mix;
+      const edge = clampCarousel(2 - Math.abs(slot)), opacity = (inactiveOpacity + (1 - inactiveOpacity) * focus) * edge;
+      const ink = blendColor(inactiveColor, phrase.color ?? activeColor, focus);
+      return /* @__PURE__ */ jsx4("div", { "data-phrase": i, style: {
+        position: "absolute",
+        left: w * 0.08,
+        top: cy - layout.height / 2,
+        width: textW,
+        height: layout.height,
+        scale,
+        transformOrigin: align === "left" ? "left center" : "right center",
+        fontFamily,
+        fontSize: layout.size,
+        lineHeight: 1.12,
+        textAlign: align,
+        color: ink,
+        opacity,
+        whiteSpace: "pre",
+        textShadow: fontFamily === "Anton" ? "none" : `0 ${Math.min(w, h) * 5e-3}px 0 #080A11`,
+        WebkitTextStroke: fontFamily === "Anton" ? void 0 : `${Math.min(w, h) * 12e-4}px #080A11`,
+        paintOrder: "stroke fill"
+      }, children: layout.lines.join("\n") }, i);
+    })
   ] });
 }
 function resolveHQFont(family, assets) {
@@ -275,4 +292,4 @@ function resolveHQFont(family, assets) {
   if (!assets[key]) throw new Error(`Informe assets.${key} para a fonte ${family}.`);
   return assets[key];
 }
-export const TextoHQCena = TextoHQ;
+export const CarrosselFrasesHQCena = CarrosselFrasesHQ;

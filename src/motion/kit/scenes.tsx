@@ -1,11 +1,11 @@
 import React, { createContext, useContext } from 'react';
 import { AbsoluteFill, Img, OffthreadVideo, interpolate, random, useCurrentFrame, useVideoConfig, Easing } from 'remotion';
 import { ANTON, C, Halftone, Panel, Punch, ROUND, SpeedBurst, Stars, ease, pop, shake, slide } from './fx';
-import { Mood, Nox, NoxPose } from './Nox';
+import { Figura, Mood, PersonagemPose, figW, useHasPersonagem } from './Personagem';
 import { IconArt } from './icons';
 
 /**
- * Cenas do kit de motion Diazverso. Cada cena recebe `len` (frames do beat) e ajusta os próprios tempos.
+ * Cenas do kit de motion do Content Lab. Cada cena recebe `len` (frames do beat) e ajusta os próprios tempos.
  * Mídias entram por referência `media:<id>` (imagem ou vídeo da obra, resolvida pelo editor).
  * Todas as cenas são diagramadas para 16:9 (1920×1080) e para 9:16 (1080×1920, Shorts): no vertical,
  * o conteúdo fica entre 12% e 72% da altura, fora da faixa da interface do Shorts e da legenda.
@@ -21,8 +21,6 @@ const color = (name?: string, fallback = C.white) => (name && (COLORS[name] || (
 
 /** Palco: tamanho do vídeo e orientação. */
 export const useStage = () => { const { width: W, height: H } = useVideoConfig(); return { W, H, V: H > W }; };
-/** Largura do Nox na tela para uma altura (recorte da figura 412×669). */
-const noxW = (h: number) => (h * 412) / 669;
 /** Tamanho de fonte que faz a palavra mais longa caber na largura (o texto quebra linha nas demais). */
 const fit = (text: string, width: number, max: number, lines = 3) => {
   const words = String(text).split(/\s+/).filter(Boolean);
@@ -78,7 +76,7 @@ export const Titulo: React.FC<Base & { palavras: string[]; cores?: string[]; fun
 
 /** Frases "pensadas" no campo de estrelas, linha a linha; opcional riscar uma palavra e fechar com destaque gigante. */
 export const Frase: React.FC<Base & { linhas: string[]; riscar?: string; destaque?: string; humor?: Mood; fundo?: Bg; tom?: string }> = ({ len, linhas, riscar, destaque, humor, fundo, tom }) => {
-  const f = useCurrentFrame(); const { W, V } = useStage();
+  const f = useCurrentFrame(); const { W, V } = useStage(); const has = useHasPersonagem();
   const lineAt = (i: number) => Math.round(i * Math.min(16, (len * 0.45) / Math.max(1, linhas.length)));
   const big = destaque ? Math.round(len * 0.55) : Infinity;
   return (
@@ -90,18 +88,18 @@ export const Frase: React.FC<Base & { linhas: string[]; riscar?: string; destaqu
             {riscar && line.includes(riscar) ? <>{line.split(riscar)[0]}<span style={{ position: 'relative' }}>{riscar}<span style={{ position: 'absolute', left: -10, right: -10, top: '52%', height: 12, background: C.red, transform: `scaleX(${slide(f, lineAt(i) + 18, 8)})`, transformOrigin: 'left' }} /></span>{line.split(riscar).slice(1).join(riscar)}</> : line}
           </div>
         )) : <div style={{ transform: `scale(${interpolate(f - big, [0, 4, 8, len - big], [1.7, 0.95, 1, 1.08], clamp)})` }}><div style={{ display: 'inline-block', background: fundo && fundo !== 'estrelas' && fundo !== 'escuro' ? C.ink : 'transparent', padding: '14px 36px', boxShadow: fundo && fundo !== 'estrelas' && fundo !== 'escuro' ? `14px 14px 0 ${C.red}` : 'none' }}><Punch size={fit(destaque!, W - 220, V ? 220 : 240, V ? 3 : 2)} color={C.yellow} style={{ textAlign: 'center' }}>{destaque}</Punch></div></div>}
-        {humor && f < big && f >= lineAt(linhas.length) + 6 && <div style={{ marginTop: 30, transform: `scale(${pop(f, lineAt(linhas.length) + 6)})`, position: 'relative', width: noxW(300), height: 300 }}><Nox mood={humor} height={300} x={0} y={0} /></div>}
+        {humor && has && f < big && f >= lineAt(linhas.length) + 6 && <div style={{ marginTop: 30, transform: `scale(${pop(f, lineAt(linhas.length) + 6)})`, position: 'relative', width: figW(300), height: 300 }}><Figura humor={humor} height={300} x={0} y={0} /></div>}
       </AbsoluteFill>
     </AbsoluteFill>
   );
 };
 
-/** Nox em destaque, de corpo inteiro, reagindo, com texto de impacto ao lado (no vertical, texto em cima). */
-export const NoxCena: React.FC<Base & { humor?: Mood; texto?: string; subtexto?: string; fundo?: Bg; tom?: string; lado?: 'direita' | 'esquerda'; poses?: Array<{ pose?: string; humor?: Mood }> }> = ({ len, humor = 'feliz', texto, subtexto, fundo = 'explosao', tom, lado = 'direita', poses }) => {
+/** Personagem do projeto em destaque, de corpo inteiro, reagindo, com texto de impacto ao lado (no vertical, texto em cima). */
+export const PersonagemCena: React.FC<Base & { humor?: Mood; texto?: string; subtexto?: string; fundo?: Bg; tom?: string; lado?: 'direita' | 'esquerda'; poses?: Array<{ pose?: string; humor?: Mood }> }> = ({ len, humor = 'feliz', texto, subtexto, fundo = 'explosao', tom, lado = 'direita', poses }) => {
   const f = useCurrentFrame(); const { W, H, V } = useStage();
   const right = lado === 'direita';
   const nh = V ? 900 : 880;
-  const nx = V ? (W - noxW(nh)) / 2 + (right ? 60 : -60) : right ? 1160 : 140;
+  const nx = V ? (W - figW(nh)) / 2 + (right ? 60 : -60) : right ? 1160 : 140;
   const ny = V ? H * 0.68 - nh : 190;
   const textBox: React.CSSProperties = V
     ? { left: 60, right: 60, top: H * 0.13, textAlign: 'center', transformOrigin: 'center' }
@@ -110,8 +108,8 @@ export const NoxCena: React.FC<Base & { humor?: Mood; texto?: string; subtexto?:
     <Camera>
       <Background kind={fundo} tint={tom} />
       {poses?.length
-        ? (() => { const k = Math.min(poses.length - 1, Math.floor(f / Math.max(1, len / poses.length))); const p = poses[k]; return <NoxPose pose={p.pose} mood={p.humor || humor} height={nh} cx={nx + noxW(nh) / 2} bottom={ny + nh} flip={(V ? !right : false) !== (k % 2 === 1)} seed={`nox${k}`} />; })()
-        : <Nox mood={humor} height={nh} x={nx} y={ny} flip={V ? !right : false} tilt={Math.sin(f / 6) * 3} squash={interpolate(f, [0, 4, 9], [0.22, -0.07, 0], clamp)} />}
+        ? (() => { const k = Math.min(poses.length - 1, Math.floor(f / Math.max(1, len / poses.length))); const p = poses[k]; return <PersonagemPose pose={p.pose} humor={p.humor || humor} height={nh} cx={nx + figW(nh) / 2} bottom={ny + nh} flip={(V ? !right : false) !== (k % 2 === 1)} seed={`personagem${k}`} />; })()
+        : <Figura humor={humor} height={nh} x={nx} y={ny} flip={V ? !right : false} tilt={Math.sin(f / 6) * 3} squash={interpolate(f, [0, 4, 9], [0.22, -0.07, 0], clamp)} />}
       {texto && <div style={{ position: 'absolute', ...textBox, transform: `scale(${pop(f, 6)}) rotate(${right ? -4 : 4}deg)` }}>
         <div style={{ display: 'inline-block', background: C.ink, padding: '10px 40px', boxShadow: `14px 14px 0 ${C.red}` }}><Punch size={fit(texto, V ? W - 200 : 900, V ? 150 : 190, V ? 3 : 2)} color={C.yellow} split={4}>{texto}</Punch></div>
         {subtexto && f >= Math.min(20, len / 3) && <div style={{ marginTop: 30, transform: `scale(${pop(f, Math.min(20, len / 3))})` }}><Punch size={V ? 100 : 120} color={fundo === 'explosao' ? C.ink : C.white} split={4}>{subtexto}</Punch></div>}
@@ -120,13 +118,14 @@ export const NoxCena: React.FC<Base & { humor?: Mood; texto?: string; subtexto?:
   );
 };
 
-/** Evidência da obra: imagem/vídeo num painel HQ com Ken Burns, etiqueta, legenda e reação opcional do Nox (só o rosto e o tronco, num canto). */
+/** Evidência da obra: imagem/vídeo num painel HQ com Ken Burns, etiqueta, legenda e reação opcional do personagem (só a parte de cima, num canto). */
 export const Evidencia: React.FC<Base & { midia: string; rotulo?: string; legenda?: string; humor?: Mood; movimento?: 'entrar' | 'sair' | 'panoramica'; fundo?: Bg; tom?: string; tela?: boolean; cheia?: boolean }> = ({ len, midia, rotulo, legenda, humor, movimento = 'entrar', fundo = 'papel', tom, tela = false, cheia }) => {
   const f = useCurrentFrame(); const { W, H, V } = useStage();
   const asset = useAsset(midia);
   const full = cheia ?? false;
-  const box = full ? { x: -10, y: -10, w: W + 20, h: H + 20 } : V ? { x: 40, y: H * 0.13, w: W - 80, h: H * 0.5 } : { x: humor ? 90 : 180, y: 110, w: humor ? 1300 : 1560, h: 820 };
-  const peek = humor ? interpolate(f, [2, 10], [0, 1], { ...clamp, easing: ease }) : 0;
+  const reage = Boolean(humor) && useHasPersonagem();
+  const box = full ? { x: -10, y: -10, w: W + 20, h: H + 20 } : V ? { x: 40, y: H * 0.13, w: W - 80, h: H * 0.5 } : { x: reage ? 90 : 180, y: 110, w: reage ? 1300 : 1560, h: 820 };
+  const peek = reage ? interpolate(f, [2, 10], [0, 1], { ...clamp, easing: ease }) : 0;
   const nh = V ? 760 : 620;
   return (
     <Camera from={1.1}>
@@ -136,16 +135,16 @@ export const Evidencia: React.FC<Base & { midia: string; rotulo?: string; legend
         {tela && <AbsoluteFill style={{ background: 'repeating-linear-gradient(to bottom, rgba(0,0,0,.18) 0 2px, transparent 2px 5px)', boxShadow: 'inset 0 0 120px rgba(0,0,0,.8)' }} />}
         {rotulo && <div style={{ position: 'absolute', left: 0, top: 0, background: C.yellow, borderRight: `7px solid ${C.ink}`, borderBottom: `7px solid ${C.ink}`, padding: '8px 22px', fontFamily: ANTON, fontSize: V ? 56 : 52, color: C.ink, transform: `translateX(${(1 - slide(f, 4, 8)) * -400}px)` }}>{rotulo}</div>}
       </Panel>
-      {legenda && f >= 10 && <div style={{ position: 'absolute', left: V ? 50 : humor ? 140 : 260, right: V ? 50 : undefined, top: V ? box.y + box.h + 50 : undefined, bottom: V ? undefined : 70, textAlign: V ? 'center' : 'left', transform: `scale(${pop(f, 10)}) rotate(-1.5deg)`, transformOrigin: V ? 'center' : 'left' }}><span style={{ fontFamily: ANTON, fontSize: V ? 80 : 74, lineHeight: 1.3, color: '#fff', background: C.ink, padding: '4px 26px', boxShadow: `10px 10px 0 ${C.red}`, boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone' }}>{legenda}</span></div>}
-      {humor && <div style={{ position: 'absolute', right: V ? -40 : 20, top: (V ? H * 0.72 : H) - nh * 0.62 * peek, width: noxW(nh), height: nh * 0.62, overflow: 'hidden' }}>
-        <Nox mood={humor} height={nh} x={0} y={0} tilt={Math.sin(f / 8) * 3} look={-1} flip />
+      {legenda && f >= 10 && <div style={{ position: 'absolute', left: V ? 50 : reage ? 140 : 260, right: V ? 50 : undefined, top: V ? box.y + box.h + 50 : undefined, bottom: V ? undefined : 70, textAlign: V ? 'center' : 'left', transform: `scale(${pop(f, 10)}) rotate(-1.5deg)`, transformOrigin: V ? 'center' : 'left' }}><span style={{ fontFamily: ANTON, fontSize: V ? 80 : 74, lineHeight: 1.3, color: '#fff', background: C.ink, padding: '4px 26px', boxShadow: `10px 10px 0 ${C.red}`, boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone' }}>{legenda}</span></div>}
+      {reage && <div style={{ position: 'absolute', right: V ? -40 : 20, top: (V ? H * 0.72 : H) - nh * 0.62 * peek, width: figW(nh), height: nh * 0.62, overflow: 'hidden' }}>
+        <Figura humor={humor} height={nh} x={0} y={0} tilt={Math.sin(f / 8) * 3} flip />
       </div>}
     </Camera>
   );
 };
 
 /**
- * Aparte do Nox (momentos cômicos, opinião): a cena da obra continua atrás e desfoca; o Nox aparece
+ * Aparte do personagem (momentos cômicos, opinião): a cena da obra continua atrás e desfoca; o personagem aparece
  * INTEIRO, subindo pela borda de baixo, com o resto do corpo fora do quadro. Cada fala é uma pose nova
  * em stop motion: troca seca de desenho e de lugar, sem quadros intermediários, com uma tremidinha.
  * Um balão com ícone ou texto mostra o que ele diz. No fim ele sai de uma vez e o fundo volta nítido.
@@ -177,7 +176,7 @@ export const Aparte: React.FC<Base & { midia?: string; falas: Array<{ pose?: str
       <AbsoluteFill style={{ filter: blur > 0.3 ? `blur(${blur}px) brightness(${1 - blur / 45})` : undefined, transform: `scale(${1.04 + blur / 300})` }}>
         {asset ? <Media asset={asset} len={len} motion="panoramica" /> : <Background kind={fundo} tint={tom} />}
       </AbsoluteFill>
-      {shown > 0 && <NoxPose pose={fala.pose} mood={(fala.humor as Mood) || 'feliz'} height={nh} cx={cx} bottom={bottom} flip={flip} seed={`aparte${k}`} />}
+      {shown > 0 && <PersonagemPose pose={fala.pose} humor={fala.humor || 'feliz'} height={nh} cx={cx} bottom={bottom} flip={flip} seed={`aparte${k}`} />}
       {bubbleOn && (
         <div style={{ position: 'absolute', left: cx, top: top - (V ? 30 : 20), transform: `translate(-50%, -100%) scale(${pop_}) rotate(${(b % 2 ? 3 : -3)}deg)`, transformOrigin: '50% 100%' }}>
           <div style={{ background: '#fff', border: `8px solid ${C.ink}`, borderRadius: 46, boxShadow: `12px 12px 0 ${C.ink}`, padding: '22px 34px', display: 'flex', alignItems: 'center', gap: 22, maxWidth: V ? W - 120 : 900 }}>
@@ -206,7 +205,7 @@ export const Pagina: React.FC<Base & { paineis: Array<{ midia?: string; humor?: 
       <Halftone />
       {paineis.slice(0, 3).map((p, i) => { const r = rect(i); const nh = Math.min(r.h * 0.85, 460); return f >= i * gap && (
         <Panel key={i} x={r.x} y={r.y} w={r.w} h={r.h} rotate={[-2, 1.5, -1][i]} bg={color(p.tom, ['#d9cfbd', C.yellow, '#e8e2d6'][i])} style={{ opacity: interpolate(f, [i * gap, i * gap + 3], [0, 1], clamp), transform: `translate${V ? 'X' : 'Y'}(${(1 - slide(f, i * gap, 9)) * (V ? (i % 2 ? 300 : -300) : 80)}px) rotate(${[-2, 1.5, -1][i]}deg)` }}>
-          {p.midia ? <Media asset={assets[p.midia.replace(/^media:/, '')] || null} len={len} /> : <><SpeedBurst bg={color(p.tom, ['#d9cfbd', C.yellow, '#e8e2d6'][i])} color="rgba(11,11,16,.2)" rays={24} /><Nox mood={p.humor || 'bravo'} height={nh} x={(r.w - noxW(nh)) / 2} y={r.h - nh * 0.95} squash={interpolate(f - i * gap, [0, 4, 10], [0.3, -0.1, 0], clamp)} /></>}
+          {p.midia ? <Media asset={assets[p.midia.replace(/^media:/, '')] || null} len={len} /> : <><SpeedBurst bg={color(p.tom, ['#d9cfbd', C.yellow, '#e8e2d6'][i])} color="rgba(11,11,16,.2)" rays={24} /><Figura humor={p.humor || 'bravo'} height={nh} x={(r.w - figW(nh)) / 2} y={r.h - nh * 0.95} squash={interpolate(f - i * gap, [0, 4, 10], [0.3, -0.1, 0], clamp)} /></>}
           {p.onomatopeia && <div style={{ position: 'absolute', right: 20, top: 30, transform: `rotate(12deg) scale(${pop(f, i * gap + 6)})` }}><Punch size={V ? 96 : 110} color={C.red} split={3}>{p.onomatopeia}</Punch></div>}
           {p.rotulo && <div style={{ position: 'absolute', left: 0, bottom: 0, background: '#fff', borderRight: `6px solid ${C.ink}`, borderTop: `6px solid ${C.ink}`, padding: '8px 18px', fontFamily: ANTON, fontSize: V ? 46 : 40, color: C.ink, maxWidth: r.w - 40 }}>{p.rotulo}</div>}
         </Panel>
@@ -238,7 +237,7 @@ export const Numero: React.FC<Base & { valor: number; de?: number; sufixo?: stri
         <polyline points={pts.map(([x, y]) => `${x},${y}`).join(' ')} fill="none" stroke={good} strokeWidth={10} strokeLinecap="round" strokeLinejoin="round" style={{ filter: `drop-shadow(0 0 14px ${good})` }} />
         {marcos.map((label, i) => { const t = (i + 1) / (marcos.length + 1); return p >= t && <g key={label} transform={`translate(${40 + t * (cw - 80)} ${curve(t)}) scale(${pop(f, 6 + t * len * 0.7)})`}><circle r={20} fill={[C.blue, C.yellow, C.red][i % 3]} stroke={C.ink} strokeWidth={6} /><rect x={-140} y={-150} width={280} height={96} fill={C.paper} stroke={C.ink} strokeWidth={7} /><text y={-80} textAnchor="middle" fontFamily="Anton" fontSize={60} fill={C.ink}>{label}</text></g>; })}
       </svg>
-      {humor && !V && <Nox mood={humor} height={540} x={1460} y={460} tilt={Math.sin(f / 9) * 3} look={-1} />}
+      {humor && !V && <Figura humor={humor} height={540} x={1460} y={460} tilt={Math.sin(f / 9) * 3} />}
     </Camera>
   );
 };
@@ -255,7 +254,7 @@ export const Ficha: React.FC<Base & { titulo: string; itens: Array<{ rotulo: str
   return (
     <Camera>
       <Halftone bg={C.blue} dot="rgba(255,255,255,.12)" />
-      {asset ? <Panel x={pic.x} y={pic.y} w={pic.w} h={pic.h} rotate={2} bg={C.ink}><Media asset={asset} len={len} /></Panel> : <Nox mood={humor} height={V ? pic.h * 1.1 : 700} x={V ? (W - noxW(pic.h * 1.1)) / 2 : 120} y={V ? pic.y : 300} squash={interpolate(f, [0, 4, 9], [0.25, -0.08, 0], clamp)} tilt={Math.sin(f / 12) * 2} />}
+      {asset ? <Panel x={pic.x} y={pic.y} w={pic.w} h={pic.h} rotate={2} bg={C.ink}><Media asset={asset} len={len} /></Panel> : <Figura humor={humor} height={V ? pic.h * 1.1 : 700} x={V ? (W - figW(pic.h * 1.1)) / 2 : 120} y={V ? pic.y : 300} squash={interpolate(f, [0, 4, 9], [0.25, -0.08, 0], clamp)} tilt={Math.sin(f / 12) * 2} />}
       <Panel x={sheet.x} y={sheet.y} w={sheet.w} h={sheet.h} rotate={-1.5}>
         <div style={{ position: 'absolute', left: 40, top: 26, fontFamily: ANTON, fontSize: 64, color: C.ink }}>{titulo}</div>
         {itens.slice(0, n).map((item, i) => {
@@ -301,7 +300,7 @@ export const Formula: React.FC<Base & { titulo?: string; termos: Array<{ rotulo:
             {i < n - 1 && f >= at + 4 && <div style={{ position: 'absolute', left: V ? W / 2 - 40 : p.x + cardW + 22, top: V ? p.y + cardH + 4 : 410, transform: `scale(${pop(f, at + 4)})` }}><Punch size={V ? 90 : 120}>{ops[i]}</Punch></div>}
           </React.Fragment>;
         })}
-        {!V && f >= flipAt + 8 && f < zoomAt && <Nox mood={humor} height={340} x={interpolate(f, [flipAt + 8, flipAt + 18], [1950, 1560], { ...clamp, easing: ease })} y={720} tilt={-10 + Math.sin(f / 5) * 4} />}
+        {!V && f >= flipAt + 8 && f < zoomAt && <Figura humor={humor} height={340} x={interpolate(f, [flipAt + 8, flipAt + 18], [1950, 1560], { ...clamp, easing: ease })} y={720} tilt={-10 + Math.sin(f / 5) * 4} />}
       </AbsoluteFill>
       {f >= zoomAt && <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', paddingBottom: V ? 300 : 0 }}><div style={{ transform: `rotate(-8deg) scale(${interpolate(f, [zoomAt + 8, zoomAt + 12, zoomAt + 16], [2.6, 0.92, 1], clamp)})`, border: `12px solid ${C.red}`, padding: '0 40px', background: 'rgba(11,11,16,.75)', opacity: f >= zoomAt + 8 ? 1 : 0 }}><Punch size={Math.min(V ? 150 : 190, (V ? 1700 : 2600) / Math.max(8, carimbo!.length))} color={C.red} split={5}>{carimbo}</Punch></div></AbsoluteFill>}
     </Camera>
@@ -334,7 +333,7 @@ export const Lista: React.FC<Base & { titulo: string; subtitulo?: string; prefix
         })}
       </div>
       {conclusao && f >= endAt && <div style={{ position: 'absolute', right: V ? 50 : 90, left: V ? 50 : undefined, top: V ? H * 0.25 + n * gap + 60 : 70, textAlign: V ? 'center' : undefined, transform: `scale(${pop(f, endAt)}) rotate(2deg)`, transformOrigin: V ? 'center' : 'right' }}><div style={{ display: 'inline-block', background: C.yellow, border: `6px solid ${C.ink}`, boxShadow: `10px 10px 0 ${C.ink}`, padding: '6px 26px' }}><Punch size={64} color={C.ink} split={2}>{conclusao}</Punch></div></div>}
-      {!V && <Nox mood={f >= endAt ? 'feliz' : humor} height={620} x={1340} y={360} squash={itens.slice(0, n).reduce((sum, _, i) => sum + interpolate(f - (14 + i * step), [0, 4, 10], [0, 0.12, 0], clamp), 0)} tilt={Math.sin(f / 14) * 2} />}
+      {!V && <Figura humor={f >= endAt ? 'feliz' : humor} height={620} x={1340} y={360} squash={itens.slice(0, n).reduce((sum, _, i) => sum + interpolate(f - (14 + i * step), [0, 4, 10], [0, 0.12, 0], clamp), 0)} tilt={Math.sin(f / 14) * 2} />}
     </Camera>
   );
 };
@@ -351,7 +350,7 @@ export const Comparacao: React.FC<Base & { esquerda: { titulo: string; midia?: s
     const inner = V ? '50px 60px 130px 60px' : '120px 90px 200px 90px';
     const nh = V ? H * 0.22 : 560;
     return f >= at && <div key={i} style={{ position: 'absolute', background: tone, ...box }}>
-      <div style={{ position: 'absolute', inset: inner, border: `8px solid ${C.ink}`, background: C.ink, overflow: 'hidden', transform: `rotate(${i ? 1.5 : -1.5}deg)` }}>{s.midia ? <Media asset={assets[s.midia.replace(/^media:/, '')] || null} len={len} motion={i ? 'sair' : 'entrar'} /> : <><SpeedBurst bg={tone} color="rgba(11,11,16,.25)" rays={20} /><Nox mood={s.humor || 'bravo'} height={nh} x={V ? (W - 120 - noxW(nh)) / 2 : 230} y={V ? 10 : 60} /></>}</div>
+      <div style={{ position: 'absolute', inset: inner, border: `8px solid ${C.ink}`, background: C.ink, overflow: 'hidden', transform: `rotate(${i ? 1.5 : -1.5}deg)` }}>{s.midia ? <Media asset={assets[s.midia.replace(/^media:/, '')] || null} len={len} motion={i ? 'sair' : 'entrar'} /> : <><SpeedBurst bg={tone} color="rgba(11,11,16,.25)" rays={20} /><Figura humor={s.humor || 'bravo'} height={nh} x={V ? (W - 120 - figW(nh)) / 2 : 230} y={V ? 10 : 60} /></>}</div>
       <div style={{ position: 'absolute', bottom: V ? 26 : 70, width: '100%', textAlign: 'center' }}><Punch size={V ? 80 : 90}>{s.titulo}</Punch></div>
     </div>;
   };
@@ -365,18 +364,18 @@ export const Comparacao: React.FC<Base & { esquerda: { titulo: string; midia?: s
   );
 };
 
-/** Encerramento: nome do canal letra a letra, Nox trocando de expressão, balão com pergunta e botão. */
-export const Cta: React.FC<Base & { titulo?: string; pergunta: string; botao?: string; tom?: string }> = ({ len, titulo = 'DIAZVERSO', pergunta, botao = 'RESPONDE NOS COMENTÁRIOS ↓', tom }) => {
+/** Encerramento: nome do canal letra a letra (opcional), personagem trocando de pose, balão com pergunta e botão. */
+export const Cta: React.FC<Base & { titulo?: string; pergunta: string; botao?: string; tom?: string }> = ({ len, titulo = '', pergunta, botao = 'RESPONDE NOS COMENTÁRIOS ↓', tom }) => {
   const f = useCurrentFrame(); const { W, H, V } = useStage();
   const letters = titulo.split('');
   const moods: Mood[] = ['surpreso', 'feliz', 'determinado', 'piscada', 'feliz'];
   const nh = V ? 720 : 760;
-  const L = V ? { title: { left: 0, right: 0, top: H * 0.08, justifyContent: 'center' }, nox: { x: (W - noxW(nh)) / 2, y: H * 0.42 }, bubble: { left: 60, top: H * 0.2, width: W - 120 }, button: { left: 0, right: 0, top: H * 0.78, textAlign: 'center' as const } }
-    : { title: { left: 760, top: 200 }, nox: { x: 110, y: 300 }, bubble: { left: 770, top: 460, width: 1060 }, button: { left: 780, top: 800 } };
+  const L = V ? { title: { left: 0, right: 0, top: H * 0.08, justifyContent: 'center' }, fig: { x: (W - figW(nh)) / 2, y: H * 0.42 }, bubble: { left: 60, top: H * 0.2, width: W - 120 }, button: { left: 0, right: 0, top: H * 0.78, textAlign: 'center' as const } }
+    : { title: { left: 760, top: 200 }, fig: { x: 110, y: 300 }, bubble: { left: 770, top: 460, width: 1060 }, button: { left: 780, top: 800 } };
   return (
     <AbsoluteFill style={{ transform: shake(f, [0], 20) }}>
       <SpeedBurst bg={color(tom, C.red)} color="rgba(11,11,16,.35)" />
-      <Nox mood={moods[Math.min(moods.length - 1, Math.floor(f / Math.max(10, len / moods.length)))]} height={nh} x={L.nox.x} y={interpolate(f, [0, 10], [H + 50, L.nox.y], { ...clamp, easing: ease })} tilt={Math.sin(f / 10) * 3} />
+      <Figura humor={moods[Math.min(moods.length - 1, Math.floor(f / Math.max(10, len / moods.length)))]} height={nh} x={L.fig.x} y={interpolate(f, [0, 10], [H + 50, L.fig.y], { ...clamp, easing: ease })} tilt={Math.sin(f / 10) * 3} />
       <div style={{ position: 'absolute', display: 'flex', ...L.title }}>
         {letters.map((l, i) => <div key={i} style={{ transform: `translateY(${(1 - slide(f, 6 + i * 2, 8)) * -300}px) rotate(${(random(`l${i}`) - 0.5) * 8}deg)`, opacity: f >= 6 + i * 2 ? 1 : 0 }}><Punch size={Math.min(190, ((V ? W - 100 : 1800)) / Math.max(6, letters.length))} color="#fff" split={5}>{l === ' ' ? ' ' : l}</Punch></div>)}
       </div>
@@ -390,4 +389,4 @@ export const Cta: React.FC<Base & { titulo?: string; pergunta: string; botao?: s
 };
 
 /** Catálogo das cenas (nome usado no roteiro em beats → componente). */
-export const SCENES: Record<string, React.FC<any>> = { titulo: Titulo, frase: Frase, nox: NoxCena, aparte: Aparte, evidencia: Evidencia, pagina: Pagina, numero: Numero, ficha: Ficha, formula: Formula, lista: Lista, comparacao: Comparacao, cta: Cta };
+export const SCENES: Record<string, React.FC<any>> = { titulo: Titulo, frase: Frase, personagem: PersonagemCena, aparte: Aparte, evidencia: Evidencia, pagina: Pagina, numero: Numero, ficha: Ficha, formula: Formula, lista: Lista, comparacao: Comparacao, cta: Cta };

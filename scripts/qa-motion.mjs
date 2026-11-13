@@ -3,7 +3,8 @@
 //  A) vídeo narrado: roteiro → mídias da "obra" (próprias) → narração → transcrição → motion_plan_auto →
 //     motion_preview → render → entrega;
 //  B) o demo "herói perfeito" refeito pelo Content Lab: sem narração, beats escritos pelo agente (motion_plan_set);
-//  C) Short 9:16 narrado com plano automático (cenas diagramadas para vertical, apartes do Nox).
+//  C) Short 9:16 narrado com plano automático (cenas diagramadas para vertical, apartes do personagem).
+// O personagem é de teste, neutro (formas simples, 3 poses), gerado aqui e importado com character_import.
 // --only=ac roda só os cenários escolhidos.
 // Extrai frames do vídeo final e mede o áudio.   node scripts/qa-motion.mjs [--keep]
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -13,7 +14,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { requireNoxDir } from '../src/core/nox-pack.js';
+import { makeCharacterPack } from '../src/test/character-fixture.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const work = await mkdtemp(path.join(os.tmpdir(), 'contentlab-motion-qa-'));
@@ -35,11 +36,12 @@ const probe = file => JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-show_
 const loudness = file => spawnSync('ffmpeg', ['-hide_banner', '-nostats', '-i', file, '-af', 'ebur128=peak=true', '-f', 'null', '-'], { encoding: 'utf8' }).stderr;
 const sheet = async (video, out, every = 1) => execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', video, '-vf', `fps=1/${every},scale=w=320:h=320:force_original_aspect_ratio=decrease,tile=8x8`, '-frames:v', '1', out]);
 
-// "Cenas da obra": mídias próprias com nomes descritivos (Nox, ícones do Diazverso e um trecho de vídeo gerado).
-const brand = path.join(root, 'assets/brand');
+// "Cenas da obra": mídias próprias com nomes descritivos (ícones do kit e um trecho de vídeo gerado) e o personagem de teste.
+const brand = path.join(root, 'assets/kit');
 const mediaDir = path.join(work, 'midias'); await mkdir(mediaDir, { recursive: true });
 const icons = ['escudo', 'lampada', 'balanca', 'caminho', 'mascara', 'raio'].map(name => { const out = path.join(mediaDir, `${name}.png`); execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-c:v', 'librsvg', '-width', '1000', '-i', path.join(brand, 'graphics', `${name}.svg`), '-frames:v', '1', out]); return out; });
-const nox = path.join(mediaDir, 'nox.png'); await copyFile(path.join(requireNoxDir(), 'Nox.png'), nox);
+const personagem = await makeCharacterPack(path.join(work, 'personagem'));
+const heroi = path.join(mediaDir, 'heroi.png'); await copyFile(path.join(personagem, 'parado.png'), heroi);
 const clip = path.join(mediaDir, 'muralha-caindo.mp4'); execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc2=s=1280x720:r=30:d=6', '-vf', 'hue=s=0.3,eq=contrast=1.3', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', clip]);
 
 const only = process.argv.find(arg => arg.startsWith('--only='))?.slice(7) || 'abc';
@@ -66,22 +68,23 @@ async function finish(projectPath, label) {
 const results = [];
 try {
   await call('contentlab_start');
-  const kit = await call('motion_kit'); note(`kit: ${Object.keys(kit.cenas).length} cenas, ${kit.humores.length} humores do Nox, ${kit.sfx.length} SFX`);
+  const kit = await call('motion_kit'); note(`kit: ${Object.keys(kit.cenas).length} cenas, ${kit.humores.length} humores, ${kit.sfx.length} SFX`);
 
   // A) Vídeo narrado, plano automático.
   if (only.includes('a')) {
   const a = await project({
     title: 'O escudo que pesava demais',
-    brief: { thesis: 'Proteger tudo o tempo todo impede o herói de escolher o que importa', audience: 'Fãs de heróis', promise: 'Entender por que um herói precisa escolher o que proteger', notes: 'Nox participa' },
+    brief: { thesis: 'Proteger tudo o tempo todo impede o herói de escolher o que importa', audience: 'Fãs de heróis', promise: 'Entender por que um herói precisa escolher o que proteger', notes: 'O herói participa' },
     script: {
       hook: 'Imagina um herói que protege tudo. O tempo todo. Parece incrível, né?',
-      development: 'O Nox carregava um escudo enorme. Cada pessoa nova era mais um peso. E um dia ele percebeu que chegava atrasado em todo lugar.\n\nFoi aí que veio a lâmpada. Ele não precisava de um escudo maior. Precisava escolher onde estar. Uma balança, não uma muralha.\n\nEm 2023, 87% das histórias mais lembradas tinham um herói obrigado a escolher. Escolher dói. Mas quem escolhe chega a tempo.',
+      development: 'O herói carregava um escudo enorme. Cada pessoa nova era mais um peso. E um dia ele percebeu que chegava atrasado em todo lugar.\n\nFoi aí que veio a lâmpada. Ele não precisava de um escudo maior. Precisava escolher onde estar. Uma balança, não uma muralha.\n\nEm 2023, 87% das histórias mais lembradas tinham um herói obrigado a escolher. Escolher dói. Mas quem escolhe chega a tempo.',
       payoff: 'Proteger não é segurar o mundo inteiro. É decidir o que vale o seu peso. E você, o que está carregando que não precisava?',
     },
-    packaging: { titleA: 'O escudo que pesava demais', titleB: 'Por que herói precisa escolher', description: 'O Nox aprende que proteger tudo é não proteger nada.', tags: 'nox, heróis, escolhas, diazverso', seo: 'herói escolhas' },
+    packaging: { titleA: 'O escudo que pesava demais', titleB: 'Por que herói precisa escolher', description: 'O herói aprende que proteger tudo é não proteger nada.', tags: 'heróis, escolhas', seo: 'herói escolhas' },
   });
   note(`▶ A: ${path.basename(a)} (narrado, plano automático)`);
-  const imported = await call('media_import_files', { path: a, files: [nox, ...icons, clip], rights: 'owned' }); await waitJob(a, imported.jobId, 'importação');
+  const imported = await call('media_import_files', { path: a, files: [heroi, ...icons, clip], rights: 'owned' }); await waitJob(a, imported.jobId, 'importação');
+  const charA = await call('character_import', { path: a, folder: personagem, rights: 'owned', rightsConfirmedByUser: true }); note(`  personagem: ${charA.name}, ${charA.poses} poses, ${charA.files} PNGs`);
   await call('audio_library', { path: a, seconds: 120 }); await approve(a);
   const narration = await call('narration_generate', { path: a, engine: 'standard', voice: 'pm_alex' }); await waitJob(a, narration.jobId, 'narração');
   const assembled = await call('narration_assemble', { path: a, preset: 'balanced' }); await waitJob(a, assembled.jobId, 'montagem da narração');
@@ -98,17 +101,18 @@ try {
     title: 'Por que um herói perfeito é chato',
     brief: { thesis: 'Uma fraqueza cria a história', audience: 'Fãs de heróis', promise: 'Entender por que heróis precisam de fraquezas', notes: 'Sem narração' },
     script: { hook: 'Imagina um herói que nunca perde.', development: 'Ele é perfeito. E o público perde o interesse. Tensão é o que ele quer vezes o que pode perder.\n\nDê a ele um limite, um custo e uma escolha.', payoff: 'Uma fraqueza não diminui o herói. Ela cria a história.' },
-    packaging: { titleA: 'Por que um herói perfeito é chato', titleB: 'A fraqueza que cria a história', description: 'Um explicador sem narração.', tags: 'nox, diazverso', seo: 'herói fraqueza' },
+    packaging: { titleA: 'Por que um herói perfeito é chato', titleB: 'A fraqueza que cria a história', description: 'Um explicador sem narração.', tags: 'heróis', seo: 'herói fraqueza' },
   });
   note(`▶ B: ${path.basename(b)} (sem narração, beats do agente)`);
   const importedB = await call('media_import_files', { path: b, files: [icons[0], clip], rights: 'owned' }); await waitJob(b, importedB.jobId, 'importação');
+  await call('character_import', { path: b, folder: personagem, rights: 'owned', rightsConfirmedByUser: true });
   await call('audio_library', { path: b, seconds: 70 }); await approve(b);
   const ids = (await call('project_get', { path: b })).media.reduce((map, item) => ({ ...map, [item.name]: item.id }), {});
   const s = (name, at = 0, volume = 0.5) => ({ name, at, volume });
   const beats = [
     { scene: 'titulo', duration: 3, props: { palavras: ['IMAGINA', 'UM HERÓI', 'QUE NUNCA PERDE.'] }, sfx: [s('impact', 0, 0.9), s('sub', 0, 0.6), s('swish', 1), s('glitch', 1.85, 0.6)] },
     { scene: 'ficha', duration: 4, props: { titulo: 'FICHA DO HERÓI #001', itens: [{ rotulo: 'FORÇA', valor: 100 }, { rotulo: 'VELOCIDADE', valor: 100 }, { rotulo: 'INTELIGÊNCIA', valor: 100 }, { rotulo: 'RISCO', valor: 0 }], carimbo: 'PERFEITO', humor: 'feliz' }, sfx: [s('whoosh'), s('pop', 0, 0.7), s('tick', 0.4), s('tick', 0.9), s('tick', 1.4), s('ding', 2.4), s('impact', 3, 0.6)] },
-    { scene: 'nox', duration: 3, props: { humor: 'piscada', texto: 'PERFEITO,', subtexto: 'NÉ?' }, sfx: [s('whoosh', 0, 0.6), s('pop', 0.2, 0.6)] },
+    { scene: 'personagem', duration: 3, props: { humor: 'piscada', texto: 'PERFEITO,', subtexto: 'NÉ?' }, sfx: [s('whoosh', 0, 0.6), s('pop', 0.2, 0.6)] },
     { scene: 'numero', duration: 4, props: { valor: 13, de: 100, sufixo: '%', rotulo: 'Interesse do público', tendencia: 'desce', fonte: 'simulação' }, sfx: [s('swish'), s('tick', 0.6, 0.35), s('tick', 1.2, 0.35), s('error', 2.6, 0.5)] },
     { scene: 'titulo', duration: 3, props: { palavras: ['MAS', 'POR QUÊ?'], fundo: 'branco' }, sfx: [s('impact', 0, 1), s('sub', 0, 0.7), s('pop', 1.5, 0.6)] },
     { scene: 'pagina', duration: 6, props: { paineis: [{ midia: `media:${ids['escudo.png']}`, rotulo: 'O VILÃO APARECE…' }, { humor: 'bravo', rotulo: '…E PERDE. EM 1 SEGUNDO.', onomatopeia: 'POW!' }, { humor: 'tedio', rotulo: 'FIM.' }], conclusao: 'SEM RISCO = SEM HISTÓRIA.' }, sfx: [s('camera'), s('camera', 1.3), s('impact', 1.5, 0.7), s('camera', 2.6)] },
@@ -135,10 +139,11 @@ try {
       development: 'Olha esse escudo. Aguenta qualquer coisa. Legal, né?\n\nSó que quando nada pode dar errado, você para de se importar. Pra que torcer se ele sempre vence?\n\nAí a muralha cai. Pela primeira vez, ele pode perder. E de repente você não consegue parar de olhar.\n\nO raio não deixa ele mais forte. A lâmpada mostra a escolha. Salvar um, ou salvar outro?',
       payoff: 'Fraqueza não estraga o herói. Ela cria a história. Qual herói você só começou a gostar quando ele perdeu?',
     },
-    packaging: { titleA: 'O herói que não podia perder', titleB: 'Por que herói invencível é chato', description: 'Por que fraqueza cria história.', tags: 'shorts, heróis, diazverso', seo: 'herói fraqueza' },
+    packaging: { titleA: 'O herói que não podia perder', titleB: 'Por que herói invencível é chato', description: 'Por que fraqueza cria história.', tags: 'shorts, heróis', seo: 'herói fraqueza' },
   });
   note(`▶ C: ${path.basename(c)} (Short 9:16 narrado, plano automático)`);
   const importedC = await call('media_import_files', { path: c, files: [...icons, clip], rights: 'owned' }); await waitJob(c, importedC.jobId, 'importação');
+  await call('character_import', { path: c, folder: personagem, rights: 'owned', rightsConfirmedByUser: true });
   await call('audio_library', { path: c, seconds: 80 }); await approve(c);
   const narrationC = await call('narration_generate', { path: c, engine: 'standard', voice: 'pm_alex' }); await waitJob(c, narrationC.jobId, 'narração');
   const assembledC = await call('narration_assemble', { path: c, preset: 'balanced' }); await waitJob(c, assembledC.jobId, 'montagem da narração');
@@ -155,7 +160,7 @@ try {
   await client.close();
   const keep = path.join(root, '.tools/qa-f29'); await mkdir(keep, { recursive: true });
   for (const item of results) { const dir = path.join(keep, item.key); await rm(dir, { recursive: true, force: true }); await mkdir(dir, { recursive: true }); await copyFile(item.output, path.join(dir, 'video.mp4')); await copyFile(item.frames, path.join(dir, 'frames.png')); for (const file of item.previews || []) await copyFile(file, path.join(dir, path.basename(file))); for (const file of await readdir(item.delivery.directory)) if (file.endsWith('.md')) await copyFile(path.join(item.delivery.directory, file), path.join(dir, file)); }
-  const report = ['# QA do modo composição via MCP', '', `Executado em ${new Date().toISOString()} · ${os.platform()} ${os.arch()} · kit de motion Diazverso`, '', 'Mídias próprias com nomes descritivos fazem o papel das cenas das obras; num vídeo real entram imagens e trechos das obras citadas, com direitos confirmados.', '', '| Produção | Formato | Duração | Loudness | Pico | Verificação |', '| --- | --- | --- | --- | --- | --- |', ...results.map(item => `| ${item.label} | ${item.size} | ${item.duration.toFixed(1)} s | ${item.lufs} LUFS | ${item.peak} dBTP | ${item.delivery.checks.filter(check => check.ok).length}/${item.delivery.checks.length} |`), '', '## Registro', '', '```text', ...log, '```', ''].join('\n');
+  const report = ['# QA do modo composição via MCP', '', `Executado em ${new Date().toISOString()} · ${os.platform()} ${os.arch()} · kit de motion do Content Lab · personagem de teste neutro (3 poses)`, '', 'Mídias próprias com nomes descritivos fazem o papel das cenas das obras; num vídeo real entram imagens e trechos das obras citadas, com direitos confirmados.', '', '| Produção | Formato | Duração | Loudness | Pico | Verificação |', '| --- | --- | --- | --- | --- | --- |', ...results.map(item => `| ${item.label} | ${item.size} | ${item.duration.toFixed(1)} s | ${item.lufs} LUFS | ${item.peak} dBTP | ${item.delivery.checks.filter(check => check.ok).length}/${item.delivery.checks.length} |`), '', '## Registro', '', '```text', ...log, '```', ''].join('\n');
   await writeFile(path.join(root, 'docs', 'QA_MOTION.md'), report);
   console.log(`\nRelatório: docs/QA_MOTION.md · amostras: .tools/qa-f29 · artefatos: ${process.argv.includes('--keep') ? work : '(removidos)'}`);
   if (!process.argv.includes('--keep')) await rm(work, { recursive: true, force: true });

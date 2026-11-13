@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { AbsoluteFill, continueRender, delayRender, interpolate, random, staticFile, useCurrentFrame, useVideoConfig, Easing } from 'remotion';
 
-/** Paleta do padrão visual Diazverso. */
-export const C = { ink: '#0B0B10', paper: '#F2E8D5', yellow: '#F5C518', red: '#E63946', blue: '#2676E8', eye: '#FCDF43', white: '#FFFFFF' };
+/** Paleta do kit: tinta, papel e as três cores HQ. */
+export const C = { ink: '#0B0B10', paper: '#F2E8D5', yellow: '#F5C518', red: '#E63946', blue: '#2676E8', white: '#FFFFFF' };
 export const ANTON = 'Anton, Impact, sans-serif';
 export const ROUND = '"Arial Rounded MT Bold", "Nunito", "DejaVu Sans", sans-serif';
 
@@ -10,6 +10,8 @@ export const ROUND = '"Arial Rounded MT Bold", "Nunito", "DejaVu Sans", sans-ser
 export const useAnton = () => {
   const [handle] = useState(() => delayRender('Anton'));
   useEffect(() => {
+    // No navegador (prévia da aba Documentação) a página já pode ter carregado a Anton.
+    if ([...document.fonts].some(face => face.family.replace(/["']/g, '') === 'Anton' && face.status === 'loaded')) { continueRender(handle); return; }
     const font = new FontFace('Anton', `url(${staticFile('brand/Anton-Regular.ttf')})`);
     font.load().then(loaded => { document.fonts.add(loaded); continueRender(handle); }).catch(() => continueRender(handle));
   }, [handle]);

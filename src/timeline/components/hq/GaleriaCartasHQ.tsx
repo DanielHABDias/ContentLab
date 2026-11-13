@@ -1,13 +1,11 @@
-// Cena ComparativoIdeiasHQ do plugin Diazverso 1.3.0, compilada por scripts/build-diazverso-scenes.mjs. Não editar à mão.
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/scenes/HQComicPage.tsx
+// Cena HQ GaleriaCartasHQ do Content Lab (arquivo único, imports só de React/Remotion).
 import { AbsoluteFill, Img, staticFile } from "remotion";
 import { jsx } from "react/jsx-runtime";
-function HQComicPage({ opacity = 100, src = staticFile("assets/brand/backgrounds/comic-page.png") }) {
+function HQComicPage({ opacity = 100, src = staticFile("assets/kit/backgrounds/comic-page.png") }) {
   if (!Number.isFinite(opacity) || opacity < 0 || opacity > 100) throw Error("opacity must be 0\u2013100");
   return /* @__PURE__ */ jsx(AbsoluteFill, { style: { pointerEvents: "none", opacity: opacity / 100, overflow: "hidden" }, children: /* @__PURE__ */ jsx(Img, { src, style: { width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" } }) });
 }
 
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/motion/hq-background.tsx
 import React from "react";
 import { AbsoluteFill as AbsoluteFill2, useCurrentFrame, useVideoConfig } from "remotion";
 import { Fragment, jsx as jsx2, jsxs } from "react/jsx-runtime";
@@ -120,11 +118,9 @@ var HQBackground = (props) => /* @__PURE__ */ jsxs(Fragment, { children: [
   props.children
 ] });
 
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/scenes/SceneBackground.tsx
 import { jsx as jsx3 } from "react/jsx-runtime";
 var SceneBackground = ({ backgroundStyle = "halftone", backgroundColor = "#162034", backgroundOpacity = 100, paperTone = "dark", gridBackgroundColor = "#10101A", gridLineColor = "#858595", children }) => /* @__PURE__ */ jsx3(HQBackground, { mode: backgroundStyle, baseColor: backgroundColor, opacity: backgroundOpacity, paperTone, gridBaseColor: gridBackgroundColor, gridColor: gridLineColor, children });
 
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/scenes/HQMotion.tsx
 var boundsCache = /* @__PURE__ */ new Map();
 function imageBoundsHQ(src) {
   if (boundsCache.has(src)) return boundsCache.get(src);
@@ -160,15 +156,10 @@ function imageBoundsHQ(src) {
   });
   return pending;
 }
-function edgeTravelHQ(position, size, viewport, direction, margin = 30) {
-  return direction < 0 ? position + size + margin : direction > 0 ? viewport - position + margin : 0;
-}
 
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/scenes/ComparativoIdeiasHQ.tsx
 import React2 from "react";
 import { AbsoluteFill as AbsoluteFill3, Img as Img2, cancelRender, continueRender, delayRender, useCurrentFrame as useCurrentFrame2, useVideoConfig as useVideoConfig2 } from "remotion";
 
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/scenes/load-font.ts
 var cache = /* @__PURE__ */ new Map();
 function loadFont({ family, url }) {
   if (!family?.trim() || !url?.trim() || url.length > 4096) return Promise.reject(new Error("Provide a licensed local font URL and family"));
@@ -188,51 +179,27 @@ function loadFont({ family, url }) {
   return promise;
 }
 
-// ../DiazVerso-Plugin/skills/diazverso-decupagem/references/scenes/ComparativoIdeiasHQ.tsx
-import { jsx as jsx4, jsxs as jsxs2 } from "react/jsx-runtime";
+import { Fragment as Fragment2, jsx as jsx4, jsxs as jsxs2 } from "react/jsx-runtime";
 var clamp = (v) => Math.max(0, Math.min(1, v));
-var ease = (v) => {
-  const p = clamp(v);
-  return 1 - Math.pow(1 - p, 3);
-};
-function comparisonLayout(count, w, h, hasTitle = false) {
-  if (![2, 3, 4].includes(count)) throw new Error("Comparativo requer de 2 a 4 itens.");
-  const horizontal = w > h;
-  const top = hasTitle ? 0.2 : 0.09;
-  const bottom = 0.91;
-  const make = (x, y, width, height2, fromX, fromY) => ({ x: x * w, y: y * h, width: width * w, height: height2 * h, fromX, fromY });
-  if (horizontal && count < 4) {
-    const gap = 0.045;
-    const width = (0.86 - gap * (count - 1)) / count;
-    return Array.from({ length: count }, (_, i) => make(
-      0.07 + i * (width + gap),
-      top,
-      width,
-      bottom - top,
-      i === 0 ? -1 : i === count - 1 ? 1 : 0,
-      count === 3 && i === 1 ? -1 : 0
-    ));
-  }
-  if (!horizontal && count === 2) {
-    const height2 = (bottom - top - 0.045) / 2;
-    return [make(0.09, top, 0.82, height2, 0, -1), make(0.09, top + height2 + 0.045, 0.82, height2, 0, 1)];
-  }
-  const height = (bottom - top - 0.055) / 2;
-  if (!horizontal && count === 3) return [
-    make(0.2, top, 0.6, height, 0, -1),
-    make(0.07, top + height + 0.055, 0.4, height, -1, 1),
-    make(0.53, top + height + 0.055, 0.4, height, 1, 1)
-  ];
-  return Array.from({ length: 4 }, (_, i) => make(
-    i % 2 ? 0.53 : 0.07,
-    top + Math.floor(i / 2) * (height + 0.055),
-    0.4,
-    height,
-    i % 2 ? 1 : -1,
-    i < 2 ? -1 : 1
-  ));
+var ease = (v) => 1 - Math.pow(1 - clamp(v), 3);
+function gallerySlot(index, columns) {
+  return { column: index % columns, layer: Math.floor(index / columns) };
 }
-function fitText(text, width, height, maximum, fontFamily = "Bangers") {
+function galleryDepth(index, columns, starts, time, entryDuration) {
+  let depth = 0;
+  for (let next = index + columns; next < starts.length; next += columns) depth += ease((time - starts[next]) / entryDuration);
+  return Math.min(3, depth);
+}
+function galleryDepths(columns, starts, time, entryDuration) {
+  const totals = Array(columns).fill(0), depths = Array(starts.length).fill(0);
+  for (let i = starts.length - 1; i >= 0; i--) {
+    const col = i % columns;
+    depths[i] = Math.min(3, totals[col]);
+    totals[col] += ease((time - starts[i]) / entryDuration);
+  }
+  return depths;
+}
+function fit(text, width, height, max, fontFamily = "Bangers") {
   const ctx = document.createElement("canvas").getContext("2d");
   if (!ctx) throw new Error("Canvas indispon\xEDvel.");
   const wrap = (size) => {
@@ -260,63 +227,76 @@ function fitText(text, width, height, maximum, fontFamily = "Bangers") {
     if (line) lines.push(line);
     return lines;
   };
-  let low = 1, high = maximum;
+  let low = 1, high = max;
   for (let i = 0; i < 18; i++) {
     const size = (low + high) / 2;
     const lines = wrap(size);
-    if (lines.length <= 3 && lines.length * size * 1.08 <= height && lines.every((line) => ctx.measureText(line).width <= width)) low = size;
+    if (lines.length <= 2 && lines.length * size * 1.08 <= height && lines.every((line) => ctx.measureText(line).width <= width)) low = size;
     else high = size;
   }
   return { lines: wrap(low), size: low };
 }
-var imageBounds = imageBoundsHQ;
-function ComparativoIdeiasHQ({
+var boundsFor = imageBoundsHQ;
+function GaleriaCartasHQ({
   fontFamily = "Anton",
   backgroundStyle = "halftone",
   backgroundOpacity = 100,
   paperTone = "light",
   gridBackgroundColor = "#10101A",
   gridLineColor = "#858595",
+  title,
+  subtitle = "",
   items,
-  title = "",
-  backgroundColor = "#D6AD42",
+  columns,
+  backgroundColor = "#1B2943",
+  cardColor = "#F6EDD8",
   textColor = "#FFFFFF",
-  startDelay = 0.15,
-  stagger = 0.45,
-  entryDuration = 0.6,
-  textDuration = 0.25,
+  cardTextColor = "#111723",
+  accentColor = "#F4C542",
+  startDelay = 0.25,
+  stagger = 1.1,
+  entryDuration = 0.65,
+  textDuration = 0.2,
+  stackOffset = 16,
   assets = {}
 }) {
   const fontUrl = resolveHQFont(fontFamily, assets);
   const { width: w, height: h, fps, durationInFrames } = useVideoConfig2();
   const t = useCurrentFrame2() / fps;
-  if (!Array.isArray(items) || ![2, 3, 4].includes(items.length)) throw new Error("Informe items com 2, 3 ou 4 imagens.");
+  const horizontal = w > h;
+  const u = Math.min(w, h) / 1080;
+  if (!title?.trim() || !Array.isArray(items) || !items.length) throw new Error("Informe title e ao menos um item.");
   if (!fontUrl) throw new Error("Informe fontUrl.");
-  if (![backgroundColor, textColor].every((c) => /^#[a-f\d]{6}$/i.test(c))) throw new Error("Cores devem usar #RRGGBB.");
-  if (![startDelay, stagger, entryDuration, textDuration].every(Number.isFinite) || startDelay < 0 || stagger < 0 || entryDuration <= 0 || textDuration <= 0) throw new Error("Tempos inv\xE1lidos.");
+  const requestedColumns = columns ?? (horizontal ? 3 : 2);
+  if (!Number.isInteger(requestedColumns) || requestedColumns < 1 || requestedColumns > 4) throw new Error("columns deve ser de 1 a 4.");
+  const count = Math.min(requestedColumns, items.length);
+  if (![backgroundColor, cardColor, textColor, cardTextColor, accentColor, ...items.flatMap((item) => [item.cardColor ?? cardColor, item.accentColor ?? accentColor])].every((color) => /^#[a-f\d]{6}$/i.test(color))) throw new Error("Cores devem usar #RRGGBB.");
+  if (![startDelay, stagger, entryDuration, textDuration, stackOffset].every(Number.isFinite) || startDelay < 0 || stagger < 0 || entryDuration <= 0 || textDuration <= 0 || stackOffset < 0 || stackOffset > 24) throw new Error("Tempos inv\xE1lidos ou stackOffset fora de 0\u201324.");
   const starts = items.map((item, i) => item.at ?? startDelay + i * stagger);
   items.forEach((item, i) => {
-    if (!item.text?.trim() || !assets[item.asset]) throw new Error("Cada item precisa de text e uma chave asset existente.");
-    if (!Number.isFinite(starts[i]) || starts[i] < 0 || starts[i] + entryDuration + textDuration > durationInFrames / fps + 1e-8) throw new Error("Imagem e texto devem terminar de entrar antes do fim da cena.");
+    if (!item.title?.trim() || !assets[item.asset]) throw new Error("Cada carta requer title e uma chave asset existente.");
+    if (!Number.isFinite(starts[i]) || starts[i] < 0 || starts[i] + entryDuration + textDuration > durationInFrames / fps + 1e-8) throw new Error("A entrada da carta e de seu texto precisa caber na cena.");
+    if (i && starts[i] < starts[i - 1]) throw new Error("Os hor\xE1rios at devem seguir a ordem dos itens.");
+    if (i >= count && starts[i] < starts[i - count] + entryDuration + textDuration - 1e-8) throw new Error("Uma carta n\xE3o pode encobrir outra antes de sua entrada e texto terminarem.");
   });
-  const slots = comparisonLayout(items.length, w, h, Boolean(title.trim()));
-  const unit = Math.min(w, h) / 1080;
+  const gap = w * 0.035;
+  const cw = (w * 0.86 - gap * (count - 1)) / count;
+  const ch = Math.min(h * 0.58, cw * 1.95);
+  const top = h * (subtitle.trim() ? 0.29 : 0.25);
   const [prepared, setPrepared] = React2.useState(null);
-  const [handle] = React2.useState(() => delayRender("Preparando comparativo de ideias"));
-  const signature = JSON.stringify({ items, assets, w, h, title });
+  const [handle] = React2.useState(() => delayRender("Preparando galeria de cartas HQ"));
+  const signature = JSON.stringify({ items, assets, title, subtitle, cw, ch, w, h });
   React2.useEffect(() => {
     let live = true;
-    Promise.all([loadFont({ family: fontFamily, url: fontUrl }), Promise.all(items.map((item) => imageBounds(assets[item.asset])))]).then(([, bounds]) => {
+    Promise.all([loadFont({ family: fontFamily, url: fontUrl }), Promise.all(items.map((item) => boundsFor(assets[item.asset])))]).then(([, bounds]) => {
       if (!live) return;
-      const labels = items.map((item, i) => fitText(
-        item.text.normalize("NFC").toLocaleUpperCase("pt-BR").trim(),
-        slots[i].width * 0.94,
-        slots[i].height * 0.25,
-        Math.min(88 * unit, slots[i].width * 0.16),
-        fontFamily
-      ));
-      const heading = title.trim() ? fitText(title.toLocaleUpperCase("pt-BR"), w * 0.84, h * 0.1, 94 * unit, fontFamily) : null;
-      setPrepared({ bounds, labels, heading });
+      setPrepared({
+        bounds,
+        labels: items.map((item) => fit(item.title.normalize("NFC").toLocaleUpperCase("pt-BR"), cw * 0.86, ch * 0.15, 65 * u, fontFamily)),
+        captions: items.map((item) => fit((item.caption ?? "").toLocaleUpperCase("pt-BR"), cw * 0.86, ch * 0.08, 32 * u, fontFamily)),
+        heading: fit(title.toLocaleUpperCase("pt-BR"), w * 0.86, h * 0.105, 100 * u, fontFamily),
+        sub: fit(subtitle.toLocaleUpperCase("pt-BR"), w * 0.86, h * 0.045, 38 * u, fontFamily)
+      });
       continueRender(handle);
     }).catch((error) => {
       if (live) cancelRender(error);
@@ -325,62 +305,107 @@ function ComparativoIdeiasHQ({
       live = false;
     };
   }, [signature, fontFamily, fontUrl, handle]);
-  const textStyle = {
-    fontFamily,
-    color: textColor,
-    lineHeight: 1.08,
-    whiteSpace: "pre",
-    WebkitTextStroke: fontFamily === "Anton" ? "0px transparent" : `${1.5 * unit}px #080A11`,
-    textShadow: fontFamily === "Anton" ? "none" : `${5 * unit}px ${7 * unit}px 0 #080A11`
-  };
-  return /* @__PURE__ */ jsxs2(AbsoluteFill3, { style: { overflow: "hidden" }, children: [
-    /* @__PURE__ */ jsx4(SceneBackground, { ...{ backgroundStyle, backgroundColor, backgroundOpacity, paperTone, gridBackgroundColor, gridLineColor }, children: /* @__PURE__ */ jsx4(AbsoluteFill3, { style: { opacity: 0.17, backgroundImage: `radial-gradient(#080A11 ${3.2 * unit}px, transparent ${3.8 * unit}px)`, backgroundSize: `${19 * unit}px ${19 * unit}px` } }) }),
-    prepared?.heading && /* @__PURE__ */ jsx4("div", { style: { ...textStyle, position: "absolute", left: "8%", top: "6%", width: "84%", textAlign: "center", fontSize: prepared.heading.size }, children: prepared.heading.lines.join("\n") }),
-    prepared && items.map((item, i) => {
-      const slot = slots[i];
-      const box = prepared.bounds[i];
-      const label = prepared.labels[i];
-      const progress = ease((t - starts[i]) / entryDuration);
-      const labelP = ease((t - starts[i] - entryDuration) / textDuration);
-      const imageH = slot.height * 0.69;
-      const size = Math.min(slot.width * 0.92 / box.width, imageH / box.height);
-      const imageW = box.width * size;
-      const visibleH = box.height * size;
-      return /* @__PURE__ */ jsxs2(React2.Fragment, { children: [
-        /* @__PURE__ */ jsx4("div", { style: {
+  const depths = galleryDepths(count, starts, t, entryDuration);
+  return /* @__PURE__ */ jsxs2(AbsoluteFill3, { style: { overflow: "hidden", fontFamily }, children: [
+    /* @__PURE__ */ jsx4(SceneBackground, { ...{ backgroundStyle, backgroundColor, backgroundOpacity, paperTone, gridBackgroundColor, gridLineColor }, children: /* @__PURE__ */ jsx4(AbsoluteFill3, { style: { opacity: 0.18, backgroundImage: `radial-gradient(#080A11 ${3.2 * u}px, transparent ${3.8 * u}px)`, backgroundSize: `${19 * u}px ${19 * u}px` } }) }),
+    prepared && /* @__PURE__ */ jsxs2(Fragment2, { children: [
+      /* @__PURE__ */ jsx4("div", { style: {
+        position: "absolute",
+        zIndex: 2,
+        left: "7%",
+        top: "6%",
+        width: "86%",
+        color: textColor,
+        textShadow: fontFamily === "Anton" ? "none" : `${4 * u}px ${6 * u}px 0 #080A11`,
+        fontSize: prepared.heading.size,
+        lineHeight: 1.08,
+        whiteSpace: "pre"
+      }, children: prepared.heading.lines.join("\n") }),
+      subtitle.trim() && /* @__PURE__ */ jsx4("div", { style: {
+        position: "absolute",
+        zIndex: 2,
+        left: "7%",
+        top: "17.5%",
+        width: "86%",
+        color: textColor,
+        fontSize: prepared.sub.size,
+        lineHeight: 1.08,
+        opacity: 0.8,
+        whiteSpace: "pre"
+      }, children: prepared.sub.lines.join("\n") }),
+      /* @__PURE__ */ jsx4("div", { style: { position: "absolute", left: "7%", top: subtitle.trim() ? "24%" : "20%", width: "86%", height: 4 * u, background: accentColor } }),
+      /* @__PURE__ */ jsx4(AbsoluteFill3, { style: { zIndex: 1 }, children: items.map((item, i) => {
+        if (t < starts[i] || i + count * 4 < items.length && t >= starts[i + count * 4] + entryDuration) return null;
+        const { column } = gallerySlot(i, count);
+        const progress = ease((t - starts[i]) / entryDuration);
+        const depth = depths[i];
+        const bx = w * 0.07 + column * (cw + gap);
+        const dx = depth * stackOffset * u * (column % 2 ? 1 : -1);
+        const dy = depth * stackOffset * u;
+        const color = item.accentColor ?? accentColor;
+        const bounds = prepared.bounds[i];
+        const pictureW = cw * 0.86, pictureH = ch * 0.65;
+        const size = Math.min(pictureW / bounds.width, pictureH / bounds.height);
+        const iw = bounds.width * size, ih = bounds.height * size;
+        const next = starts[i + count];
+        const occlusion = next === void 0 ? 0 : ease((t - next - entryDuration * 0.45) / (entryDuration * 0.55));
+        const contentOpacity = 1 - clamp(occlusion);
+        const labelP = ease((t - starts[i] - entryDuration) / textDuration);
+        return /* @__PURE__ */ jsxs2("div", { style: {
           position: "absolute",
-          left: slot.x + (slot.width - imageW) / 2,
-          top: slot.y + (imageH - visibleH) / 2,
-          width: imageW,
-          height: visibleH,
-          overflow: "hidden",
-          opacity: t < starts[i] ? 0 : 1,
-          translate: `${slot.fromX * edgeTravelHQ(slot.x + (slot.width - imageW) / 2, imageW, w, slot.fromX, 30 * unit) * (1 - progress)}px ${slot.fromY * edgeTravelHQ(slot.y + (imageH - visibleH) / 2, visibleH, h, slot.fromY, 30 * unit) * (1 - progress)}px`
-        }, children: /* @__PURE__ */ jsx4(Img2, { src: assets[item.asset], style: {
-          position: "absolute",
-          left: -box.x * size,
-          top: -box.y * size,
-          width: box.sourceWidth * size,
-          height: box.sourceHeight * size,
-          maxWidth: "none"
-        } }) }),
-        /* @__PURE__ */ jsx4("div", { style: {
-          ...textStyle,
-          position: "absolute",
-          left: slot.x + slot.width * 0.03,
-          top: slot.y + slot.height * 0.74,
-          width: slot.width * 0.94,
-          height: slot.height * 0.25,
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          textAlign: "center",
-          fontSize: label.size,
-          opacity: labelP,
-          translate: `0 ${(1 - labelP) * 12 * unit}px`
-        }, children: label.lines.join("\n") })
-      ] }, i);
-    })
+          left: bx + dx,
+          top: top + dy,
+          width: cw,
+          height: ch,
+          zIndex: i + 1,
+          translate: `0 ${(1 - progress) * (h - top + 30 * u)}px`,
+          scale: 1 - depth * 0.025,
+          rotate: `${depth * (column % 2 ? 0.8 : -0.8)}deg`,
+          boxSizing: "border-box",
+          background: item.cardColor ?? cardColor,
+          border: `${6 * u}px solid #080A11`,
+          boxShadow: `${10 * u}px ${12 * u}px 0 #080A11`,
+          transformOrigin: "center"
+        }, children: [
+          /* @__PURE__ */ jsx4("div", { style: { position: "absolute", top: 0, left: 0, right: 0, height: 8 * u, background: color } }),
+          /* @__PURE__ */ jsx4(AbsoluteFill3, { style: { opacity: 0.08, backgroundImage: `radial-gradient(#080A11 ${2 * u}px, transparent ${2.5 * u}px)`, backgroundSize: `${15 * u}px ${15 * u}px` } }),
+          /* @__PURE__ */ jsxs2(AbsoluteFill3, { style: { opacity: contentOpacity }, children: [
+            /* @__PURE__ */ jsx4("div", { style: { position: "absolute", left: 14 * u, top: 16 * u, background: color, color: "#080A11", padding: `${3 * u}px ${9 * u}px`, fontSize: 27 * u }, children: String(i + 1).padStart(2, "0") }),
+            /* @__PURE__ */ jsx4("div", { style: { position: "absolute", left: (cw - iw) / 2, top: ch * 0.07 + (pictureH - ih) / 2, width: iw, height: ih, overflow: "hidden" }, children: /* @__PURE__ */ jsx4(Img2, { src: assets[item.asset], style: {
+              position: "absolute",
+              left: -bounds.x * size,
+              top: -bounds.y * size,
+              width: bounds.sourceWidth * size,
+              height: bounds.sourceHeight * size,
+              maxWidth: "none"
+            } }) }),
+            /* @__PURE__ */ jsx4("div", { style: {
+              position: "absolute",
+              left: "7%",
+              top: "75%",
+              width: "86%",
+              opacity: labelP,
+              color: cardTextColor,
+              fontSize: prepared.labels[i].size,
+              lineHeight: 1.08,
+              whiteSpace: "pre",
+              textShadow: fontFamily === "Anton" ? "none" : `${1.5 * u}px ${2 * u}px 0 #00000022`
+            }, children: prepared.labels[i].lines.join("\n") }),
+            item.caption && /* @__PURE__ */ jsx4("div", { style: {
+              position: "absolute",
+              left: "7%",
+              top: "91%",
+              width: "86%",
+              color: cardTextColor,
+              opacity: labelP * 0.8,
+              fontSize: prepared.captions[i].size,
+              lineHeight: 1.08,
+              whiteSpace: "pre"
+            }, children: prepared.captions[i].lines.join("\n") })
+          ] })
+        ] }, i);
+      }) })
+    ] })
   ] });
 }
 function resolveHQFont(family, assets) {
@@ -389,4 +414,4 @@ function resolveHQFont(family, assets) {
   if (!assets[key]) throw new Error(`Informe assets.${key} para a fonte ${family}.`);
   return assets[key];
 }
-export const ComparativoIdeiasHQCena = ComparativoIdeiasHQ;
+export const GaleriaCartasHQCena = GaleriaCartasHQ;

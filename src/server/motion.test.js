@@ -5,7 +5,10 @@ import { motionPlanSchema, MOTION_SCENES } from '../core/contracts.js';
 import { MOTION_KIT } from '../motion/kit-catalog.js';
 import { mediaRefs } from '../render/motion-renderer.js';
 import { missingStageArtifacts } from '../core/workflow.js';
-import { noxDir } from '../core/nox-pack.js';
+import { TEST_POSES } from '../test/character-fixture.js';
+
+/** Catálogo do personagem de teste (pose → { tons }), como fica em project.character.poses. */
+const POSES = Object.fromEntries(Object.entries(TEST_POSES).map(([name, pose]) => [name, { arquivos: [`${name}.png`], gesto: pose.gesto, tons: pose.tons }]));
 
 const window = (id, text, start, length) => ({ scene: { id, label: id, text }, start, length });
 const windows = [
@@ -54,7 +57,7 @@ test('palavras de impacto priorizam nomes e números', () => {
   expect(impact('O Batman de 1940 já tinha medo')).toEqual(['BATMAN', '1940', 'MEDO']);
 });
 
-test('thumbnail do kit: still real 1280×720 com mídia da obra, texto e Nox', async () => {
+test('thumbnail do kit: still real 1280×720 com mídia da obra, texto e o personagem do projeto', async () => {
   const { mkdtemp, rm, readFile } = await import('node:fs/promises');
   const { execFileSync } = await import('node:child_process');
   const os = await import('node:os'); const path = await import('node:path');
@@ -63,7 +66,11 @@ test('thumbnail do kit: still real 1280×720 com mídia da obra, texto e Nox', a
   try {
     const image = path.join(dir, 'obra.png');
     execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc2=s=800x600', '-frames:v', '1', image]);
-    const files = await new MotionRenderer(dir).thumbnails({ media: [{ id: 'obra', kind: 'image', uri: image }] }, { directory: path.join(dir, 'out'), variants: [{ label: 'A', texto: 'O HERÓI *CHATO*', midia: 'media:obra', humor: 'tedio' }] });
+    const { makeCharacterPack } = await import('../test/character-fixture.js');
+    const pack = await makeCharacterPack(path.join(dir, 'boneco'));
+    const character = { schema: 'contentlab-character-v1', name: 'Boneco', tons: {}, poses: POSES, files: Object.fromEntries(Object.keys(POSES).map(name => [`${name}.png`, `pose_${name}`])), importedAt: '2026-01-01' };
+    const media = [{ id: 'obra', kind: 'image', uri: image }, ...Object.keys(POSES).map(name => ({ id: `pose_${name}`, kind: 'image', role: 'character', uri: path.join(pack, `${name}.png`) }))];
+    const files = await new MotionRenderer(dir).thumbnails({ media, character }, { directory: path.join(dir, 'out'), variants: [{ label: 'A', texto: 'O HERÓI *CHATO*', midia: 'media:obra', humor: 'tedio' }] });
     const png = await readFile(files[0].file);
     expect(png.readUInt32BE(16)).toBe(1280); expect(png.readUInt32BE(20)).toBe(720);
   } finally { await rm(dir, { recursive: true, force: true }); }
@@ -88,19 +95,19 @@ test('cenas 3D: painéis no espaço renderizam com WebGL (swangle) num still rea
   } finally { await rm(dir, { recursive: true, force: true }); }
 }, 180_000);
 
-test('plano automático: pergunta sobre a cena vira aparte do Nox com ícone, e o Nox de corpo inteiro é raro', () => {
+test('plano automático: pergunta sobre a cena vira aparte do personagem com ícone, e o personagem de corpo inteiro é raro', () => {
   const w = (id, text, start, length) => ({ scene: { id, label: id, text }, start, length });
   const plan = planMotion({ windows: [
     w('hook-1', 'Esse herói nunca perdeu. E esse é o problema.', 0, 5),
     w('development-1', 'Olha esse escudo. Aguenta qualquer coisa. Pra que torcer se ele sempre vence? A muralha cai. O raio não ajuda. Ele pode morrer agora.', 5, 16),
     w('payoff-1', 'Fraqueza cria a história. Qual herói te ensinou isso?', 21, 6),
-  ], media: [{ id: 'm_escudo', name: 'escudo.png', kind: 'image' }, { id: 'm_muralha', name: 'muralha.png', kind: 'image' }], end: 28 });
+  ], media: [{ id: 'm_escudo', name: 'escudo.png', kind: 'image' }, { id: 'm_muralha', name: 'muralha.png', kind: 'image' }], end: 28, poses: POSES });
   expect(motionPlanSchema.safeParse(plan).success).toBe(true);
   const aparte = plan.beats.find(beat => beat.scene === 'aparte');
   expect(aparte.props.midia).toMatch(/^media:m_/);
   expect(MOTION_KIT.cenas.aparte.icones).toContain(aparte.props.falas[0].icone);
   expect(plan.beats.some(beat => beat.scene === 'aparte' && beat.props.falas.some(fala => fala.icone === 'caveira'))).toBe(true); // "pode morrer"
-  expect(plan.beats.filter(beat => beat.scene === 'nox').length).toBeLessThanOrEqual(1);
+  expect(plan.beats.filter(beat => beat.scene === 'personagem').length).toBeLessThanOrEqual(1);
 });
 
 test('plano automático: poses no aparte, fundos variados, cena sozinha, caixinhas e recorte citado', () => {
@@ -109,10 +116,10 @@ test('plano automático: poses no aparte, fundos variados, cena sozinha, caixinh
     w('hook-1', 'O Superman nunca perdeu. E esse é o problema.', 0, 5),
     w('development-1', 'Olha esse escudo enorme. Aguenta tudo. Pra mim, isso mata a história. A muralha cai. O escudo racha. A moeda da sorte não salva ninguém. Ele pode perder tudo agora. O escudo some. A muralha volta.', 5, 26),
     w('payoff-1', 'Fraqueza cria a história. Qual herói te ensinou isso?', 31, 6),
-  ], media: [{ id: 'm_escudo', name: 'escudo.png', kind: 'image' }, { id: 'm_muralha', name: 'muralha.png', kind: 'image' }, { id: 'm_moeda', name: 'recorte-moeda.png', kind: 'image' }], end: 38 });
+  ], media: [{ id: 'm_escudo', name: 'escudo.png', kind: 'image' }, { id: 'm_muralha', name: 'muralha.png', kind: 'image' }, { id: 'm_moeda', name: 'recorte-moeda.png', kind: 'image' }], end: 38, poses: POSES });
   expect(motionPlanSchema.safeParse(plan).success).toBe(true);
   const aparte = plan.beats.find(beat => beat.scene === 'aparte');
-  expect(MOTION_KIT.poses.lista).toContain(aparte.props.falas[0].pose);
+  expect(Object.keys(POSES)).toContain(aparte.props.falas[0].pose);
   expect(plan.beats.some(beat => beat.scene === 'evidencia' && beat.props.cheia)).toBe(true);
   expect(plan.beats.some(beat => JSON.stringify(beat.props).includes('m_moeda'))).toBe(false); // recorte não vira cena
   const extras = plan.beats.flatMap(beat => beat.extras || []);
@@ -123,10 +130,8 @@ test('plano automático: poses no aparte, fundos variados, cena sozinha, caixinh
   expect(mediaRefs(plan)).toContain('m_moeda');
 });
 
-test.skipIf(!noxDir())('plano automático: o Nox troca de pose enquanto fala, passa por todas as poses do catálogo e a legenda segue o formato', async () => {
-  const { loadPoseCatalog } = await import('./production-operations.js');
-  const poses = await loadPoseCatalog();
-  expect(Object.keys(poses).length).toBeGreaterThanOrEqual(20);
+test('plano automático: o personagem troca de pose enquanto fala, passa por todas as poses do catálogo e a legenda segue o formato', () => {
+  const poses = POSES;
   const w = (id, text, start, length) => ({ scene: { id, label: id, text }, start, length });
   const lines = ['Pra mim, esse é o melhor vilão.', 'Ele perdeu tudo e ninguém ligou?', 'Sério, que absurdo!', 'Mas calma, tem um detalhe.', 'Pouca gente sabe desse bastidor.', 'E aí que está a lição.', 'Ele venceu no fim, campeão.', 'Isso foi um erro enorme.', 'Funciona perfeito, genial.', 'Eu não concordo, é forçado.', 'Ele morreu e foi triste.', 'Olha esse detalhe aqui.'];
   const windows = [w('hook-1', 'O vilão mais odiado tinha razão.', 0, 4), ...Array.from({ length: 36 }, (_, i) => w(`development-${i}`, lines[i % lines.length], 4 + i * 3, 3)), w('payoff-1', 'Qual vilão te convenceu?', 112, 4)];
@@ -147,19 +152,44 @@ test.skipIf(!noxDir())('plano automático: o Nox troca de pose enquanto fala, pa
   expect(short.beats.filter(beat => beat.scene === 'evidencia').every(beat => beat.legenda !== false)).toBe(true);
 });
 
-test('poses do Nox: cada PNG pronto vale como está e o sufixo vira variante da mesma pose', async () => {
-  const { mkdtemp, rm } = await import('node:fs/promises');
-  const { execFileSync } = await import('node:child_process');
+test('poses do personagem: cada PNG do pacote vai para a pasta pública com tamanho, pose e tons; sem personagem, nada', async () => {
+  const { mkdtemp, rm, stat } = await import('node:fs/promises');
   const os = await import('node:os'); const path = await import('node:path');
-  const { loadNoxPoses } = await import('../render/motion-renderer.js');
+  const { stageCharacter } = await import('../render/motion-renderer.js');
+  const { makeCharacterPack } = await import('../test/character-fixture.js');
   const dir = await mkdtemp(path.join(os.tmpdir(), 'contentlab-poses-test-'));
   try {
-    for (const name of ['pensando.png', 'pensando-b.png', 'arminha-2.png', 'Errado.png']) execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'color=c=black@0:s=400x640', '-frames:v', '1', path.join(dir, name)]);
-    const { poses, files } = await loadNoxPoses(dir, 'public:brand/poses/');
-    expect(poses.pensando).toEqual({ src: 'public:brand/poses/pensando.png', w: 400, h: 640, pose: 'pensando' });
-    expect(poses['pensando-b']).toMatchObject({ pose: 'pensando' });
-    expect(poses['arminha-2']).toMatchObject({ pose: 'arminha', w: 400, h: 640 });
-    expect(Object.keys(poses).sort()).toEqual(['arminha-2', 'pensando', 'pensando-b']); // nome fora do padrão fica de fora
-    expect(files.sort()).toEqual(['arminha-2.png', 'pensando-b.png', 'pensando.png']);
+    const pack = await makeCharacterPack(path.join(dir, 'pack'));
+    const poses = { ...POSES, apontando: { ...POSES.apontando, arquivos: ['apontando.png', 'apontando-b.png'] } };
+    const files = { 'parado.png': 'p1', 'pensando.png': 'p2', 'apontando.png': 'p3', 'apontando-b.png': 'p4' };
+    const media = Object.entries(files).map(([file, id]) => ({ id, kind: 'image', role: 'character', uri: path.join(pack, file) }));
+    const result = await stageCharacter({ media, character: { poses, files } }, path.join(dir, 'public'));
+    expect(result.poses.parado).toEqual({ src: 'public:personagem/parado.png', w: 460, h: 640, pose: 'parado' });
+    expect(result.poses['apontando-b']).toMatchObject({ pose: 'apontando' }); // variante da mesma pose
+    expect(result.tons.apontando).toEqual(TEST_POSES.apontando.tons);
+    expect((await stat(path.join(dir, 'public/personagem/apontando-b.png'))).isFile()).toBe(true);
+    expect(await stageCharacter({ media: [], character: null }, path.join(dir, 'vazio'))).toEqual({ poses: {}, tons: {} });
   } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+test('plano automático sem personagem: sem aparte, sem a cena personagem e sem humor', () => {
+  const w = (id, text, start, length) => ({ scene: { id, label: id, text }, start, length });
+  const report = {};
+  const plan = planMotion({ windows: [
+    w('hook-1', 'O Superman nunca perdeu. E esse é o problema.', 0, 5),
+    w('development-1', 'Pra mim, isso mata a história. Sério, que absurdo! Ele perdeu tudo e ninguém ligou? Olha esse escudo. Haha, que piada.', 5, 20),
+    w('payoff-1', 'Qual herói te ensinou isso?', 25, 5),
+  ], media: [{ id: 'm_escudo', name: 'escudo.png', kind: 'image' }, { id: 'm_muralha', name: 'muralha.png', kind: 'image' }], end: 31, report });
+  expect(motionPlanSchema.safeParse(plan).success).toBe(true);
+  expect(plan.beats.some(beat => ['aparte', 'personagem'].includes(beat.scene))).toBe(false);
+  expect(plan.beats.some(beat => beat.props.humor)).toBe(false);
+  expect(report.posesFaltando).toEqual([]);
+  expect(plan.beats.at(-1).props.titulo).toBeUndefined(); // CTA sem nome de canal fixo
+});
+
+// Migração de projetos antigos (a cena do personagem se chamava nox).
+test('migração: plano antigo com a cena nox vira personagem na leitura', () => {
+  const parsed = motionPlanSchema.parse({ schema: 'contentlab-motion-v1', beats: [{ id: 'a', scene: 'nox', at: 0, duration: 2, props: { humor: 'feliz' } }] });
+  expect(parsed.beats[0].scene).toBe('personagem');
+  expect(MOTION_SCENES).not.toContain('nox');
 });

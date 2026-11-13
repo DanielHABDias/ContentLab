@@ -4,6 +4,7 @@ Primeira versão candidata completa. Ela vai da ideia ao vídeo final, roda loca
 
 ## O que entra
 
+- **Content Lab neutro:** kit e cenas HQ próprios; personagem como mídia do projeto (`character_import`); aba Documentação com prévias ao vivo.
 - **Projetos:** criar, abrir, configurar, renomear, duplicar, excluir pela lixeira e restaurar. A lista de Recentes tem backup, as revisões são otimistas e o histórico é auditável (F12–F15).
 - **Dependências instaláveis pelo app:** tamanho, licença e consentimento aparecem antes de instalar, e cada recurso que depende de algo mostra o que falta (F14).
 - **Mídia:** importar arquivos, arrastar para a janela e importar por URL com direitos confirmados. Também há cortes, transcrição PT-BR com whisper large-v3 e busca no texto (F16).
@@ -16,13 +17,13 @@ Primeira versão candidata completa. Ela vai da ideia ao vídeo final, roda loca
 - **Workflow:** aprovações e pedidos de mudança. O modo autônomo para por direitos, consentimento, custo ou aprovação (F20).
 - **Acessibilidade:** diálogos acessíveis, uso por teclado, contraste AA, aviso quando o servidor fica offline, seletor nativo no Linux, Windows e macOS, e a tela "Sobre e diagnóstico" (F21).
 - **Segurança:** a API local recusa outros sites e DNS rebinding; os pacotes têm limites contra ZIP bomb; as fontes são locais e não existe telemetria (F22).
-- **Estilo Diazverso (F27–F28):** cenas HQ do plugin Diazverso com imagem do assunto em cada beat, Anton e Nox embutidos, legenda palavra a palavra (Whisper), SFX originais, trilha licenciada com ducking sob a voz, áreas seguras de Shorts, capítulos e `verificacao.md` na entrega. Disponível pela interface e pelo MCP.
-- **Nox em stop motion (F34):** 21 poses prontas do catálogo do plugin, trocando enquanto ele fala e todas usadas ao longo do vídeo. Legenda o tempo todo nos Shorts e só em trechos (gancho e apartes) no vídeo longo.
-- **Modo composição (F29):** o vídeo inteiro como motion design do kit Diazverso, em beats: ritmo de troca a cada 1,5–3 s, Nox com 8 expressões, cenas das obras em painéis HQ, legenda palavra a palavra, som em cada troca, plano automático e prévia em PNG pelo MCP.
-- **Nox em stop motion e caixinhas (F34):** o Nox gesticula trocando de pose a cada fala, sem animação entre as poses; caixinhas HQ de lembrete e recortes PNG por cima das cenas; fundos sempre variando e cena da obra sozinha em tela cheia. As poses se combinam com qualquer expressão dos olhos.
-- **Shorts e aparte do Nox (F33):** todas as cenas diagramadas para 9:16; o Nox comenta a cena da obra em aparte, com o fundo desfocado e um balão de ícone; thumbnails limpas, com fundo preto ou branco.
+- **Estilo HQ (F27–F28):** cenas HQ com imagem do assunto em cada beat, Anton embutida, legenda palavra a palavra (Whisper), SFX originais, trilha licenciada com ducking sob a voz, áreas seguras de Shorts, capítulos e `verificacao.md` na entrega. Disponível pela interface e pelo MCP.
+- **Personagem em stop motion (F34):** as poses prontas do personagem do projeto trocam enquanto ele fala, e todas são usadas ao longo do vídeo. Legenda o tempo todo nos Shorts e só em trechos (gancho e apartes) no vídeo longo.
+- **Modo composição (F29):** o vídeo inteiro como motion design do kit de motion, em beats: ritmo de troca a cada 1,5–3 s, personagem com 8 expressões, cenas das obras em painéis HQ, legenda palavra a palavra, som em cada troca, plano automático e prévia em PNG pelo MCP.
+- **Stop motion e caixinhas (F34):** o personagem gesticula trocando de pose a cada fala, sem animação entre as poses; caixinhas HQ de lembrete e recortes PNG por cima das cenas; fundos sempre variando e cena da obra sozinha em tela cheia. As poses se combinam com qualquer expressão dos olhos.
+- **Shorts e aparte do personagem (F33):** todas as cenas diagramadas para 9:16; o personagem comenta a cena da obra em aparte, com o fundo desfocado e um balão de ícone; thumbnails limpas, com fundo preto ou branco.
 - **Cena 3D (F32):** voo de câmera por painéis da obra no espaço, sem precisar de placa de vídeo.
-- **Thumbnail do kit (F31):** thumbnails A/B no estilo do canal, com a cena da obra, até 4 palavras em Anton, o Nox com expressão e uma versão do tamanho do celular para conferir.
+- **Thumbnail do kit (F31):** thumbnails A/B no estilo do canal, com a cena da obra, até 4 palavras em Anton, o personagem com expressão e uma versão do tamanho do celular para conferir.
 - **Fluxo combinado (F30):** antes de criar o projeto, o agente pergunta se é tudo automático, com pausas em etapas escolhidas para você revisar no app, ou com aprovação de cada etapa; e se a narração é voz de IA ou a sua, gravada no app.
 - **Instalação Linux sem npm:** atualização assinada com volta de versão, e desinstalação que pergunta antes de cada parte (F23).
 

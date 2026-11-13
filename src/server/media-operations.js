@@ -9,6 +9,7 @@ import { TranscriptStore, searchSegments, segmentsFromWhisper, wordsFromWhisper 
 import { JobQueue } from './job-queue.js';
 import { LifecycleError } from './project-lifecycle.js';
 import { readProjectDirectory } from './project-registry.js';
+import { readCharacterPack } from '../core/character-pack.js';
 
 const MEDIA_TYPES = { '.mp4': 'video/mp4', '.m4v': 'video/mp4', '.mov': 'video/quicktime', '.mkv': 'video/x-matroska', '.webm': 'video/webm', '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.flac': 'audio/flac', '.m4a': 'audio/mp4', '.aac': 'audio/aac', '.ogg': 'audio/ogg', '.opus': 'audio/ogg', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp' };
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp'];
@@ -82,6 +83,41 @@ export class MediaOperations {
       progress({ phase: 'Vinculando ao projeto' });
       return await this.attach(directory, imported, { rights, source: { type: 'url', value: url } });
     }, { cancellable: true }) });
+  }
+
+  /**
+   * Importa um pacote de personagem (pasta com PNGs de poses + catalogo.json) para o projeto: cada pose vira
+   * mídia com papel `character` e o catálogo fica em `project.character`. Exige direitos confirmados.
+   * dryRun só valida e resume o pacote. Importar de novo troca o personagem (as poses antigas saem do projeto).
+   */
+  async importCharacter({ path: directory, folder, rights = 'owned', rightsConfirmed, dryRun = false }) {
+    const pack = await readCharacterPack(folder);
+    const summary = { name: pack.name, poses: Object.keys(pack.poses).length, files: pack.files.length, tones: [...new Set(Object.values(pack.poses).flatMap(pose => pose.tons))], ignored: pack.ignored };
+    if (dryRun) return { dryRun: true, ...summary };
+    if (!['owned', 'licensed', 'authorized'].includes(rights) || rightsConfirmed !== true) throw new LifecycleError('RIGHTS_REQUIRED', 'Confirme que você tem direitos sobre o personagem');
+    await this.app.requireFeature('media.import');
+    const before = await readProjectDirectory(directory);
+    return this.app.activities.track(directory, 'importação de personagem', async () => {
+      const files = {};
+      for (const item of pack.files) {
+        const imported = await this.app.media.importFile(item.path);
+        const attached = await this.attach(directory, imported, { rights, role: 'character', name: item.file, source: { type: 'file', value: item.path } });
+        const current = await readProjectDirectory(directory); const media = current.media.find(entry => entry.id === attached.mediaId);
+        // O mesmo PNG já estava no projeto com outro papel: passa a ser pose do personagem.
+        if (media && media.role !== 'character') await this.app.runProjectAction({ path: directory, baseRevision: current.revision, action: { type: 'media.add', media: { ...media, role: 'character', rights } } });
+        files[item.file] = attached.mediaId;
+      }
+      const character = { schema: 'contentlab-character-v1', name: pack.name, tons: pack.tons, poses: pack.poses, files, importedAt: new Date().toISOString() };
+      let project = await readProjectDirectory(directory);
+      const result = await this.app.runProjectAction({ path: directory, baseRevision: project.revision, action: { type: 'character.set', character } });
+      // Poses do personagem anterior que não fazem parte do novo pacote saem do projeto.
+      const keep = new Set(Object.values(files));
+      for (const id of Object.values(before.character?.files || {}).filter(id => !keep.has(id))) {
+        project = await readProjectDirectory(directory);
+        if (project.media.some(item => item.id === id)) await this.app.runProjectAction({ path: directory, baseRevision: project.revision, action: { type: 'media.remove', mediaId: id, detachUsages: true } });
+      }
+      return { ...summary, revision: (await readProjectDirectory(directory)).revision ?? result.project?.revision };
+    });
   }
 
   async usage({ path: directory, mediaId }) { return mediaUsages(await readProjectDirectory(directory), mediaId); }

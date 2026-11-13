@@ -15,27 +15,12 @@ O próximo agente deve ler primeiro `AGENTS.md`, este arquivo e somente a docume
 - A suíte de referência possui 43 testes e a auditoria npm estava sem vulnerabilidades no encerramento do ciclo anterior.
 - Não existem projetos, textos, versões ou históricos fictícios na interface.
 
-## Referência externa Diazverso — somente leitura
+## Continuidade pelo Codex Cloud
 
-O plugin indicado pelo usuário está em:
-
-`/home/daniel/Documentos/Projects/DiazVerso-Plugin`
-
-Ele não pertence ao Content Lab e não deve ser editado, formatado, commitado nem receber arquivos gerados por este projeto. Para economia de contexto, consultar somente quando necessário:
-
-- `skills/diazverso-contexto-eficiente/SKILL.md`
-- `skills/context-optimization/SKILL.md`
-
-Se “plugin do Javas” se referir a outro projeto, localizar e confirmar o caminho antes de usá-lo; não substituir silenciosamente a referência acima.
-
-### Continuidade pelo Codex Cloud
-
-O caminho acima é local e provavelmente não estará montado num executor Cloud. Isso não deve bloquear tarefas independentes do plugin:
+Tarefas que dependem de diálogo gráfico, microfone, GPU ou gerenciador de pacotes do computador local não rodam num executor Cloud:
 
 - usar este plano como checkpoint canônico;
-- não inventar conteúdo das skills nem tentar modificar o repositório do plugin;
-- se o plugin não estiver disponível, aplicar diretamente o protocolo de contexto abaixo e registrar a limitação no checkpoint;
-- evitar testes que dependam de diálogo gráfico, microfone, GPU ou gerenciador de pacotes do computador local;
+- evitar testes que dependam desses recursos;
 - implementar contratos e testes automatizados no Cloud, deixando QA nativo explicitamente marcado para execução local;
 - antes de continuar uma branch criada no Cloud, sincronizar a `main` e conferir se a revisão deste plano não mudou.
 
@@ -368,7 +353,7 @@ Não iniciar empacotamento desktop antes de estabilizar armazenamento, setup e o
 - Próxima tarefa: F13 — projetar contratos de remoção de Recentes, lixeira e exclusão segura antes de alterar a interface.
 - Primeiro teste a escrever: remover um projeto de Recentes preserva `project.json`; excluir via lixeira remove o caminho ativo e mantém possibilidade de restauração.
 - Arquivos iniciais prováveis: `src/server/project-registry.js`, `src/server/local-application-service.js`, `src/server/http-server.js`, `src/ui/App.jsx` e seus testes diretos.
-- Restrições: preservar projetos reais, não editar DiazVerso-Plugin, não usar force push e não considerar toast/placeholder como implementação.
+- Restrições: preservar projetos reais, não usar force push e não considerar toast/placeholder como implementação.
 
 ### F21 concluída (2026-11-12)
 
@@ -430,9 +415,9 @@ Objetivo: um chat (Claude/Codex) opera o app real via MCP — abre o Content Lab
 - [x] QA real `npm run qa:mcp`: vídeo longo 16:9 com espera de aprovação e pedido de mudança + 5 Shorts autônomos; tudo persiste após desligar e reabrir.
 - [ ] Escuta da narração padrão pelo dono (`.tools/qa-f26/`).
 
-## F27 — Estilo HQ (paridade com o Diazverso) por MCP e interface
+## F27 — Estilo HQ por MCP e interface
 
-Objetivo: produzir o tipo de vídeo que o plugin Diazverso planeja — cenas HQ animadas, trilha sob a voz, SFX, Shorts 1080×1920 com áreas seguras, capítulos e verificação — com recursos originais e o mesmo núcleo para interface, CLI e MCP.
+Objetivo: produzir vídeos em estilo HQ — cenas HQ animadas, trilha sob a voz, SFX, Shorts 1080×1920 com áreas seguras, capítulos e verificação — com recursos originais e o mesmo núcleo para interface, CLI e MCP.
 
 - [x] Sete cenas HQ originais (Remotion, arquivo único, só React/Remotion) registradas no catálogo; propriedade `text` de várias linhas; campo de várias linhas no editor.
 - [x] Plano automático de cenas por trecho do roteiro (tempos reais da narração) e lista definida pelo agente; trilha **Cenas**; legendas sempre por cima.
@@ -441,26 +426,26 @@ Objetivo: produzir o tipo de vídeo que o plugin Diazverso planeja — cenas HQ 
 - [x] Capítulos dos tempos da narração em `embalagem.md`; `verificacao.md` com o que foi conferido (ffprobe, direitos, aprovações).
 - [x] MCP: `scene_list`, `scene_add`, `audio_library`, `chapters_get`, `timeline_auto_assemble` ampliado; interface: Produção assistida.
 - [x] QA real `npm run qa:hq` (longo 16:9 + Short 9:16 via MCP), frames inspecionados.
-- [ ] Escuta da trilha/SFX e avaliação visual pelo dono. (Avaliado: o resultado não seguiu o plugin; substituído pela F28.)
+- [ ] Escuta da trilha/SFX e avaliação visual pelo dono. (Avaliado: o resultado não cumpriu o padrão visual; substituído pela F28.)
 
-## F28 — Padrão Diazverso: cenas do plugin, imagem em cada cena e legenda por palavra
+## F28 — Padrão HQ: imagem em cada cena e legenda por palavra
 
-Objetivo: corrigir a F27, que não seguia o plugin (vídeo só com texto, sem Nox nem Anton, legenda por cena, trilha sintetizada como final). O plugin 1.2.0 passou a ter um padrão visual mínimo objetivo; o Content Lab passa a cumpri-lo.
+Objetivo: corrigir a F27 (vídeo só com texto, sem Anton, legenda por cena, trilha sintetizada como final). O Content Lab passa a cumprir um padrão visual mínimo objetivo.
 
-- [x] Cenas HQ do plugin compiladas para arquivo único (`npm run scenes:diazverso`); assets de marca (Anton OFL, Nox, página HQ, ícones) em `assets/brand/`.
+- [x] Cenas HQ do Content Lab em arquivo único (`src/timeline/components/hq/`); arquivos do kit (Anton OFL, página HQ, ícones) em `assets/kit/`.
 - [x] Props `json`; referências `media:<id>`/`brand:<nome>` levadas à pasta pública do render e resolvidas com `staticFile`; Anton também nas legendas.
 - [x] Plano automático por beat (uma frase ou grupo curto: até 7 s no longo, 4,5 s no Short) com imagem do assunto em cada beat e sem repetir componente; montagem recusa projeto sem imagens (`VISUAL_EVIDENCE_MISSING`).
 - [x] Legenda palavra a palavra a partir do Whisper (`narration_transcribe`), com recuo para legenda por frase.
 - [x] Verificação: imagem em cada cena, trilha licenciada (a sintetizada é rascunho), duração do Short como decisão do criador.
 - [x] MCP e interface atualizados; importação com papel `music`.
-- [x] QA real `npm run qa:hq` com imagens próprias (Nox e ícones), frames inspecionados.
+- [x] QA real `npm run qa:hq` com imagens próprias (personagem de teste e ícones), frames inspecionados.
 - [ ] Vídeo real com imagens dos personagens e trilha licenciada escolhidas pelo dono, e avaliação dele.
 
-## F29 — Modo composição: o vídeo como motion design (kit Diazverso)
+## F29 — Modo composição: o vídeo como motion design (kit de motion)
 
-Objetivo: produzir pelo MCP vídeos no nível do demo (ritmo do RunnyIA, estética HQ, Nox expressivo, som em cada troca) com cenas das obras. A timeline de clips deixa de ser o caminho principal.
+Objetivo: produzir pelo MCP vídeos no nível do demo (ritmo do RunnyIA, estética HQ, personagem expressivo, som em cada troca) com cenas das obras. A timeline de clips deixa de ser o caminho principal.
 
-- [x] Plugin 1.3.0: skill `diazverso-motion` com kit (efeitos, Nox com 8 expressões, 11 cenas parametrizadas com mídia), catálogo, contrato em beats, SFX e linguagem das referências.
+- [x] Kit de motion (`src/motion/kit/`): efeitos, personagem com 8 expressões, 11 cenas parametrizadas com mídia, catálogo, contrato em beats, SFX e linguagem das referências.
 - [x] Contrato `contentlab-motion-v1` no projeto (`motion`), ação `motion.set`, etapas de edição satisfeitas pelo plano.
 - [x] Render da composição única (Remotion) com narração, legenda palavra a palavra, trilha com ducking, SFX e −14 LUFS com limitador; fila e entrega de sempre.
 - [x] Plano automático por frase nos tempos do Whisper, mídia citada pelo nome entra quando é dita, sem repetir cena 3×.
@@ -473,37 +458,37 @@ Objetivo: produzir pelo MCP vídeos no nível do demo (ritmo do RunnyIA, estéti
 - [x] `pauseAt` e `narrationBy` no projeto (contrato, criação, `project.update`, resumo).
 - [x] MCP: `project_create` e `project_flow_set` com o fluxo; `stage_approve` recusa etapa de pausa sem aprovação da pessoa; `narration_generate` recusa quando a pessoa grava a voz.
 - [x] Instruções do MCP pedem para combinar o fluxo numa pergunta antes de criar o projeto.
-- [x] Cenas TSX avulsas aposentadas no plugin; `scenes:diazverso` copia só o kit de motion e mantém as cópias do modo antigo.
+- [x] Cenas TSX avulsas aposentadas; o kit de motion e as cenas HQ do modo clips ficam em pastas próprias.
 
 ## F31 — Thumbnail pelo kit de motion
 
-- [x] `MotionRenderer.thumbnails`: still `DiazversoThumb` do kit com mídia da obra, texto em Anton, Nox e selo.
-- [x] `thumbnails_generate` com `style: "kit"` (padrão), variantes com mídia, texto de até 4 palavras, Nox, lado, tom, selo e VS; recusa mídia sem direitos.
+- [x] `MotionRenderer.thumbnails`: still `KitThumb` do kit com mídia da obra, texto em Anton, personagem do projeto e selo.
+- [x] `thumbnails_generate` com `style: "kit"` (padrão), variantes com mídia, texto de até 4 palavras, personagem, lado, tom, selo e VS; recusa mídia sem direitos.
 - [x] Versões de 320 px em `output/previas/` para conferir no celular.
 - [x] Teste real de render do still (1280×720).
 
 ## F32 — Cenas 3D no modo composição
 
-- [x] `@remotion/three`, `three` e `@react-three/fiber` como dependências; cenas `nox3d` e `paineis3d` no contrato.
+- [x] `@remotion/three`, `three` e `@react-three/fiber` como dependências; cena 3D do personagem e `paineis3d` no contrato.
 - [x] Render com `gl: "swangle"` (WebGL por software) só quando o plano tem cena 3D: prévias e vídeo.
-- [x] Teste real: still do Nox 3D; vídeo de 14,5 s com 4 gestos do Nox e voo por 3 painéis conferido em frames (~62 s de render).
+- [x] Teste real: still do personagem 3D; vídeo de 14,5 s com 4 gestos e voo por 3 painéis conferido em frames (~62 s de render).
 
-## F33 — Shorts 9:16, aparte do Nox e thumbnail limpa
+## F33 — Shorts 9:16, aparte do personagem e thumbnail limpa
 
 - [x] Kit diagramado para 9:16 em todas as cenas; legenda acima da interface do Shorts; textos dimensionados pela palavra mais longa.
-- [x] Cena `aparte`: cena da obra desfocada, Nox da cintura para cima mudando de pose e expressão, balão com 16 ícones HQ ou texto.
-- [x] Plano automático: perguntas e comentários viram aparte sobre a última cena; Nox de corpo inteiro raro; reação no canto mostra só rosto e tronco.
-- [x] Nox 3D retirado (a pedido); `paineis3d` mantido.
+- [x] Cena `aparte`: cena da obra desfocada, personagem da cintura para cima mudando de pose e expressão, balão com 16 ícones HQ ou texto.
+- [x] Plano automático: perguntas e comentários viram aparte sobre a última cena; corpo inteiro raro; reação no canto mostra só rosto e tronco.
+- [x] Personagem 3D retirado (a pedido); `paineis3d` mantido.
 - [x] Thumbnail limpa (fundo preto ou branco e o personagem) como padrão; `background` no MCP.
 - [x] QA real: Short 9:16 narrado pelo MCP, 32,6 s, 16 beats (média 2,0 s), 3 apartes, −14,2 LUFS.
 
-## F34 — Nox em stop motion, extras e variação
+## F34 — Personagem em stop motion, extras e variação
 
-- [x] Poses do Nox em stop motion: `assets/brand/nox/poses/*.png` entram no render; troca seca por fala com "tremidinha"; sem a pose, Nox canônico.
-- [x] Aparte com o Nox inteiro subindo pela borda de baixo (pernas fora do quadro).
+- [x] Poses do personagem em stop motion: os PNGs de poses do projeto entram no render; troca seca por fala com "tremidinha".
+- [x] Aparte com o personagem inteiro subindo pela borda de baixo (pernas fora do quadro).
 - [x] `extras` no beat (contrato e MCP): caixinhas HQ de lembrete (inscrição, like, sininho, opinião, spoiler, fonte, comenta) e recortes PNG.
 - [x] Plano automático: evidência sozinha em tela cheia em metade dos beats, fundos sem repetição, poses pelo tom da frase, caixinhas em 20%/55% e nas opiniões, recortes citados.
-- [x] Poses por PNG pronto com variantes sorteadas (`pose-2.png`); opcional PNG sem olhos + `poses.json` com o humor desenhado pelo kit; o validador do plugin confere os arquivos.
-- [x] PNGs das poses do Nox: 21 poses (24 PNGs com as variantes `-b`) e `catalogo.json` no plugin; o validador recusa PNG fora do catálogo.
-- [x] O Nox troca de pose enquanto fala (~0,85 s por pose) e o plano passa por todas as poses do catálogo; frases de emoção chamam o aparte.
+- [x] Poses por PNG pronto com variantes sorteadas; o importador confere os arquivos contra o `catalogo.json`.
+- [x] Importação do personagem (`character_import`, interface e CLI): pasta com PNGs e `catalogo.json`, direitos confirmados; o importador recusa PNG fora do catálogo.
+- [x] O personagem troca de pose enquanto fala (~0,85 s por pose) e o plano passa por todas as poses do catálogo do personagem; frases de emoção chamam o aparte.
 - [x] Legenda: Shorts o tempo todo; vídeo longo só no gancho e nos apartes.

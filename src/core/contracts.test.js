@@ -20,3 +20,8 @@ test('aceita operação transacional com dry-run', () => {
   const result = parseOperation({ schema: 'contentlab-operation-v1', operationId: 'op_demo', projectId: 'project_demo', baseRevision: 1, dryRun: true, actions: [{ type: 'clip.move', trackId: 'visual_main', clipId: 'clip_intro', startFrame: 30 }] });
   expect(result.dryRun).toBe(true);
 });
+
+test('migração: componente HQ antigo com prefixo dv_ passa a hq_ na leitura', async () => {
+  const { clipSchema } = await import('./contracts.js');
+  expect(clipSchema.parse({ id: 'clip_a', type: 'component', startFrame: 0, durationInFrames: 30, componentId: 'dv_texto_hq' }).componentId).toBe('hq_texto_hq');
+});

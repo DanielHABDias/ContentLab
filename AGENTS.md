@@ -11,8 +11,8 @@ Para continuidade do produto, use `PLANO_FINALIZACAO_CONTENT_LAB.md` como backlo
 - Interface, CLI e MCP devem chamar o mesmo núcleo; não edite manifestos diretamente.
 - Mantenha contratos versionados, operações idempotentes, dry-run e revisões otimistas.
 - Não implemente publicação automática nem banco de mídia social.
-- Plugin Diazverso (mesmo dono) é a fonte das cenas HQ e dos assets de marca: altere no repositório do plugin e recompile com `npm run scenes:diazverso`; não edite à mão `src/timeline/components/diazverso/` nem `assets/brand/`. Siga o padrão visual do plugin; a montagem principal é o modo composição (`docs/MOTION.md`).
-- O Nox (`Nox.png`, `nox-sem-olhos.png`, poses e `catalogo.json`) é propriedade do Diazverso e não entra no Content Lab nem no git dele: o app lê do plugin no computador (`src/core/nox-pack.js`: `CONTENTLAB_NOX_DIR`, `DIAZVERSO_PLUGIN_DIR` ou a pasta `DiazVerso-Plugin` ao lado). Não copie o Nox para este repositório.
+- O Content Lab é uma ferramenta neutra: não traz marca, canal nem personagem de ninguém. O kit de motion (`src/motion/kit/`, `assets/kit/`) e as cenas HQ do modo clips (`src/timeline/components/hq/`) são código próprio; a montagem principal é o modo composição (`docs/MOTION.md`).
+- Personagem é mídia do projeto: entra por `character_import` (pasta com PNGs de poses + `catalogo.json`, direitos confirmados). Não coloque personagem, poses ou marca de terceiros no repositório; nos testes e no QA use o personagem de teste de `src/test/character-fixture.js`.
 
 ## Qualidade
 

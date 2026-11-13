@@ -10,7 +10,7 @@ import { MotionRenderer } from './motion-renderer.js';
 import { cleanMetadata } from './clean-metadata.js';
 
 const run = promisify(execFile);
-const ANTON = import.meta.url.startsWith('file:') ? path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../assets/brand/fonts/Anton-Regular.ttf') : path.join(process.cwd(), 'assets/brand/fonts/Anton-Regular.ttf');
+const ANTON = import.meta.url.startsWith('file:') ? path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../assets/kit/fonts/Anton-Regular.ttf') : path.join(process.cwd(), 'assets/brand/fonts/Anton-Regular.ttf');
 const FONT_CANDIDATES = [ANTON, '/usr/share/fonts/truetype/inter-zorin-os/Inter-Bold.ttf', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', '/usr/share/fonts/TTF/DejaVuSans-Bold.ttf', '/Library/Fonts/Arial Bold.ttf', '/System/Library/Fonts/Supplemental/Arial Bold.ttf', 'C:\\Windows\\Fonts\\arialbd.ttf'];
 
 /**

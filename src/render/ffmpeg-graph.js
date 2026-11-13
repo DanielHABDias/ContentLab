@@ -2,7 +2,7 @@ import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const STYLES = {
-  // Legenda pelo lado menor: ≈67 px em 1920×1080 e 1080×1920 (padrão Diazverso: ≥56 px no 16:9, ≥64 px no 9:16).
+  // Legenda pelo lado menor: ≈67 px em 1920×1080 e 1080×1920 (padrão do kit: ≥56 px no 16:9, ≥64 px no 9:16).
   legenda: { size: 0.062, relative: 'short', position: 'bottom', box: 0.6 },
   destaque: { size: 0.06, position: 'top', box: 0.75 },
   titulo: { size: 0.085, position: 'center', box: 0 },

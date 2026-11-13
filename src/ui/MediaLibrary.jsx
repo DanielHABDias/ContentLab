@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Download, Film, Link2, Plus, Scissors, Search, Trash2, Upload, X } from 'lucide-react';
+import { ArrowLeft, Download, Film, Link2, Plus, Scissors, Search, Trash2, Upload, UserRound, X } from 'lucide-react';
 import { ConfirmDialog } from './Dialogs.jsx';
 import { localApi } from './local-api.js';
 import { DependencyNotice, FeatureList } from './DependencyGate.jsx';
@@ -58,6 +58,7 @@ export function MediaLibrary({ details, onBack, onUpdated, setup, onOpenSetup })
     <div className={`drop-zone ${dragging ? 'active' : ''}`} aria-hidden={!dragging}><Upload size={18}/> Solte arquivos aqui para importar com direitos “{RIGHTS[rights]}”.</div>
     <FeatureList features={STAGE_REQUIREMENTS.media.features} setup={setup} onOpenSetup={onOpenSetup}/>
     <UrlImport projectPath={projectPath} blocked={blocked('media.url')} onOpenSetup={onOpenSetup} onStarted={loadJobs}/>
+    <CharacterImport projectPath={projectPath} character={project.character} blocked={blocked('media.import')} onOpenSetup={onOpenSetup} onImported={refresh}/>
     <JobsPanel jobs={jobs} uploads={uploads} onCancel={jobId => act(async () => { await localApi.cancelJob(jobId); await loadJobs(); })}/>
     <TranscriptSearch projectPath={projectPath} onPick={result => { setSelected(result.mediaId); setSeek({ mediaId: result.mediaId, time: result.start, at: Date.now() }); }}/>
     <section className="media-grid">
@@ -70,6 +71,29 @@ export function MediaLibrary({ details, onBack, onUpdated, setup, onOpenSetup })
     </section>
     {removing && <RemoveDialog removing={removing} onClose={() => setRemoving(null)} onConfirm={async detachUsages => { await localApi.removeMedia({ path: projectPath, baseRevision: project.revision, mediaId: removing.media.id, detachUsages }); setRemoving(null); if (selected === removing.media.id) setSelected(null); await refresh(); }}/>}
   </main>;
+}
+
+/** Pacote de personagem: pasta com os PNGs das poses e o catalogo.json; vira mídia com papel “personagem”. */
+function CharacterImport({ projectPath, character, blocked, onOpenSetup, onImported }) {
+  const [rights, setRights] = useState('owned'); const [confirmed, setConfirmed] = useState(false); const [error, setError] = useState(null); const [status, setStatus] = useState(''); const [busy, setBusy] = useState(false);
+  const submit = async event => {
+    event.preventDefault(); setError(null); setStatus('');
+    try {
+      const choice = await localApi.chooseDirectory('Pasta do personagem (PNGs das poses e catalogo.json)'); if (!choice.path) return;
+      setBusy(true); const result = await localApi.characterImport({ path: projectPath, folder: choice.path, rights, rightsConfirmed: confirmed });
+      setStatus(`Personagem “${result.name}” importado: ${result.poses} poses, ${result.files} imagens.`); setConfirmed(false); await onImported();
+    } catch (issue) { setError(issue); } finally { setBusy(false); }
+  };
+  if (blocked.length) return null;
+  const poses = character ? Object.keys(character.poses).length : 0;
+  return <form className="workflow-card url-import" onSubmit={submit} aria-label="Importar personagem">
+    <span className="hint"><UserRound size={16} aria-hidden="true"/> {character ? `Personagem: ${character.name} (${poses} poses). Importar outro substitui.` : 'Sem personagem: o vídeo sai sem apartes. Importe a pasta das poses com o catalogo.json.'}</span>
+    <label className="mode-select">Direitos <select value={rights} onChange={event => setRights(event.target.value)}><option value="owned">Própria</option><option value="licensed">Licenciada</option><option value="authorized">Autorizada</option></select></label>
+    <label className="check"><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)}/> Tenho direito de usar este personagem</label>
+    <button className="button quiet" disabled={!confirmed || busy} title={!confirmed ? 'Confirme os direitos sobre o personagem' : ''}><UserRound size={16}/> {busy ? 'Importando…' : 'Importar personagem'}</button>
+    {status && <p className="notice" role="status">{status}</p>}
+    <DependencyNotice error={error} onOpenSetup={onOpenSetup}/>
+  </form>;
 }
 
 function UrlImport({ projectPath, blocked, onOpenSetup, onStarted }) {

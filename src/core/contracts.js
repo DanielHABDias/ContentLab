@@ -59,7 +59,7 @@ export const mediaRefSchema = z.object({
   rights: z.enum(['owned', 'licensed', 'authorized', 'pending']),
   name: z.string().max(255).optional(),
   source: z.object({ type: z.enum(['file', 'url', 'upload', 'generated']), value: z.string().max(4096) }).optional(),
-  role: z.enum(['content', 'thumbnail', 'slide', 'narration', 'music', 'sfx', 'background']).optional(),
+  role: z.enum(['content', 'thumbnail', 'slide', 'narration', 'music', 'sfx', 'background', 'character']).optional(),
   importedAt: z.string().optional(),
   metadata: z.object({
     durationSeconds: z.number().nonnegative().nullable(),
@@ -89,7 +89,8 @@ export const clipSchema = z.object({
   startFrame: z.number().int().nonnegative(),
   durationInFrames: z.number().int().positive(),
   sourceId: idSchema.optional(),
-  componentId: idSchema.optional(),
+  // Migração: as cenas HQ embutidas tinham o prefixo `dv_` até a 2.1; hoje é `hq_`.
+  componentId: z.preprocess(value => (typeof value === 'string' && value.startsWith('dv_') ? `hq_${value.slice(3)}` : value), idSchema).optional(),
   componentProps: z.record(z.string(), componentValue).refine(value => JSON.stringify(value).length <= 64_000, 'Props de componente grandes demais').default({}),
   fit: z.enum(['cover', 'contain', 'stretch']).default('cover'),
   anchor: z.enum(['center', 'top', 'bottom', 'left', 'right']).default('center'),
@@ -123,16 +124,17 @@ export const timelineSchema = z.object({
 });
 
 /**
- * Plano de motion (roteiro em beats do kit Diazverso): o vídeo inteiro vira uma composição Remotion única.
+ * Plano de motion (roteiro em beats do kit de motion do Content Lab): o vídeo inteiro vira uma composição Remotion única.
  * Tempos em segundos; props das cenas são JSON e citam mídia como `media:<id>`.
  */
 const motionValue = z.lazy(() => z.union([z.string().max(2000), z.number().finite(), z.boolean(), z.null(), z.array(motionValue).max(40), z.record(z.string().max(64), motionValue)]));
-export const MOTION_SCENES = ['titulo', 'frase', 'nox', 'evidencia', 'pagina', 'numero', 'ficha', 'formula', 'lista', 'comparacao', 'cta', 'aparte', 'paineis3d'];
-/** Nomes de SFX do kit (lista `sfx` do catálogo do plugin; som novo entra pelo plugin e `npm run scenes:diazverso`). */
+export const MOTION_SCENES = ['titulo', 'frase', 'personagem', 'evidencia', 'pagina', 'numero', 'ficha', 'formula', 'lista', 'comparacao', 'cta', 'aparte', 'paineis3d'];
+/** Nomes de SFX do kit (lista `sfx` de src/motion/kit/catalog.json; o arquivo fica em assets/kit/sfx). */
 export const MOTION_SFX = kitCatalog.sfx;
 export const motionBeatSchema = z.object({
   id: z.string().regex(/^[a-z0-9_-]{1,40}$/i),
-  scene: z.enum(MOTION_SCENES),
+  // Migração de projetos antigos: a cena do personagem se chamava `nox` (contentlab-motion-v1 até a 2.1).
+  scene: z.preprocess(value => (value === 'nox' ? 'personagem' : value), z.enum(MOTION_SCENES)),
   at: z.number().min(0).max(7200),
   duration: z.number().min(0.2).max(120),
   props: z.record(z.string().max(64), motionValue).default({}),
@@ -162,6 +164,27 @@ export const motionPlanSchema = z.object({
   }
 });
 
+/**
+ * Personagem do projeto (pacote importado com `character_import`): poses em PNG prontos, guardados como
+ * mídia com papel `character`, e o catálogo pose → arquivos, gesto e tons. O plano automático e o kit
+ * escolhem a pose pelo tom da fala; sem personagem, o plano não tem apartes nem a cena `personagem`.
+ */
+export const POSE_FILE = /^[a-z0-9]+(?:-[a-z0-9]+)*\.png$/;
+export const characterSchema = z.object({
+  schema: z.literal('contentlab-character-v1'),
+  name: z.string().min(1).max(80),
+  tons: z.record(z.string().regex(/^[a-z0-9-]{1,40}$/), z.string().max(200)).default({}),
+  poses: z.record(z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/), z.object({
+    arquivos: z.array(z.string().regex(POSE_FILE)).min(1).max(12),
+    gesto: z.string().max(300).default(''),
+    olhos: z.string().max(200).optional(),
+    tons: z.array(z.string().regex(/^[a-z0-9-]{1,40}$/)).max(16).default([]),
+  })).refine(value => Object.keys(value).length >= 1 && Object.keys(value).length <= 80, 'De 1 a 80 poses'),
+  /** Arquivo da pose → id da mídia no projeto. */
+  files: z.record(z.string().regex(POSE_FILE), idSchema),
+  importedAt: z.string(),
+});
+
 export const projectSchema = z.object({
   schema: z.literal('contentlab-project-v1'),
   id: idSchema,
@@ -179,6 +202,7 @@ export const projectSchema = z.object({
   media: z.array(mediaRefSchema),
   timeline: timelineSchema,
   motion: motionPlanSchema.nullable().default(null),
+  character: characterSchema.nullable().default(null),
   creative: z.object({
     brief: z.object({ thesis: z.string(), audience: z.string(), promise: z.string(), notes: z.string() }),
     script: z.object({ hook: z.string(), development: z.string(), payoff: z.string(), visual: z.string(), sources: z.string() }),
@@ -207,6 +231,7 @@ export const operationSchema = z.object({
     z.object({ type: z.literal('project.update'), title: z.string().min(1).optional(), projectType: z.enum(['long', 'short', 'custom']).optional(), aspectRatio: aspectRatioSchema.optional(), mode: z.enum(['review', 'autonomous']).optional(), pauseAt: z.array(z.enum(FLOW_STAGES)).optional(), narrationBy: z.enum(['ai', 'creator']).optional() }),
     z.object({ type: z.literal('creative.update'), creative: projectSchema.shape.creative }),
     z.object({ type: z.literal('motion.set'), motion: motionPlanSchema.nullable() }),
+    z.object({ type: z.literal('character.set'), character: characterSchema.nullable() }),
     z.object({ type: z.literal('media.add'), media: mediaRefSchema }),
     z.object({ type: z.literal('media.remove'), mediaId: idSchema, detachUsages: z.boolean().default(false) }),
     z.object({ type: z.literal('media.cut.add'), mediaId: idSchema, cut: mediaCutSchema }),

@@ -1,19 +1,19 @@
 {
-  "schema": "diazverso-motion-v1",
+  "schema": "contentlab-kit-v1",
   "regras": [
     "Troca de informação visual a cada 1,5–3 s; nenhum beat parado acima de 6 s (o kit sempre move a câmera).",
-    "Mostre o assunto: cenas da obra (media:<id>) quando a fala cita personagem, edição, cena ou dado; o Nox quando a fala é reação, dúvida ou explicação.",
+    "Mostre o assunto: cenas da obra (media:<id>) quando a fala cita personagem, edição, cena ou dado; o personagem do projeto (se houver) quando a fala é reação, dúvida ou explicação.",
     "Palavras gigantes (titulo) no gancho e nas viradas; frase (estrelas) como respiro; o mesmo tipo de cena no máximo 2 vezes seguidas.",
-    "Cada troca tem som: whoosh/swish na troca, impact nas palavras gigantes, pop no Nox, tick em números, camera em painéis, riser antes do payoff.",
+    "Cada troca tem som: whoosh/swish na troca, impact nas palavras gigantes, pop quando o personagem entra, tick em números, camera em painéis, riser antes do payoff.",
     "Beats em segundos, contíguos e em ordem (at do próximo = at + duration do anterior). Com narração, alinhe o at ao início da frase dita.",
     "Números inventados para explicar uma ideia levam fonte 'simulação'; dados reais levam a fonte.",
     "Cena 3D (paineis3d) é destaque: no máximo 1 a cada ~30 s.",
     "Shorts 9:16: todas as cenas são diagramadas para vertical; o conteúdo fica entre 12% e 72% da altura e a legenda acima da interface do Shorts.",
     "A base do vídeo é a cena da obra; em muitos beats ela fica sozinha, em tela cheia (evidencia com cheia=true), sem motion design por cima.",
-    "O Nox entra em opinião e humor: aparte (inteiro, subindo pela borda, pernas fora do quadro) com poses em stop motion; corpo inteiro em cena própria só às vezes.",
+    "Com personagem no projeto (character_import), ele entra em opinião e humor: aparte (inteiro, subindo pela borda, pernas fora do quadro) com poses em stop motion; corpo inteiro em cena própria (personagem) só às vezes. Sem personagem, não use aparte nem a cena personagem.",
     "Variar sempre: fundo, cor, tipo de cena e movimento nunca se repetem de um beat para o outro.",
     "Caixinhas HQ de lembrete (inscreva-se, like, opinião, spoiler) e recortes PNG do que está sendo falado entram como extras ao longo do vídeo.",
-    "Legenda palavra a palavra: nos Shorts (9:16) o tempo todo; no vídeo longo (16:9) só em trechos — o gancho dos primeiros segundos e os apartes do Nox — com legenda: false nos outros beats."
+    "Legenda palavra a palavra: nos Shorts (9:16) o tempo todo; no vídeo longo (16:9) só em trechos — o gancho dos primeiros segundos e os apartes do personagem — com legenda: false nos outros beats."
   ],
   "humores": [
     "bravo",
@@ -76,7 +76,7 @@
         "linhas": "string[] (obrigatório)",
         "riscar": "palavra a riscar",
         "destaque": "frase final gigante",
-        "humor": "Nox pequeno reagindo",
+        "humor": "personagem pequeno reagindo (se houver)",
         "fundo": "estrelas | explosao | meio-tom | branco | papel | escuro (variar a cada uso)",
         "tom": "cor do fundo: amarelo, vermelho, azul..."
       },
@@ -89,16 +89,16 @@
         "destaque": "A HISTÓRIA."
       }
     },
-    "nox": {
-      "uso": "Reação, dúvida, humor ou explicação do Nox, com texto de impacto ao lado",
+    "personagem": {
+      "uso": "Reação, dúvida, humor ou explicação do personagem do projeto, com texto de impacto ao lado (precisa de personagem)",
       "props": {
-        "humor": "humor",
+        "humor": "humor (escolhe a pose pelo tom)",
         "texto": "texto curto",
         "subtexto": "texto menor",
         "fundo": "fundo (padrão explosao)",
         "tom": "cor do fundo",
-        "lado": "direita ou esquerda (onde fica o Nox)",
-        "poses": "lista de { pose, humor }: o Nox troca de pose em stop motion ao longo do beat"
+        "lado": "direita ou esquerda (onde fica o personagem)",
+        "poses": "lista de { pose, humor }: o personagem troca de pose em stop motion ao longo do beat"
       },
       "exemplo": {
         "humor": "piscada",
@@ -107,12 +107,12 @@
       }
     },
     "evidencia": {
-      "uso": "Cena da obra (imagem ou vídeo) num painel HQ com zoom lento; etiqueta, legenda e reação do Nox opcionais",
+      "uso": "Cena da obra (imagem ou vídeo) num painel HQ com zoom lento; etiqueta, legenda e reação do personagem opcionais",
       "props": {
         "midia": "media:<id> (obrigatório)",
         "rotulo": "etiqueta amarela (nome, edição)",
         "legenda": "frase curta embaixo",
-        "humor": "reação do Nox no canto (só rosto e tronco); usar pouco",
+        "humor": "reação do personagem no canto (só a parte de cima); usar pouco",
         "movimento": "entrar, sair ou panoramica",
         "fundo": "fundo (padrão papel)",
         "tela": "true para moldura de TV",
@@ -125,7 +125,7 @@
       }
     },
     "pagina": {
-      "uso": "Página HQ de 2–3 painéis em sequência (mídia ou Nox), com onomatopeia e conclusão digitada",
+      "uso": "Página HQ de 2–3 painéis em sequência (mídia ou personagem), com onomatopeia e conclusão digitada",
       "props": {
         "paineis": "[{ midia?, humor?, rotulo?, onomatopeia?, tom? }] (obrigatório)",
         "conclusao": "frase digitada no fim"
@@ -155,7 +155,7 @@
         "tendencia": "sobe ou desce",
         "fonte": "fonte do dado ou 'simulação'",
         "marcos": "string[] marcados na curva",
-        "humor": "Nox"
+        "humor": "personagem reagindo (se houver)"
       },
       "exemplo": {
         "valor": 94,
@@ -176,8 +176,8 @@
         "titulo": "string (obrigatório)",
         "itens": "[{ rotulo, valor 0–100 }] (obrigatório)",
         "carimbo": "texto do carimbo",
-        "midia": "media:<id> no lugar do Nox",
-        "humor": "Nox"
+        "midia": "media:<id> no lugar do personagem",
+        "humor": "personagem reagindo (se houver)"
       },
       "exemplo": {
         "titulo": "FICHA DO HERÓI #001",
@@ -201,7 +201,7 @@
         "termos": "[{ rotulo, valor, vira? }] 2–4 (obrigatório)",
         "operadores": "string[] (padrão × e =)",
         "carimbo": "texto do zoom final",
-        "humor": "Nox"
+        "humor": "personagem reagindo (se houver)"
       },
       "exemplo": {
         "titulo": "A FÓRMULA DA TENSÃO",
@@ -232,7 +232,7 @@
         "prefixo": "rótulo da aba (ITEM, ERRO, FRAQUEZA…)",
         "itens": "[{ titulo, texto? }] até 5 (obrigatório)",
         "conclusao": "selo final",
-        "humor": "Nox"
+        "humor": "personagem reagindo (se houver)"
       },
       "exemplo": {
         "titulo": "COMO CONSERTAR?",
@@ -266,10 +266,10 @@
       }
     },
     "cta": {
-      "uso": "Encerramento: nome do canal, Nox trocando de expressão, pergunta para os comentários",
+      "uso": "Encerramento: nome do canal (opcional), personagem trocando de pose, pergunta para os comentários",
       "props": {
         "pergunta": "string (obrigatório)",
-        "titulo": "padrão DIAZVERSO",
+        "titulo": "nome do canal, letra a letra (padrão: sem título)",
         "botao": "texto do botão",
         "tom": "cor do fundo"
       },
@@ -301,7 +301,7 @@
       "render": "precisa de WebGL; só imagens (vídeo não vira textura); 2–3 s por painel"
     },
     "aparte": {
-      "uso": "Aparte do Nox (momentos cômicos, opinião): a cena da obra desfoca e o Nox aparece INTEIRO subindo pela borda de baixo (pernas fora do quadro); cada fala é uma pose nova em stop motion (troca seca, sem animação entre poses), com balão de ícone ou texto; depois ele sai de uma vez e o fundo volta nítido",
+      "uso": "Aparte do personagem do projeto (momentos cômicos, opinião; precisa de personagem): a cena da obra desfoca e o personagem aparece INTEIRO subindo pela borda de baixo (pernas fora do quadro); cada fala é uma pose nova em stop motion (troca seca, sem animação entre poses), com balão de ícone ou texto; depois ele sai de uma vez e o fundo volta nítido",
       "props": {
         "midia": "media:<id> — a cena que continua atrás (desfocada)",
         "falas": "lista de 2–5 { pose, humor, icone, texto }: a pose troca de uma vez a cada fala, a cada 0,7–1 s; o balão continua até a próxima fala com ícone ou texto",
@@ -342,14 +342,14 @@
     }
   },
   "thumbnail": {
-    "composicao": "DiazversoThumb",
+    "composicao": "KitThumb",
     "tamanho": "1280x720 (still)",
-    "contrato": "diazverso-thumb-v1",
+    "contrato": "contentlab-thumb-v1",
     "props": {
       "midia": "media:<id> — assunto dominante (obra com direitos)",
       "midiaB": "media:<id> — segunda mídia: layout VS",
       "texto": "até 4 palavras; *palavra* fica amarela; quebra de linha com \\n",
-      "humor": "expressão do Nox (omitir = sem Nox)",
+      "humor": "pose do personagem do projeto por humor (omitir = sem personagem)",
       "lado": "esquerda | direita — lado do texto",
       "tom": "amarelo | vermelho | azul",
       "selo": "selo curto (até 18 caracteres)",
@@ -370,32 +370,26 @@
     }
   },
   "poses": {
-    "lista": [
-      "acenando",
-      "apontando",
-      "arminha",
-      "assustado",
-      "bracos-cruzados",
-      "calma",
-      "cochichando",
-      "comemorando",
-      "explicando",
-      "explicando-centro",
-      "facepalm",
-      "high-five",
-      "ideia",
-      "joinha",
-      "mao-na-cabeca",
-      "maos-na-cintura",
-      "ombros",
-      "parado",
-      "pensando",
-      "rindo",
-      "triste"
-    ],
-    "uso": "stop motion: enquanto o Nox fala, a pose troca de uma vez a cada 0,7–1 s (um aparte de 3 s tem 3 ou 4 poses), sem animação entre poses. Todas as poses da lista precisam aparecer ao longo do vídeo, cada uma no tom certo. Pose = PNG pronto (gesto e olhos desenhados); <pose>-b, -2… são variantes sorteadas. Pose ausente usa o Nox canônico com o humor",
-    "catalogo": "assets/brand/nox/poses/catalogo.json",
-    "guia": "skills/diazverso-nox/references/poses.md"
+    "uso": "stop motion: enquanto o personagem fala, a pose troca de uma vez a cada 0,7–1 s (um aparte de 3 s tem 3 ou 4 poses), sem animação entre poses. O plano automático passa por todas as poses do personagem, cada uma no tom certo. Pose = PNG pronto (gesto e expressão desenhados); <pose>-b, -2… são variantes sorteadas.",
+    "pacote": "pasta com os PNGs das poses e catalogo.json ({ tons: { tom: descrição }, poses: { pose: { arquivos: [png], gesto, tons: [tom] } } }), importada no projeto com character_import (direitos confirmados)",
+    "tons": [
+      "abertura",
+      "base",
+      "explicacao",
+      "enfase",
+      "opiniao",
+      "piada",
+      "pergunta",
+      "surpresa",
+      "discordancia",
+      "ressalva",
+      "bastidor",
+      "erro",
+      "tristeza",
+      "descoberta",
+      "aprovacao",
+      "vitoria"
+    ]
   },
   "extras": {
     "uso": "por cima de qualquer cena, no campo extras do beat (tempos relativos ao beat)",

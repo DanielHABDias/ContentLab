@@ -26,7 +26,6 @@
     "app:status": "node scripts/start.mjs status",
     "qa:hq": "node scripts/qa-hq.mjs",
     "qa:mcp": "node scripts/qa-mcp.mjs",
-    "scenes:diazverso": "node scripts/build-diazverso-scenes.mjs",
     "qa:motion": "node scripts/qa-motion.mjs"
   },
   "dependencies": {
@@ -35,6 +34,7 @@
     "@modelcontextprotocol/sdk": "^1.32.2",
     "@react-three/fiber": "^9.3.0",
     "@remotion/bundler": "4.0.543",
+    "@remotion/player": "4.0.543",
     "@remotion/renderer": "4.0.543",
     "@remotion/three": "^4.0.543",
     "@vitejs/plugin-react": "latest",

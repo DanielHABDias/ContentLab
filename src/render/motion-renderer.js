@@ -1,16 +1,16 @@
-import { copyFile, link, mkdir, mkdtemp, open, readdir, rm, stat } from 'node:fs/promises';
+import { copyFile, link, mkdir, mkdtemp, rm, stat } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { cleanMetadata } from './clean-metadata.js';
-import { requireNoxDir } from '../core/nox-pack.js';
+import { pngSize } from '../core/character-pack.js';
 
 const run = promisify(execFile);
 const here = import.meta.url.startsWith('file:') ? path.dirname(fileURLToPath(import.meta.url)) : path.join(process.cwd(), 'src/render');
 export const KIT_ENTRY = path.resolve(here, '../motion/kit/index.ts');
-const BRAND = path.resolve(here, '../../assets/brand');
+const KIT_ASSETS = path.resolve(here, '../../assets/kit');
 const SIZES = { '16:9': [1920, 1080], '9:16': [1080, 1920], '1:1': [1080, 1080], '4:5': [1080, 1350] };
 const LOUDNESS_TARGET = -14;
 /** Cenas 3D (Three.js) precisam de WebGL no Chrome headless: ANGLE sobre SwiftShader funciona sem GPU. */
@@ -18,24 +18,28 @@ const SCENES_3D = new Set(['paineis3d']);
 const chromium = plan => (plan.beats.some(beat => SCENES_3D.has(beat.scene)) ? { gl: 'swangle' } : {});
 
 /**
- * Render do modo composição: o plano de motion (beats do kit Diazverso) vira um único vídeo Remotion.
- * Prepara a pasta pública (marca, SFX e só as mídias citadas), resolve `media:<id>`, renderiza com
+ * Render do modo composição: o plano de motion (beats do kit) vira um único vídeo Remotion.
+ * Prepara a pasta pública (fonte, SFX, poses do personagem do projeto e só as mídias citadas), resolve `media:<id>`, renderiza com
  * narração, legenda por palavra e trilha com ducking, e normaliza o áudio para −14 LUFS com limitador.
  */
-const pngSize = async file => { const handle = await open(file, 'r'); try { const head = Buffer.alloc(24); await handle.read(head, 0, 24, 0); return head.toString('ascii', 12, 16) === 'IHDR' ? { w: head.readUInt32BE(16), h: head.readUInt32BE(20) } : null; } finally { await handle.close(); } };
 /**
- * Poses do Nox: PNGs prontos (gesto e olhos desenhados) em `poses/` do pacote do Nox (plugin Diazverso); o nome do arquivo é a pose
- * e o sufixo `-b`, `-c`… (ou `-2`, `-3`…) faz dele variante da mesma pose, sorteada pelo kit.
+ * Personagem do projeto (`project.character`, importado com character_import): copia os PNGs das poses para a
+ * pasta pública e devolve `{ poses: arquivo → { src, w, h, pose }, tons: pose → tons }` para o kit. Sem personagem, vazio.
  */
-export async function loadNoxPoses(dir, prefix) {
-  const names = (await readdir(dir).catch(() => [])).filter(name => /^[a-z0-9-]+\.png$/.test(name));
-  const poses = {}; const files = [];
-  for (const file of names) {
-    const size = await pngSize(path.join(dir, file)); if (!size) continue;
-    const name = file.slice(0, -4);
-    poses[name] = { src: `${prefix}${file}`, ...size, pose: name.replace(/-(\d+|[a-z])$/, '') }; files.push(file);
+export async function stageCharacter(project, publicDir) {
+  const character = project.character; const poses = {}; const tons = {};
+  if (!character) return { poses, tons };
+  for (const [pose, entry] of Object.entries(character.poses)) {
+    tons[pose] = entry.tons || [];
+    for (const file of entry.arquivos) {
+      const item = project.media.find(media => media.id === character.files[file]);
+      if (!item?.uri) continue;
+      const size = await pngSize(item.uri).catch(() => null); if (!size) continue;
+      await place(item.uri, path.join(publicDir, 'personagem', file));
+      poses[file.slice(0, -4)] = { src: `public:personagem/${file}`, ...size, pose };
+    }
   }
-  return { poses, files };
+  return { poses, tons };
 }
 
 export class MotionRenderer {
@@ -47,20 +51,21 @@ export class MotionRenderer {
   }
 
   /**
-   * Thumbnails do kit (`DiazversoThumb`, 1280×720 ou o tamanho pedido): cada variante é um still com a mídia
-   * da obra, até 4 palavras em Anton e o Nox com expressão. Devolve um PNG por variante em `directory`.
+   * Thumbnails do kit (`KitThumb`, 1280×720 ou o tamanho pedido): cada variante é um still com a mídia
+   * da obra, até 4 palavras em Anton e, se houver, o personagem do projeto na pose do humor. Devolve um PNG por variante em `directory`.
    */
   async thumbnails(project, { variants, directory, width = 1280, height = 720 }) {
     const work = await mkdtemp(path.join(os.tmpdir(), 'contentlab-thumb-')); const publicDir = path.join(work, 'public');
     try {
-      const nox = requireNoxDir(); await place(path.join(BRAND, 'fonts/Anton-Regular.ttf'), path.join(publicDir, 'brand/Anton-Regular.ttf')); await place(path.join(nox, 'nox-sem-olhos.png'), path.join(publicDir, 'brand/nox-sem-olhos.png'));
+      await place(path.join(KIT_ASSETS, 'fonts/Anton-Regular.ttf'), path.join(publicDir, 'brand/Anton-Regular.ttf'));
+      const personagem = await stageCharacter(project, publicDir);
       const assets = await this.#stageMedia(project, mediaRefs({ beats: variants.map(variant => ({ props: variant })) }), publicDir);
       const { bundle } = await import('@remotion/bundler'); const { renderStill, selectComposition } = await import('@remotion/renderer');
       const serveUrl = await bundle({ entryPoint: KIT_ENTRY, outDir: path.join(work, 'bundle'), publicDir, enableCaching: true, onProgress: () => {} });
       await mkdir(directory, { recursive: true }); const files = [];
       for (const { label, ...variant } of variants) {
-        const inputProps = { ...variant, assets, width, height };
-        const composition = await selectComposition({ serveUrl, id: 'DiazversoThumb', inputProps, logLevel: 'error' });
+        const inputProps = { ...variant, assets, personagem, width, height };
+        const composition = await selectComposition({ serveUrl, id: 'KitThumb', inputProps, logLevel: 'error' });
         const file = path.join(directory, `thumb-${label}.png`);
         await renderStill({ serveUrl, composition, frame: 0, output: file, inputProps, logLevel: 'error', overwrite: true });
         files.push({ label, file });
@@ -91,20 +96,16 @@ export class MotionRenderer {
     try {
       onProgress({ phase: 'Preparando mídias', progress: 0.01 });
       await mkdir(path.join(publicDir, 'brand'), { recursive: true }); await mkdir(path.join(publicDir, 'sfx'), { recursive: true }); await mkdir(path.join(publicDir, 'media'), { recursive: true });
-      // Nox e poses vêm do pacote do plugin Diazverso no computador (não fazem parte do Content Lab).
-      const nox = requireNoxDir();
-      await place(path.join(BRAND, 'fonts/Anton-Regular.ttf'), path.join(publicDir, 'brand/Anton-Regular.ttf'));
-      for (const file of ['nox-sem-olhos.png', 'Nox.png']) await place(path.join(nox, file), path.join(publicDir, 'brand', file));
-      const { poses, files } = await loadNoxPoses(path.join(nox, 'poses'), 'public:brand/poses/');
-      for (const file of files) await place(path.join(nox, 'poses', file), path.join(publicDir, 'brand', 'poses', file));
+      await place(path.join(KIT_ASSETS, 'fonts/Anton-Regular.ttf'), path.join(publicDir, 'brand/Anton-Regular.ttf'));
+      const personagem = await stageCharacter(project, publicDir);
       const used = new Set(plan.beats.flatMap(beat => beat.sfx || []).map(cue => cue.name));
-      for (const name of used) await place(path.join(BRAND, 'sfx', `${name}.wav`), path.join(publicDir, 'sfx', `${name}.wav`));
+      for (const name of used) await place(path.join(KIT_ASSETS, 'sfx', `${name}.wav`), path.join(publicDir, 'sfx', `${name}.wav`));
       const assets = await this.#stageMedia(project, mediaRefs(plan), publicDir);
       let narration = null; let music = null;
       if (plan.narration !== false && inputs.narration) { await place(inputs.narration, path.join(publicDir, 'media', `narracao${path.extname(inputs.narration)}`)); narration = `public:media/narracao${path.extname(inputs.narration)}`; }
       if (plan.music && inputs.music) { await place(inputs.music, path.join(publicDir, 'media', `trilha${path.extname(inputs.music)}`)); music = `public:media/trilha${path.extname(inputs.music)}`; }
       const end = Math.max(...plan.beats.map(beat => beat.at + beat.duration), inputs.narrationSeconds || 0);
-      const props = { plan: { fps, width: even(width * scale), height: even(height * scale), duration: end, beats: plan.beats, captions: plan.captions, musicVolume: plan.music?.volume, duck: plan.music?.duck }, assets, narration, music, poses, words: plan.narration !== false ? inputs.words || [] : [] };
+      const props = { plan: { fps, width: even(width * scale), height: even(height * scale), duration: end, beats: plan.beats, captions: plan.captions, musicVolume: plan.music?.volume, duck: plan.music?.duck }, assets, narration, music, personagem, words: plan.narration !== false ? inputs.words || [] : [] };
       const scaled = scale === 1 ? props : { ...props, plan: { ...props.plan, width, height } };
 
       const { bundle } = await import('@remotion/bundler'); const { renderMedia, selectComposition, makeCancelSignal } = await import('@remotion/renderer');
@@ -112,7 +113,7 @@ export class MotionRenderer {
       const serveUrl = await bundle({ entryPoint: KIT_ENTRY, outDir: path.join(work, 'bundle'), publicDir, enableCaching: true, onProgress: () => {} });
       const inputProps = scaled;
       const chromiumOptions = chromium(plan);
-      const composition = await selectComposition({ serveUrl, id: 'DiazversoMotion', inputProps, chromiumOptions, logLevel: 'error' });
+      const composition = await selectComposition({ serveUrl, id: 'KitMotion', inputProps, chromiumOptions, logLevel: 'error' });
       if (stills) {
         const { renderStill } = await import('@remotion/renderer'); await mkdir(stills.directory, { recursive: true }); const files = [];
         for (const second of stills.seconds) { const file = path.join(stills.directory, `previa-${String(Math.round(second * 10)).padStart(5, '0')}.png`); await renderStill({ serveUrl, composition, frame: Math.min(composition.durationInFrames - 1, Math.max(0, Math.round(second * fps))), output: file, inputProps, scale, chromiumOptions, logLevel: 'error' }); files.push(file); }

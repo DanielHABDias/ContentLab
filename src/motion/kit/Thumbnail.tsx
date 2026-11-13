@@ -1,14 +1,14 @@
 import React, { useContext } from 'react';
 import { AbsoluteFill, Img, OffthreadVideo, CalculateMetadataFunction } from 'remotion';
 import { ANTON, C, Halftone, SpeedBurst, resolvePublic, useAnton } from './fx';
-import { Nox, Mood } from './Nox';
+import { Figura, Mood, PersonagemCtx, Character, figW } from './Personagem';
 import { Asset, Assets } from './scenes';
 
 /**
- * Thumbnail do vídeo (contrato `diazverso-thumb-v1`), renderizada como still 1280×720.
+ * Thumbnail do vídeo (contrato `contentlab-thumb-v1`), renderizada como still 1280×720.
  * Um assunto dominante (a mídia da obra), até 4 palavras em Anton com contorno e
- * aberração cromática, a palavra entre *asteriscos* em amarelo, Nox opcional com a
- * expressão que conta a emoção do vídeo e um selo curto opcional.
+ * aberração cromática, a palavra entre *asteriscos* em amarelo, o personagem do projeto
+ * (opcional) na pose do humor do vídeo e um selo curto opcional.
  */
 export type ThumbProps = {
   width?: number; height?: number;
@@ -17,6 +17,8 @@ export type ThumbProps = {
   midiaB?: string;
   texto: string;
   humor?: Mood;
+  /** Poses do personagem do projeto (sem ele, `humor` não mostra nada). */
+  personagem?: Character;
   lado?: 'esquerda' | 'direita';
   tom?: 'amarelo' | 'vermelho' | 'azul';
   selo?: string;
@@ -54,7 +56,8 @@ const BigText: React.FC<{ text: string; size: number; clean?: 'preto' | 'branco'
 
 export const Thumbnail: React.FC<ThumbProps> = (raw) => {
   useAnton();
-  const { assets, midia, midiaB, texto, humor, lado = 'esquerda', tom = 'amarelo', selo, width = 1280, height = 720, fundo = 'preto' } = resolvePublic(raw) as ThumbProps;
+  const { assets, personagem = { poses: {} }, midia, midiaB, texto, humor: wanted, lado = 'esquerda', tom = 'amarelo', selo, width = 1280, height = 720, fundo = 'preto' } = resolvePublic(raw) as ThumbProps;
+  const humor = wanted && Object.keys(personagem.poses || {}).length ? wanted : undefined;
   const accent = TONS[tom] || C.yellow;
   const words = texto.replace(/\*/g, '').split(/\s+/).filter(Boolean).length;
   const size = Math.round(height * (words <= 2 ? 0.25 : words <= 3 ? 0.21 : 0.18) * (humor && !midiaB ? 0.88 : 1));
@@ -69,21 +72,21 @@ export const Thumbnail: React.FC<ThumbProps> = (raw) => {
       <div style={{ position: 'absolute', top: 0, bottom: 0, [side === 'direita' ? 'right' : 'left']: 0, width: width * w, maskImage: fade, WebkitMaskImage: fade } as React.CSSProperties}><Subject id={id} fit="cover" /></div>
     );
     return (
-      <Assets.Provider value={assets}>
+      <Assets.Provider value={assets}><PersonagemCtx.Provider value={personagem}>
         <AbsoluteFill style={{ background: bg, overflow: 'hidden' }}>
           {versus ? <>{half(midia, 'esquerda')}{half(midiaB, 'direita')}</> : half(midia)}
-          {humor && <Nox mood={humor} height={height * 0.5} x={left ? width * 0.03 : width - height * 0.5 * 0.62 - width * 0.03} y={height * 0.52} flip={!left} blinkEvery={100000} />}
+          {humor && <Figura humor={humor} seed="thumb" height={height * 0.5} x={left ? width * 0.03 : width - figW(height * 0.5) - width * 0.03} y={height * 0.5} flip={!left} />}
           <div style={{ position: 'absolute', ...(versus ? { left: 0, right: 0, bottom: height * 0.07, textAlign: 'center' } : { top: humor ? height * 0.08 : height * 0.2, [left ? 'left' : 'right']: width * 0.05, maxWidth: width * 0.48, textAlign: left ? 'left' : 'right' }) } as React.CSSProperties}>
             <BigText text={texto} size={size} clean={fundo} />
           </div>
           {versus && <div style={{ position: 'absolute', left: '50%', top: height * 0.38, transform: 'translate(-50%, -50%)', fontFamily: ANTON, fontSize: height * 0.16, color: fundo === 'branco' ? C.ink : C.white }}>VS</div>}
           {selo && <div style={{ position: 'absolute', top: height * 0.06, [left ? 'left' : 'right']: width * 0.05, background: accent, color: C.ink, fontFamily: ANTON, fontSize: height * 0.06, padding: '2px 16px', textTransform: 'uppercase' } as React.CSSProperties}>{selo}</div>}
         </AbsoluteFill>
-      </Assets.Provider>
+      </PersonagemCtx.Provider></Assets.Provider>
     );
   }
   return (
-    <Assets.Provider value={assets}>
+    <Assets.Provider value={assets}><PersonagemCtx.Provider value={personagem}>
       <AbsoluteFill style={{ background: C.ink, overflow: 'hidden' }}>
         {versus ? (
           <>
@@ -98,14 +101,14 @@ export const Thumbnail: React.FC<ThumbProps> = (raw) => {
         {!versus && <AbsoluteFill style={{ background: `linear-gradient(${left ? 90 : 270}deg, rgba(11,11,16,.92) 0%, rgba(11,11,16,.7) 38%, transparent 62%)` }} />}
         {!versus && <AbsoluteFill style={{ opacity: 0.35, maskImage: `linear-gradient(${left ? 90 : 270}deg, #000 0%, transparent 45%)`, WebkitMaskImage: `linear-gradient(${left ? 90 : 270}deg, #000 0%, transparent 45%)` }}><Halftone bg="transparent" dot={accent} size={18} drift={false} /></AbsoluteFill>}
         <AbsoluteFill style={{ boxShadow: 'inset 0 0 160px rgba(0,0,0,.65)' }} />
-        {humor && <Nox mood={humor} height={height * 0.6} x={left ? width * 0.015 : width - height * 0.6 * 0.62 - width * 0.015} y={height * 0.44} flip={!left} blinkEvery={100000} tilt={left ? -5 : 5} />}
+        {humor && <Figura humor={humor} seed="thumb" height={height * 0.6} x={left ? width * 0.015 : width - figW(height * 0.6) - width * 0.015} y={height * 0.4} flip={!left} tilt={left ? -5 : 5} />}
         <div style={{ position: 'absolute', top: versus ? height * 0.6 : humor ? height * 0.05 : height * 0.12, [left ? 'left' : 'right']: width * 0.045, ...(versus ? { left: 0, right: 0, display: 'flex', justifyContent: 'center' } : {}), maxWidth: versus ? width : width * 0.55, textAlign: versus ? 'center' : left ? 'left' : 'right' } as React.CSSProperties}>
           <BigText text={texto} size={size} />
         </div>
         {versus && <div style={{ position: 'absolute', left: '50%', top: height * 0.3, transform: 'translate(-50%, -50%) rotate(-6deg)', fontFamily: ANTON, fontSize: height * 0.2, color: C.ink, background: accent, padding: '0 28px', border: `8px solid ${C.ink}`, boxShadow: `10px 10px 0 ${C.ink}` }}>VS</div>}
         {selo && <div style={{ position: 'absolute', top: height * 0.05, [left ? 'right' : 'left']: width * 0.04, background: C.red, color: C.white, fontFamily: ANTON, fontSize: height * 0.07, padding: '4px 20px', border: `6px solid ${C.ink}`, transform: 'rotate(3deg)', boxShadow: `8px 8px 0 ${C.ink}`, textTransform: 'uppercase' } as React.CSSProperties}>{selo}</div>}
       </AbsoluteFill>
-    </Assets.Provider>
+    </PersonagemCtx.Provider></Assets.Provider>
   );
 };
 

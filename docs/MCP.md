@@ -58,9 +58,10 @@ Um servidor MCP não consegue iniciar uma mensagem no chat por conta própria; q
 | `stage_wait_decision`, `stage_approve`, `stage_request_changes` | Aprovação humana ou do agente. Ver as regras abaixo |
 | `media_import_files`, `media_import_url`, `media_generate_slides` | Mídias próprias ou licenciadas, ou um slide por cena do roteiro quando não há filmagem |
 | `voice_options`, `narration_generate`, `narration_assemble` | Narração **padrão** (Kokoro: Alex, Dora, Santa; rápida) ou **clonada** (seu perfil de voz; lenta em CPU) e a montagem tratada da narração |
-| `motion_kit`, `motion_plan_auto`, `motion_plan_get`, `motion_plan_set`, `motion_preview` | **Modo composição** (principal): o vídeo inteiro como motion design do kit Diazverso, em beats; plano automático, ajuste pelo agente e prévia em PNG. Ver [MOTION.md](MOTION.md) |
+| `motion_kit`, `motion_plan_auto`, `motion_plan_get`, `motion_plan_set`, `motion_preview` | **Modo composição** (principal): o vídeo inteiro como motion design do kit de motion, em beats; plano automático, ajuste pelo agente e prévia em PNG. Ver [MOTION.md](MOTION.md) |
+| `character_import` | Importa o personagem do projeto: pasta com PNGs de poses e `catalogo.json` (pose, gesto, tons), com direitos confirmados. Vira mídia com papel `character`. Sem personagem, o plano não tem aparte nem a cena `personagem`. `dryRun` confere sem gravar |
 | `narration_transcribe` | Transcreve a narração montada (Whisper local) para legenda palavra a palavra |
-| `scene_list`, `scene_add` | Cenas HQ do plugin Diazverso, com plano sugerido (um beat visual por frase, cada um com imagem do assunto); adicionar uma cena num intervalo |
+| `scene_list`, `scene_add` | Cenas HQ do Content Lab, com plano sugerido (um beat visual por frase, cada um com imagem do assunto); adicionar uma cena num intervalo |
 | `audio_library` | Efeitos sonoros **originais** (whoosh, ding, boom, riser) e uma trilha sintetizada que é só rascunho |
 | `timeline_auto_assemble` | Coloca a narração no áudio, distribui as mídias pela duração e cria legendas sincronizadas por cena. Opcionalmente: cenas HQ (`scenes: "auto"` ou lista), trilha com ducking (`music`), SFX nas trocas (`sfx`). Em 9:16 aplica as áreas seguras de Shorts |
 | `chapters_get` | Capítulos a partir dos tempos reais da narração |
