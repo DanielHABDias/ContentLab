@@ -205,7 +205,13 @@ function VoiceSection({ projectPath, narration, finalTakeIds, base, state, setup
   const [profileId, setProfileId] = useState(state.profiles[0]?.id || ''); const [plan, setPlan] = useState(null);
   useEffect(() => { if (!state.profiles.some(profile => profile.id === profileId)) setProfileId(state.profiles[0]?.id || ''); }, [state.profiles]);
   const pending = state.scenes.filter(scene => !scene.generated[profileId]);
-  const checkPlan = async () => setPlan((await act(() => localApi.voicePlan()))?.plan || null);
+  const checkPlan = async () => { const next = (await act(() => localApi.voicePlan()))?.plan || null; setPlan(next); return next; };
+  // Antes de gerar, confere a memória de novo: se faltar, mostra o painel para liberar em vez de abrir uma tarefa que falha.
+  const generate = async sceneIds => {
+    const next = await checkPlan();
+    if (next?.status === 'needs-free-memory') { window.requestAnimationFrame(() => document.getElementById('memory-panel')?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })); return; }
+    await startJob(() => localApi.generateVoice({ path: projectPath, profileId, sceneIds }));
+  };
   // Confere a memória assim que a seção abre, para mostrar antes de gerar o que dá para fechar.
   useEffect(() => { if (state.profiles.length && !missing.length) Promise.resolve(localApi.voicePlan()).then(result => setPlan(result?.plan || null), () => null); }, [state.profiles.length, missing.length]);
   return <section className="workflow-card" aria-labelledby="voice-title">
@@ -213,10 +219,10 @@ function VoiceSection({ projectPath, narration, finalTakeIds, base, state, setup
     {missing.length > 0 ? <div className="notice error" role="alert"><span>Para gerar voz, instale: {missing.map(item => item.label).join(', ')}.</span><button className="mini-button" onClick={() => onOpenSetup(missing.map(item => item.id))}>Instalar dependências</button></div> : <>
       {!state.profiles.length && <div className="empty-state"><strong>Nenhum perfil de voz.</strong><span>Grave uma amostra da sua voz em “Minha voz” (barra lateral): o Content Lab mostra um texto de cerca de 60 s, grava e cria o perfil. A narração por voz de IA só fica disponível depois disso.</span>{onOpenVoice && <button className="button primary" onClick={onOpenVoice}><Mic size={17} aria-hidden="true"/> Abrir Minha voz</button>}</div>}
       {state.profiles.length > 0 && <>
-        <div className="generate-bar"><label>Perfil<select value={profileId} onChange={event => setProfileId(event.target.value)}>{state.profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label><button className="mini-button" onClick={checkPlan}>Verificar recursos</button><button className="button primary" disabled={!pending.length || running} onClick={() => startJob(() => localApi.generateVoice({ path: projectPath, profileId, sceneIds: pending.map(scene => scene.id) }))}>Gerar {pending.length} cena{pending.length === 1 ? '' : 's'} pendente{pending.length === 1 ? '' : 's'}</button></div>
-        {plan && <p className="plan-line" role="status">{plan.status === 'ready' ? `Pronto: ${plan.device.toUpperCase()}, ${plan.threads} núcleos, até ${Math.round(plan.memoryLimitBytes / 1024 ** 3)} GB.` : plan.reasons.join(' ')}{plan.estimate?.realtimeFactor ? ` Cerca de ${plan.estimate.realtimeFactor} s de processamento por segundo de fala (${plan.estimate.source}).` : ''}</p>}
+        <div className="generate-bar"><label>Perfil<select value={profileId} onChange={event => setProfileId(event.target.value)}>{state.profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label><button className="mini-button" onClick={checkPlan}>Verificar recursos</button><button className="button primary" disabled={!pending.length || running} onClick={() => generate(pending.map(scene => scene.id))}>Gerar {pending.length} cena{pending.length === 1 ? '' : 's'} pendente{pending.length === 1 ? '' : 's'}</button></div>
+        {plan && plan.status !== 'needs-free-memory' && <p className="plan-line" role="status">{plan.status === 'ready' ? `Pronto: ${plan.device.toUpperCase()}, ${plan.threads} núcleos, até ${Math.round(plan.memoryLimitBytes / 1024 ** 3)} GB.` : plan.reasons.join(' ')}{plan.estimate?.realtimeFactor ? ` Cerca de ${plan.estimate.realtimeFactor} s de processamento por segundo de fala (${plan.estimate.source}).` : ''}</p>}
         {plan?.status === 'needs-free-memory' && <MemoryPanel plan={plan} onChanged={checkPlan}/>}
-        {state.scenes.length ? <ol className="media-list">{state.scenes.map(scene => <li key={scene.id}><span><strong>{scene.label}</strong><small>{scene.text.length > 140 ? `${scene.text.slice(0, 140)}…` : scene.text}</small></span>{scene.generated[profileId] ? <span className="available">Gerada</span> : <button className="mini-button" disabled={running} onClick={() => startJob(() => localApi.generateVoice({ path: projectPath, profileId, sceneIds: [scene.id] }))}>Gerar</button>}</li>)}</ol> : <div className="empty-state"><span>Escreva abertura, desenvolvimento ou payoff no roteiro para gerar cenas.</span></div>}
+        {state.scenes.length ? <ol className="media-list">{state.scenes.map(scene => <li key={scene.id}><span><strong>{scene.label}</strong><small>{scene.text.length > 140 ? `${scene.text.slice(0, 140)}…` : scene.text}</small></span>{scene.generated[profileId] ? <span className="available">Gerada</span> : <button className="mini-button" disabled={running} onClick={() => generate([scene.id])}>Gerar</button>}</li>)}</ol> : <div className="empty-state"><span>Escreva abertura, desenvolvimento ou payoff no roteiro para gerar cenas.</span></div>}
         <div className="voice-final">
           <div><strong>Narração final</strong><small>{pending.length ? `Faltam ${pending.length} cena${pending.length === 1 ? '' : 's'} para gerar. ` : ''}Junta as cenas geradas, na ordem do roteiro, num único áudio no volume padrão do YouTube. A voz de IA já sai limpa: não passa por tratamento.</small></div>
           <button className="button primary" disabled={!finalTakeIds.length || running} onClick={() => startJob(() => localApi.assembleNarration({ ...base, takeIds: finalTakeIds, treatment: AI_FINAL_TREATMENT }))}><Wand2 size={17} aria-hidden="true"/> {narration.assembled ? 'Montar de novo' : 'Montar narração final'}</button>
@@ -248,7 +254,7 @@ function MemoryPanel({ plan, onChanged }) {
     } catch (issue) { setError(issue.message); }
     await onChanged(); await load();
   };
-  return <div className="memory-panel" role="region" aria-labelledby="memory-title">
+  return <div id="memory-panel" className="memory-panel" role="region" aria-labelledby="memory-title">
     <div className="memory-head">
       <div><strong id="memory-title">Libere {gbText(missingBytes)} de memória para gerar</strong><small>A voz clonada precisa de {gbText(plan.requiredBytes)} livres; há {gbText(plan.availableBytes)} agora. Feche algum destes programas:</small></div>
       <button className="mini-button" onClick={async () => { await onChanged(); await load(); }}>Verificar de novo</button>

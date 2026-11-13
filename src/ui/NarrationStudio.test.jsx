@@ -140,3 +140,13 @@ test('sem RAM livre, mostra o que fechar e fecha com confirmação', async () =>
   await waitFor(() => expect(localApi.closeApp).toHaveBeenCalledWith({ name: 'ChatGPT', force: false }));
   expect(await screen.findByText(/chatgpt fechado: cerca de 3,2 gb liberados/i)).toBeInTheDocument();
 });
+
+test('sem memória, gerar não abre tarefa: mostra o painel para liberar', async () => {
+  localApi.voicePlan.mockResolvedValue({ plan: { status: 'needs-free-memory', requiredBytes: 11.5 * 1024 ** 3, availableBytes: 10.7 * 1024 ** 3, reasons: [], device: 'cpu', threads: 9, memoryLimitBytes: 0, estimate: {} } });
+  localApi.systemApps.mockResolvedValue({ supported: true, apps: [] });
+  render(<NarrationStudio details={details('ai')} setup={setup()} onOpenSetup={vi.fn()}/>);
+  fireEvent.click(await screen.findByRole('button', { name: /gerar 1 cena pendente/i }));
+  expect(await screen.findByRole('region', { name: /libere 0,8 gb/i })).toBeInTheDocument();
+  await waitFor(() => expect(localApi.voicePlan).toHaveBeenCalledTimes(2));
+  expect(localApi.generateVoice).not.toHaveBeenCalled();
+});
