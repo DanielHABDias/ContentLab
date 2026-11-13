@@ -1,3 +1,4 @@
+import { NarrationReader } from './NarrationReader.jsx';
 import { ScriptPanel } from './ScriptPanel.jsx';
 import { useEffect, useRef, useState } from 'react';
 import { BookOpen, Power, ArrowLeft, ArrowRight, Check, Eye, Film, FileText, Lock, Mic, SlidersHorizontal, Wrench, FolderOpen, History, LayoutTemplate, MessageSquareText, Plus, RotateCcw, Save, Settings2, Sparkles, Tag, X } from 'lucide-react';
@@ -211,6 +212,11 @@ function ShutDownScreen() {
 }
 
 export function App() {
+  const query = new URLSearchParams(window.location.search);
+  return query.get('view') === 'narration-script' ? <NarrationReader projectPath={query.get('project')}/> : <ContentLabApp/>;
+}
+
+function ContentLabApp() {
   const [shutDown, setShutDown] = useState(false);
   if (shutDown) return <ShutDownScreen/>;
   return <AppShell onShutDown={() => setShutDown(true)}/>;

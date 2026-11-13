@@ -1,5 +1,10 @@
 # Narração, voz e áudio
 
+## Ler durante a gravação
+
+Em **Narração → Eu gravo**, clique em **Abrir roteiro em outra aba**, disponível no roteiro e ao lado dos controles de gravação. Mova a aba para a segunda tela e mantenha a gravação na aba principal. A aba de leitura exibe somente falas, separadas por capítulos com títulos de orientação, com ajuste de tamanho do texto e atalhos de capítulos. Abrir ou fechar essa aba não interrompe o microfone da aba principal. Se editar o roteiro, clique em **Atualizar roteiro** na aba de leitura; o texto não muda automaticamente durante a fala.
+
+
 Tudo fica em `<projeto>/narration/` (`src/audio/narration-service.js` + `src/server/narration-operations.js`), pela mesma API usada pela interface:
 
 - **Takes**: gravação pelo microfone (só depois do clique em “Permitir microfone”; captura sem cancelamento de eco/ruído do navegador) ou importação de áudio/vídeo. Cada take guarda o original como veio (`takes/<id>/original.*`) e um WAV de trabalho PCM 48 kHz mono (`take.wav`).

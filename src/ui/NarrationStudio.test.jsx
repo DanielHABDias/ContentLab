@@ -219,3 +219,27 @@ test('mostra transcrição pronta e permite retomar a falha sem remontar os take
   expect(localApi.productionTranscribeNarration).toHaveBeenCalledWith({ path: '/p' });
   expect(localApi.assembleNarration).not.toHaveBeenCalled();
 });
+
+test('abre roteiro em outra aba ao lado da gravação, mantendo o projeto e a captura ativa', async () => {
+  const stopTrack = vi.fn(); const stopRecording = vi.fn(); const startRecording = vi.fn();
+  Object.defineProperty(navigator, 'mediaDevices', { value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [{ stop: stopTrack }] }) }, configurable: true });
+  const previousRecorder = globalThis.MediaRecorder;
+  globalThis.MediaRecorder = class { static isTypeSupported() { return true; } start = startRecording; stop = stopRecording; };
+  const view = render(<NarrationStudio details={details('creator')} setup={setup()}/>);
+  const takes = await screen.findByRole('region', { name: 'Gravações e áudios' });
+  const link = within(takes).getByRole('link', { name: 'Abrir roteiro em outra aba' });
+  expect(link).toHaveAttribute('target', '_blank');
+  expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  const url = new URL(link.href);
+  expect(url.searchParams.get('view')).toBe('narration-script');
+  expect(url.searchParams.get('project')).toBe('/p');
+  fireEvent.click(within(takes).getByRole('button', { name: /permitir microfone/i }));
+  fireEvent.click(await within(takes).findByRole('button', { name: 'Gravar' }));
+  fireEvent.click(link);
+  expect(within(takes).getByRole('button', { name: /Parar/ })).toBeEnabled();
+  expect(startRecording).toHaveBeenCalledTimes(1);
+  expect(stopRecording).not.toHaveBeenCalled();
+  expect(stopTrack).not.toHaveBeenCalled();
+  view.unmount();
+  globalThis.MediaRecorder = previousRecorder;
+});

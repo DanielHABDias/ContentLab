@@ -333,3 +333,18 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-vi
 .read-chapter .read-scenes { margin: 12px 0 0; }
 .narration-transcription p { font-size: 14px; line-height: 1.6; }
 .narration-transcription .ready { color: #a7dfc8; }
+
+/* Leitura em uma segunda tela, com rolagem única para o roteiro inteiro. */
+.narration-reader { min-height: 100vh; }
+.reader-toolbar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px; padding: 20px clamp(20px, 5vw, 72px); background: var(--bg, #0b0b10); border-bottom: 1px solid var(--line); }
+.reader-toolbar h1 { font-size: 28px; margin: 4px 0; }
+.reader-toolbar p { margin: 0; color: var(--muted); }
+.reader-content { max-width: 1000px; margin: auto; padding: 24px clamp(20px, 5vw, 60px) 40vh; }
+.reader-hint { color: var(--muted); line-height: 1.6; }
+.reader-chapters { display: flex; flex-wrap: wrap; gap: 12px 24px; margin: 24px 0; }
+.reader-chapters a { color: var(--blue); text-underline-offset: 4px; }
+.narration-reader .read-chapter { scroll-margin-top: 190px; padding-top: 32px; margin-top: 32px; }
+.narration-reader .read-scenes { max-height: none; overflow: visible; gap: 24px; }
+.narration-reader .read-scenes p { font-size: var(--reading-size); line-height: 1.75; }
+.script-to-read > .button { margin-bottom: 18px; }
+@media (max-width: 600px) { .reader-toolbar { position: static; } .narration-reader .read-chapter { scroll-margin-top: 20px; } }

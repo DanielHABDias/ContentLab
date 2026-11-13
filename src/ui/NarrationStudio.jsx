@@ -6,6 +6,7 @@ import { JobsPanel, clock } from './MediaLibrary.jsx';
 import { DependencyNotice } from './DependencyGate.jsx';
 import { useVoiceGeneration } from './useVoiceGeneration.js';
 import { MemoryPanel } from './MemoryPanel.jsx';
+import { NarrationChapters, NarrationReaderLink } from './NarrationReader.jsx';
 import { featureBlock } from '../core/capabilities.js';
 
 const ORIGINS = { recording: 'Gravação', import: 'Importado', generated: 'Voz clonada' };
@@ -40,7 +41,7 @@ export function NarrationStudio({ details, setup, onOpenSetup, onUpdated, onOpen
     <NarratorChoice project={details.project} profiles={state.profiles} path={projectPath} onUpdated={onUpdated} onOpenVoice={onOpenVoice}/>
     {/* Só aparecem as seções do jeito escolhido: voz de IA gera por cena; "Eu gravo" grava ou importa takes. */}
     {mode === 'ai' && <VoiceSection projectPath={projectPath} narration={narration} finalTakeIds={finalTakeIds} base={base} state={state} setup={setup} onOpenSetup={onOpenSetup} act={act} startJob={startJob} reload={load} jobs={jobs} running={running} onOpenVoice={onOpenVoice}/>}
-    {mode === 'creator' && <ScriptToRead scenes={state.scenes}/>}
+    {mode === 'creator' && <ScriptToRead scenes={state.scenes} projectPath={projectPath}/>}
     {mode === 'creator' && <TakesSection projectPath={projectPath} narration={narration} act={act} base={base}/>}
     {mode === 'creator' && <TreatmentSection takeIds={finalTakeIds} projectPath={projectPath} narration={narration} previewSeconds={state.previewSeconds} act={act} startJob={startJob} base={base} setup={setup} onOpenSetup={onOpenSetup}/>}
     {mode && <TranscriptionStatus transcription={state.transcription} assembled={narration.assembled} running={running} onRetry={() => startJob(() => localApi.productionTranscribeNarration({ path: projectPath }))}/>}
@@ -94,7 +95,7 @@ function TakesSection({ projectPath, narration, act, base }) {
   const importFiles = async () => { const choice = await act(() => localApi.chooseMedia('Importar áudio para a narração', true)); if (!choice?.paths?.length) return; const result = await act(() => localApi.narrationImport({ path: projectPath, sources: choice.paths })); if (result) await act(async () => null, result.failed ? `${result.imported} importado(s); falharam: ${result.results.filter(item => item.error).map(item => item.error).join('; ')}` : `${result.imported} take(s) importado(s).`); };
   const move = (index, delta) => { const order = narration.takes.map(take => take.id); const [item] = order.splice(index, 1); order.splice(index + delta, 0, item); return act(() => localApi.reorderTakes({ ...base, order })); };
   return <section className="workflow-card" aria-labelledby="takes-title">
-    <div className="section-title"><div><span className="eyebrow">Takes</span><h2 id="takes-title">Gravações e áudios</h2></div><div className="header-actions"><Recorder projectPath={projectPath} onDone={() => act(async () => null, 'Gravação salva como take.')}/><button className="button quiet" onClick={importFiles}><Upload size={17}/> Importar áudio</button></div></div>
+    <div className="section-title"><div><span className="eyebrow">Takes</span><h2 id="takes-title">Gravações e áudios</h2></div><div className="header-actions"><NarrationReaderLink projectPath={projectPath}/><Recorder projectPath={projectPath} onDone={() => act(async () => null, 'Gravação salva como take.')}/><button className="button quiet" onClick={importFiles}><Upload size={17}/> Importar áudio</button></div></div>
     {narration.takes.length ? <ol className="media-list take-list">{narration.takes.map((take, index) => <li key={take.id}>
       <span><strong>{take.name}</strong><small>{ORIGINS[take.origin]} · {clock(take.durationSeconds)}{take.trim ? ` · usa ${clock(take.trim.start)}–${clock(take.trim.end)}` : ''}{take.stale ? ' · texto da cena mudou' : ''}</small><audio controls preload="none" src={fileUrl(projectPath, { take: take.id })} aria-label={`Ouvir ${take.name}`}/></span>
       <span className="take-actions"><button className="icon-button" aria-label={`Subir ${take.name}`} disabled={index === 0} onClick={() => move(index, -1)}><ArrowUp size={16}/></button><button className="icon-button" aria-label={`Descer ${take.name}`} disabled={index === narration.takes.length - 1} onClick={() => move(index, 1)}><ArrowDown size={16}/></button><button className="mini-button" onClick={() => setEditing(take)}>Editar</button><button className="icon-button" aria-label={`Excluir ${take.name}`} onClick={() => setDeleting(take)}><Trash2 size={16}/></button></span>
@@ -257,18 +258,12 @@ function VoiceProgress({ job, scenes }) {
 }
 
 /** Somente fala, agrupada pelos capítulos editoriais; títulos são orientação, nunca locução. */
-function ScriptToRead({ scenes }) {
-  const chapters = [];
-  for (const scene of scenes) {
-    const id = scene.chapterId || scene.section || scene.id;
-    let chapter = chapters.find(item => item.id === id);
-    if (!chapter) { chapter = { id, title: scene.chapterTitle || ({ hook: 'Abertura', development: 'Desenvolvimento', payoff: 'Encerramento' }[scene.section]) || scene.label.replace(/ \d+$/, ''), scenes: [] }; chapters.push(chapter); }
-    chapter.scenes.push(scene);
-  }
+function ScriptToRead({ scenes, projectPath }) {
   return <section className="workflow-card script-to-read" aria-labelledby="script-read-title">
+    <NarrationReaderLink projectPath={projectPath}/>
     <details open>
       <summary><span className="eyebrow">Para gravar</span><h2 id="script-read-title">Roteiro de narração</h2><small>Leia somente os textos abaixo. Os títulos dos capítulos não são narrados.</small></summary>
-      {chapters.length ? chapters.map((chapter, index) => <section className="read-chapter" key={chapter.id} aria-labelledby={`read-chapter-${index}`}><h3 id={`read-chapter-${index}`}>{chapter.title}</h3><small>Título de orientação · não narrar</small><ol className="read-scenes">{chapter.scenes.map(scene => <li key={scene.id}>{(scene.lines || [{ text: scene.text }]).map((line, i) => <p key={i}>{line.text}</p>)}</li>)}</ol></section>) : <p className="empty-state">O roteiro ainda não tem texto para narrar.</p>}
+      <NarrationChapters scenes={scenes}/>
     </details>
   </section>;
 }
