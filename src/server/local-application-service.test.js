@@ -17,13 +17,25 @@ test('cria projeto real e o registra nos recentes', async () => {
   expect(await service.listProjects()).toMatchObject([{ id: 'meu_video_real', path: path.join(root, 'workspace', 'meu_video_real') }]);
 });
 
-test('guarda o fluxo combinado: pausas e quem grava a narração', async () => {
+test('guarda o modo de produção e deixa quem narra para a etapa Narração', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'contentlab-flow-')); roots.push(root);
   const service = new LocalApplicationService({ dataDirectory: path.join(root, 'data') });
-  const created = await service.createProject({ title: 'Fluxo', type: 'long', aspectRatio: '16:9', mode: 'autonomous', pauseAt: ['script', 'narration', 'script'], narrationBy: 'creator', parentDirectory: path.join(root, 'w') });
-  expect(created.project).toMatchObject({ mode: 'autonomous', pauseAt: ['script', 'narration'], narrationBy: 'creator' });
+  const created = await service.createProject({ title: 'Fluxo', type: 'long', aspectRatio: '16:9', mode: 'autonomous', narrationBy: 'creator', parentDirectory: path.join(root, 'w') });
+  expect(created.project).toMatchObject({ mode: 'autonomous', narrationBy: 'creator' });
   const plain = await service.createProject({ title: 'Padrão', type: 'short', aspectRatio: '9:16', parentDirectory: path.join(root, 'w') });
-  expect(plain.project).toMatchObject({ mode: 'review', pauseAt: [], narrationBy: 'ai' });
+  expect(plain.project).toMatchObject({ mode: 'review', narrationBy: null });
+});
+
+test('a voz de IA é recusada enquanto não houver perfil de voz gravado', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'contentlab-voice-gate-')); roots.push(root);
+  const service = new LocalApplicationService({ dataDirectory: path.join(root, 'data') });
+  await expect(service.createProject({ title: 'Com IA', type: 'long', aspectRatio: '16:9', narrationBy: 'ai', parentDirectory: path.join(root, 'w') }))
+    .rejects.toMatchObject({ code: 'VOICE_PROFILE_REQUIRED' });
+  const created = await service.createProject({ title: 'Sem escolha', type: 'long', aspectRatio: '16:9', parentDirectory: path.join(root, 'w') });
+  await expect(service.runProjectAction({ path: created.path, baseRevision: created.project.revision, action: { type: 'project.update', narrationBy: 'ai' } }))
+    .rejects.toMatchObject({ code: 'VOICE_PROFILE_REQUIRED' });
+  const updated = await service.runProjectAction({ path: created.path, baseRevision: created.project.revision, action: { type: 'project.update', narrationBy: 'creator' } });
+  expect(updated.project.narrationBy).toBe('creator');
 });
 
 test('cancelamento do seletor retorna null sem fingir sucesso', async () => {

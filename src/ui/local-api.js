@@ -102,7 +102,7 @@ export const localApi = {
   transcript: input => post('/media/transcript', input),
   saveTranscript: input => post('/media/transcript-save', input),
   searchTranscripts: input => post('/media/search', input),
-  jobs: path => request(`/jobs?path=${encodeURIComponent(path)}`),
+  jobs: path => request(path ? `/jobs?path=${encodeURIComponent(path)}` : '/jobs'),
   cancelJob: jobId => post('/jobs/cancel', { jobId }),
   editState: path => post('/edit/state', { path }),
   editApply: input => post('/edit/apply', input),
@@ -127,6 +127,16 @@ export const localApi = {
   deleteVoiceProfile: profileId => post('/narration/profile-delete', { profileId, confirm: true }),
   generateVoice: input => post('/narration/generate', input),
   voicePlan: () => post('/narration/voice-plan', {}),
+  voiceStudio: () => request('/voice/studio'),
+  discardVoiceSample: sampleId => post('/voice/sample-discard', { sampleId }),
+  generateVoiceCheck: profileId => post('/voice/profile-check', { profileId }),
+  /** Amostra de voz gravada em “Minha voz”: vai para fora de qualquer projeto. */
+  uploadVoiceSample: async ({ blob, name }) => {
+    const response = await fetch(`/api/v1/voice/sample?name=${encodeURIComponent(name)}`, { method: 'POST', body: blob, headers: { 'x-contentlab-client': '1', 'content-type': 'application/octet-stream' } });
+    const value = await response.json().catch(() => ({}));
+    if (!response.ok) throw Object.assign(new Error(value.error || `Falha no envio (${response.status})`), { code: value.code, details: value.details });
+    return value;
+  },
   /** Gravação do microfone (Blob) enviada como corpo bruto. */
   uploadTake: async ({ path, blob, name, origin = 'recording' }) => {
     const response = await fetch(`/api/v1/narration/upload?path=${encodeURIComponent(path)}&name=${encodeURIComponent(name)}&origin=${origin}`, { method: 'POST', body: blob, headers: { 'x-contentlab-client': '1', 'content-type': 'application/octet-stream' } });

@@ -79,7 +79,7 @@ export function planAutonomousStage(project, stageId, { jobId, operationId }) {
   let stopReason = missing.length ? 'missing_artifacts' : 'approval';
   const log = missing.length ? [`Faltam: ${missing.join(', ')}`] : ['Artefatos verificados', 'Aprovação humana necessária'];
   if (stageId === 'media' && project.media.some(item => item.rights === 'pending')) { state = 'waiting_rights'; stopReason = 'rights'; }
-  else if (stageId === 'narration' && missing.length) { state = 'waiting_consent'; stopReason = 'consent'; log.splice(0, log.length, 'Escolha gravação/importação ou confirme consentimento antes de usar voz sintética'); }
+  else if (stageId === 'narration' && missing.length) { state = 'waiting_consent'; stopReason = 'consent'; log.splice(0, log.length, 'Escolha gravação/importação ou confirme consentimento antes de usar a voz clonada'); }
   else if (stageId === 'review' && !missing.length) { state = 'waiting_cost'; stopReason = 'cost'; log.splice(0, log.length, 'Render pode consumir tempo e recursos', 'Confirmação de custo necessária'); }
   return { id: jobId, stageId, state, baseRevision: project.revision, operationId, inputs: [`project@${project.revision}`, `stage:${stageId}@${stage.revision}`], outputs: missing.map(item => `missing:${item}`), log, stopReason, createdAt: new Date().toISOString(), finishedAt: new Date().toISOString() };
 }

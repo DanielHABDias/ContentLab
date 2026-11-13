@@ -30,6 +30,20 @@ async function call(name, args = {}) {
   if (result.isError) throw Object.assign(new Error(`${name}: ${value.error}`), { code: value.code });
   return value;
 }
+
+/**
+ * Perfil de voz clonada usado pelo QA. A única voz de IA do Content Lab é a voz clonada da
+ * pessoa: sem perfil gravado em “Minha voz”, o QA para avisando em vez de fingir sucesso.
+ */
+async function requireVoiceProfile() {
+  const options = await call('voice_options');
+  if (options.install) throw new Error(`QA precisa da voz clonada: ${options.install}`);
+  const wanted = process.env.CONTENTLAB_QA_VOICE_PROFILE;
+  const profile = wanted ? options.profiles.find(item => item.id === wanted) : options.profiles[0];
+  if (!profile) throw new Error('QA precisa de um perfil de voz: grave a sua voz em “Minha voz” no app (cerca de 60 s de leitura) e rode de novo. A geração é lenta em CPU (~30 s por segundo de fala).');
+  note(`  voz clonada: perfil ${profile.name} (${profile.id})`);
+  return profile.id;
+}
 async function waitJob(projectPath, jobId, label) { for (;;) { const job = await call('job_wait', { path: projectPath, jobId, timeoutSeconds: 120 }); if (!job.waiting) { if (job.state !== 'completed') throw new Error(`${label}: ${job.state} ${job.error || ''}`); return job; } note(`  … ${label}: ${job.phase || ''} ${typeof job.progress === 'number' ? `${Math.round(job.progress * 100)}%` : ''}`); } }
 const approve = async projectPath => { const { currentStage } = await call('project_get', { path: projectPath }); if (currentStage?.missing?.length) throw new Error(`Etapa ${currentStage.id} incompleta: ${currentStage.missing.join(', ')}`); await call('stage_approve', { path: projectPath }); };
 const probe = file => JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration:stream=codec_type,width,height,r_frame_rate', '-of', 'json', file], { encoding: 'utf8' }));
@@ -86,7 +100,7 @@ try {
   const imported = await call('media_import_files', { path: a, files: [heroi, ...icons, clip], rights: 'owned' }); await waitJob(a, imported.jobId, 'importação');
   const charA = await call('character_import', { path: a, folder: personagem, rights: 'owned', rightsConfirmedByUser: true }); note(`  personagem: ${charA.name}, ${charA.poses} poses, ${charA.files} PNGs`);
   await call('audio_library', { path: a, seconds: 120 }); await approve(a);
-  const narration = await call('narration_generate', { path: a, engine: 'standard', voice: 'pm_alex' }); await waitJob(a, narration.jobId, 'narração');
+  const narration = await call('narration_generate', { path: a, profileId: await requireVoiceProfile() }); await waitJob(a, narration.jobId, 'narração');
   const assembled = await call('narration_assemble', { path: a, preset: 'balanced' }); await waitJob(a, assembled.jobId, 'montagem da narração');
   const transcribed = await call('narration_transcribe', { path: a }); if (transcribed.jobId) await waitJob(a, transcribed.jobId, 'transcrição');
   const auto = await call('motion_plan_auto', { path: a });
@@ -145,7 +159,7 @@ try {
   const importedC = await call('media_import_files', { path: c, files: [...icons, clip], rights: 'owned' }); await waitJob(c, importedC.jobId, 'importação');
   await call('character_import', { path: c, folder: personagem, rights: 'owned', rightsConfirmedByUser: true });
   await call('audio_library', { path: c, seconds: 80 }); await approve(c);
-  const narrationC = await call('narration_generate', { path: c, engine: 'standard', voice: 'pm_alex' }); await waitJob(c, narrationC.jobId, 'narração');
+  const narrationC = await call('narration_generate', { path: c, profileId: await requireVoiceProfile() }); await waitJob(c, narrationC.jobId, 'narração');
   const assembledC = await call('narration_assemble', { path: c, preset: 'balanced' }); await waitJob(c, assembledC.jobId, 'montagem da narração');
   const transcribedC = await call('narration_transcribe', { path: c }); if (transcribedC.jobId) await waitJob(c, transcribedC.jobId, 'transcrição');
   const autoC = await call('motion_plan_auto', { path: c });

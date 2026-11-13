@@ -191,8 +191,9 @@ export class LocalApplicationService {
   async choosePackage(options) { return { path: await this.dialog.choosePackage(options) }; }
   async chooseMedia(options) { const value = await this.dialog.chooseMedia(options); return options?.multiple ? { paths: value ? value.split('\n').filter(Boolean) : [] } : { path: value }; }
 
-  async createProject({ title, type, aspectRatio, mode = 'review', pauseAt = [], narrationBy = 'ai', parentDirectory }) {
+  async createProject({ title, type, aspectRatio, mode = 'review', pauseAt = [], narrationBy = null, parentDirectory }) {
     if (!title?.trim()) throw new Error('Informe o título do projeto');
+    if (narrationBy) await this.#requireNarrationChoice(narrationBy);
     await this.ready();
     const id = await this.#availableId(parentDirectory || this.projectsDirectory, slug(title));
     const root = path.resolve(parentDirectory || this.projectsDirectory);
@@ -239,7 +240,18 @@ export class LocalApplicationService {
     return await this.registerProject(preview.destination);
   }
 
+  /**
+   * A voz de IA só fica disponível com um perfil de voz gravado em “Minha voz”:
+   * a narração do Content Lab é a voz clonada da pessoa, nunca uma voz genérica.
+   */
+  async #requireNarrationChoice(narrationBy) {
+    if (narrationBy !== 'ai') return;
+    const profiles = await this.narrationOps.profiles.list();
+    if (!profiles.length) throw new LifecycleError('VOICE_PROFILE_REQUIRED', 'Grave a sua voz em “Minha voz” antes de escolher a narração por voz de IA');
+  }
+
   async runProjectAction({ path: directory, baseRevision, action, actions }) {
+    for (const item of actions || [action]) if (item?.type === 'project.update' && item.narrationBy) await this.#requireNarrationChoice(item.narrationBy);
     const absolute = path.resolve(directory);
     return await this.activities.track(absolute, 'escrita', async () => {
       const project = await readProjectDirectory(absolute);
@@ -405,6 +417,10 @@ export class LocalApplicationService {
   narrationPreview(input) { return this.narrationOps.preview(input); }
   narrationAssemble(input) { return this.narrationOps.assemble(input); }
   narrationFile(input) { return this.narrationOps.file(input); }
+  voiceStudio() { return this.narrationOps.voiceStudio(); }
+  voiceSampleUpload(input) { return this.narrationOps.uploadSample(input); }
+  voiceSampleDiscard(input) { return this.narrationOps.discardSample(input); }
+  voiceProfileCheck(input) { return this.narrationOps.generateCheckSample(input); }
   voiceProfileCreate(input) { return this.narrationOps.createProfile(input); }
   voiceProfileReport(input) { return this.narrationOps.profileReport(input); }
   voiceProfileDelete(input) { return this.narrationOps.deleteProfile(input); }

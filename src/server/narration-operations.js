@@ -3,7 +3,7 @@ import { createWriteStream } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
-import { NarrationStore, VOICE_PRESETS, VoiceProfileStore, VoxCPMVoice, generationKey, measureAudio, normalizeTreatment, renderParts, scenesFromScript, treatmentFilters, KokoroVoice, STANDARD_VOICES, standardProfile } from '../audio/narration-service.js';
+import { NarrationStore, VOICE_CHECK_PHRASE, VOICE_PRESETS, VOICE_SAMPLE_LIMIT_SECONDS, VOICE_SAMPLE_TEXT, VoiceProfileStore, VoxCPMVoice, generationKey, measureAudio, normalizeTreatment, renderParts, scenesFromScript, toWav, treatmentFilters } from '../audio/narration-service.js';
 import os from 'node:os';
 import { processAlive, readLock, withProjectLock } from '../core/project-lock.js';
 import { LifecycleError } from './project-lifecycle.js';
@@ -19,9 +19,8 @@ const PREVIEW_SECONDS = 20;
  * com cache e consentimento obrigatório. Usa a mesma fila de jobs da mídia.
  */
 export class NarrationOperations {
-  constructor(app, { voice = null, standardVoice = null } = {}) {
+  constructor(app, { voice = null } = {}) {
     this.app = app;
-    this.standardFactory = standardVoice || (async () => new KokoroVoice(app.setup.voiceRuntime('kokoro')));
     this.voiceFactory = voice || (async () => new VoxCPMVoice({ ...app.setup.voiceRuntime('voxcpm2'), planner: () => app.setup.voicePlan(), onMeasured: value => app.setup.recordCalibration('voxcpm2', value) }));
   }
 
@@ -41,7 +40,6 @@ export class NarrationOperations {
     const takes = session.takes.map(take => {
       if (take.origin !== 'generated') return take;
       const scene = scenes.find(item => item.id === take.sceneId);
-      if (take.engine === 'standard') { let profile = null; try { profile = standardProfile(take.voice, take.speed); } catch { /* voz removida */ } return { ...take, stale: !scene || !profile || generationKey({ model: 'kokoro', profile, text: scene.text }) !== take.cacheKey }; }
       const profile = profiles.find(item => item.id === take.profileId);
       return { ...take, stale: !scene || !profile || generationKey({ profile, text: scene.text }) !== take.cacheKey };
     });
@@ -49,7 +47,6 @@ export class NarrationOperations {
       narration: { ...session, takes },
       scenes: scenes.map(scene => ({ ...scene, generated: Object.fromEntries(profiles.map(profile => [profile.id, takes.find(take => take.origin === 'generated' && take.cacheKey === generationKey({ profile, text: scene.text }))?.id || null])) })),
       profiles: profiles.map(publicProfile),
-      standardVoices: STANDARD_VOICES,
       presets: Object.entries(VOICE_PRESETS).map(([id, value]) => ({ id, ...value })),
       previewSeconds: PREVIEW_SECONDS,
     };
@@ -177,10 +174,13 @@ export class NarrationOperations {
   }
 
   /** Arquivo de áudio para ouvir na interface: take, preview, montagem ou amostra do perfil. */
-  async file({ path: directory, takeId, preview, assembled, profileId, original }) {
+  async file({ path: directory, takeId, preview, assembled, profileId, check, original }) {
     let target;
-    if (profileId) target = (await this.profiles.read(profileId)).samplePath;
-    else {
+    if (profileId) {
+      const profile = await this.profiles.read(profileId);
+      target = check ? profile.checkSample?.file : profile.samplePath;
+      if (check && !target) throw Object.assign(new Error('Este perfil ainda não tem amostra da voz clonada'), { code: 'ENOENT' });
+    } else {
       const store = await this.#store(directory);
       const session = await store.read();
       if (takeId) { const take = requireTake(session, takeId); target = store.resolve(original ? take.original : take.file); }
@@ -193,12 +193,97 @@ export class NarrationOperations {
     return { file: target, size: info.size, contentType: types[path.extname(target).toLowerCase()] || 'application/octet-stream' };
   }
 
-  /** Cria perfil a partir de um take do projeto (gravado lendo o texto de referência). */
-  async createProfile({ path: directory, takeId, name, holder, consent, referenceText }) {
-    const store = await this.#store(directory);
-    const take = requireTake(await store.read(), takeId);
-    const profile = await this.profiles.create({ name, holder, consent, referenceText, samplePath: store.resolve(take.file), ...this.tools });
+  /**
+   * Cria o perfil a partir da amostra gravada em “Minha voz” (`sampleId`, fora de qualquer
+   * projeto) ou de um take já existente num projeto (`path` + `takeId`).
+   */
+  async createProfile({ path: directory, takeId, sampleId, name, holder, consent, referenceText }) {
+    let samplePath;
+    if (sampleId) samplePath = this.#stagedSample(sampleId);
+    else {
+      const store = await this.#store(directory);
+      const take = requireTake(await store.read(), takeId);
+      samplePath = store.resolve(take.file);
+    }
+    const profile = await this.profiles.create({ name, holder, consent, referenceText, samplePath, ...this.tools });
+    if (sampleId) await rm(path.dirname(samplePath), { recursive: true, force: true });
     return { profile: publicProfile(profile) };
+  }
+
+  /** Tela “Minha voz”: perfis gravados e o texto de leitura da amostra. */
+  async voiceStudio() {
+    const profiles = await this.profiles.list();
+    return { profiles: profiles.map(publicProfile), sampleText: VOICE_SAMPLE_TEXT, sampleLimitSeconds: VOICE_SAMPLE_LIMIT_SECONDS, checkPhrase: VOICE_CHECK_PHRASE };
+  }
+
+  /** Uma geração de voz por vez: as cenas do projeto e a amostra de conferência disputam a mesma RAM. */
+  #voiceRunning() { return this.jobs.list().some(job => ['voice.generate', 'voice.check'].includes(job.kind) && job.state === 'running'); }
+
+  #stagingRoot() { return path.join(this.app.dataDirectory, 'voices', '.staging'); }
+
+  #stagedSample(sampleId) {
+    if (!/^[a-f0-9-]{36}$/.test(String(sampleId))) throw new Error('Amostra inválida');
+    return path.join(this.#stagingRoot(), String(sampleId), 'amostra.wav');
+  }
+
+  /**
+   * Recebe a gravação da amostra de voz feita em “Minha voz”. Fica numa área temporária
+   * global (`<dados>/voices/.staging/`) até virar perfil; nenhum projeto é tocado.
+   */
+  async uploadSample({ name, stream, size }) {
+    await this.app.requireFeature('narration.treatment');
+    if (!(size > 0) || size > 200 * 1024 ** 2) throw new Error('Envie um áudio de até 200 MB');
+    const safeName = path.basename(String(name || 'amostra.webm')).replace(/[^\w.\- ]+/g, '_').slice(-120) || 'amostra.webm';
+    if (!AUDIO_EXTENSIONS.includes(path.extname(safeName).toLowerCase())) throw new Error('Formato de áudio não suportado');
+    const sampleId = randomUUID();
+    const directory = path.join(this.#stagingRoot(), sampleId);
+    await mkdir(directory, { recursive: true, mode: 0o700 });
+    const raw = path.join(directory, safeName);
+    try {
+      let received = 0;
+      stream.on('data', chunk => { received += chunk.length; if (received > size) stream.destroy(new Error('Tamanho maior que o anunciado')); });
+      await pipeline(stream, createWriteStream(raw, { mode: 0o600 }));
+      if (received !== size) throw new Error('Envio incompleto');
+      const wav = path.join(directory, 'amostra.wav');
+      await toWav(this.tools.ffmpeg, raw, wav);
+      const measures = await measureAudio(this.tools, wav);
+      await rm(raw, { force: true });
+      return { sampleId, measures };
+    } catch (error) { await rm(directory, { recursive: true, force: true }); throw error; }
+  }
+
+  /** Descarta uma amostra gravada que a pessoa não quis transformar em perfil. */
+  async discardSample({ sampleId }) {
+    await rm(path.dirname(this.#stagedSample(sampleId)), { recursive: true, force: true });
+    return { discarded: true };
+  }
+
+  /**
+   * Gera a frase curta de conferência com a própria voz do perfil (“ouvir como ficou”).
+   * Usa a mesma trava global da geração por cena: uma geração por computador.
+   */
+  async generateCheckSample({ profileId }) {
+    await this.app.requireFeature('voice.synthetic');
+    const profile = await this.profiles.read(profileId);
+    if (!profile.consent?.granted) throw Object.assign(new Error('Perfil sem consentimento do titular'), { code: 'CONSENT_REQUIRED' });
+    if (this.#voiceRunning()) throw new LifecycleError('VOICE_BUSY', 'Já existe uma geração de voz em andamento; aguarde ou cancele');
+    const lockDirectory = path.join(this.app.dataDirectory, 'voices', '.generation');
+    await mkdir(lockDirectory, { recursive: true });
+    const owner = await readLock(lockDirectory);
+    if (owner && !owner.corrupt && owner.pid !== process.pid && (owner.hostname !== os.hostname() || processAlive(owner.pid))) throw voiceBusy(owner);
+    const voice = await this.voiceFactory();
+    const plan = await this.app.setup.voicePlan();
+    const factor = plan.estimate?.realtimeFactor || null;
+    const estimateSeconds = factor ? Math.round(estimateSpeech(VOICE_CHECK_PHRASE) * factor) : null;
+    return this.jobs.start({ kind: 'voice.check', projectPath: path.join(this.app.dataDirectory, 'voices'), label: `Amostra de “${profile.name}”${estimateSeconds ? ` · cerca de ${minutes(estimateSeconds)}` : ''}`, run: ({ signal, progress }) => withProjectLock(lockDirectory, 'geração de voz', async () => {
+      progress({ done: 0, total: 1, phase: 'Gerando a frase de conferência' });
+      const output = this.profiles.checkSamplePath(profileId);
+      await voice.generate({ text: VOICE_CHECK_PHRASE, profile, output, signal });
+      const measures = await measureAudio(this.tools, output);
+      await this.profiles.recordCheckSample(profileId, { phrase: VOICE_CHECK_PHRASE, measures });
+      progress({ done: 1, total: 1 });
+      return { profileId, durationSeconds: measures.durationSeconds };
+    }).catch(error => { throw error.code === 'PROJECT_LOCKED' ? voiceBusy(error.details.owner) : error; }) });
   }
 
   async voicePlan() {
@@ -207,24 +292,19 @@ export class NarrationOperations {
   }
 
   /**
-   * Gera as cenas do roteiro com a voz do perfil, uma por vez, em um único job.
-   * Cenas já geradas com o mesmo texto/perfil/modelo vêm do cache.
+   * Gera a narração das cenas do roteiro com a voz clonada do perfil (VoxCPM2, consentimento
+   * obrigatório). Retorna um job; cenas já geradas com o mesmo texto e perfil vêm do cache.
    */
-  /**
-   * Gera a narração das cenas do roteiro. `engine: 'cloned'` usa o perfil de voz (VoxCPM2,
-   * exige consentimento); `engine: 'standard'` usa a narração padrão (Kokoro) com `voice` e `speed`.
-   * Retorna um job; cenas já geradas com o mesmo texto e voz vêm do cache.
-   */
-  async generate({ path: directory, profileId, sceneIds, engine = profileId ? 'cloned' : 'standard', voice: standardVoiceId = 'pm_alex', speed = 1 }) {
-    if (engine === 'standard') return this.#generateStandard({ directory, sceneIds, voiceId: standardVoiceId, speed });
+  async generate({ path: directory, profileId, sceneIds }) {
     await this.app.requireFeature('voice.synthetic');
+    if (!profileId) throw new LifecycleError('VOICE_PROFILE_REQUIRED', 'Escolha um perfil de voz: grave a sua voz em “Minha voz” antes de gerar a narração');
     const project = await readProjectDirectory(directory);
     const profile = await this.profiles.read(profileId);
     if (!profile.consent?.granted || !profile.consent?.holder) throw Object.assign(new Error('Perfil sem consentimento do titular'), { code: 'CONSENT_REQUIRED' });
     const all = scenesFromScript(project.creative?.script);
     const scenes = sceneIds?.length ? sceneIds.map(id => all.find(scene => scene.id === id) || (() => { throw new Error(`Cena desconhecida: ${id}`); })()) : all;
     if (!scenes.length) throw new Error('O roteiro não tem texto para narrar (abertura, desenvolvimento ou payoff)');
-    if (this.jobs.list().some(job => job.kind === 'voice.generate' && job.state === 'running')) throw new LifecycleError('VOICE_BUSY', 'Já existe uma geração de voz em andamento; aguarde ou cancele');
+    if (this.#voiceRunning()) throw new LifecycleError('VOICE_BUSY', 'Já existe uma geração de voz em andamento; aguarde ou cancele');
     // Uma geração por computador também entre processos (interface, CLI e MCP): cada uma pode usar a RAM quase toda.
     const lockDirectory = path.join(this.app.dataDirectory, 'voices', '.generation');
     await mkdir(lockDirectory, { recursive: true });
@@ -256,39 +336,6 @@ export class NarrationOperations {
     }).catch(error => { throw error.code === 'PROJECT_LOCKED' ? voiceBusy(error.details.owner) : error; }), { cancellable: true }) });
   }
 
-  async #generateStandard({ directory, sceneIds, voiceId, speed }) {
-    await this.app.requireFeature('voice.standard');
-    const profile = standardProfile(voiceId, speed);
-    const project = await readProjectDirectory(directory);
-    const all = scenesFromScript(project.creative?.script);
-    const scenes = sceneIds?.length ? sceneIds.map(id => all.find(scene => scene.id === id) || (() => { throw new Error(`Cena desconhecida: ${id}`); })()) : all;
-    if (!scenes.length) throw new Error('O roteiro não tem texto para narrar (abertura, desenvolvimento ou payoff)');
-    if (this.jobs.list({ projectPath: directory }).some(job => job.kind === 'voice.generate' && job.state === 'running')) throw new LifecycleError('VOICE_BUSY', 'Já existe uma geração de voz em andamento neste projeto');
-    const store = new NarrationStore(directory);
-    const voice = await this.standardFactory();
-    return this.jobs.start({ kind: 'voice.generate', projectPath: directory, label: `Narração padrão: ${scenes.length} cena${scenes.length === 1 ? '' : 's'}`, run: ({ signal, progress }) => this.app.activities.track(directory, 'geração de voz', async activitySignal => {
-      const combined = AbortSignal.any([signal, activitySignal]);
-      const results = [];
-      for (const [index, scene] of scenes.entries()) {
-        if (combined.aborted) throw Object.assign(new Error('Cancelado'), { code: 'CANCELLED' });
-        const cacheKey = generationKey({ model: 'kokoro', profile, text: scene.text });
-        const existing = (await store.read()).takes.find(take => take.cacheKey === cacheKey);
-        if (existing) { results.push({ sceneId: scene.id, status: 'cached', takeId: existing.id }); continue; }
-        progress({ done: index, total: scenes.length, phase: scene.label });
-        const cacheFile = path.join(store.root, 'generated', `${cacheKey}.wav`);
-        await mkdir(path.dirname(cacheFile), { recursive: true });
-        await voice.generate({ text: scene.text, voice: profile.voice, speed: profile.speed, output: cacheFile, signal: combined });
-        const label = STANDARD_VOICES.find(item => item.id === profile.voice).label.split(' ')[0];
-        const take = await store.createTake({ source: cacheFile, name: `Narração padrão (${label}) · ${scene.label}`, origin: 'generated', signal: combined, extra: { sceneId: scene.id, engine: 'standard', voice: profile.voice, speed: profile.speed, cacheKey, model: KokoroVoice.model }, ...this.tools });
-        await store.mutate(undefined, value => { value.takes.push(take); });
-        await rm(cacheFile, { force: true });
-        results.push({ sceneId: scene.id, status: 'generated', takeId: take.id });
-      }
-      progress({ done: scenes.length, total: scenes.length });
-      return { engine: 'standard', voice: profile.voice, results, generated: results.filter(item => item.status === 'generated').length, cached: results.filter(item => item.status === 'cached').length };
-    }, { cancellable: true }) });
-  }
-
   /** O que some ao excluir o perfil: takes gerados e montagens que os usam, por projeto conhecido. */
   async profileReport({ profileId }) {
     const profile = await this.profiles.read(profileId);
@@ -310,7 +357,7 @@ export class NarrationOperations {
   async deleteProfile({ profileId, confirm }) {
     const report = await this.profileReport({ profileId });
     if (confirm !== true) throw new LifecycleError('CONFIRMATION_REQUIRED', 'Confirme a exclusão do perfil e dos áudios gerados', report);
-    if (this.jobs.list().some(job => job.kind === 'voice.generate' && job.state === 'running')) throw new LifecycleError('VOICE_BUSY', 'Cancele a geração de voz antes de excluir o perfil');
+    if (this.#voiceRunning()) throw new LifecycleError('VOICE_BUSY', 'Cancele a geração de voz antes de excluir o perfil');
     const failures = [];
     for (const item of report.projects) {
       try {
@@ -341,8 +388,8 @@ export class NarrationOperations {
 
 function voiceBusy(owner) { return new LifecycleError('VOICE_BUSY', `Outra geração de voz está rodando neste computador (PID ${owner.pid}); aguarde ou cancele por lá`, { owner }); }
 function publicProfile(profile) {
-  const { id, name, referenceText, consent, measures, model, createdAt } = profile;
-  return { id, name, referenceText, consent, durationSeconds: measures?.durationSeconds ?? null, model, createdAt };
+  const { id, name, referenceText, consent, measures, model, createdAt, checkSample } = profile;
+  return { id, name, referenceText, consent, durationSeconds: measures?.durationSeconds ?? null, model, createdAt, checkSample: checkSample ? { phrase: checkSample.phrase, generatedAt: checkSample.generatedAt, durationSeconds: checkSample.measures?.durationSeconds ?? null } : null };
 }
 function requireTake(session, id) { const take = session.takes.find(item => item.id === id); if (!take) throw new Error(`Take desconhecido: ${id}`); return take; }
 function round(value) { return Math.round(value * 1000) / 1000; }

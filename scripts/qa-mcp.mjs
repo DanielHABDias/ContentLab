@@ -3,7 +3,7 @@
 //  A) vídeo longo 16:9 em modo revisão: o agente produz cada etapa e ESPERA a aprovação humana
 //     (simulada aqui clicando "Aprovar" pela API do app, depois de um pedido de mudança no roteiro);
 //  B) 5 Shorts 9:16 em modo autônomo: o agente aprova sozinho e entrega tudo.
-// Narração padrão (Kokoro), slides do roteiro, montagem, thumbnails A/B, render, entrega, ZIP,
+// Narração com voz clonada, slides do roteiro, montagem, thumbnails A/B, render, entrega, ZIP,
 // e reabertura do app para provar que tudo persiste. Usa pastas temporárias e porta própria.
 //   node scripts/qa-mcp.mjs [--keep] [--shorts N]
 import { execFileSync } from 'node:child_process';
@@ -54,7 +54,23 @@ async function gate(projectPath, mode, { changes } = {}) {
 }
 const probe = file => JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration:stream=codec_type,width,height', '-of', 'json', file], { encoding: 'utf8' }));
 
-async function produce({ title, type, mode, brief, script, packaging, voice, reviseScript }) {
+
+/**
+ * Perfil de voz clonada usado pelo QA. Desde a remoção da narração padrão, a única voz de IA
+ * do Content Lab é a voz clonada da pessoa: sem perfil gravado em “Minha voz”, não há o que
+ * narrar automaticamente e o QA para avisando, em vez de fingir sucesso.
+ */
+async function requireVoiceProfile() {
+  const options = await call('voice_options');
+  if (options.install) throw new Error(`QA precisa da voz clonada: ${options.install}`);
+  const wanted = process.env.CONTENTLAB_QA_VOICE_PROFILE;
+  const profile = wanted ? options.profiles.find(item => item.id === wanted) : options.profiles[0];
+  if (!profile) throw new Error('QA precisa de um perfil de voz: grave a sua voz em “Minha voz” no app (cerca de 60 s de leitura) e rode de novo. A geração é lenta em CPU (~30 s por segundo de fala).');
+  note(`  voz clonada: perfil ${profile.name} (${profile.id})`);
+  return profile.id;
+}
+
+async function produce({ title, type, mode, brief, script, packaging, profileId, reviseScript }) {
   const created = await call('project_create', { title, type, mode }); const projectPath = created.path;
   note(`▶ ${title} (${type} ${created.aspectRatio}, modo ${mode})`);
   if (mode === 'review') { const blocked = await call('stage_approve', { path: projectPath }).catch(error => error.code); if (blocked !== 'APPROVAL_REQUIRED') throw new Error('agente aprovou sozinho em modo revisão'); note('  🔒 agente tentou aprovar sozinho em modo revisão → recusado (APPROVAL_REQUIRED)'); }
@@ -67,7 +83,7 @@ async function produce({ title, type, mode, brief, script, packaging, voice, rev
   await gate(projectPath, mode);
   await call('creative_write', { path: projectPath, packaging }); await gate(projectPath, mode);
   const slides = await call('media_generate_slides', { path: projectPath }); note(`  ${slides.slides.length} slides gerados`); await gate(projectPath, mode);
-  const job = await call('narration_generate', { path: projectPath, engine: 'standard', voice }); await waitJob(projectPath, job.jobId, 'narração');
+  const job = await call('narration_generate', { path: projectPath, profileId }); await waitJob(projectPath, job.jobId, 'narração');
   const assembled = await call('narration_assemble', { path: projectPath, preset: 'balanced' }); await waitJob(projectPath, assembled.jobId, 'montagem da narração');
   const timeline = await call('timeline_auto_assemble', { path: projectPath, captionStyle: 'legenda' }); note(`  timeline: ${timeline.durationSeconds.toFixed(1)} s, ${timeline.visualClips} clips, ${timeline.captions} legendas`);
   await gate(projectPath, mode); // narração
@@ -87,12 +103,11 @@ const results = [];
 try {
   note(`Status antes de abrir: ${JSON.stringify(await call('contentlab_status'))}`);
   await call('contentlab_start'); const status = await call('contentlab_status');
-  note(`App aberto pelo agente: v${status.version}, narração padrão ${status.narration.standard ? 'pronta' : 'AUSENTE'}, voz clonada ${status.narration.cloned ? 'pronta' : 'não instalada'}`);
-  const clone = await call('narration_generate', { path: '/nao/existe', engine: 'cloned' }).catch(error => error.code);
-  note(`Voz clonada sem perfil → ${clone}`);
+  note(`App aberto pelo agente: v${status.version}, voz clonada ${status.narration.cloned ? 'pronta' : 'não instalada'}, ${status.narration.profiles.length} perfil(is)`);
+  const voiceProfile = await requireVoiceProfile();
 
   results.push(await produce({
-    title: 'Por que esquecemos os sonhos', type: 'long', mode: 'review', voice: 'pm_alex',
+    title: 'Por que esquecemos os sonhos', type: 'long', mode: 'review', profileId: voiceProfile,
     brief: { thesis: 'O cérebro desliga a gravação de memória durante o sono REM', audience: 'Curiosos de ciência, 18 a 35 anos', promise: 'Entender em poucos minutos por que os sonhos somem ao acordar', notes: '' },
     script: {
       hook: 'Você acorda lembrando de um sonho incrível. Dois minutos depois, ele simplesmente desapareceu.',
@@ -110,9 +125,8 @@ try {
     ['Bananas são radioativas', 'Toda banana é um pouquinho radioativa.', 'Ela tem potássio, e uma pequena parte do potássio natural emite radiação. Mas você precisaria comer milhões de bananas de uma vez para isso fazer mal.', 'Então pode comer tranquilo. O seu próprio corpo é mais radioativo que uma banana. Segue para mais.'],
     ['Formigas não dormem como nós', 'Uma formiga tira centenas de cochilos por dia.', 'Cada cochilo dura cerca de um minuto, somando umas quatro horas e meia. Assim a colônia nunca fica sem ninguém acordado para trabalhar.', 'A rainha, por outro lado, dorme bem mais e vive muitos anos. Qual curiosidade você quer no próximo?'],
   ].slice(0, shortsCount);
-  const voices = ['pf_dora', 'pm_alex', 'pm_santa', 'pf_dora', 'pm_alex'];
-  for (const [index, [title, hook, development, payoff]] of ideas.entries()) {
-    results.push(await produce({ title, type: 'short', mode: 'autonomous', voice: voices[index], brief: { thesis: hook, audience: 'Público geral de Shorts', promise: 'Uma curiosidade em menos de um minuto', notes: '' }, script: { hook, development, payoff }, packaging: { titleA: title, titleB: `${title}?!`, description: `${hook} ${payoff}`, tags: 'curiosidades, shorts, ciência', seo: title.toLowerCase() } }));
+  for (const [title, hook, development, payoff] of ideas) {
+    results.push(await produce({ title, type: 'short', mode: 'autonomous', profileId: voiceProfile, brief: { thesis: hook, audience: 'Público geral de Shorts', promise: 'Uma curiosidade em menos de um minuto', notes: '' }, script: { hook, development, payoff }, packaging: { titleA: title, titleB: `${title}?!`, description: `${hook} ${payoff}`, tags: 'curiosidades, shorts, ciência', seo: title.toLowerCase() } }));
   }
 
   note('Desligando o app pelo agente e abrindo de novo para provar que tudo persiste…');
@@ -127,7 +141,7 @@ try {
 } finally {
   await call('contentlab_stop', { force: true }).catch(() => {});
   await client.close();
-  const report = ['# QA do fluxo de agente via MCP', '', `Executado em ${new Date().toISOString()} · ${os.platform()} ${os.arch()} · narração padrão Kokoro`, '', '| Projeto | Formato | Duração | Entrega | Persistiu após reabrir |', '| --- | --- | --- | --- | --- |', ...results.map(item => `| ${item.title} | ${item.size} | ${item.duration.toFixed(1)} s | ${item.delivery.files.length} arquivos | ${item.persisted ? 'sim' : 'não'} |`), '', '## Log', '', '```', ...log, '```', ''].join('\n');
+  const report = ['# QA do fluxo de agente via MCP', '', `Executado em ${new Date().toISOString()} · ${os.platform()} ${os.arch()}`, '', '| Projeto | Formato | Duração | Entrega | Persistiu após reabrir |', '| --- | --- | --- | --- | --- |', ...results.map(item => `| ${item.title} | ${item.size} | ${item.duration.toFixed(1)} s | ${item.delivery.files.length} arquivos | ${item.persisted ? 'sim' : 'não'} |`), '', '## Log', '', '```', ...log, '```', ''].join('\n');
   await writeFile(path.join(root, 'docs', 'QA_MCP_AGENTE.md'), report);
   console.log(`\nRelatório: docs/QA_MCP_AGENTE.md · artefatos: ${process.argv.includes('--keep') ? work : '(removidos)'}`);
   if (!process.argv.includes('--keep')) await rm(work, { recursive: true, force: true });

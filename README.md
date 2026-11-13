@@ -60,11 +60,17 @@ Em **Configurações**: pastas de projetos, cache de mídia, cache de render, fe
 
 ## Uso
 
-A tela inicial cria, abre, importa e retoma projetos locais reais. Não são inseridos exemplos. “Abrir projeto” espera uma pasta cujo nome corresponda ao `id` de um `project.json` válido; “Importar pacote” aceita `.contentlab` e ZIP seguro. Ao criar o projeto, você já escolhe como produzir (aprovar cada etapa, automático com pausas nas etapas marcadas ou tudo automático) e quem faz a narração (voz de IA ou você grava). Dá para mudar depois em **Configurar**. Reabrir uma etapa preserva o histórico e invalida dependências posteriores.
+A tela inicial cria, abre, importa e retoma projetos locais reais. Não são inseridos exemplos. “Abrir projeto” espera uma pasta cujo nome corresponda ao `id` de um `project.json` válido; “Importar pacote” aceita `.contentlab` e ZIP seguro. Ao criar o projeto, você escolhe só como produzir: **tudo automático** (a IA vai da ideia ao render e entrega) ou **etapa por etapa** (ela espera o seu OK a cada etapa). Nos dois casos dá para reabrir qualquer etapa depois, e dá para mudar o modo em **Configurar**. Quem narra é escolhido na etapa **Narração**, com o roteiro na mão. Reabrir uma etapa preserva o histórico e invalida dependências posteriores.
 
 ### Documentação
 
 A aba **Documentação**, na barra lateral, mostra o que todo projeto traz do kit de motion do Content Lab. Nela as cenas de exemplo tocam ao vivo no navegador (16:9 ou 9:16), os fundos (estrelas, meio-tom, explosão, papel…) aparecem com seletor de cor, cada SFX toca com um clique e há as regras de legenda e de som. Os dados vêm de `GET /api/v1/brand/docs` e os arquivos de `GET /api/v1/brand/file?kind=sfx|font&name=…`, que só servem nomes do kit. Pelo MCP, use `kit_docs`.
+
+### Minha voz
+
+A narração por voz de IA do Content Lab é a **sua** voz, clonada de uma amostra gravada por você. A tela **Minha voz**, na barra lateral, mostra um texto de leitura de cerca de 60 s (com perguntas, exclamações e números, para o modelo pegar a entonação), grava pelo microfone só depois do clique, registra o consentimento do titular e cria o perfil. Cada perfil tem o botão **Ouvir como ficou**, que gera uma frase curta com a voz clonada para você conferir o resultado. Dá para ter vários perfis e escolher qual usar em cada projeto.
+
+Enquanto não houver nenhum perfil gravado, a opção de narração por voz de IA fica bloqueada nos projetos: resta gravar a narração você mesmo na etapa Narração. Detalhes em [docs/NARRACAO_E_VOZ.md](docs/NARRACAO_E_VOZ.md).
 
 ### Personagem do projeto
 

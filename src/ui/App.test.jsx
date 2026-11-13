@@ -29,7 +29,7 @@ test('primeira execução fica vazia e não injeta exemplos', async () => {
 });
 
 test('cria projeto real pela API e abre o workflow', async () => {
-  localApi.createProject.mockResolvedValue(realDetails()); render(<App/>); await screen.findByText(/nenhum projeto recente/i); fireEvent.click(screen.getByRole('button', { name: /novo projeto/i })); fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Meu projeto' } }); fireEvent.click(screen.getByRole('button', { name: /criar projeto/i })); expect(await screen.findByRole('heading', { name: 'Meu projeto' })).toBeInTheDocument(); expect(localApi.createProject).toHaveBeenCalledWith(expect.objectContaining({ title: 'Meu projeto', type: 'long', mode: 'review', pauseAt: [], narrationBy: 'ai' }));
+  localApi.createProject.mockResolvedValue(realDetails()); render(<App/>); await screen.findByText(/nenhum projeto recente/i); fireEvent.click(screen.getByRole('button', { name: /novo projeto/i })); fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Meu projeto' } }); fireEvent.click(screen.getByRole('button', { name: /criar projeto/i })); expect(await screen.findByRole('heading', { name: 'Meu projeto' })).toBeInTheDocument(); expect(localApi.createProject).toHaveBeenCalledWith(expect.objectContaining({ title: 'Meu projeto', type: 'long', mode: 'autonomous', pauseAt: [] })); expect(localApi.createProject.mock.calls[0][0]).not.toHaveProperty('narrationBy');
 });
 
 test('configurar persiste e continuar abre a etapa real', async () => {
@@ -421,16 +421,18 @@ test('edição oferece montar a timeline automaticamente e recarrega o projeto',
   expect(await within(panel).findByText(/6 cena\(s\) com 4 imagem\(ns\), 18 legenda\(s\)/)).toBeInTheDocument();
 });
 
-test('novo projeto: combina fluxo e narração, Esc fecha e título vazio avisa', async () => {
+test('novo projeto: só dois modos de produção, sem escolha de narração, Esc fecha e título vazio avisa', async () => {
   localApi.createProject.mockResolvedValue(realDetails()); render(<App/>); await screen.findByText(/nenhum projeto recente/i);
   fireEvent.click(screen.getByRole('button', { name: /novo projeto/i })); expect(screen.getByRole('dialog', { name: 'Novo vídeo' })).toBeInTheDocument();
   fireEvent.keyDown(document, { key: 'Escape' }); expect(screen.queryByRole('dialog', { name: 'Novo vídeo' })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /novo projeto/i })); fireEvent.click(screen.getByRole('button', { name: /criar projeto/i }));
   expect(await screen.findByText(/dê um título ao vídeo/i)).toBeInTheDocument(); expect(localApi.createProject).not.toHaveBeenCalled();
   fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Short do herói' } }); fireEvent.click(screen.getByLabelText(/short · 9:16/i));
-  fireEvent.click(screen.getByLabelText(/automático com pausas/i)); fireEvent.click(screen.getByLabelText('Edição')); fireEvent.click(screen.getByLabelText(/eu gravo/i));
+  expect(screen.getAllByRole('radio', { name: /automático|etapa por etapa/i })).toHaveLength(2);
+  expect(screen.queryByLabelText(/voz de ia/i)).not.toBeInTheDocument(); expect(screen.queryByLabelText(/eu gravo/i)).not.toBeInTheDocument();
+  fireEvent.click(screen.getByLabelText(/etapa por etapa/i));
   fireEvent.click(screen.getByRole('button', { name: /criar projeto/i }));
-  await waitFor(() => expect(localApi.createProject).toHaveBeenCalledWith(expect.objectContaining({ title: 'Short do herói', type: 'short', aspectRatio: '9:16', mode: 'autonomous', pauseAt: ['script', 'narration', 'review', 'edit'], narrationBy: 'creator' })));
+  await waitFor(() => expect(localApi.createProject).toHaveBeenCalledWith(expect.objectContaining({ title: 'Short do herói', type: 'short', aspectRatio: '9:16', mode: 'review', pauseAt: [] })));
 });
 
 test('abas do editor andam com as setas', async () => {

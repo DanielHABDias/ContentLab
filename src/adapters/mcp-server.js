@@ -50,9 +50,10 @@ export function createMcpServer() {
     'A pessoa acompanha pelo app: logo depois de project_create (ou ao retomar um projeto), chame contentlab_open com o path do projeto. Ele abre o projeto no navegador padrão dela, e a tela se atualiza sozinha enquanto você trabalha.',
     'Modo composição (jeito principal): o vídeo inteiro é uma composição Remotion do kit de motion do Content Lab (troca a cada 1,5–3 s, câmera sempre em movimento, personagem do projeto em poses quando houver, palavras gigantes, cenas da obra em painéis HQ, som em cada troca). Leia motion_kit. Fluxo: importe CENAS DAS OBRAS citadas (imagens/vídeos com direitos confirmados, nomes de arquivo descritivos como batman-1940.jpg ajudam a casar com a fala) e uma trilha licenciada (media_import_files com role music); narração + narration_transcribe; motion_plan_auto; motion_preview e abra os PNG; ajuste com motion_plan_set (mais evidência da obra onde a fala cita algo, menos texto genérico); render_start. Vídeo sem narração: escreva os beats direto em motion_plan_set com narration=false. Não invente falas canônicas de personagens.',
     'Fluxo típico: contentlab_start → project_create → contentlab_open → creative_write (brief) → aprovar/aguardar → creative_write (packaging: títulos) → aprovar/aguardar → creative_write (script) → … → media_import_files (imagens do assunto; trilha licenciada com role music) → narration_generate + job_wait → narration_assemble + job_wait → narration_transcribe + job_wait → motion_plan_auto → motion_preview → motion_plan_set (ajustes) → thumbnails_generate → render_start + job_wait → deliverable_build → project_export.',
-    'Antes de project_create, combine o fluxo com a pessoa (uma pergunta só): tudo automático (mode autonomous), parar em etapas para revisar no app (autonomous + pauseAt, por exemplo ["script", "narration", "review"]) ou aprovar cada etapa (review); e se a narração é voz de IA ou a pessoa grava a própria voz (narrationBy creator). Nas pausas, avise no chat o que revisar e espere com stage_wait_decision: enquanto você espera, o app mostra o aviso, e o botão Aprovar e seguir (ou Pedir mudanças) devolve a decisão para você. A espera não trava a conversa: se a pessoa aprovar pelo chat, use stage_approve com userApproved=true e siga. Com narrationBy creator, não gere voz: peça para gravar e montar no app, espere e rode narration_transcribe.',
+    'Antes de project_create, combine o fluxo com a pessoa (uma pergunta só): tudo automático até o render (mode autonomous) ou etapa por etapa, esperando o OK dela a cada uma (mode review). Nos dois casos ela pode voltar numa etapa depois. Nas esperas, avise no chat o que revisar e use stage_wait_decision: o app mostra o aviso, e o botão Aprovar e seguir (ou Pedir mudanças) devolve a decisão para você. A espera não trava a conversa: se a pessoa aprovar pelo chat, use stage_approve com userApproved=true e siga.',
+    'Quem narra é decidido na ETAPA NARRAÇÃO, não ao criar o projeto: narrationBy começa null. Ao chegar nela, chame voice_options. Com perfil de voz gravado, confirme com a pessoa e use project_flow_set narrationBy="ai" antes de narration_generate. Sem perfil, a voz de IA fica bloqueada: narrationBy só pode ser "creator" — peça para ela gravar a própria voz na etapa Narração do app (ou gravar o perfil em “Minha voz”, cerca de 60 s de leitura, se quiser a voz clonada), espere e rode narration_transcribe. A narração por IA é sempre a voz clonada da própria pessoa; não existe voz genérica.',
     'Em cada etapa: preencha o que project_get indica como `missing`. Se o projeto está em modo `review`, chame stage_wait_decision e espere a pessoa aprovar no app; só use stage_approve com userApproved=true quando a pessoa aprovar no chat. Em modo `autonomous` (a pessoa pediu para não aprovar), use stage_approve direto.',
-    'Trabalhos longos devolvem jobId: chame job_wait repetidamente (cada chamada espera até timeoutSeconds) e avise a pessoa do progresso. A voz clonada é lenta (~30 s por segundo de fala em CPU); a narração padrão é rápida.',
+    'Trabalhos longos devolvem jobId: chame job_wait repetidamente (cada chamada espera até timeoutSeconds) e avise a pessoa do progresso. A voz clonada é lenta (~30 s por segundo de fala em CPU): avise antes de começar e dê o tempo estimado.',
   ].join('\n') });
 
   tool(server, 'contentlab_status', 'Diz se o Content Lab está aberto, a versão, dependências prontas, vozes e perfis disponíveis.', {}, async () => {
@@ -60,7 +61,7 @@ export function createMcpServer() {
     const [about, setup] = await Promise.all([api('/about'), api('/setup/status')]);
     const ready = id => setup.items.find(item => item.id === id)?.ready || false;
     const profiles = (await api('/narration/profiles-list', {}).catch(() => ({ profiles: [] }))).profiles;
-    return { running: true, url: `http://127.0.0.1:${port}/`, version: about.app.version, essentialsReady: setup.essentialsReady, narration: { standard: ready('kokoro'), standardVoices: ['pm_alex', 'pf_dora', 'pm_santa'], cloned: ready('voxcpm2'), profiles }, transcription: ready('whisper-cli') && ready('whisper-large-v3'), urlImport: ready('yt-dlp'), missingOptional: setup.items.filter(item => !item.ready && !item.required).map(item => ({ id: item.id, label: item.label })) };
+    return { running: true, url: `http://127.0.0.1:${port}/`, version: about.app.version, essentialsReady: setup.essentialsReady, narration: { cloned: ready('voxcpm2'), profiles }, transcription: ready('whisper-cli') && ready('whisper-large-v3'), urlImport: ready('yt-dlp'), missingOptional: setup.items.filter(item => !item.ready && !item.required).map(item => ({ id: item.id, label: item.label })) };
   });
 
   tool(server, 'contentlab_start', 'Abre o Content Lab em segundo plano (interface + API) se ainda não estiver aberto. Não abre o navegador a menos que openBrowser=true.', { openBrowser: z.boolean().default(false) }, async ({ openBrowser }) => {
@@ -92,18 +93,17 @@ export function createMcpServer() {
   tool(server, 'project_list', 'Lista os projetos dos Recentes (título, tipo, etapa, caminho).', {}, async () => ({ projects: (await api('/projects')).projects.map(item => ({ id: item.id, title: item.title, type: item.type, aspectRatio: item.aspectRatio, stage: item.stage, status: item.status, path: item.path })) }));
 
   const flowFields = {
-    mode: z.enum(['review', 'autonomous']).describe('"review": a pessoa aprova cada etapa; "autonomous": o agente aprova, exceto nas etapas de pauseAt'),
-    pauseAt: z.array(z.enum(FLOW_STAGES)).describe('Etapas em que o agente para e espera a pessoa revisar no app, mesmo no modo autônomo'),
-    narrationBy: z.enum(['ai', 'creator']).describe('"creator": a pessoa grava a própria voz no app (Narração → Gravar e Montar narração); o agente não gera voz'),
+    mode: z.enum(['review', 'autonomous']).describe('"autonomous": vai da ideia ao render sozinho e entrega; "review": para ao fim de cada etapa e espera o OK da pessoa'),
+    narrationBy: z.enum(['ai', 'creator']).describe('Decidido na etapa Narração. "ai": voz clonada da própria pessoa (exige perfil gravado em “Minha voz”); "creator": ela grava os takes no app e o agente não gera voz'),
   };
-  const flowOf = project => ({ mode: project.mode, pauseAt: project.pauseAt || [], narrationBy: project.narrationBy || 'ai' });
+  const flowOf = project => ({ mode: project.mode, narrationBy: project.narrationBy ?? null });
 
-  tool(server, 'project_create', 'Cria um projeto real (aparece nos Recentes do app) com o fluxo combinado com a pessoa: tudo automático, parar em etapas escolhidas (pauseAt) ou aprovar cada etapa; e quem grava a narração.', {
+  tool(server, 'project_create', 'Cria um projeto real (aparece nos Recentes do app) com o fluxo combinado com a pessoa: tudo automático até o render ou etapa por etapa. Quem narra NÃO se decide aqui: fica para a etapa Narração.', {
     title: z.string().min(1).max(120), type: z.enum(['long', 'short']), aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:5']).optional(),
-    mode: flowFields.mode.default('review'), pauseAt: flowFields.pauseAt.default([]), narrationBy: flowFields.narrationBy.default('ai'),
-  }, async ({ title, type, aspectRatio, mode, pauseAt, narrationBy }) => { const created = await api('/projects/create', { title, type, aspectRatio: aspectRatio || (type === 'short' ? '9:16' : '16:9'), mode, pauseAt, narrationBy }); return { path: created.path, id: created.project.id, revision: created.project.revision, ...flowOf(created.project), aspectRatio: created.project.aspectRatio }; });
+    mode: flowFields.mode.default('review'),
+  }, async ({ title, type, aspectRatio, mode }) => { const created = await api('/projects/create', { title, type, aspectRatio: aspectRatio || (type === 'short' ? '9:16' : '16:9'), mode }); return { path: created.path, id: created.project.id, revision: created.project.revision, ...flowOf(created.project), aspectRatio: created.project.aspectRatio }; });
 
-  tool(server, 'project_flow_set', 'Muda o fluxo combinado de um projeto: modo, etapas de pausa e quem grava a narração. Use quando a pessoa mudar de ideia no meio.', { path: projectPath, mode: flowFields.mode.optional(), pauseAt: flowFields.pauseAt.optional(), narrationBy: flowFields.narrationBy.optional() }, async ({ path, ...changes }) => {
+  tool(server, 'project_flow_set', 'Muda o fluxo de um projeto: o modo (automático ou etapa por etapa) e, na etapa Narração, quem narra. narrationBy="ai" é recusado enquanto não houver perfil de voz gravado.', { path: projectPath, mode: flowFields.mode.optional(), narrationBy: flowFields.narrationBy.optional() }, async ({ path, ...changes }) => {
     const { project } = await openProject(path);
     const updated = await api('/projects/action', { path, baseRevision: project.revision, action: { type: 'project.update', ...Object.fromEntries(Object.entries(changes).filter(([, value]) => value !== undefined)) } });
     return { revision: updated.project.revision, ...flowOf(updated.project) };
@@ -153,20 +153,31 @@ export function createMcpServer() {
 
   tool(server, 'media_generate_slides', 'Gera um slide (imagem com texto) por cena do roteiro, para vídeos sem filmagem própria.', { path: projectPath }, async ({ path }) => api('/production/slides', { path }));
 
-  tool(server, 'voice_options', 'Vozes disponíveis: narração padrão (Kokoro: pm_alex, pf_dora, pm_santa) e perfis de voz clonada com consentimento.', {}, async () => {
+  tool(server, 'voice_options', 'Perfis de voz clonada da pessoa (gravados em “Minha voz”, com consentimento). Sem perfil não existe narração por IA: ela mesma grava os takes.', {}, async () => {
     const setup = await api('/setup/status'); const ready = id => setup.items.find(item => item.id === id)?.ready || false;
     const profiles = (await api('/narration/profiles-list', {}).catch(() => ({ profiles: [] }))).profiles;
-    return { standard: { ready: ready('kokoro'), voices: [{ id: 'pm_alex', label: 'Alex (masculina)' }, { id: 'pf_dora', label: 'Dora (feminina)' }, { id: 'pm_santa', label: 'Santa (masculina, grave)' }], install: ready('kokoro') ? null : 'Instale "Narração padrão (Kokoro)" em Dependências' }, cloned: { ready: ready('voxcpm2'), profiles, note: profiles.length ? 'Lenta em CPU (~30 s por segundo de fala).' : 'Sem perfil: a pessoa precisa gravar a voz em Narração → Gravar minha voz.' } };
+    return {
+      ready: ready('voxcpm2') && profiles.length > 0,
+      profiles,
+      install: ready('voxcpm2') ? null : 'Instale "VoxCPM2 (voz clonada)" em Dependências',
+      note: profiles.length
+        ? 'Lenta em CPU (~30 s por segundo de fala). Confirme narrationBy="ai" com project_flow_set antes de gerar.'
+        : 'Nenhum perfil: a voz de IA está bloqueada. Peça para a pessoa gravar a voz dela em “Minha voz” (cerca de 60 s de leitura) ou use narrationBy="creator" e espere ela gravar os takes na etapa Narração.',
+    };
   });
 
-  tool(server, 'narration_generate', 'Gera a narração das cenas do roteiro. engine "standard" (Kokoro, rápido) ou "cloned" (voz da pessoa, exige profileId). Devolve jobId.', {
-    path: projectPath, engine: z.enum(['standard', 'cloned']).default('standard'), voice: z.enum(['pm_alex', 'pf_dora', 'pm_santa']).default('pm_alex'), speed: z.number().min(0.5).max(2).default(1), profileId: z.string().optional(),
-  }, async ({ path, engine, voice, speed, profileId }) => {
-    if (engine === 'cloned' && !profileId) throw new AppError('Informe profileId (veja voice_options)', 'PROFILE_REQUIRED');
+  tool(server, 'narration_generate', 'Gera a narração das cenas do roteiro com a voz clonada da pessoa (profileId de voice_options). Devolve jobId. Lenta em CPU: avise antes.', {
+    path: projectPath, profileId: z.string().optional(),
+  }, async ({ path, profileId }) => {
     const { project } = await openProject(path);
     if (project.narrationBy === 'creator') throw new AppError('A pessoa vai gravar a própria voz: peça para gravar e montar a narração no app (Narração) e espere com stage_wait_decision; depois rode narration_transcribe', 'CREATOR_RECORDS');
-    const job = await api('/narration/generate', engine === 'cloned' ? { path, engine, profileId } : { path, engine, voice, speed });
-    return { jobId: job.id, label: job.label, hint: 'Use job_wait; depois narration_assemble.' };
+    const profiles = (await api('/narration/profiles-list', {}).catch(() => ({ profiles: [] }))).profiles;
+    if (!profiles.length) throw new AppError('Nenhum perfil de voz: peça para a pessoa gravar a voz dela em “Minha voz” no app, ou combine narrationBy="creator"', 'VOICE_PROFILE_REQUIRED');
+    const chosen = profileId || profiles[0].id;
+    if (!profiles.some(item => item.id === chosen)) throw new AppError(`Perfil desconhecido: ${chosen} (veja voice_options)`, 'UNKNOWN_PROFILE');
+    if (project.narrationBy !== 'ai') await api('/projects/action', { path, baseRevision: project.revision, action: { type: 'project.update', narrationBy: 'ai' } });
+    const job = await api('/narration/generate', { path, profileId: chosen });
+    return { jobId: job.id, label: job.label, profileId: chosen, hint: 'Use job_wait; depois narration_assemble.' };
   });
 
   tool(server, 'narration_assemble', 'Junta os takes gerados mais recentes (um por cena, na ordem do roteiro) numa narração tratada (WAV 48 kHz, loudness medido). Devolve jobId.', { path: projectPath, preset: z.enum(['original', 'warm', 'gentle', 'balanced', 'deep']).default('original') }, async ({ path, preset }) => {

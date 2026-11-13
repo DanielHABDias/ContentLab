@@ -9,14 +9,13 @@ export const FEATURES = {
   transcription: { label: 'Transcrever em português', requires: ['whisper-cli', 'whisper-large-v3'] },
   'narration.treatment': { label: 'Tratar e medir áudio da narração', requires: ['ffmpeg', 'ffprobe'] },
   'voice.synthetic': { label: 'Gerar voz clonada (VoxCPM2)', requires: ['voxcpm2'] },
-  'voice.standard': { label: 'Gerar narração padrão (Kokoro)', requires: ['kokoro'] },
   render: { label: 'Renderizar e validar o vídeo', requires: ['ffmpeg', 'ffprobe'] },
 };
 
 /** `requires`: sem eles a etapa não abre. `features`: recursos bloqueados individualmente. */
 export const STAGE_REQUIREMENTS = {
   media: { requires: ['ffmpeg', 'ffprobe'], features: ['media.import', 'media.url', 'transcription'] },
-  narration: { requires: ['ffmpeg', 'ffprobe'], features: ['narration.treatment', 'voice.standard', 'voice.synthetic'] },
+  narration: { requires: ['ffmpeg', 'ffprobe'], features: ['narration.treatment', 'voice.synthetic'] },
   edit: { requires: ['ffmpeg', 'ffprobe'], features: [] },
   review: { requires: ['ffmpeg', 'ffprobe'], features: ['render'] },
 };

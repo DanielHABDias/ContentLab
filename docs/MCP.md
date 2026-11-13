@@ -35,10 +35,15 @@ Para você acompanhar, logo depois de criar ou retomar um projeto o agente chama
 
 Antes de criar o projeto, o agente pergunta como você quer trabalhar e grava a resposta no projeto:
 
-- **Tudo automático:** `mode: "autonomous"`. O agente aprova cada etapa e só avisa no fim.
-- **Parar em pontos escolhidos:** `mode: "autonomous"` com `pauseAt`, por exemplo `["script", "narration", "review"]`. Nessas etapas ele avisa no chat o que revisar e espera você aprovar no app. `stage_approve` recusa a etapa de pausa sem a sua aprovação.
-- **Aprovar tudo:** `mode: "review"`.
-- **Sua própria voz:** `narrationBy: "creator"`. O agente não gera voz (`narration_generate` recusa). Você grava e monta a narração no app (Narração → Gravar → Montar narração), e ele continua com `narration_transcribe`.
+São dois caminhos, só isso:
+
+- **Tudo automático:** `mode: "autonomous"`. O agente vai da ideia ao render sozinho e entrega o projeto pronto. Você revisa no fim e pode reabrir qualquer etapa. Ele ainda para por direitos de mídia, consentimento de voz e custo de render, e nunca publica.
+- **Etapa por etapa:** `mode: "review"`. Ao fim de cada etapa ele chama `stage_wait_decision` e espera. Você clica em **Aprovar e seguir** no app, ou responde no chat, e ele continua.
+
+**Quem narra não se decide aqui.** `narrationBy` começa `null`. Na etapa Narração o agente chama `voice_options` e combina com você:
+
+- **Voz de IA:** é a sua voz clonada. Só existe com um perfil gravado em **Minha voz** (barra lateral, cerca de 60 s de leitura). O agente confirma com `project_flow_set narrationBy: "ai"` antes de `narration_generate`; sem perfil, o app e o servidor recusam (`VOICE_PROFILE_REQUIRED`).
+- **Você grava:** `narrationBy: "creator"`. O agente não gera voz (`narration_generate` recusa). Você grava e monta a narração no app (Narração → Gravar → Montar narração), e ele continua com `narration_transcribe`.
 
 Para mudar no meio do caminho, o agente usa `project_flow_set`.
 
@@ -59,7 +64,7 @@ Um servidor MCP não consegue iniciar uma mensagem no chat por conta própria; q
 | `creative_write` | Ideia (brief), roteiro (abertura, desenvolvimento e payoff; cada parágrafo do desenvolvimento vira uma cena) e embalagem (títulos A/B, descrição, tags, SEO) |
 | `stage_wait_decision`, `stage_approve`, `stage_request_changes` | Aprovação humana ou do agente. Ver as regras abaixo |
 | `media_import_files`, `media_import_url`, `media_generate_slides` | Mídias próprias ou licenciadas, ou um slide por cena do roteiro quando não há filmagem |
-| `voice_options`, `narration_generate`, `narration_assemble` | Narração **padrão** (Kokoro: Alex, Dora, Santa; rápida) ou **clonada** (seu perfil de voz; lenta em CPU) e a montagem tratada da narração |
+| `voice_options`, `narration_generate`, `narration_assemble` | Perfis de voz clonada (gravados em Minha voz) e a geração e montagem tratada da narração. Lenta em CPU: ~30 s por segundo de fala |
 | `motion_kit`, `motion_plan_auto`, `motion_plan_get`, `motion_plan_set`, `motion_preview` | **Modo composição** (principal): o vídeo inteiro como motion design do kit de motion, em beats; plano automático, ajuste pelo agente e prévia em PNG. Ver [MOTION.md](MOTION.md) |
 | `character_import` | Importa o personagem do projeto: pasta com PNGs de poses e `catalogo.json` (pose, gesto, tons), com direitos confirmados. Vira mídia com papel `character`. Sem personagem, o plano não tem aparte nem a cena `personagem`. `dryRun` confere sem gravar |
 | `narration_transcribe` | Transcreve a narração montada (Whisper local) para legenda palavra a palavra |
@@ -77,7 +82,7 @@ Um servidor MCP não consegue iniciar uma mensagem no chat por conta própria; q
 - **Modo `review`:** o agente produz a etapa e chama `stage_wait_decision`. Ele só pode aprovar sozinho se você disser no chat que aprovou (`userApproved=true`), e o histórico registra "usuário (aprovado no chat, MCP)".
 - **Modo `autonomous`:** você escolheu não aprovar. O agente aprova cada etapa, e o histórico registra "agente (modo autônomo, MCP)".
 - **Direitos de mídia:** valem nos dois modos. Mídia com direitos pendentes bloqueia a etapa, e importar por URL exige a sua confirmação.
-- **Voz clonada:** exige um perfil gravado com o seu consentimento (Narração → Gravar minha voz).
+- **Voz clonada:** exige um perfil gravado com o seu consentimento em **Minha voz**. Sem perfil não há voz de IA: resta você gravar os takes.
 
 ## Fluxo de exemplo
 

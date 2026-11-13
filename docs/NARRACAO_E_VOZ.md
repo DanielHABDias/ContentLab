@@ -52,26 +52,25 @@ O VoxCPM2 não declara marca d'água. O canal deve continuar sinalizando conteú
 
 A validação auditiva final continua exigindo corpus PT-BR autorizado no hardware do usuário antes de declarar qualidade de produção.
 
-## Gravar minha voz (perfil guiado)
+## “Minha voz”: gravar o perfil (fora dos projetos)
 
-Em Narração → "Sua voz, com consentimento", o botão **Gravar minha voz** cria o perfil sem precisar de um take gravado antes.
+A tela **Minha voz**, na barra lateral, é o único lugar onde a voz da pessoa é gravada. Ela não pertence a nenhum projeto: os perfis são do computador e valem para todos.
 
-1. O app mostra um texto de leitura de cerca de 147 palavras, umas 60 s em ritmo de narração. Ele cobre bem os sons do PT-BR e tem perguntas, exclamações e números.
+1. O app mostra um texto de leitura de cerca de 147 palavras, umas 60 s em ritmo de narração. Ele cobre bem os sons do PT-BR e tem perguntas, exclamações e números, para o modelo aprender entonação e não só timbre.
 2. O microfone só é pedido quando a pessoa clica em "Começar a gravar". A gravação para sozinha em 58 s, porque o limite da amostra é de 60 s.
-3. A amostra vira um take do projeto. A pessoa ouve antes de criar o perfil e pode gravar de novo.
+3. A amostra vai para uma área temporária global (`<dados>/voices/.staging/<uuid>/amostra.wav`), convertida em WAV e medida. A pessoa ouve antes de criar o perfil e pode gravar de novo; a área temporária é apagada ao criar o perfil ou ao fechar o diálogo.
 4. O texto de referência já vem preenchido com o texto lido e pode ser corrigido se alguma palavra mudou. Amostras com menos de 20 s recebem um aviso, porque soam mais robóticas.
 5. Criar o perfil exige o nome do titular e o consentimento marcado.
 
-A narração por voz clonada só fica disponível quando o VoxCPM2 está instalado em Dependências e existe pelo menos um perfil. Até lá a tela explica o que falta. "Usar take existente" continua disponível para amostras importadas.
+**Ouvir como ficou:** cada perfil tem o botão "Ouvir como ficou", que gera uma frase curta com a própria voz clonada (`voice.check`, `<dados>/voices/<id>/check.wav`) e a mostra logo abaixo da amostra gravada. É a forma de conferir o resultado antes de usar o perfil num vídeo. Em CPU a geração leva minutos; o job mostra a estimativa e pode ser cancelado. Uma geração de voz por vez no computador, seja de cena ou de conferência (`VOICE_BUSY`).
 
-## Narração padrão (Kokoro, sem clonagem)
+**Vários perfis:** dá para ter quantos perfis quiser (voz calma, voz animada, outra pessoa com autorização por escrito) e escolher qual usar em cada projeto, na etapa Narração.
 
-Para narrar sem usar a sua voz, use a **narração padrão**. Ela é instalada em Dependências como "Narração padrão (Kokoro, PT-BR)".
+## Quem narra é escolhido na etapa Narração
 
-- **Vozes:** Alex (masculina), Dora (feminina) e Santa (masculina, grave).
-- **Velocidade:** de 0,9× a 1,2×.
-- **Desempenho:** roda em CPU, cerca de 5× mais rápido que o tempo real, e não precisa de limite de memória especial.
-- **Cache por cena:** o mesmo texto com a mesma voz não é gerado de novo. Se o roteiro mudar, a cena fica marcada como desatualizada.
-- **Licença:** o kokoro-onnx é MIT. Os pesos do Kokoro-82M são Apache-2.0 e foram treinados só com áudio de licença permissiva, então o uso comercial é permitido. A fonética usa o espeak-ng (GPL-3) como programa separado, baixado na instalação e não redistribuído pelo Content Lab.
+`narrationBy` começa `null` ao criar o projeto. Na etapa Narração a pessoa escolhe:
 
-Na interface, ela fica em Narração → Voz sintética pronta. Pelo MCP, use `narration_generate` com `engine: "standard"` e `voice`.
+- **Voz de IA (sua voz clonada)**: só aparece habilitada quando existe ao menos um perfil em Minha voz. Sem perfil, o rádio fica desabilitado, a tela explica por quê e oferece o atalho para Minha voz; o servidor também recusa (`VOICE_PROFILE_REQUIRED`) tanto em `createProject` quanto em `project.update`, venha a chamada da interface, da CLI ou do MCP.
+- **Eu gravo**: a pessoa grava ou importa os takes na própria etapa e a seção de voz clonada some da tela.
+
+Não existe voz sintética genérica no Content Lab: a narração por IA é sempre a voz clonada da pessoa, com consentimento registrado.

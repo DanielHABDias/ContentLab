@@ -1,4 +1,4 @@
-import { copyFile, mkdir, mkdtemp, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
@@ -166,6 +166,19 @@ export class NarrationStore {
   async removeTakeFiles(id) { await rm(this.takeDirectory(id), { recursive: true, force: true }); }
 }
 
+/**
+ * Texto de leitura do perfil de voz (~150 palavras, cerca de 60 s em ritmo de narração).
+ * Cobre os sons do PT-BR, com pergunta, exclamação, números e pausas, para o VoxCPM2
+ * aprender entonação, e não só timbre. Quem gravar pode corrigir o texto se trocar palavras.
+ */
+export const VOICE_SAMPLE_TEXT = `Olá! Este é o meu perfil de voz para o Content Lab. Vou ler este texto com calma, do jeito que eu falo nos meus vídeos. Hoje o céu amanheceu limpo, e a cidade acordou devagar: o padeiro abriu a porta às seis e quinze, o ônibus passou lotado e alguém gritou lá da esquina. Você já reparou como cada lugar tem um som próprio? Na praia, as ondas quebram sem pressa; na floresta, os pássaros conversam entre os galhos; no centro, as buzinas não param nunca. Eu gosto de histórias que começam pequenas e crescem aos poucos. Um detalhe, uma pergunta, uma ideia que ninguém tinha percebido. Então eu pesquiso, escrevo, gravo e edito, até tudo fazer sentido. Será que vai dar certo? Às vezes dá, às vezes não. Mas cada vídeo me ensina alguma coisa nova. Obrigado por ouvir até aqui, e até a próxima!`;
+
+/** Limite de gravação da amostra, em segundos: o VoxCPM2 recusa amostras acima de 60 s. */
+export const VOICE_SAMPLE_LIMIT_SECONDS = 58;
+
+/** Frase curta gerada com o perfil para a pessoa conferir como a voz clonada ficou. */
+export const VOICE_CHECK_PHRASE = 'Testando a minha voz clonada no Content Lab. Será que ficou parecido? Fala comigo nos comentários!';
+
 /** Perfis de voz globais (`<dados>/voices/<id>/`), sempre com consentimento do titular. */
 export class VoiceProfileStore {
   constructor(root) { this.root = path.resolve(root); }
@@ -205,6 +218,17 @@ export class VoiceProfileStore {
     return profiles.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
 
+  /** Caminho da amostra "como ficou" (frase curta gerada com o próprio perfil). */
+  checkSamplePath(id) { return path.join(this.#dir(id), 'check.wav'); }
+
+  /** Registra no perfil a amostra gerada para conferência; não toca na amostra gravada. */
+  async recordCheckSample(id, { phrase, measures }) {
+    const profile = await this.read(id);
+    const value = { ...profile, checkSample: { file: this.checkSamplePath(id), phrase, measures, generatedAt: new Date().toISOString() } };
+    await writeFile(path.join(this.#dir(id), 'profile.json'), `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
+    return value;
+  }
+
   async remove(id) { await rm(this.#dir(id), { recursive: true, force: true }); }
 }
 
@@ -224,41 +248,6 @@ function round(value, digits = 3) { const factor = 10 ** digits; return Math.rou
  * dispositivo, núcleos e teto de memória sem swap (Linux: systemd-run), com
  * prioridade baixa. Estourar o teto encerra só a geração, nunca o sistema.
  */
-export const STANDARD_VOICES = [
-  { id: 'pm_alex', label: 'Alex (masculina)' },
-  { id: 'pf_dora', label: 'Dora (feminina)' },
-  { id: 'pm_santa', label: 'Santa (masculina, grave)' },
-];
-
-/** Perfil "virtual" da narração padrão: entra na mesma chave de cache das cenas. */
-export function standardProfile(voice = 'pm_alex', speed = 1) {
-  if (!STANDARD_VOICES.some(item => item.id === voice)) throw Object.assign(new Error(`Voz padrão desconhecida: ${voice}`), { code: 'INVALID_VOICE' });
-  const rate = Number(speed);
-  if (!(rate >= 0.5 && rate <= 2)) throw Object.assign(new Error('Velocidade da narração deve ficar entre 0,5 e 2'), { code: 'INVALID_VOICE' });
-  return { id: `standard-${voice}-${rate}`, sampleSha256: 'kokoro-82m-v1.0', referenceText: '', voice, speed: rate };
-}
-
-/** Narração padrão (Kokoro-82M, PT-BR, sem clonagem). Leve: CPU, sem limite de memória especial. */
-export class KokoroVoice {
-  static model = 'kokoro';
-  constructor({ runner = 'contentlab-tts', modelPath, spawnFile = execFile } = {}) { this.runner = runner; this.modelPath = modelPath; this.spawnFile = spawnFile; }
-  async generate({ text, voice = 'pm_alex', speed = 1, output, signal }) {
-    const directory = await mkdtemp(path.join(os.tmpdir(), 'contentlab-tts-'));
-    try {
-      const textFile = path.join(directory, 'texto.txt');
-      await writeFile(textFile, String(text).trim());
-      const threads = Math.max(1, Math.min(8, os.cpus().length - 2));
-      await new Promise((resolve, reject) => this.spawnFile(this.runner, ['--model', this.modelPath, '--voice', voice, '--speed', String(speed), '--lang', 'pt-br', '--text-file', textFile, '--output', path.resolve(output), '--threads', String(threads)], { timeout: 60 * 60_000, maxBuffer: 4 * 1024 * 1024, signal }, (error, stdout, stderr) => {
-        if (!error) return resolve(stdout);
-        if (error.code === 'ENOENT') return reject(Object.assign(new Error('Narração padrão não instalada: instale em Dependências'), { code: 'DEPENDENCY_MISSING' }));
-        let message = error.message; try { message = JSON.parse(String(stderr).trim().split('\n').pop()).error || message; } catch { /* texto livre */ }
-        reject(Object.assign(new Error(`Narração padrão falhou: ${message}`), { code: signal?.aborted ? 'CANCELLED' : 'VOICE_FAILED' }));
-      }));
-      return { output: path.resolve(output) };
-    } finally { await rm(directory, { recursive: true, force: true }); }
-  }
-}
-
 export class VoxCPMVoice {
   static model = 'voxcpm2';
   constructor({ runner = 'contentlab-voice', modelPath, planner, onMeasured = async () => {}, spawnFile = execFile, platform = process.platform } = {}) {

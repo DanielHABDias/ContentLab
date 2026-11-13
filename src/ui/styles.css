@@ -120,3 +120,9 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-vi
 .background-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 12px; }
 .background-grid li { display: grid; gap: 6px; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel-2); min-width: 0; }
 .creative-editor > .approval-bar { margin-top: 28px; }.approval-bar small { color: var(--muted); font-size: 12px; }.approval-bar.agent-waiting { border-top-color: var(--lime); }.agent-note { display: flex; align-items: center; gap: 6px; color: var(--lime); font-size: 13px; max-width: 560px; }
+
+/* Minha voz: perfis de voz do computador, com a amostra gravada e a amostra da voz clonada. */
+.voice-screen .home-header h1 { margin-top: 6px; }.voice-screen .home-header p { max-width: 62ch; }
+.voice-profiles li > span:first-child { gap: 7px; }.voice-profiles audio { width: min(420px, 100%); }
+.voice-profiles .check-sample { display: grid; gap: 4px; padding-top: 6px; border-top: 1px dashed var(--line); }
+.voice-profiles .take-actions { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; }

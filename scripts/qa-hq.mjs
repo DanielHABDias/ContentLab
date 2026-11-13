@@ -32,7 +32,22 @@ const approve = async projectPath => { const { currentStage } = await call('proj
 const probe = file => JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration:stream=codec_type,width,height,r_frame_rate', '-of', 'json', file], { encoding: 'utf8' }));
 const loudness = file => spawnSync('ffmpeg', ['-hide_banner', '-nostats', '-i', file, '-af', 'ebur128=framelog=quiet', '-f', 'null', '-'], { encoding: 'utf8' }).stderr;
 
-async function produce({ title, type, brief, script, packaging, voice, scenes, shots, images }) {
+
+/**
+ * Perfil de voz clonada usado pelo QA. A única voz de IA do Content Lab é a voz clonada da
+ * pessoa: sem perfil gravado em “Minha voz”, o QA para avisando em vez de fingir sucesso.
+ */
+async function requireVoiceProfile() {
+  const options = await call('voice_options');
+  if (options.install) throw new Error(`QA precisa da voz clonada: ${options.install}`);
+  const wanted = process.env.CONTENTLAB_QA_VOICE_PROFILE;
+  const profile = wanted ? options.profiles.find(item => item.id === wanted) : options.profiles[0];
+  if (!profile) throw new Error('QA precisa de um perfil de voz: grave a sua voz em “Minha voz” no app (cerca de 60 s de leitura) e rode de novo. A geração é lenta em CPU (~30 s por segundo de fala).');
+  note(`  voz clonada: perfil ${profile.name} (${profile.id})`);
+  return profile.id;
+}
+
+async function produce({ title, type, brief, script, packaging, profileId, scenes, shots, images }) {
   const created = await call('project_create', { title, type, mode: 'autonomous' }); const projectPath = created.path;
   note(`▶ ${title} (${type} ${created.aspectRatio})`);
   await call('creative_write', { path: projectPath, brief }); await approve(projectPath);
@@ -42,7 +57,7 @@ async function produce({ title, type, brief, script, packaging, voice, scenes, s
   note(`  ${images.length} imagens do assunto importadas (direitos próprios)`);
   const audio = await call('audio_library', { path: projectPath, seconds: 240 }); note(`  ${Object.keys(audio.sfx).length} SFX originais e trilha de rascunho (${audio.rights})`);
   await approve(projectPath); // mídia
-  const job = await call('narration_generate', { path: projectPath, engine: 'standard', voice }); await waitJob(projectPath, job.jobId, 'narração');
+  const job = await call('narration_generate', { path: projectPath, profileId: profileId || await requireVoiceProfile() }); await waitJob(projectPath, job.jobId, 'narração');
   const assembled = await call('narration_assemble', { path: projectPath, preset: 'balanced' }); await waitJob(projectPath, assembled.jobId, 'montagem da narração');
   const transcribed = await call('narration_transcribe', { path: projectPath }); if (transcribed.jobId) await waitJob(projectPath, transcribed.jobId, 'transcrição');
   const listed = await call('scene_list', { path: projectPath });
@@ -75,7 +90,7 @@ const results = [];
 try {
   await call('contentlab_start');
   results.push(await produce({
-    title: 'O escudo que pesava demais', type: 'long', voice: 'pm_alex', scenes: 'auto', images: [heroi, ...icons],
+    title: 'O escudo que pesava demais', type: 'long', scenes: 'auto', images: [heroi, ...icons],
     shots: duration => Array.from({ length: 10 }, (_, index) => ((index + 0.5) * duration) / 10),
     brief: { thesis: 'Proteger tudo o tempo todo impede o herói de escolher o que realmente importa', audience: 'Fãs de heróis que gostam de entender escolhas', promise: 'Entender por que um herói precisa escolher o que proteger', notes: 'O herói participa da explicação' },
     script: {
@@ -86,7 +101,7 @@ try {
     packaging: { titleA: 'O escudo que pesava demais', titleB: 'Por que herói precisa escolher', description: 'O herói aprende que proteger tudo é não proteger nada.', tags: 'heróis, escolhas', seo: 'herói escolhas responsabilidade' },
   }));
   results.push(await produce({
-    title: 'O herói e a regra quebrada', type: 'short', voice: 'pf_dora', images: [heroi, icons[0], icons[4], icons[1], icons[5]],
+    title: 'O herói e a regra quebrada', type: 'short', images: [heroi, icons[0], icons[4], icons[1], icons[5]],
     shots: duration => Array.from({ length: 8 }, (_, index) => Math.min(duration - 0.3, 0.6 + (index * duration) / 8)),
     // O agente troca o 3º beat por um diálogo: herói × a regra (ícone da máscara), com tempos dentro do beat.
     scenes: (suggestion, evidence) => suggestion.map((item, index) => index !== 2 ? item : { ...item, componentId: 'dv_dialogo_hq', props: {
@@ -106,7 +121,7 @@ try {
 } finally {
   await call('contentlab_stop', { force: true }).catch(() => {});
   await client.close();
-  const report = ['# QA das cenas HQ via MCP', '', `Executado em ${new Date().toISOString()} · ${os.platform()} ${os.arch()} · narração padrão Kokoro · legenda palavra a palavra (Whisper) · cenas HQ do Content Lab · imagens próprias (personagem de teste e ícones) · SFX originais e trilha de rascunho`, '', 'Teste técnico do fluxo com imagens próprias; a qualidade editorial final depende das imagens reais dos personagens e de uma trilha licenciada, escolhidas pelo criador.', '', '| Projeto | Formato | Duração | Cenas HQ | Loudness | Capítulos | Verificação |', '| --- | --- | --- | --- | --- | --- | --- |', ...results.map(item => `| ${item.title} | ${item.size} | ${item.duration.toFixed(1)} s | ${item.sceneClips} | ${item.lufs} LUFS | ${item.chapters.length} | ${item.delivery.checks.filter(check => check.ok).length}/${item.delivery.checks.length} |`), '', '## Registro', '', '```text', ...log, '```', ''].join('\n');
+  const report = ['# QA das cenas HQ via MCP', '', `Executado em ${new Date().toISOString()} · ${os.platform()} ${os.arch()} · legenda palavra a palavra (Whisper) · cenas HQ do Content Lab · imagens próprias (personagem de teste e ícones) · SFX originais e trilha de rascunho`, '', 'Teste técnico do fluxo com imagens próprias; a qualidade editorial final depende das imagens reais dos personagens e de uma trilha licenciada, escolhidas pelo criador.', '', '| Projeto | Formato | Duração | Cenas HQ | Loudness | Capítulos | Verificação |', '| --- | --- | --- | --- | --- | --- | --- |', ...results.map(item => `| ${item.title} | ${item.size} | ${item.duration.toFixed(1)} s | ${item.sceneClips} | ${item.lufs} LUFS | ${item.chapters.length} | ${item.delivery.checks.filter(check => check.ok).length}/${item.delivery.checks.length} |`), '', '## Registro', '', '```text', ...log, '```', ''].join('\n');
   await writeFile(path.join(root, 'docs', 'QA_HQ.md'), report);
   console.log(`\nRelatório: docs/QA_HQ.md · artefatos: ${process.argv.includes('--keep') ? work : '(removidos)'}`);
   if (!process.argv.includes('--keep')) await rm(work, { recursive: true, force: true });
