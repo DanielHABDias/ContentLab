@@ -235,3 +235,21 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-vi
 .memory-apps li > span { display: grid; gap: 2px; min-width: 0; }
 .memory-panel .notice { margin: 0; }
 .workflow-card.jobs { padding: 14px 18px; }.jobs .media-list { margin-top: 0; }.jobs .media-list li:first-child { border-top: 0; }.jobs .media-list li { padding: 10px 0; }
+.settings-lead { color: var(--muted); font-size: 14px; line-height: 1.5; margin: 12px 0 0; max-width: 62ch; }
+.choice-group { border: 0; padding: 0; margin: 22px 0 0; min-width: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.choice-group legend { padding: 0; margin-bottom: 10px; font-size: 13px; font-weight: 700; }
+.choice-card { position: relative; display: grid; gap: 8px; align-content: start; padding: 16px 18px; border: 1px solid #3a3a48; border-radius: 12px; background: #111118; cursor: pointer; transition: border-color .15s, background .15s, box-shadow .15s; }
+.choice-card:hover { border-color: #565666; }
+.choice-card input { position: absolute; opacity: 0; pointer-events: none; }
+.choice-card.selected { border-color: var(--lime); background: rgba(216,255,72,.05); box-shadow: 0 0 0 1px var(--lime) inset; }
+.choice-card:has(input:focus-visible) { outline: 3px solid var(--lime); outline-offset: 3px; }
+.choice-group:disabled .choice-card { cursor: not-allowed; opacity: .6; }
+.choice-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.choice-head strong { font-size: 16px; }
+.choice-head strong::before { content: ''; display: inline-block; width: 14px; height: 14px; margin-right: 9px; vertical-align: -2px; border: 2px solid #5a5a6a; border-radius: 50%; box-sizing: border-box; }
+.choice-card.selected .choice-head strong::before { border: 4px solid var(--lime); }
+.choice-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: #72e5ae; border: 1px solid #39765e; background: #172b25; border-radius: 999px; padding: 3px 8px; }
+.choice-chip { justify-self: start; font-size: 12px; color: #d9d8df; border: 1px solid #40404d; border-radius: 999px; padding: 3px 9px; }
+.choice-card small { color: var(--muted); font-size: 13px; line-height: 1.45; }
+.settings-note { display: flex; gap: 10px; align-items: flex-start; margin: 16px 0 0; padding: 12px 14px; border: 1px solid #2f4a6a; border-radius: 10px; background: #131c28; color: #c4d6ea; font-size: 13px; line-height: 1.5; }
+.settings-note svg { flex-shrink: 0; margin-top: 2px; color: var(--blue); }

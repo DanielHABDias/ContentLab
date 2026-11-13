@@ -475,8 +475,9 @@ test('configurações escolhem e persistem o modo de voz usado nas duas telas', 
   localApi.updateSettings.mockResolvedValue({ ...settingsFixture(), revision: 4, voice: { mode: 'economy' } });
   render(<App/>);
   fireEvent.click(await screen.findByRole('button', { name: /configurações/i }));
-  const select = await screen.findByLabelText('Modo de geração');
-  fireEvent.change(select, { target: { value: 'economy' } });
+  expect(await screen.findByRole('radio', { name: /padrão/i })).toBeChecked();
+  expect(screen.getByText(/serve para os dois modos/i)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('radio', { name: /econômico/i }));
   fireEvent.click(screen.getByRole('button', { name: /salvar modo de voz/i }));
   await waitFor(() => expect(localApi.updateSettings).toHaveBeenCalledWith({ baseRevision: 3, voice: { mode: 'economy' } }));
   expect(await screen.findByText('Modo de voz salvo.')).toBeInTheDocument();
