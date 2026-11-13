@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, Mic, Square, Trash2, Upload, Wand2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, AudioLines, Check, Gauge, Headphones, Lock, Mic, Scissors, Sparkles, Square, Trash2, Upload, Volume2, Wand2, Wind, X } from 'lucide-react';
 import { ConfirmDialog } from './Dialogs.jsx';
 import { localApi } from './local-api.js';
 import { JobsPanel, clock } from './MediaLibrary.jsx';
@@ -27,14 +27,19 @@ export function NarrationStudio({ details, setup, onOpenSetup, onUpdated, onOpen
   const startJob = async task => { const job = await act(task); if (job?.id) { setJobs(previous => [job, ...previous]); refreshJobs(); } };
   if (!state) return <section className="workflow-card"><p className="empty-state">{error ? error.message : 'Carregando narração…'}</p></section>;
   const { narration } = state; const base = { path: projectPath, baseRevision: narration.revision };
+  const mode = details.project.narrationBy === 'ai' ? 'ai' : details.project.narrationBy === 'creator' ? 'creator' : null;
+  // Voz de IA: a cena gerada mais recente de cada cena, na ordem do roteiro. Eu gravo: os takes na ordem da lista.
+  const latest = new Map(narration.takes.filter(take => take.origin === 'generated' && !take.stale).map(take => [take.sceneId, take.id]));
+  const finalTakeIds = mode === 'ai' ? state.scenes.map(scene => latest.get(scene.id)).filter(Boolean) : narration.takes.filter(take => take.origin !== 'generated').map(take => take.id);
   return <div className="narration">
     <div aria-live="polite">{status && <div className="notice" role="status">{status}</div>}</div>
     <DependencyNotice error={error} onOpenSetup={onOpenSetup}/>
     <JobsPanel jobs={jobs} uploads={[]} onCancel={async jobId => { await localApi.cancelJob(jobId); refreshJobs(); }}/>
     <NarratorChoice project={details.project} profiles={state.profiles} path={projectPath} onUpdated={onUpdated} onOpenVoice={onOpenVoice}/>
-    <TakesSection projectPath={projectPath} narration={narration} act={act} base={base}/>
-    <TreatmentSection projectPath={projectPath} narration={narration} presets={state.presets} previewSeconds={state.previewSeconds} act={act} startJob={startJob} base={base}/>
-    {details.project.narrationBy !== 'creator' && <VoiceSection projectPath={projectPath} state={state} setup={setup} onOpenSetup={onOpenSetup} act={act} startJob={startJob} running={running} onOpenVoice={onOpenVoice}/>}
+    {/* Só aparecem as seções do jeito escolhido: voz de IA gera por cena; "Eu gravo" grava ou importa takes. */}
+    {mode === 'ai' && <VoiceSection projectPath={projectPath} narration={narration} finalTakeIds={finalTakeIds} base={base} state={state} setup={setup} onOpenSetup={onOpenSetup} act={act} startJob={startJob} running={running} onOpenVoice={onOpenVoice}/>}
+    {mode === 'creator' && <TakesSection projectPath={projectPath} narration={narration} act={act} base={base}/>}
+    {mode === 'creator' && <TreatmentSection takeIds={finalTakeIds} projectPath={projectPath} narration={narration} previewSeconds={state.previewSeconds} act={act} startJob={startJob} base={base} setup={setup} onOpenSetup={onOpenSetup}/>}
   </div>;
 }
 
@@ -45,20 +50,35 @@ export function NarrationStudio({ details, setup, onOpenSetup, onUpdated, onOpen
 function NarratorChoice({ project, profiles, path, onUpdated, onOpenVoice }) {
   const [busy, setBusy] = useState(false); const [error, setError] = useState('');
   const choose = async narrationBy => {
+    if (narrationBy === project.narrationBy) return;
     setBusy(true); setError('');
     try { onUpdated?.(await localApi.runProjectAction({ path, baseRevision: project.revision, action: { type: 'project.update', narrationBy } })); }
     catch (issue) { setError(issue.message); }
     finally { setBusy(false); }
   };
+  const aiLocked = !profiles.length;
+  const options = [
+    { id: 'ai', icon: Sparkles, title: 'Voz de IA', subtitle: 'Sua voz clonada', disabled: aiLocked,
+      text: aiLocked ? 'Indisponível: nenhum perfil de voz gravado ainda.' : `Gerada cena a cena com o perfil gravado em “Minha voz” (${profiles.length} ${profiles.length === 1 ? 'perfil' : 'perfis'}).` },
+    { id: 'creator', icon: Mic, title: 'Eu gravo', subtitle: 'Microfone ou arquivo', disabled: false,
+      text: 'Você grava ou importa os takes aqui embaixo; a IA não gera voz.' },
+  ];
   return <section className="workflow-card" aria-labelledby="narrator-title">
     <div className="section-title"><div><span className="eyebrow">Quem narra</span><h2 id="narrator-title">Voz deste vídeo</h2></div></div>
     {error && <div className="notice error" role="alert">{error}</div>}
-    <fieldset><legend className="sr-only">Quem narra este vídeo</legend>
-      <label><input type="radio" name="narration-by" disabled={busy || !profiles.length} checked={project.narrationBy === 'ai'} onChange={() => choose('ai')}/> Voz de IA (sua voz clonada)<span className="option-hint">{profiles.length ? `Gerada cena a cena com o perfil gravado em “Minha voz” (${profiles.length} ${profiles.length === 1 ? 'perfil' : 'perfis'}).` : 'Indisponível: nenhum perfil de voz gravado ainda.'}</span></label>
-      <label><input type="radio" name="narration-by" disabled={busy} checked={project.narrationBy === 'creator'} onChange={() => choose('creator')}/> Eu gravo<span className="option-hint">Você grava ou importa os takes aqui embaixo; a IA não gera voz.</span></label>
-    </fieldset>
-    {!profiles.length && <div className="notice" role="status">
-      <span>Para liberar a voz de IA, grave uma amostra da sua voz (cerca de 60 s) em <strong>Minha voz</strong>.</span>
+    <div className="narrator-options" role="radiogroup" aria-label="Quem narra este vídeo">
+      {options.map(option => {
+        const Icon = option.disabled ? Lock : option.icon; const selected = project.narrationBy === option.id;
+        return <label key={option.id} className={`narrator-option ${selected ? 'selected' : ''} ${option.disabled ? 'locked' : ''}`}>
+          <input type="radio" className="sr-only" name="narration-by" disabled={busy || option.disabled} checked={selected} onChange={() => choose(option.id)}/>
+          <span className="narrator-icon" aria-hidden="true"><Icon size={20}/></span>
+          <span className="narrator-copy"><strong>{option.title}</strong><small className="narrator-sub">{option.subtitle}</small><span className="option-hint">{option.text}</span></span>
+          <span className="narrator-check" aria-hidden="true">{selected && <Check size={14}/>}</span>
+        </label>;
+      })}
+    </div>
+    {aiLocked && <div className="narrator-unlock" role="status">
+      <span><Mic size={16} aria-hidden="true"/><span>Para liberar a voz de IA, grave uma amostra da sua voz (cerca de 60 s) em <strong>Minha voz</strong>.</span></span>
       {onOpenVoice && <button className="mini-button" onClick={onOpenVoice}>Abrir Minha voz</button>}
     </div>}
     {!project.narrationBy && <p className="plan-line">Escolha uma das duas para liberar a geração ou a gravação da narração.</p>}
@@ -110,30 +130,84 @@ function Recorder({ projectPath, onDone }) {
   </span>;
 }
 
-function TreatmentSection({ projectPath, narration, presets, previewSeconds, act, startJob, base }) {
-  const [settings, setSettings] = useState(narration.treatment); const [preview, setPreview] = useState(null); const [busy, setBusy] = useState(false);
-  const takeIds = narration.takes.map(take => take.id);
+const CLEANUP = [
+  ['aiDenoise', Sparkles, 'Limpar a voz com IA', 'DeepFilterNet3 local: tira ruído de fundo, ventilador, chiado e eco leve.', 'narration.ai'],
+  ['removeBreaths', Wind, 'Silenciar respiros', 'O que fica entre as frases (respiro, estalo, ruído) vira silêncio.', 'narration.pauses'],
+  ['trimPauses', Scissors, 'Encurtar pausas longas', 'Corta as pausas maiores que o limite e o silêncio das pontas.', 'narration.pauses'],
+];
+const LEVEL = [
+  ['compress', Gauge, 'Compressão de locução', 'Deixa trechos baixos e altos mais parecidos, sem esmagar.'],
+  ['normalize', Volume2, 'Volume padrão', 'Ganho medido até o alvo, com limitador de pico.'],
+];
+const TARGETS = [[-14, '-14', 'Mais alto'], [-16, '-16', 'YouTube'], [-19, '-19', 'Podcast']];
+const PAUSES = [[0.25, 'Curtas'], [0.4, 'Naturais'], [0.7, 'Calmas']];
+const seconds = value => `${value.toFixed(value < 1 ? 2 : 1).replace('.', ',')} s`;
+
+function TreatmentSection({ takeIds, projectPath, narration, previewSeconds, act, startJob, base, setup, onOpenSetup }) {
+  const [settings, setSettings] = useState({ maxPauseSeconds: 0.4, aiDenoise: true, removeBreaths: true, trimPauses: true, ...narration.treatment }); const [preview, setPreview] = useState(null); const [busy, setBusy] = useState(false);
+  const missing = feature => (setup && feature ? featureBlock(feature, setup.items) : []);
+  // Recurso sem modelo instalado fica desligado e travado até instalar.
+  const effective = { ...settings, ...Object.fromEntries(CLEANUP.filter(([, , , , feature]) => missing(feature).length).map(([key]) => [key, false])) };
   const set = (key, value) => { setSettings(previous => ({ ...previous, [key]: value })); setPreview(null); };
-  const listen = async () => { setBusy(true); setPreview(await act(() => localApi.narrationPreview({ path: projectPath, takeIds, treatment: settings }))); setBusy(false); };
-  const toggles = { trimSilence: 'Cortar silêncio das pontas', denoise: 'Redução de ruído', highpass: 'Filtro de graves (high-pass 80 Hz)', compress: 'Compressão leve', normalize: 'Normalizar loudness' };
-  return <section className="workflow-card" aria-labelledby="treatment-title">
+  const listen = async () => { setBusy(true); setPreview(await act(() => localApi.narrationPreview({ path: projectPath, takeIds, treatment: effective }))); setBusy(false); };
+  const toggle = ([key, Icon, label, hint, feature]) => {
+    const absent = missing(feature);
+    return <div key={key} className={`treat-toggle ${effective[key] ? 'on' : ''} ${absent.length ? 'locked' : ''}`}>
+      <label className="treat-toggle-main">
+        <input type="checkbox" role="switch" disabled={Boolean(absent.length)} checked={effective[key]} onChange={event => set(key, event.target.checked)}/>
+        <span className="treat-icon" aria-hidden="true"><Icon size={17}/></span>
+        <span className="treat-copy"><strong>{label}</strong><small>{absent.length ? `Precisa instalar: ${absent.map(item => item.label).join(', ')}.` : hint}</small></span>
+        {!absent.length && <span className="switch" aria-hidden="true"/>}
+      </label>
+      {absent.length > 0 && onOpenSetup && <button className="mini-button" onClick={() => onOpenSetup(absent.map(item => item.id))}>Instalar</button>}
+    </div>;
+  };
+  const chips = (name, label, options, value, key, disabled, format) => <div className={`treat-target ${disabled ? 'off' : ''}`} role="radiogroup" aria-label={label}>
+    <span>{label}</span>
+    {options.map(([option, hint]) => <label key={option} className={value === option ? 'active' : ''}>
+      <input type="radio" className="sr-only" name={name} disabled={disabled} checked={value === option} onChange={() => set(key, option)}/>
+      <strong>{format(option)}</strong><small>{hint}</small>
+    </label>)}
+  </div>;
+  return <section className="workflow-card treatment" aria-labelledby="treatment-title">
     <div className="section-title"><div><span className="eyebrow">Tratamento</span><h2 id="treatment-title">Ouvir, ajustar e montar</h2></div></div>
-    <div className="treatment-grid">{Object.entries(toggles).map(([key, label]) => <label key={key} className="check"><input type="checkbox" checked={settings[key]} onChange={event => set(key, event.target.checked)}/> {label}</label>)}
-      <label>Loudness alvo<select value={settings.targetLufs} disabled={!settings.normalize} onChange={event => set('targetLufs', Number(event.target.value))}><option value={-14}>-14 LUFS (mais alto)</option><option value={-16}>-16 LUFS (YouTube)</option><option value={-19}>-19 LUFS (podcast mono)</option></select></label>
-      <label>Timbre<select value={settings.preset} onChange={event => set('preset', event.target.value)}>{presets.map(preset => <option key={preset.id} value={preset.id}>{preset.label}</option>)}</select></label>
+    <p className="treat-intro">Limpa a sua gravação e junta os takes, na ordem da lista, num único áudio: a <strong>narração final</strong>, que vai para a edição. Tudo roda no seu computador; os originais nunca são alterados.</p>
+    {!takeIds.length && <p className="plan-line">Grave ou importe um take acima para montar a narração final.</p>}
+    <div className="treat-groups">
+      <fieldset className="treat-group"><legend>Limpeza</legend>{CLEANUP.map(toggle)}
+        {chips('max-pause', 'Pausas', PAUSES, effective.maxPauseSeconds, 'maxPauseSeconds', !effective.trimPauses, seconds)}
+      </fieldset>
+      <fieldset className="treat-group"><legend>Nível</legend>{LEVEL.map(toggle)}
+        {chips('target-lufs', 'Alvo (LUFS)', TARGETS.map(([value, , hint]) => [value, hint]), effective.targetLufs, 'targetLufs', !effective.normalize, value => String(value))}
+      </fieldset>
     </div>
-    <div className="dialog-actions"><button className="button quiet" disabled={!takeIds.length || busy} onClick={listen}>{busy ? 'Preparando…' : `Ouvir preview (${previewSeconds} s)`}</button><button className="button primary" disabled={!takeIds.length} onClick={() => startJob(() => localApi.assembleNarration({ ...base, takeIds, treatment: settings }))}><Wand2 size={17}/> Montar narração</button></div>
-    {preview && <div className="ab-preview">{[['original', 'Sem tratamento'], ['treated', 'Com tratamento']].map(([key, label]) => <div key={key}><strong>{label}</strong><audio controls src={fileUrl(projectPath, { preview: preview[key].file })} aria-label={`Preview ${label.toLowerCase()}`}/><small>{measureLine(preview[key].measures)}</small></div>)}</div>}
-    {narration.assembled && <div className="rights-note"><strong>Narração montada{narration.assembled.outdated ? ' · um take usado foi excluído; monte de novo' : ''}</strong><span>{measureLine(narration.assembled.measures)} · já está no catálogo de mídias do projeto.</span><audio controls preload="none" src={fileUrl(projectPath, { assembled: 1 })} aria-label="Ouvir narração montada"/></div>}
+    <div className="treat-actions"><button className="button quiet" disabled={!takeIds.length || busy} onClick={listen}><Headphones size={17} aria-hidden="true"/> {busy ? 'Preparando…' : `Ouvir preview (${previewSeconds} s)`}</button><button className="button primary" disabled={!takeIds.length} onClick={() => startJob(() => localApi.assembleNarration({ ...base, takeIds, treatment: effective }))}><Wand2 size={17}/> {narration.assembled ? 'Montar de novo' : 'Montar narração final'}</button></div>
+    {preview && <div className="ab-preview">{[['original', 'Sem tratamento'], ['treated', 'Com tratamento']].map(([key, label]) => <div key={key} className={key}><span className="ab-label"><AudioLines size={14} aria-hidden="true"/> {label}{key === 'treated' && preview.removedSeconds > 0 ? ` · ${seconds(preview.removedSeconds)} de pausas a menos` : ''}</span><audio controls src={fileUrl(projectPath, { preview: preview[key].file })} aria-label={`Preview ${label.toLowerCase()}`}/><small>{measureLine(preview[key].measures)}</small></div>)}</div>}
+    <FinalNarration projectPath={projectPath} narration={narration}/>
   </section>;
 }
 
-function VoiceSection({ projectPath, state, setup, onOpenSetup, act, startJob, running, onOpenVoice }) {
+/** O áudio montado que a edição usa (fica nas mídias do projeto). */
+function FinalNarration({ projectPath, narration }) {
+  if (!narration.assembled) return null;
+  return <div className="final-narration">
+    <div className="final-head"><span className="final-icon" aria-hidden="true"><Check size={16}/></span><div><strong>Narração final{narration.assembled.outdated ? ' · desatualizada' : ''}</strong><small>{narration.assembled.outdated ? 'Um take usado foi excluído: monte de novo.' : 'É o áudio que a edição usa. Já está nas mídias do projeto e entra na timeline.'}</small></div></div>
+    <audio controls preload="none" src={fileUrl(projectPath, { assembled: 1 })} aria-label="Ouvir narração final"/>
+    <small>{measureLine(narration.assembled.measures)}</small>
+  </div>;
+}
+
+/** Voz de IA já sai limpa: na montagem só junta as cenas e acerta o volume, sem limpeza nem cortes. */
+export const AI_FINAL_TREATMENT = { aiDenoise: false, removeBreaths: false, trimPauses: false, compress: false, normalize: true, targetLufs: -16 };
+
+function VoiceSection({ projectPath, narration, finalTakeIds, base, state, setup, onOpenSetup, act, startJob, running, onOpenVoice }) {
   const missing = setup ? featureBlock('voice.synthetic', setup.items) : [];
   const [profileId, setProfileId] = useState(state.profiles[0]?.id || ''); const [plan, setPlan] = useState(null);
   useEffect(() => { if (!state.profiles.some(profile => profile.id === profileId)) setProfileId(state.profiles[0]?.id || ''); }, [state.profiles]);
   const pending = state.scenes.filter(scene => !scene.generated[profileId]);
   const checkPlan = async () => setPlan((await act(() => localApi.voicePlan()))?.plan || null);
+  // Confere a memória assim que a seção abre, para mostrar antes de gerar o que dá para fechar.
+  useEffect(() => { if (state.profiles.length && !missing.length) Promise.resolve(localApi.voicePlan()).then(result => setPlan(result?.plan || null), () => null); }, [state.profiles.length, missing.length]);
   return <section className="workflow-card" aria-labelledby="voice-title">
     <div className="section-title"><div><span className="eyebrow">Voz clonada · VoxCPM2</span><h2 id="voice-title">Narração com a sua voz</h2></div>{onOpenVoice && <span className="header-actions"><button className="button quiet" onClick={onOpenVoice}><Mic size={17} aria-hidden="true"/> Minha voz</button></span>}</div>
     {missing.length > 0 ? <div className="notice error" role="alert"><span>Para gerar voz, instale: {missing.map(item => item.label).join(', ')}.</span><button className="mini-button" onClick={() => onOpenSetup(missing.map(item => item.id))}>Instalar dependências</button></div> : <>
@@ -141,10 +215,59 @@ function VoiceSection({ projectPath, state, setup, onOpenSetup, act, startJob, r
       {state.profiles.length > 0 && <>
         <div className="generate-bar"><label>Perfil<select value={profileId} onChange={event => setProfileId(event.target.value)}>{state.profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label><button className="mini-button" onClick={checkPlan}>Verificar recursos</button><button className="button primary" disabled={!pending.length || running} onClick={() => startJob(() => localApi.generateVoice({ path: projectPath, profileId, sceneIds: pending.map(scene => scene.id) }))}>Gerar {pending.length} cena{pending.length === 1 ? '' : 's'} pendente{pending.length === 1 ? '' : 's'}</button></div>
         {plan && <p className="plan-line" role="status">{plan.status === 'ready' ? `Pronto: ${plan.device.toUpperCase()}, ${plan.threads} núcleos, até ${Math.round(plan.memoryLimitBytes / 1024 ** 3)} GB.` : plan.reasons.join(' ')}{plan.estimate?.realtimeFactor ? ` Cerca de ${plan.estimate.realtimeFactor} s de processamento por segundo de fala (${plan.estimate.source}).` : ''}</p>}
+        {plan?.status === 'needs-free-memory' && <MemoryPanel plan={plan} onChanged={checkPlan}/>}
         {state.scenes.length ? <ol className="media-list">{state.scenes.map(scene => <li key={scene.id}><span><strong>{scene.label}</strong><small>{scene.text.length > 140 ? `${scene.text.slice(0, 140)}…` : scene.text}</small></span>{scene.generated[profileId] ? <span className="available">Gerada</span> : <button className="mini-button" disabled={running} onClick={() => startJob(() => localApi.generateVoice({ path: projectPath, profileId, sceneIds: [scene.id] }))}>Gerar</button>}</li>)}</ol> : <div className="empty-state"><span>Escreva abertura, desenvolvimento ou payoff no roteiro para gerar cenas.</span></div>}
+        <div className="voice-final">
+          <div><strong>Narração final</strong><small>{pending.length ? `Faltam ${pending.length} cena${pending.length === 1 ? '' : 's'} para gerar. ` : ''}Junta as cenas geradas, na ordem do roteiro, num único áudio no volume padrão do YouTube. A voz de IA já sai limpa: não passa por tratamento.</small></div>
+          <button className="button primary" disabled={!finalTakeIds.length || running} onClick={() => startJob(() => localApi.assembleNarration({ ...base, takeIds: finalTakeIds, treatment: AI_FINAL_TREATMENT }))}><Wand2 size={17} aria-hidden="true"/> {narration.assembled ? 'Montar de novo' : 'Montar narração final'}</button>
+        </div>
+        <FinalNarration projectPath={projectPath} narration={narration}/>
       </>}
     </>}
   </section>;
+}
+
+const gbText = bytes => `${(bytes / 1024 ** 3).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} GB`;
+
+/**
+ * Falta RAM para a voz clonada: mostra quanto falta e os programas abertos que mais usam
+ * memória, com botão para fechar cada um (com confirmação). Navegadores ganham a opção de
+ * fechar só algumas abas pelo gerenciador de tarefas deles.
+ */
+function MemoryPanel({ plan, onChanged }) {
+  const [apps, setApps] = useState(null); const [confirming, setConfirming] = useState(null); const [message, setMessage] = useState(''); const [error, setError] = useState('');
+  const load = async () => { try { setApps((await localApi.systemApps()).apps); } catch (issue) { setError(issue.message); } };
+  useEffect(() => { load(); }, [plan.availableBytes]);
+  const missingBytes = Math.max(0, plan.requiredBytes - plan.availableBytes);
+  const close = async (app, force = false) => {
+    setError(''); setMessage('');
+    try {
+      const result = await localApi.closeApp({ name: app.name, force });
+      if (result.closed) setMessage(`${app.name} fechado: cerca de ${gbText(result.freedBytes)} liberados.`);
+      else setConfirming({ ...app, stuck: true });
+    } catch (issue) { setError(issue.message); }
+    await onChanged(); await load();
+  };
+  return <div className="memory-panel" role="region" aria-labelledby="memory-title">
+    <div className="memory-head">
+      <div><strong id="memory-title">Libere {gbText(missingBytes)} de memória para gerar</strong><small>A voz clonada precisa de {gbText(plan.requiredBytes)} livres; há {gbText(plan.availableBytes)} agora. Feche algum destes programas:</small></div>
+      <button className="mini-button" onClick={async () => { await onChanged(); await load(); }}>Verificar de novo</button>
+    </div>
+    <span className="memory-meter" aria-hidden="true"><i style={{ width: `${Math.min(100, (plan.availableBytes / plan.requiredBytes) * 100)}%` }}/></span>
+    {message && <p className="notice" role="status">{message}</p>}
+    {error && <p className="notice error" role="alert">{error}</p>}
+    {apps === null ? <p className="plan-line">Procurando programas abertos…</p> : apps.length ? <ul className="memory-apps">{apps.map(app => <li key={app.name}>
+      <span><strong>{app.name}</strong><small>{gbText(app.bytes)}{app.kind === 'browser' ? ' · navegador: dá para fechar só algumas abas com Shift+Esc (gerenciador de tarefas dele)' : ''}</small></span>
+      <button className="mini-button" aria-label={`Fechar ${app.name}${app.kind === 'browser' ? ' inteiro' : ''}`} onClick={() => setConfirming(app)}>{app.kind === 'browser' ? 'Fechar tudo' : 'Fechar'}</button>
+    </li>)}</ul> : <p className="plan-line">Nenhum programa grande aberto. Talvez este computador não tenha memória suficiente agora.</p>}
+    {confirming && <ConfirmDialog
+      title={confirming.stuck ? `${confirming.name} não fechou` : `Fechar ${confirming.name}?`}
+      message={confirming.stuck ? `${confirming.name} não respondeu. Forçar o fechamento encerra na hora: o que não foi salvo nele se perde.` : `${confirming.name} vai ser fechado por completo (${confirming.processes} processo${confirming.processes === 1 ? '' : 's'}, ${gbText(confirming.bytes)}). Salve o que estiver aberto nele antes.${confirming.kind === 'browser' ? ' Se o Content Lab estiver aberto neste navegador, a página fecha junto; o servidor continua e é só abrir de novo.' : ''}`}
+      confirm={confirming.stuck ? 'Forçar fechamento' : `Fechar ${confirming.name}`}
+      onClose={() => setConfirming(null)}
+      onConfirm={async () => { const app = confirming; setConfirming(null); await close(app, Boolean(app.stuck)); }}
+    />}
+  </div>;
 }
 
 function TakeDialog({ take, onClose, onSave }) {

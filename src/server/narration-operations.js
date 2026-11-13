@@ -3,7 +3,7 @@ import { createWriteStream } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
-import { NarrationStore, VOICE_CHECK_PHRASE, VOICE_PRESETS, VOICE_SAMPLE_LIMIT_SECONDS, VOICE_SAMPLE_TEXT, VoiceProfileStore, VoxCPMVoice, generationKey, measureAudio, normalizeTreatment, renderParts, scenesFromScript, toWav, treatmentFilters } from '../audio/narration-service.js';
+import { NarrationStore, VOICE_CHECK_PHRASE, VOICE_SAMPLE_LIMIT_SECONDS, VOICE_SAMPLE_TEXT, VoiceProfileStore, VoxCPMVoice, generationKey, measureAudio, normalizeTreatment, scenesFromScript, toWav, treatParts } from '../audio/narration-service.js';
 import os from 'node:os';
 import { processAlive, readLock, withProjectLock } from '../core/project-lock.js';
 import { LifecycleError } from './project-lifecycle.js';
@@ -47,7 +47,6 @@ export class NarrationOperations {
       narration: { ...session, takes },
       scenes: scenes.map(scene => ({ ...scene, generated: Object.fromEntries(profiles.map(profile => [profile.id, takes.find(take => take.origin === 'generated' && take.cacheKey === generationKey({ profile, text: scene.text }))?.id || null])) })),
       profiles: profiles.map(publicProfile),
-      presets: Object.entries(VOICE_PRESETS).map(([id, value]) => ({ id, ...value })),
       previewSeconds: PREVIEW_SECONDS,
     };
   }
@@ -131,18 +130,31 @@ export class NarrationOperations {
     return { narration: session };
   }
 
+  /** Modelos locais do tratamento: confere a instalação antes e devolve os caminhos. */
+  async #ai(settings) {
+    if (settings.aiDenoise) await this.app.requireFeature('narration.ai');
+    if (settings.trimPauses || settings.removeBreaths) await this.app.requireFeature('narration.pauses');
+    const setup = this.app.setup;
+    return {
+      ffprobe: this.tools.ffprobe,
+      deepFilter: settings.aiDenoise ? await setup.toolPath('deep-filter') : null,
+      vad: settings.trimPauses || settings.removeBreaths ? { binary: await setup.toolPath('whisper-vad-speech-segments'), model: setup.modelPath('silero-vad') } : null,
+    };
+  }
+
   /** Preview A/B dos primeiros segundos: sem tratamento e com tratamento, ambos medidos. */
   async preview({ path: directory, takeIds, treatment }) {
     await this.app.requireFeature('narration.treatment');
     const store = await this.#store(directory);
     const session = await store.read();
     const settings = normalizeTreatment(treatment);
+    const ai = await this.#ai(settings);
     const parts = this.#parts(store, session, takeIds);
     const key = createHash('sha256').update(JSON.stringify({ parts, settings })).digest('hex').slice(0, 24);
     return await this.app.activities.track(directory, 'preview de narração', async () => {
-      const before = await renderParts(this.tools.ffmpeg, parts, path.join(store.root, 'previews', `${key}-original.wav`), { limitSeconds: PREVIEW_SECONDS });
-      const after = await renderParts(this.tools.ffmpeg, parts, path.join(store.root, 'previews', `${key}-tratado.wav`), { filters: treatmentFilters(settings), limitSeconds: PREVIEW_SECONDS });
-      return { treatment: settings, original: { file: path.basename(before), measures: await measureAudio(this.tools, before) }, treated: { file: path.basename(after), measures: await measureAudio(this.tools, after) } };
+      const before = path.join(store.root, 'previews', `${key}-original.wav`);
+      const { target: after, removedSeconds } = await treatParts(this.tools.ffmpeg, parts, path.join(store.root, 'previews', `${key}-tratado.wav`), settings, { rawOutput: before, limitSeconds: PREVIEW_SECONDS, ai });
+      return { treatment: settings, removedSeconds, original: { file: path.basename(before), measures: await measureAudio(this.tools, before) }, treated: { file: path.basename(after), measures: await measureAudio(this.tools, after) } };
     });
   }
 
@@ -156,18 +168,21 @@ export class NarrationOperations {
     const session = await store.read();
     if (baseRevision !== undefined && baseRevision !== session.revision) throw Object.assign(new Error(`A narração mudou (revisão ${session.revision}); recarregue antes de montar`), { code: 'NARRATION_CONFLICT' });
     const settings = normalizeTreatment(treatment);
+    const ai = await this.#ai(settings);
     const ids = takeIds?.length ? takeIds : session.takes.map(take => take.id);
     const parts = this.#parts(store, session, ids);
     return this.jobs.start({ kind: 'narration.assemble', projectPath: directory, label: `Montar narração (${ids.length} take${ids.length === 1 ? '' : 's'})`, run: ({ signal, progress }) => this.app.activities.track(directory, 'montagem de narração', async activitySignal => {
       progress({ phase: 'Montando e tratando', done: 0, total: 3 });
-      const output = await renderParts(this.tools.ffmpeg, parts, path.join(store.root, 'assembled', `narracao-${Date.now()}.wav`), { filters: treatmentFilters(settings), signal: AbortSignal.any([signal, activitySignal]) });
+      const { target: output } = await treatParts(this.tools.ffmpeg, parts, path.join(store.root, 'assembled', `narracao-${Date.now()}.wav`), settings, { signal: AbortSignal.any([signal, activitySignal]), ai });
       progress({ phase: 'Medindo', done: 1 });
       const measures = await measureAudio(this.tools, output);
       if (!measures.wav48kMono) throw new Error('A montagem não saiu em WAV 48 kHz mono');
       progress({ phase: 'Vinculando ao projeto', done: 2 });
       const attached = await this.app.mediaOps.attach(directory, await this.app.media.importFile(output), { rights: 'owned', source: { type: 'file', value: output }, name: 'Narração montada', role: 'narration' });
       const previous = (await store.read()).assembled;
-      await store.mutate(undefined, value => { value.treatment = settings; value.assembled = { file: path.relative(store.root, output), takeIds: ids, treatment: settings, measures, mediaId: attached.mediaId, createdAt: new Date().toISOString() }; });
+      // O tratamento salvo é o da gravação própria; a montagem da voz de IA não o sobrescreve.
+      const recorded = ids.some(id => session.takes.find(take => take.id === id)?.origin !== 'generated');
+      await store.mutate(undefined, value => { if (recorded) value.treatment = settings; value.assembled = { file: path.relative(store.root, output), takeIds: ids, treatment: settings, measures, mediaId: attached.mediaId, createdAt: new Date().toISOString() }; });
       if (previous?.file && previous.file !== path.relative(store.root, output)) await rm(store.resolve(previous.file), { force: true });
       return { mediaId: attached.mediaId, measures };
     }, { cancellable: true }) });

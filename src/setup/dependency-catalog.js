@@ -61,8 +61,10 @@ export function defaultCatalog() {
       destination: 'bin/yt-dlp', executable: true,
     },
     {
-      id: 'whisper-cli', label: 'whisper.cpp (whisper-cli)', group: 'ai', kind: 'build', required: false, consent: true, platforms: ['linux', 'darwin'],
-      description: 'Motor local de transcrição. Compilado a partir do código-fonte fixado.', version: '1.9.5',
+      id: 'whisper-cli', label: 'Whisper large-v3 (transcrição)', group: 'ai', kind: 'build', required: false, consent: true, platforms: ['linux', 'darwin'],
+      description: 'Transcrição local em português com o modelo mais preciso do Whisper. Instala junto o motor whisper.cpp (compilado do código-fonte fixado), o modelo large-v3 (cerca de 2,9 GB) e o Silero VAD, que acha pausas e respiros na narração.', version: '1.9.5',
+      bundle: ['whisper-large-v3', 'silero-vad'],
+      extraTargets: [{ target: 'whisper-vad-speech-segments', destination: 'bin/whisper-vad-speech-segments' }],
       detect: { command: 'whisper-cli', args: ['--help'] }, tool: 'whisper-cli',
       license: 'MIT', origin: 'https://github.com/ggml-org/whisper.cpp/releases/tag/v1.9.5',
       source: { repository: 'https://github.com/ggml-org/whisper.cpp.git', tag: 'v1.9.5', commit: 'd1be6fde11ac6e0407606b4e42fe72d34add8037' },
@@ -71,11 +73,27 @@ export function defaultCatalog() {
       destination: 'bin/whisper-cli', executable: true,
     },
     {
-      id: 'whisper-large-v3', label: 'Pesos Whisper large-v3', group: 'ai', kind: 'download', required: false, consent: true,
+      id: 'whisper-large-v3', label: 'Modelo Whisper large-v3', group: 'ai', kind: 'download', required: false, consent: true, partOf: 'whisper-cli',
       description: 'Modelo de transcrição em português (cerca de 2,9 GB).', version: 'ggml-large-v3',
       license: 'MIT (pesos OpenAI Whisper)', origin: 'https://huggingface.co/ggerganov/whisper.cpp',
       artifacts: { any: { url: 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin', size: 3095033483, sha256: '64d182b440b98d5203c4f9bd541544d84c605196c4f7b845dfa11fb23594d1e2' } },
       destination: 'models/ggml-large-v3.bin', executable: false,
+    },
+    {
+      id: 'silero-vad', label: 'Silero VAD', group: 'ai', kind: 'download', required: false, consent: true, partOf: 'whisper-cli',
+      description: 'Detecta onde há fala, pausa e respiro (formato do whisper.cpp).', version: 'v5.1.2',
+      license: 'MIT', origin: 'https://huggingface.co/ggml-org/whisper-vad',
+      artifacts: { any: { url: 'https://huggingface.co/ggml-org/whisper-vad/resolve/main/ggml-silero-v5.1.2.bin', size: 885098, sha256: '29940d98d42b91fbd05ce489f3ecf7c72f0a42f027e4875919a28fb4c04ea2cf' } },
+      destination: 'models/ggml-silero-v5.1.2.bin', executable: false,
+    },
+    {
+      id: 'deepfilternet', label: 'Limpeza de voz com IA (DeepFilterNet3)', group: 'ai', kind: 'download', required: false, consent: true,
+      description: 'Remove ruído de fundo da narração com um modelo local, rápido em CPU (cerca de 0,15 s por segundo de áudio).', version: '0.5.6',
+      license: 'MIT ou Apache-2.0', origin: 'https://github.com/Rikorose/DeepFilterNet/releases/tag/v0.5.6',
+      artifacts: {
+        'linux-x64': { url: 'https://github.com/Rikorose/DeepFilterNet/releases/download/v0.5.6/deep-filter-0.5.6-x86_64-unknown-linux-musl', size: 36417296, sha256: '70775e251eee44c0f2451a1e833326cf8bcbbe304d3e7cd12851e6fce72ef7da' },
+      },
+      destination: 'bin/deep-filter', executable: true,
     },
     {
       id: 'voxcpm2', label: 'VoxCPM2 (voz clonada)', group: 'ai', kind: 'python', required: false, consent: true, platforms: ['linux', 'darwin'],

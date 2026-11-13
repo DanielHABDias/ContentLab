@@ -40,7 +40,9 @@ Nada expira sozinho: o Content Lab avisa sobre os limites de disco em Configura�
 | zenity | LGPL-2.1+ | Pacote do sistema (Linux) | Não é empacotado |
 | yt-dlp | Unlicense | Baixado em Dependências (versão e hash fixados) | Sim |
 | whisper.cpp | MIT | Compilado em Dependências | Sim, com o aviso MIT |
-| Pesos Whisper large-v3 | MIT | Baixados com consentimento (cerca de 3 GB) | Possível, mas são baixados sob demanda pelo tamanho |
+| Modelo Whisper large-v3 (parte do item “Whisper large-v3”, junto com o whisper.cpp) | MIT | Baixados com consentimento (cerca de 3 GB) | Possível, mas são baixados sob demanda pelo tamanho |
+| Silero VAD v5.1.2 (parte do item “Whisper large-v3”) | MIT | Baixado com consentimento (885 KB), SHA-256 fixado | Sim, com o aviso de licença |
+| DeepFilterNet3 `deep-filter` 0.5.6 (“Limpeza de voz com IA”) | MIT ou Apache-2.0 | Baixado com consentimento (36 MB, Linux x64), SHA-256 fixado | Sim, com o aviso de licença |
 | VoxCPM2 | Apache-2.0 | Baixado com consentimento | Sim, com NOTICE. O uso comercial é permitido. |
 | PyTorch | BSD-3-Clause | pip no venv isolado | Baixado sob demanda |
 | Inter e Barlow Condensed | OFL-1.1 | npm `@fontsource` (no bundle) | Sim |

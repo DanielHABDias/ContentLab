@@ -4,7 +4,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { afterEach, expect, test } from 'vitest';
 import { writeFile } from 'node:fs/promises';
-import { VoiceProfileStore, VoxCPMVoice, measureAudio, normalizeTreatment, renderParts, scenesFromScript, treatmentFilters } from './narration-service.js';
+import { VoiceProfileStore, VoxCPMVoice, editPlan, finishFilters, measureAudio, normalizeTreatment, renderParts, scenesFromScript, treatParts, treatmentFilters } from './narration-service.js';
 
 const roots = [];
 afterEach(async () => Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true }))));
@@ -17,15 +17,31 @@ test('monta trechos com corte não destrutivo em WAV 48 kHz mono', async () => {
   expect(await readFile(a)).toEqual(before);
 });
 
-test('tratamento valida parâmetros e mede loudness e pico', async () => {
+test('tratamento valida parâmetros, aceita o formato antigo e mede loudness e pico', async () => {
   const { root, a } = await setup();
   expect(() => normalizeTreatment({ targetLufs: -5 })).toThrow(/LUFS/);
-  expect(() => normalizeTreatment({ preset: 'robô' })).toThrow(/Preset/);
-  expect(treatmentFilters({ trimSilence: false, denoise: false, highpass: false, compress: false, normalize: false, preset: 'original' })).toEqual([]);
-  const treated = await renderParts('ffmpeg', [{ file: a }], path.join(root, 'tratado.wav'), { filters: treatmentFilters({ preset: 'deep', targetLufs: -16 }) });
+  expect(() => normalizeTreatment({ maxPauseSeconds: 5 })).toThrow(/Pausa/);
+  expect(normalizeTreatment({ denoise: false, trimSilence: false, preset: 'warm' })).toMatchObject({ aiDenoise: false, trimPauses: false });
+  const off = { aiDenoise: false, removeBreaths: false, trimPauses: false, compress: false, normalize: false };
+  expect(treatmentFilters(off)).toEqual([]);
+  expect(treatmentFilters({ ...off, aiDenoise: true, compress: true }).join(',')).toMatch(/^highpass=f=70:poles=2,acompressor=/);
+  expect(finishFilters({ normalize: true, targetLufs: -16 }, -26)).toEqual(['volume=10dB', expect.stringMatching(/^alimiter/)]);
+  await expect(treatParts('ffmpeg', [{ file: a }], path.join(root, 'x.wav'), { aiDenoise: true })).rejects.toMatchObject({ code: 'DEPENDENCY_MISSING' });
+  const { target: treated } = await treatParts('ffmpeg', [{ file: a }], path.join(root, 'tratado.wav'), { ...off, compress: true, normalize: true, targetLufs: -16 });
   const measures = await measureAudio({}, treated);
   expect(measures.integratedLufs).toBeCloseTo(-16, 0);
   expect(measures.truePeakDb).toBeLessThanOrEqual(-1);
+});
+
+test('plano de edição encurta pausas e silencia o que fica entre as falas', () => {
+  const speech = [{ start: 0.5, end: 2 }, { start: 5, end: 6 }];
+  const both = editPlan(speech, 7, { maxPauseSeconds: 0.4 });
+  expect(both.pieces).toEqual([{ silence: 0.2 }, { start: 0.42, end: 2.14 }, { silence: 0.4 }, { start: 4.92, end: 6.14 }, { silence: 0.2 }]);
+  expect(both.removedSeconds).toBeCloseTo(7 - (0.2 + 1.72 + 0.4 + 1.22 + 0.2), 2);
+  const keepBreaths = editPlan(speech, 7, { removeBreaths: false, maxPauseSeconds: 0.4 });
+  expect(keepBreaths.pieces[2]).toEqual({ start: 2.14, end: 2.54 });
+  expect(editPlan(speech, 7, { removeBreaths: false, trimPauses: false })).toBeNull();
+  expect(editPlan([], 7, {})).toBeNull();
 });
 
 test('roteiro vira cenas só com o que é narrado', () => {

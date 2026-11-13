@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Mic, Play, Square, Trash2, X } from 'lucide-react';
+import { ArrowLeft, AudioLines, CheckCircle2, Headphones, Mic, Play, RotateCcw, ShieldCheck, Square, Trash2, Volume2, VolumeX, X } from 'lucide-react';
 import { localApi } from './local-api.js';
 import { ConfirmDialog, useDialogFocus } from './Dialogs.jsx';
 import { JobsPanel, clock } from './MediaLibrary.jsx';
 import { DependencyNotice } from './DependencyGate.jsx';
 import { featureBlock } from '../core/capabilities.js';
 
+const mmss = value => `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, '0')}`;
 const profileSampleUrl = (profileId, check = false) => `/api/v1/narration/file?profile=${encodeURIComponent(profileId)}${check ? '&check=1' : ''}`;
 
 /**
@@ -34,9 +35,9 @@ export function VoiceScreen({ setup, onOpenSetup, onBack, onProfilesChanged }) {
 
   if (!state) return <main id="main" className="project-home"><p className="empty-state">{error ? error.message : 'Carregando perfis de voz…'}</p></main>;
   return <main id="main" className="project-home voice-screen">
+    {onBack && <button className="text-button back-link" onClick={onBack}><ArrowLeft size={16} aria-hidden="true"/> Projetos</button>}
     <header className="home-header">
       <div>
-        {onBack && <button className="button quiet" onClick={onBack}><ArrowLeft size={17} aria-hidden="true"/> Voltar</button>}
         <span className="eyebrow">Voz do criador</span>
         <h1>Minha voz</h1>
         <p>A narração por voz de IA do Content Lab é a <strong>sua</strong> voz, clonada de uma amostra gravada aqui. Enquanto não houver nenhum perfil, os projetos só aceitam narração gravada por você.</p>
@@ -54,22 +55,36 @@ export function VoiceScreen({ setup, onOpenSetup, onBack, onProfilesChanged }) {
 
     <section aria-labelledby="profiles-title">
       <div className="section-title"><h2 id="profiles-title">Perfis de voz</h2><span>{state.profiles.length} {state.profiles.length === 1 ? 'perfil' : 'perfis'}</span></div>
-      {state.profiles.length ? <ul className="media-list voice-profiles">{state.profiles.map(profile => <li key={profile.id}>
-        <span>
-          <strong>{profile.name}</strong>
-          <small>Titular: {profile.consent.holder} · consentimento em {new Date(profile.consent.grantedAt).toLocaleDateString('pt-BR')} · amostra de {clock(profile.durationSeconds)}</small>
-          <audio controls preload="none" src={profileSampleUrl(profile.id)} aria-label={`Ouvir a amostra gravada de ${profile.name}`}/>
-          {profile.checkSample
-            ? <span className="check-sample"><small>Como a voz clonada ficou · gerada em {new Date(profile.checkSample.generatedAt).toLocaleDateString('pt-BR')}</small><audio controls preload="none" src={profileSampleUrl(profile.id, true)} aria-label={`Ouvir a voz clonada de ${profile.name}`}/></span>
-            : <small className="field-hint">Ainda sem amostra da voz clonada.</small>}
-        </span>
-        <span className="take-actions">
-          <button className="mini-button" disabled={running || Boolean(missing.length)} onClick={() => check(profile)}><Play size={15} aria-hidden="true"/> {profile.checkSample ? 'Gerar de novo' : 'Ouvir como ficou'}</button>
-          <button className="icon-button" aria-label={`Excluir perfil ${profile.name}`} onClick={() => askRemove(profile)}><Trash2 size={16}/></button>
-        </span>
-      </li>)}</ul> : <div className="empty-state">
+      {state.profiles.length ? <ul className="voice-profiles">{state.profiles.map(profile => <li key={profile.id} className="voice-card">
+        <div className="voice-card-head">
+          <span className="voice-avatar" aria-hidden="true"><AudioLines size={20}/></span>
+          <div>
+            <h3>{profile.name}</h3>
+            <small>Titular: {profile.consent.holder} · consentimento em {new Date(profile.consent.grantedAt).toLocaleDateString('pt-BR')} · amostra de {clock(profile.durationSeconds)}</small>
+          </div>
+          <button className="icon-button danger-hover" aria-label={`Excluir perfil ${profile.name}`} onClick={() => askRemove(profile)}><Trash2 size={16} aria-hidden="true"/></button>
+        </div>
+        <div className="voice-tracks">
+          <div className="voice-track">
+            <span className="voice-track-label"><Mic size={14} aria-hidden="true"/> Amostra gravada</span>
+            <audio controls preload="none" src={profileSampleUrl(profile.id)} aria-label={`Ouvir a amostra gravada de ${profile.name}`}/>
+          </div>
+          <div className="voice-track">
+            <span className="voice-track-label"><Headphones size={14} aria-hidden="true"/> Voz clonada</span>
+            {profile.checkSample
+              ? <><audio controls preload="none" src={profileSampleUrl(profile.id, true)} aria-label={`Ouvir a voz clonada de ${profile.name}`}/><small>Gerada em {new Date(profile.checkSample.generatedAt).toLocaleDateString('pt-BR')}</small></>
+              : <small className="field-hint">Ainda sem amostra da voz clonada.</small>}
+            <button className="mini-button" disabled={running || Boolean(missing.length)} onClick={() => check(profile)}><Play size={15} aria-hidden="true"/> {profile.checkSample ? 'Gerar de novo' : 'Ouvir como ficou'}</button>
+          </div>
+        </div>
+      </li>)}</ul> : <div className="empty-state voice-empty">
         <strong>Nenhuma voz gravada ainda.</strong>
-        <span>Grave uma amostra lendo o texto abaixo (cerca de 60 s). Depois disso a narração por voz de IA fica disponível nos seus projetos.</span>
+        <span>Grave uma amostra lendo um texto curto (cerca de 60 s). Depois disso a narração por voz de IA fica disponível nos seus projetos.</span>
+        <ol className="voice-steps" aria-label="Como funciona">
+          <li><Mic size={16} aria-hidden="true"/><span><strong>Grave</strong> lendo o texto na tela</span></li>
+          <li><ShieldCheck size={16} aria-hidden="true"/><span><strong>Confira</strong> e registre o consentimento</span></li>
+          <li><Headphones size={16} aria-hidden="true"/><span><strong>Use</strong> na etapa Narração</span></li>
+        </ol>
         <button className="button primary" disabled={Boolean(missing.length)} onClick={() => setRecording(true)}><Mic size={17} aria-hidden="true"/> Gravar a primeira voz</button>
       </div>}
       <p className="hint">Dá para ter mais de um perfil (voz calma, voz animada, outra pessoa com autorização) e escolher qual usar em cada projeto, na etapa Narração.</p>
@@ -142,34 +157,58 @@ function RecordProfileDialog({ sampleText, limitSeconds, onClose, onCreated }) {
   };
 
   const short = sample && sample.measures.durationSeconds < 20;
+  const reviewing = phase === 'review' || phase === 'creating';
   return <div className="dialog-backdrop" role="presentation"><div ref={ref} className="dialog guided-voice" role="dialog" aria-modal="true" aria-labelledby="record-voice-title">
-    <div className="section-title">
+    <div className="voice-dialog-head">
       <div><span className="eyebrow">Perfil de voz · cerca de 60 s</span><h2 id="record-voice-title">Gravar minha voz</h2></div>
       <button type="button" className="icon-button" aria-label="Fechar" disabled={phase === 'recording' || phase === 'saving' || phase === 'creating'} onClick={close}><X aria-hidden="true"/></button>
     </div>
-    {phase !== 'review' && phase !== 'creating' && <>
-      <p className="hint">Lugar silencioso, microfone a um palmo da boca, sem música. Leia no seu ritmo normal de narração, inclusive as perguntas e as pausas. A gravação para sozinha em {limitSeconds} s.</p>
+    <ol className="voice-progress" aria-label="Etapas">
+      <li className={reviewing ? 'done' : 'current'} aria-current={reviewing ? undefined : 'step'}>{reviewing ? <CheckCircle2 size={15} aria-hidden="true"/> : <span>1</span>} Gravar</li>
+      <li className={reviewing ? 'current' : ''} aria-current={reviewing ? 'step' : undefined}><span>2</span> Conferir e autorizar</li>
+    </ol>
+    {!reviewing && <>
+      <ul className="voice-tips" aria-label="Antes de gravar">
+        <li><VolumeX size={15} aria-hidden="true"/> Lugar silencioso, sem música</li>
+        <li><Mic size={15} aria-hidden="true"/> Microfone a um palmo da boca</li>
+        <li><Volume2 size={15} aria-hidden="true"/> Ritmo normal de narração, com as pausas</li>
+      </ul>
       <blockquote className="reading-text" aria-label="Texto para ler">{sampleText}</blockquote>
-      <div className="dialog-actions" aria-live="polite">
+      <div className="voice-record-bar" aria-live="polite">
         {phase === 'recording'
-          ? <><span className="recording-clock" role="timer" aria-label={`Gravando: ${seconds} de ${limitSeconds} segundos`}><span className="rec-dot" aria-hidden="true"/>{clock(seconds)} / {clock(limitSeconds)}</span><button className="button danger" onClick={stop} disabled={seconds < 3}><Square size={16} aria-hidden="true"/> Parar</button></>
-          : <button className="button primary" onClick={record} disabled={phase === 'saving'}><Mic size={17} aria-hidden="true"/> {phase === 'saving' ? 'Salvando…' : 'Começar a gravar'}</button>}
+          ? <>
+            <span className="recording-clock" role="timer" aria-label={`Gravando: ${seconds} de ${limitSeconds} segundos`}><span className="rec-dot" aria-hidden="true"/>{mmss(seconds)} / {mmss(limitSeconds)}</span>
+            <span className="rec-meter" aria-hidden="true"><i style={{ width: `${Math.min(100, (seconds / limitSeconds) * 100)}%` }}/></span>
+            <button className="button danger" onClick={stop} disabled={seconds < 3}><Square size={16} aria-hidden="true"/> Parar</button>
+          </>
+          : <>
+            <span className="hint">A gravação para sozinha em {limitSeconds} s.</span>
+            <button className="button primary" onClick={record} disabled={phase === 'saving'}><Mic size={17} aria-hidden="true"/> {phase === 'saving' ? 'Salvando…' : 'Começar a gravar'}</button>
+          </>}
       </div>
     </>}
-    {(phase === 'review' || phase === 'creating') && <form onSubmit={create}>
-      <p>Amostra gravada: <strong>{clock(sample.measures.durationSeconds)}</strong>. Ouça antes de criar o perfil.</p>
-      <audio controls src={preview} aria-label="Ouvir amostra gravada"/>
+    {reviewing && <form className="voice-review" onSubmit={create}>
+      <div className="voice-sample">
+        <div className="voice-sample-head">
+          <span><AudioLines size={16} aria-hidden="true"/> Amostra gravada</span>
+          <strong>{clock(sample.measures.durationSeconds)}</strong>
+        </div>
+        <audio controls src={preview} aria-label="Ouvir amostra gravada"/>
+        <small>Ouça antes de criar o perfil.</small>
+      </div>
       {short && <p className="notice error" role="status">Amostra curta: com menos de 20 s a voz clonada tende a soar mais robótica. Vale gravar de novo lendo o texto inteiro.</p>}
-      <label>Texto lido na amostra (corrija se você trocou alguma palavra)<textarea rows="5" required value={referenceText} onChange={event => setReferenceText(event.target.value)}/></label>
-      <label>Nome do perfil<input required value={name} onChange={event => setName(event.target.value)} placeholder="Ex.: Minha voz calma"/></label>
-      <label>Titular da voz<input required value={holder} onChange={event => setHolder(event.target.value)} placeholder="Nome de quem gravou"/></label>
-      <label className="check consent"><input type="checkbox" checked={consent} onChange={event => setConsent(event.target.checked)}/> Sou o titular desta voz (ou tenho autorização por escrito dele) e autorizo gerar narrações com ela neste computador.</label>
+      <div className="voice-fields">
+        <label>Nome do perfil<input required value={name} onChange={event => setName(event.target.value)} placeholder="Ex.: Minha voz calma"/></label>
+        <label>Titular da voz<input required value={holder} onChange={event => setHolder(event.target.value)} placeholder="Nome de quem gravou"/></label>
+        <label className="wide">Texto lido na amostra<span className="field-hint">Corrija se você trocou alguma palavra.</span><textarea rows="4" required value={referenceText} onChange={event => setReferenceText(event.target.value)}/></label>
+      </div>
+      <label className={`voice-consent ${consent ? 'checked' : ''}`}><input type="checkbox" checked={consent} onChange={event => setConsent(event.target.checked)}/><span><ShieldCheck size={16} aria-hidden="true"/> Sou o titular desta voz (ou tenho autorização por escrito dele) e autorizo gerar narrações com ela neste computador.</span></label>
       {error && <p className="notice error" role="alert">{error}</p>}
       <div className="dialog-actions">
-        <button type="button" className="button quiet" disabled={phase === 'creating'} onClick={again}>Gravar de novo</button>
+        <button type="button" className="button quiet" disabled={phase === 'creating'} onClick={again}><RotateCcw size={16} aria-hidden="true"/> Gravar de novo</button>
         <button className="button primary" disabled={!consent || !holder.trim() || phase === 'creating'}>{phase === 'creating' ? 'Criando…' : 'Criar perfil'}</button>
       </div>
     </form>}
-    {phase !== 'review' && error && <p className="notice error" role="alert">{error}</p>}
+    {!reviewing && error && <p className="notice error" role="alert">{error}</p>}
   </div></div>;
 }

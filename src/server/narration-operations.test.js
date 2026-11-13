@@ -72,8 +72,9 @@ test('preview A/B e montagem tratada geram WAV 48 kHz mono medido e vinculado ao
   const { narration } = await service.narrationState({ path: project.path });
   const ids = narration.takes.map(take => take.id);
   await service.narrationUpdateTake({ path: project.path, baseRevision: narration.revision, takeId: ids[0], trim: { start: 1, end: 3 } });
-  const treatment = { trimSilence: false, denoise: true, highpass: true, compress: true, normalize: true, targetLufs: -16, preset: 'warm' };
-  expect(treatmentFilters(treatment).join(',')).toMatch(/rubberband=pitch=0\.97.*bass=g=3.*loudnorm=I=-16/);
+  const treatment = { aiDenoise: false, removeBreaths: false, trimPauses: false, compress: true, normalize: true, targetLufs: -16 };
+  expect(treatmentFilters(treatment).join(',')).toMatch(/^acompressor=/);
+  await expect(service.narrationPreview({ path: project.path, takeIds: ids, treatment: { ...treatment, aiDenoise: true } })).rejects.toMatchObject({ code: 'DEPENDENCY_MISSING' });
   const preview = await service.narrationPreview({ path: project.path, takeIds: ids, treatment });
   expect(preview.original.measures.durationSeconds).toBeCloseTo(6, 0);
   expect(preview.treated.measures.integratedLufs).toBeGreaterThan(preview.original.measures.integratedLufs + 3);
@@ -89,7 +90,7 @@ test('preview A/B e montagem tratada geram WAV 48 kHz mono medido e vinculado ao
   const media = (await service.inspectProject(project.path)).project.media;
   expect(media).toEqual([expect.objectContaining({ id: done.result.mediaId, kind: 'audio', rights: 'owned', name: 'Narração montada' })]);
   const state = await service.narrationState({ path: project.path });
-  expect(state.narration.assembled).toMatchObject({ takeIds: ids, mediaId: done.result.mediaId, treatment: { preset: 'warm' } });
+  expect(state.narration.assembled).toMatchObject({ takeIds: ids, mediaId: done.result.mediaId, treatment: { aiDenoise: false, normalize: true } });
 });
 
 test('gravação enviada pelo navegador vira take; perfil exige consentimento, texto e amostra válida', async () => {
@@ -164,7 +165,7 @@ test('excluir perfil mostra relatório e remove takes gerados e a montagem que o
   await service.mediaOps.jobs.waitFor((await service.voiceGenerate({ path: project.path, profileId: profile.id })).id);
   const state = await service.narrationState({ path: project.path });
   const generated = state.narration.takes.find(take => take.origin === 'generated');
-  const assembled = await service.mediaOps.jobs.waitFor((await service.narrationAssemble({ path: project.path, takeIds: [generated.id], treatment: { preset: 'original' } })).id);
+  const assembled = await service.mediaOps.jobs.waitFor((await service.narrationAssemble({ path: project.path, takeIds: [generated.id], treatment: { aiDenoise: false, removeBreaths: false, trimPauses: false } })).id);
   expect(assembled.state).toBe('completed');
 
   const report = await service.voiceProfileReport({ profileId: profile.id });

@@ -65,6 +65,23 @@ export class SetupService {
       if (inspected.ready && recorded?.torchBuild && recorded.torchBuild !== plan.torchBuild) return { ...withRuntime, ready: false, installable: true, problem: `Instalado para ${recorded.device}; reinstale para usar ${plan.device}` };
       return withRuntime;
     }));
+    // Itens agrupados (ex.: Whisper = motor + modelo) aparecem como um só: o principal só fica
+    // pronto quando todas as partes estão prontas, e o tamanho soma as partes.
+    for (const item of items) {
+      const entry = this.catalog.find(candidate => candidate.id === item.id);
+      if (entry?.partOf) item.partOf = entry.partOf;
+      const parts = (entry?.bundle || []).map(id => items.find(other => other.id === id)).filter(Boolean);
+      if (!parts.length) continue;
+      const pending = [item, ...parts].filter(entry => !entry.ready);
+      Object.assign(item, {
+        mainReady: item.ready,
+        ready: !pending.length,
+        installable: pending.some(entry => entry.installable),
+        downloadBytes: [item, ...parts].reduce((sum, entry) => sum + (entry.downloadBytes || 0), 0),
+        problem: pending.length ? (item.ready ? `Falta: ${pending.map(entry => entry.label).join(', ')}` : item.problem) : item.problem,
+        bundle: parts.map(entry => entry.id),
+      });
+    }
     const fsInfo = await this.statfs(await nearestExisting(this.toolsDirectory)).catch(() => null);
     return {
       schema: 'contentlab-setup-status-v1', catalogVersion: CATALOG_VERSION,
@@ -90,7 +107,17 @@ export class SetupService {
   /** Enfileira instalações. Itens que exigem consentimento precisam estar em `consent`. */
   async install({ ids = [], consent = [] } = {}) {
     await this.#distro();
-    const items = ids.map(id => this.catalog.find(item => item.id === id) || (() => { throw new SetupError('UNKNOWN_ITEM', `Dependência desconhecida: ${id}`); })());
+    const requested = ids.map(id => this.catalog.find(item => item.id === id) || (() => { throw new SetupError('UNKNOWN_ITEM', `Dependência desconhecida: ${id}`); })());
+    // Pedir o item principal instala também as partes que faltam, com o mesmo consentimento.
+    const state = await this.#readState();
+    const items = [];
+    for (const item of requested) {
+      const parts = (item.bundle || []).map(id => this.catalog.find(entry => entry.id === id)).filter(Boolean);
+      const pending = [];
+      for (const part of parts) if (!(await this.#inspect(part, state)).ready) pending.push(part);
+      for (const entry of [item, ...pending]) if (!items.includes(entry)) items.push(entry);
+      if (consent.includes(item.id)) consent = [...consent, ...parts.map(part => part.id)];
+    }
     const missingConsent = items.filter(item => item.consent && !consent.includes(item.id));
     if (missingConsent.length) throw new SetupError('CONSENT_REQUIRED', `Confirme origem, licença e tamanho antes de instalar: ${missingConsent.map(item => item.label).join(', ')}`, { ids: missingConsent.map(item => item.id) });
     for (const item of items) if (!INSTALLABLE.includes(item.kind)) throw new SetupError('NOT_INSTALLABLE', `${item.label} não é instalado pelo Content Lab; veja as instruções exibidas`, { id: item.id });
@@ -171,7 +198,8 @@ export class SetupService {
     if (missing.length) throw new SetupError('BUILD_TOOLS_MISSING', `Ferramentas de compilação ausentes: ${missing.join(', ')}. Instale-as com: ${this.#systemCommand(item) || 'o gerenciador do sistema'}`, { missing });
     const target = path.join(this.toolsDirectory, item.destination);
     const existing = await this.#readState();
-    if (existing.items[item.id]?.commit === item.source.commit && await stat(target).then(() => true, () => false)) return { status: 'already-installed', path: target };
+    const extrasPresent = (await Promise.all((item.extraTargets || []).map(extra => stat(path.join(this.toolsDirectory, extra.destination)).then(() => true, () => false)))).every(Boolean);
+    if (existing.items[item.id]?.commit === item.source.commit && extrasPresent && await stat(target).then(() => true, () => false)) return { status: 'already-installed', path: target };
     const sourceDirectory = path.join(this.toolsDirectory, 'src', `${item.id}-${item.version}`);
     const head = async () => (await this.run('git', ['-C', sourceDirectory, 'rev-parse', 'HEAD'], { signal })).stdout.trim();
     let current = await head().catch(() => null);
@@ -186,7 +214,14 @@ export class SetupService {
     job.phase = 'Compilando (pode levar alguns minutos)';
     const buildDirectory = path.join(sourceDirectory, 'build');
     await this.run('cmake', ['-S', sourceDirectory, '-B', buildDirectory, '-DCMAKE_BUILD_TYPE=Release', '-DWHISPER_BUILD_TESTS=OFF', '-DWHISPER_BUILD_EXAMPLES=ON'], { signal, timeout: 30 * 60_000 });
-    await this.run('cmake', ['--build', buildDirectory, '--config', 'Release', '--target', 'whisper-cli', '-j'], { signal, timeout: 60 * 60_000 });
+    await this.run('cmake', ['--build', buildDirectory, '--config', 'Release', '--target', 'whisper-cli', ...(item.extraTargets || []).map(extra => extra.target), '-j'], { signal, timeout: 60 * 60_000 });
+    for (const extra of item.extraTargets || []) {
+      const builtExtra = path.join(buildDirectory, 'bin', extra.target);
+      await stat(builtExtra).catch(() => { throw new SetupError('BUILD_FAILED', `A compilação terminou sem gerar ${extra.target}`); });
+      const extraTarget = path.join(this.toolsDirectory, extra.destination);
+      await mkdir(path.dirname(extraTarget), { recursive: true });
+      await copyFile(builtExtra, `${extraTarget}.partial`); await chmod(`${extraTarget}.partial`, 0o755); await rename(`${extraTarget}.partial`, extraTarget);
+    }
     const built = path.join(buildDirectory, 'bin', 'whisper-cli');
     await stat(built).catch(() => { throw new SetupError('BUILD_FAILED', 'A compilação terminou sem gerar whisper-cli'); });
     job.phase = 'Verificando binário';
@@ -314,6 +349,8 @@ export class SetupService {
     if (destination && recorded) {
       const present = await stat(destination).then(file => !recorded.size || file.size === recorded.size, () => false);
       const current = this.#current(item, recorded);
+      const extrasPresent = (await Promise.all((item.extraTargets || []).map(extra => stat(path.join(this.toolsDirectory, extra.destination)).then(() => true, () => false)))).every(Boolean);
+      if (present && current && !extrasPresent) return { ...info, ready: false, installable: true, problem: 'Falta um componente novo; atualize', location: destination, managed: true };
       if (present && current) return { ...info, ready: true, detected: `instalado em .tools (${recorded.version})`, location: destination, managed: true };
       if (present && !current) return { ...info, ready: false, installable: true, problem: 'Versão instalada difere da versão fixada; atualize', location: destination, managed: true };
     }

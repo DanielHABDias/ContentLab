@@ -8,39 +8,151 @@ import { sha256File } from '../media/media-service.js';
 
 const run = promisify(execFile);
 
-/** Presets do antigo Voice Studio: tom em semitons (rubberband, formantes preservados) e reforço de graves. */
-export const VOICE_PRESETS = {
-  original: { label: 'Original', pitch: 0, bass: 0 },
-  warm: { label: 'Quente', pitch: -0.5, bass: 3 },
-  gentle: { label: 'Suave', pitch: 0.5, bass: 1 },
-  balanced: { label: 'Equilibrada', pitch: 0, bass: 1.5 },
-  deep: { label: 'Grave', pitch: -1.5, bass: 4 },
-};
+/**
+ * Tratamento da narração, refeito do zero em cima de dois modelos locais:
+ * - DeepFilterNet3 (`deep-filter`): remoção de ruído por IA, a 48 kHz, em CPU;
+ * - Silero VAD (via whisper.cpp): separa fala de pausa, respiro e ruído entre frases.
+ * Com eles: tira o ruído de fundo, silencia respiros, encurta pausas longas e deixa a voz
+ * no volume certo. Os originais nunca são alterados.
+ */
+export const DEFAULT_TREATMENT = { aiDenoise: true, removeBreaths: true, trimPauses: true, maxPauseSeconds: 0.4, compress: true, normalize: true, targetLufs: -16 };
 
-export const DEFAULT_TREATMENT = { trimSilence: true, denoise: true, highpass: true, compress: true, normalize: true, targetLufs: -16, preset: 'original' };
-
+/** Aceita também o formato antigo (denoise/trimSilence/preset), salvo em narrações existentes. */
 export function normalizeTreatment(input = {}) {
-  const value = { ...DEFAULT_TREATMENT, ...input };
-  for (const key of ['trimSilence', 'denoise', 'highpass', 'compress', 'normalize']) value[key] = Boolean(value[key]);
+  const legacy = {};
+  if ('denoise' in input && !('aiDenoise' in input)) legacy.aiDenoise = input.denoise;
+  if ('trimSilence' in input && !('trimPauses' in input)) legacy.trimPauses = input.trimSilence;
+  const value = { ...DEFAULT_TREATMENT, ...legacy, ...input };
+  for (const key of ['aiDenoise', 'removeBreaths', 'trimPauses', 'compress', 'normalize']) value[key] = Boolean(value[key]);
   value.targetLufs = Number(value.targetLufs);
   if (!(value.targetLufs >= -24 && value.targetLufs <= -10)) throw new Error('Loudness alvo deve ficar entre -24 e -10 LUFS');
-  if (!VOICE_PRESETS[value.preset]) throw new Error(`Preset de voz desconhecido: ${value.preset}`);
-  return { trimSilence: value.trimSilence, denoise: value.denoise, highpass: value.highpass, compress: value.compress, normalize: value.normalize, targetLufs: value.targetLufs, preset: value.preset };
+  value.maxPauseSeconds = Number(value.maxPauseSeconds);
+  if (!(value.maxPauseSeconds >= 0.15 && value.maxPauseSeconds <= 2)) throw new Error('Pausa máxima deve ficar entre 0,15 e 2 s');
+  return { aiDenoise: value.aiDenoise, removeBreaths: value.removeBreaths, trimPauses: value.trimPauses, maxPauseSeconds: value.maxPauseSeconds, compress: value.compress, normalize: value.normalize, targetLufs: value.targetLufs };
 }
 
-/** Cadeia FFmpeg do tratamento, na ordem: silêncio → ruído → high-pass → preset → compressão → loudness. */
-export function treatmentFilters(input) {
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+const DEFAULT_ANALYSIS = { noiseFloorDb: -60, speechLevelDb: -24 };
+
+/** Forma da voz depois da limpeza: high-pass suave e compressão de locução relativa ao nível da fala. */
+export function treatmentFilters(input, analysis = DEFAULT_ANALYSIS) {
   const settings = normalizeTreatment(input);
+  const speech = Number.isFinite(analysis.speechLevelDb) ? analysis.speechLevelDb : DEFAULT_ANALYSIS.speechLevelDb;
   const filters = [];
-  if (settings.trimSilence) { const edge = 'silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.15'; filters.push(edge, 'areverse', edge, 'areverse'); }
-  if (settings.denoise) filters.push('afftdn=nf=-25');
-  if (settings.highpass) filters.push('highpass=f=80');
-  const preset = VOICE_PRESETS[settings.preset];
-  if (preset.pitch) filters.push(`rubberband=pitch=${round(2 ** (preset.pitch / 12), 5)}:formant=preserved`);
-  if (preset.bass) filters.push(`bass=g=${preset.bass}:f=110`);
-  if (settings.compress) filters.push('acompressor=threshold=-18dB:ratio=2.5:attack=12:release=120');
-  if (settings.normalize) filters.push(`loudnorm=I=${settings.targetLufs}:TP=-1.5:LRA=11`);
+  if (settings.aiDenoise) filters.push('highpass=f=70:poles=2');
+  if (settings.compress) filters.push(`acompressor=threshold=${round(clamp(speech - 6, -40, -10), 1)}dB:ratio=2.5:attack=15:release=180:knee=4:makeup=1`);
   return filters;
+}
+
+/** Nível final: ganho linear medido até o alvo e limitador de pico (sem loudnorm dinâmico). */
+export function finishFilters(input, measuredLufs) {
+  const settings = normalizeTreatment(input);
+  if (!settings.normalize || !Number.isFinite(measuredLufs)) return [];
+  const gain = round(clamp(settings.targetLufs - measuredLufs, -30, 36), 2);
+  return [`volume=${gain}dB`, 'alimiter=limit=0.79:attack=5:release=60:level=false'];
+}
+
+/** Piso de ruído (percentil 10) e nível da fala (percentil 90) em janelas de 50 ms, mais o loudness integrado. */
+export async function analyzeVoice(ffmpeg, file, { signal } = {}) {
+  const { stdout, stderr } = await run(ffmpeg, ['-hide_banner', '-nostats', '-i', path.resolve(file), '-af', 'aresample=48000,asetnsamples=n=2400:p=0,astats=metadata=1:reset=1:measure_perchannel=none:measure_overall=RMS_level,ametadata=print:key=lavfi.astats.Overall.RMS_level:file=-,ebur128=framelog=quiet', '-f', 'null', '-'], { timeout: 30 * 60_000, maxBuffer: 64 * 1024 * 1024, signal });
+  const levels = [...stdout.matchAll(/RMS_level=(-?[\d.]+)/g)].map(match => Number(match[1])).filter(Number.isFinite).sort((x, y) => x - y);
+  const pick = ratio => (levels.length ? levels[Math.min(levels.length - 1, Math.floor(levels.length * ratio))] : null);
+  const lufs = [...stderr.matchAll(/\bI:\s+(-?[\d.]+|-inf) LUFS/g)].at(-1)?.[1];
+  return { noiseFloorDb: pick(0.1), speechLevelDb: pick(0.9), integratedLufs: lufs === undefined || lufs === '-inf' ? null : Number(lufs) };
+}
+
+/** Remove o ruído com o DeepFilterNet3 (atraso do modelo compensado). */
+export async function aiDenoise(deepFilter, source, target, { signal } = {}) {
+  const directory = `${path.resolve(target)}.df`;
+  await mkdir(directory, { recursive: true });
+  try {
+    await run(deepFilter, ['--compensate-delay', '--output-dir', directory, path.resolve(source)], { timeout: 6 * 60 * 60_000, maxBuffer: 16 * 1024 * 1024, signal });
+    await rename(path.join(directory, path.basename(source)), target);
+  } catch (error) {
+    if (signal?.aborted) throw Object.assign(new Error('Cancelado'), { code: 'CANCELLED' });
+    throw new Error(`Falha na limpeza por IA: ${`${error.stderr || error.message}`.trim().split(/\r?\n/).slice(-2).join(' ')}`);
+  } finally { await rm(directory, { recursive: true, force: true }); }
+}
+
+/** Trechos de fala (em segundos) detectados pelo Silero VAD. */
+export async function speechSegments({ binary, model }, file, { signal } = {}) {
+  const { stdout, stderr } = await run(binary, ['--vad-model', model, '--file', path.resolve(file), '--no-prints', '--vad-min-silence-duration-ms', '120', '--vad-speech-pad-ms', '30'], { timeout: 30 * 60_000, maxBuffer: 16 * 1024 * 1024, signal });
+  // O exemplo do whisper.cpp imprime os tempos em centésimos de segundo.
+  return [...`${stdout}\n${stderr}`.matchAll(/start = ([\d.]+), end = ([\d.]+)/g)].map(match => ({ start: Number(match[1]) / 100, end: Number(match[2]) / 100 })).filter(item => item.end > item.start);
+}
+
+/**
+ * Plano de edição a partir dos trechos de fala: cada fala ganha uma folga curta, as pausas
+ * longas viram `maxPauseSeconds` e, com `removeBreaths`, o que fica entre as falas
+ * (respiro, estalo, ruído) vira silêncio.
+ */
+export function editPlan(segments, duration, input) {
+  const settings = normalizeTreatment(input);
+  if (!segments.length || !(settings.trimPauses || settings.removeBreaths)) return null;
+  const PRE = 0.08; const POST = 0.14; const EDGE = 0.2;
+  const spans = [];
+  for (const segment of segments) {
+    const start = clamp(segment.start - PRE, 0, duration); const end = clamp(segment.end + POST, 0, duration);
+    const last = spans.at(-1);
+    if (last && start <= last.end) last.end = Math.max(last.end, end); else spans.push({ start, end });
+  }
+  const pieces = []; const gapLength = (length, limit) => (settings.trimPauses ? Math.min(length, limit) : length);
+  const gap = (from, to, limit) => {
+    const length = gapLength(to - from, limit);
+    if (length < 0.01) return;
+    pieces.push(settings.removeBreaths ? { silence: round(length) } : { start: round(from), end: round(from + length) });
+  };
+  gap(0, spans[0].start, EDGE);
+  spans.forEach((span, index) => { pieces.push({ start: round(span.start), end: round(span.end) }); if (spans[index + 1]) gap(span.end, spans[index + 1].start, settings.maxPauseSeconds); });
+  gap(spans.at(-1).end, duration, EDGE);
+  const kept = pieces.reduce((sum, piece) => sum + (piece.silence ?? piece.end - piece.start), 0);
+  return { pieces, removedSeconds: round(Math.max(0, duration - kept), 2) };
+}
+
+async function applyEdit(ffmpeg, source, target, plan, { signal }) {
+  const fade = 0.012;
+  const chains = plan.pieces.map((piece, index) => piece.silence !== undefined
+    ? `aevalsrc=0:d=${piece.silence}:s=48000:c=mono[p${index}]`
+    : `[0:a]atrim=start=${piece.start}:end=${piece.end},asetpts=PTS-STARTPTS,afade=t=in:d=${fade},afade=t=out:st=${round(Math.max(0, piece.end - piece.start - fade))}:d=${fade}[p${index}]`);
+  const graph = `${chains.join(';')};${plan.pieces.map((_, index) => `[p${index}]`).join('')}concat=n=${plan.pieces.length}:v=0:a=1[out]`;
+  await ffmpegRun(ffmpeg, ['-i', source, '-filter_complex', graph, '-map', '[out]', ...WAV_OUT, '-y', target], { signal, target });
+}
+
+/**
+ * Tratamento completo: monta os trechos sem filtro (`rawOutput` = "sem tratamento" no preview),
+ * limpa com IA, corta pausas e respiros pelo VAD, dá forma à voz e acerta o volume.
+ * `ai`: { deepFilter, vad: { binary, model } } — caminhos dos modelos locais.
+ */
+export async function treatParts(ffmpeg, parts, output, settingsInput, { rawOutput, limitSeconds = null, signal, ai = {} } = {}) {
+  const settings = normalizeTreatment(settingsInput);
+  const target = path.resolve(output);
+  const raw = path.resolve(rawOutput || `${target}.bruto.wav`);
+  const temp = name => `${target}.${name}.wav`;
+  const temps = [temp('limpo'), temp('editado'), temp('forma')];
+  try {
+    await renderParts(ffmpeg, parts, raw, { limitSeconds, signal });
+    let current = raw;
+    if (settings.aiDenoise) {
+      if (!ai.deepFilter) throw Object.assign(new Error('Limpeza por IA indisponível: instale “Limpeza de voz com IA” em Dependências'), { code: 'DEPENDENCY_MISSING' });
+      await aiDenoise(ai.deepFilter, current, temps[0], { signal }); current = temps[0];
+    }
+    let plan = null;
+    if (settings.trimPauses || settings.removeBreaths) {
+      if (!ai.vad?.binary || !ai.vad?.model) throw Object.assign(new Error('Detecção de pausas indisponível: instale “Whisper large-v3” em Dependências'), { code: 'DEPENDENCY_MISSING' });
+      const duration = (await measureAudio({ ffmpeg, ffprobe: ai.ffprobe || 'ffprobe' }, current)).durationSeconds;
+      plan = editPlan(await speechSegments(ai.vad, current, { signal }), duration, settings);
+      if (plan) { await applyEdit(ffmpeg, current, temps[1], plan, { signal }); current = temps[1]; }
+    }
+    const analysis = await analyzeVoice(ffmpeg, current, { signal });
+    const shaping = treatmentFilters(settings, analysis);
+    if (shaping.length) { await ffmpegRun(ffmpeg, ['-i', current, '-af', shaping.join(','), ...WAV_OUT, '-y', temps[2]], { signal, target: temps[2] }); current = temps[2]; }
+    const finish = finishFilters(settings, settings.normalize ? (await analyzeVoice(ffmpeg, current, { signal })).integratedLufs : null);
+    await ffmpegRun(ffmpeg, ['-i', current, '-af', finish.length ? finish.join(',') : 'anull', ...WAV_OUT, '-y', target], { signal, target });
+    return { target, analysis, removedSeconds: plan?.removedSeconds || 0 };
+  } finally {
+    await Promise.all(temps.map(file => rm(file, { force: true })));
+    if (!rawOutput) await rm(raw, { force: true });
+  }
 }
 
 const WAV_OUT = ['-c:a', 'pcm_s16le', '-ar', '48000', '-ac', '1'];

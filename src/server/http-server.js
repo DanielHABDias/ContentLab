@@ -68,6 +68,8 @@ export function createContentLabServer({ dataDirectory = roots.dataDirectory, st
       const narrationRoutes = { 'profiles-list': 'voiceProfiles', state: 'narrationState', import: 'narrationImport', 'take-update': 'narrationUpdateTake', reorder: 'narrationReorder', 'take-delete': 'narrationDeleteTake', preview: 'narrationPreview', assemble: 'narrationAssemble', 'profile-create': 'voiceProfileCreate', 'profile-report': 'voiceProfileReport', 'profile-delete': 'voiceProfileDelete', generate: 'voiceGenerate', 'voice-plan': 'voicePlan' };
       const narrationMatch = request.method === 'POST' && url.pathname.match(/^\/api\/v1\/narration\/([a-z-]+)$/);
       if (narrationMatch && narrationRoutes[narrationMatch[1]]) return json(response, 200, await application[narrationRoutes[narrationMatch[1]]](await readJson(request)));
+      if (request.method === 'POST' && url.pathname === '/api/v1/system/apps') return json(response, 200, await application.systemApps());
+      if (request.method === 'POST' && url.pathname === '/api/v1/system/close-app') return json(response, 200, await application.systemCloseApp(await readJson(request)));
       if (request.method === 'POST' && url.pathname === '/api/v1/jobs/cancel') return json(response, 200, application.cancelJob(await readJson(request)));
       const getRoutes = { '/api/v1/settings': 'getSettings', '/api/v1/storage/usage': 'storageUsage', '/api/v1/storage/orphans': 'storageOrphans', '/api/v1/storage/jobs': 'storageJobs', '/api/v1/registry/backups': 'listRegistryBackups', '/api/v1/update/status': 'updateStatus' };
       if (request.method === 'GET' && getRoutes[url.pathname]) return json(response, 200, await application[getRoutes[url.pathname]]());

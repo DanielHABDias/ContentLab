@@ -24,16 +24,18 @@ export function SetupWizard({ firstRun = false, focus = [], onClose, onFinished,
   if (!status) return <main id="main" className="workspace setup">{error ? <div className="notice error" role="alert"><X size={16}/>{error}</div> : <p className="empty-state" role="status">Verificando o computador…</p>}</main>;
 
   const essentials = status.items.filter(item => item.group === 'essential');
-  const ai = status.items.filter(item => item.group === 'ai');
+  const ai = status.items.filter(item => item.group === 'ai' && !item.partOf);
   const missingEssentials = essentials.filter(item => !item.ready);
   const essentialCommand = [...new Set(missingEssentials.map(item => item.systemCommand).filter(Boolean))].join(' && ');
-  const jobFor = id => [...jobs].reverse().find(job => job.itemId === id);
+  const jobFor = id => { const ids = [id, ...(status.items.find(item => item.id === id)?.bundle || [])]; const mine = [...jobs].reverse().filter(job => ids.includes(job.itemId)); return mine.find(job => ACTIVE.includes(job.state)) || mine[0]; };
   const chosen = ai.filter(item => selected.includes(item.id));
   const totalBytes = chosen.reduce((sum, item) => sum + (item.downloadBytes || 0), 0);
   const enoughSpace = status.freeBytes == null || totalBytes < status.freeBytes;
   const toggle = id => setSelected(previous => previous.includes(id) ? previous.filter(value => value !== id) : [...previous, id]);
   const act = async task => { setError(''); try { await task(); } catch (issue) { setError(issue.message); } await load(); };
-  const install = () => act(async () => { await localApi.setupInstall({ ids: selected, consent: consent ? selected : [] }); setSelected([]); setConsent(false); });
+  // Item agrupado com o principal já pronto (ex.: só falta o modelo do Whisper): pede só as partes que faltam.
+  const installIds = selected.flatMap(id => { const item = status.items.find(entry => entry.id === id); return item?.mainReady ? status.items.filter(entry => entry.partOf === id && !entry.ready).map(entry => entry.id) : [id]; });
+  const install = () => act(async () => { await localApi.setupInstall({ ids: installIds, consent: consent ? installIds : [] }); setSelected([]); setConsent(false); });
   const copy = async text => { try { await navigator.clipboard.writeText(text); setCopied(text); } catch { setError('Não foi possível copiar; selecione o comando e copie manualmente.'); } };
   const choose = async choice => act(async () => { await localApi.setupOnboarding(choice); (choice === 'completed' ? onFinished : onClose)?.(); });
 

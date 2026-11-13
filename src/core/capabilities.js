@@ -8,6 +8,8 @@ export const FEATURES = {
   'media.url': { label: 'Importar vídeo por URL', requires: ['yt-dlp'] },
   transcription: { label: 'Transcrever em português', requires: ['whisper-cli', 'whisper-large-v3'] },
   'narration.treatment': { label: 'Tratar e medir áudio da narração', requires: ['ffmpeg', 'ffprobe'] },
+  'narration.ai': { label: 'Limpar a voz com IA', requires: ['deepfilternet'] },
+  'narration.pauses': { label: 'Cortar pausas e respiros', requires: ['whisper-cli', 'silero-vad'] },
   'voice.synthetic': { label: 'Gerar voz clonada (VoxCPM2)', requires: ['voxcpm2'] },
   render: { label: 'Renderizar e validar o vídeo', requires: ['ffmpeg', 'ffprobe'] },
 };
@@ -15,7 +17,7 @@ export const FEATURES = {
 /** `requires`: sem eles a etapa não abre. `features`: recursos bloqueados individualmente. */
 export const STAGE_REQUIREMENTS = {
   media: { requires: ['ffmpeg', 'ffprobe'], features: ['media.import', 'media.url', 'transcription'] },
-  narration: { requires: ['ffmpeg', 'ffprobe'], features: ['narration.treatment', 'voice.synthetic'] },
+  narration: { requires: ['ffmpeg', 'ffprobe'], features: ['narration.treatment', 'narration.ai', 'narration.pauses', 'voice.synthetic'] },
   edit: { requires: ['ffmpeg', 'ffprobe'], features: [] },
   review: { requires: ['ffmpeg', 'ffprobe'], features: ['render'] },
 };
@@ -23,7 +25,10 @@ export const STAGE_REQUIREMENTS = {
 /** Itens ausentes (com rótulo) entre `ids`, a partir do status do setup. */
 export function missingDependencies(ids = [], items = []) {
   const byId = new Map(items.map(item => [item.id, item]));
-  return ids.filter(id => !byId.get(id)?.ready).map(id => ({ id, label: byId.get(id)?.label || id }));
+  const missing = ids.filter(id => !byId.get(id)?.ready);
+  // Parte de um item agrupado (ex.: modelo do Whisper) não aparece separada quando o principal também falta.
+  const shown = missing.filter(id => !missing.includes(byId.get(id)?.partOf));
+  return shown.map(id => ({ id, label: byId.get(id)?.label || id }));
 }
 
 export function stageBlock(stageId, items) {

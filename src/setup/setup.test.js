@@ -282,3 +282,14 @@ test('runtime de voz aponta para o shim instalado e para a pasta de pesos, não 
   expect(setup.voiceRuntime('voxcpm2')).toEqual({ runner: '/ferramentas/bin/contentlab-voice', modelPath: '/ferramentas/models/voxcpm2' });
   expect(() => setup.voiceRuntime('ffmpeg')).toThrow(/desconhecido/);
 });
+
+test('Whisper aparece como um item só: motor + modelo, instalados juntos', async () => {
+  const root = await temp(); const setup = await service(root, 'http://127.0.0.1:1/x');
+  const byId = Object.fromEntries((await setup.status()).items.map(item => [item.id, item]));
+  expect(byId['whisper-cli']).toMatchObject({ label: expect.stringMatching(/^Whisper large-v3/), ready: false, bundle: ['whisper-large-v3', 'silero-vad'], downloadBytes: expect.any(Number) });
+  expect(byId['whisper-cli'].downloadBytes).toBeGreaterThan(payload.length);
+  expect(byId['whisper-large-v3']).toMatchObject({ partOf: 'whisper-cli' });
+  const jobs = await setup.install({ ids: ['whisper-cli'], consent: ['whisper-cli'] });
+  expect(jobs.map(job => job.itemId)).toEqual(['whisper-cli', 'whisper-large-v3', 'silero-vad']);
+  await Promise.all(jobs.map(job => setup.waitFor(job.id)));
+});

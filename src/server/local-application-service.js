@@ -6,6 +6,7 @@ import { idSchema } from '../core/contracts.js';
 import { LOCK_FILE, withProjectLock } from '../core/project-lock.js';
 import { FEATURES, featureBlock } from '../core/capabilities.js';
 import { SetupService } from '../setup/setup-service.js';
+import { AppsService } from '../system/apps.js';
 import { MediaOperations } from './media-operations.js';
 import { NarrationOperations } from './narration-operations.js';
 import { EditOperations } from './edit-operations.js';
@@ -31,7 +32,8 @@ import { BUNDLED_COMPONENTS } from '../timeline/components/catalog.js';
 const bundledDirectory = import.meta.url.startsWith('file:') ? path.join(path.dirname(fileURLToPath(import.meta.url)), '../timeline/components') : path.join(process.cwd(), 'src/timeline/components');
 
 export class LocalApplicationService {
-  constructor({ dataDirectory, dialog = new NativeDialog(), packages = new PackageService(), media = null, renderer = null, trash = new SystemTrash(), opener = new SystemOpener(), activities = new ActivityTracker(), setup = null, toolsDirectory = null, projectsDirectory = null, renderCacheDirectory = null, transcriber = null, voice = null, updater = null }) {
+  constructor({ dataDirectory, dialog = new NativeDialog(), packages = new PackageService(), media = null, renderer = null, trash = new SystemTrash(), opener = new SystemOpener(), activities = new ActivityTracker(), setup = null, toolsDirectory = null, projectsDirectory = null, renderCacheDirectory = null, transcriber = null, voice = null, updater = null, apps = new AppsService() }) {
+    this.apps = apps;
     this.dataDirectory = path.resolve(dataDirectory);
     this.projectsDirectory = path.resolve(projectsDirectory || path.join(this.dataDirectory, 'projects'));
     this.updater = updater;
@@ -445,6 +447,10 @@ export class LocalApplicationService {
   productionMotionSet(input) { return this.productionOps.motionPlanSet(input); }
   productionMotionPreview(input) { return this.productionOps.motionPreview(input); }
   voicePlan() { return this.narrationOps.voicePlan(); }
+  /** Programas abertos que mais usam RAM, para liberar memória antes da voz clonada. */
+  async systemApps() { return this.apps.list(); }
+  /** Fecha um programa do usuário (pede confirmação na interface). */
+  async systemCloseApp(input) { return this.apps.close(input); }
 
   /** Capacidades para as telas de etapa, derivadas do mesmo catálogo do setup. */
   async diagnostics() {

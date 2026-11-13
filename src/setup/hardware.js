@@ -3,6 +3,8 @@ import { readFile } from 'node:fs/promises';
 import os from 'node:os';
 import { promisify } from 'node:util';
 
+import { PROTECTED_PROCESSES } from '../system/apps.js';
+
 const execFileAsync = promisify(execFile);
 const GiB = 1024 ** 3;
 
@@ -53,6 +55,7 @@ export async function detectHardware({ run = defaultRun, read = file => readFile
     profile.cpu.flags = ['avx2', 'avx512f', 'avx512_bf16', 'amx_bf16'].filter(flag => flags.includes(flag));
     if (await tryRun(run, 'systemd-run', ['--version'])) profile.memoryGuard = 'systemd';
   }
+  if (platform === 'linux' || platform === 'darwin') profile.memory.topApps = topApps(await tryRun(run, 'ps', ['-eo', 'rss=,comm=']));
   const nvidia = await tryRun(run, 'nvidia-smi', ['--query-gpu=name,memory.total,driver_version', '--format=csv,noheader,nounits']);
   if (nvidia) {
     const header = await tryRun(run, 'nvidia-smi', []);
@@ -111,7 +114,11 @@ export function planVoiceRuntime(profile, { calibration = null, requirements = V
   const ceiling = total - reserve;
   let status = 'ready';
   if (ceiling < needed) { status = 'unsupported'; reasons.push(`São necessários cerca de ${gb(needed + reserve)} de RAM no total; este computador tem ${gb(total)}.`); }
-  else if (available < needed) { status = 'needs-free-memory'; reasons.push(`Feche programas: a geração precisa de ${gb(needed)} livres e há ${gb(available)} agora.`); }
+  else if (available < needed) {
+    status = 'needs-free-memory';
+    const apps = (profile.memory.topApps || []).map(app => `${app.name} (${gb(app.bytes)})`);
+    reasons.push(`Feche programas: a geração precisa de ${gb(needed)} livres e há ${gb(available)} agora.${apps.length ? ` Os que mais usam memória agora: ${apps.join(', ')}.` : ''}`);
+  }
 
   const memoryLimitBytes = Math.min(ceiling, Math.max(needed, Math.min(available - 0.5 * GiB, ceiling)));
   const measured = calibration?.device === device && calibration?.realtimeFactor > 0 ? calibration : null;
@@ -120,7 +127,22 @@ export function planVoiceRuntime(profile, { calibration = null, requirements = V
     : device === 'cpu'
       ? { realtimeFactor: round(requirements.cpu.referenceRealtimeFactor * (requirements.cpu.referenceThreads / threads)), source: 'referência' }
       : { realtimeFactor: null, source: 'desconhecido até a primeira geração' };
-  return { engine: 'voxcpm2', status, device, torchBuild: build, torch: TORCH_BUILDS[build], threads, memoryLimitBytes: Math.round(memoryLimitBytes), memoryGuard: profile.memoryGuard, requiredBytes: needed, estimate, reasons, warnings };
+  return { engine: 'voxcpm2', status, device, torchBuild: build, torch: TORCH_BUILDS[build], threads, memoryLimitBytes: Math.round(memoryLimitBytes), memoryGuard: profile.memoryGuard, requiredBytes: needed, availableBytes: available, estimate, reasons, warnings };
+}
+
+
+/** Programas que mais ocupam RAM agora (somando processos de mesmo nome), a partir de `ps`. */
+export function topApps(output, limit = 3) {
+  if (!output) return [];
+  const totals = new Map();
+  for (const line of String(output.stdout ?? output).split('\n')) {
+    const match = line.trim().match(/^(\d+)\s+(.+)$/);
+    if (!match) continue;
+    const name = match[2].split('/').pop().trim();
+    if (PROTECTED_PROCESSES.test(name)) continue;
+    totals.set(name, (totals.get(name) || 0) + Number(match[1]) * 1024);
+  }
+  return [...totals].map(([name, bytes]) => ({ name, bytes })).filter(app => app.bytes >= 300 * 1024 ** 2).sort((a, b) => b.bytes - a.bytes).slice(0, limit);
 }
 
 function compare(a, b) { return a[0] - b[0] || a[1] - b[1]; }

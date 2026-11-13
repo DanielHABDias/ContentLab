@@ -36,8 +36,11 @@ try {
   // Personagem: inspect valida a pasta sem o app; import usa o app aberto (o mesmo núcleo da interface e do MCP).
   else if (command === 'character.inspect') { const pack = await readCharacterPack(argument); result = { name: pack.name, poses: Object.keys(pack.poses).length, files: pack.files.map(item => item.file), ignored: pack.ignored }; }
   else if (command === 'character.import') result = await appApi('/character/import', await input());
+  // Memória: lista os programas que mais usam RAM e fecha um pelo nome ({"name":"ChatGPT","force":false}).
+  else if (command === 'system.apps') result = await appApi('/system/apps', {});
+  else if (command === 'system.close-app') result = await appApi('/system/close-app', await input());
   else if (command === 'package.restore') { const request = await input(); result = await packages.restore(request.packagePath, request.destination); }
-  else throw new Error('Comando inválido. Use project.create, project.inspect, project.run, character.inspect, character.import ou package.*');
+  else throw new Error('Comando inválido. Use project.create, project.inspect, project.run, character.inspect, character.import, system.apps, system.close-app ou package.*');
   process.stdout.write(`${JSON.stringify({ ok: true, result })}\n`);
 } catch (error) {
   process.stderr.write(`Content Lab: ${error.message}\n`);

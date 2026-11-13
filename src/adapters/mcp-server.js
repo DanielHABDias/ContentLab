@@ -180,14 +180,20 @@ export function createMcpServer() {
     return { jobId: job.id, label: job.label, profileId: chosen, hint: 'Use job_wait; depois narration_assemble.' };
   });
 
-  tool(server, 'narration_assemble', 'Junta os takes gerados mais recentes (um por cena, na ordem do roteiro) numa narração tratada (WAV 48 kHz, loudness medido). Devolve jobId.', { path: projectPath, preset: z.enum(['original', 'warm', 'gentle', 'balanced', 'deep']).default('original') }, async ({ path, preset }) => {
+  tool(server, 'narration_assemble', 'Junta os takes gerados mais recentes (um por cena, na ordem do roteiro) numa narração tratada (WAV 48 kHz, loudness medido): limpeza por IA (DeepFilterNet3), respiros silenciados e pausas encurtadas (Silero VAD), compressão e volume. A voz clonada já sai limpa: por padrão só junta e acerta o volume (-16 LUFS); limpeza e cortes são opcionais e ficam desligados se o modelo não estiver instalado. Devolve jobId.', { path: projectPath, aiDenoise: z.boolean().optional(), removeBreaths: z.boolean().optional(), trimPauses: z.boolean().optional(), maxPauseSeconds: z.number().min(0.15).max(2).optional(), targetLufs: z.number().min(-24).max(-10).optional() }, async ({ path, ...overrides }) => {
     const state = await api('/narration/state', { path });
     const generated = state.narration.takes.filter(take => take.origin === 'generated' && !take.stale);
     const bySceneLatest = new Map(); for (const take of generated) bySceneLatest.set(take.sceneId, take);
     const takeIds = state.scenes.map(scene => bySceneLatest.get(scene.id)?.id).filter(Boolean);
     if (!takeIds.length) throw new AppError('Nenhuma cena narrada ainda: use narration_generate', 'NARRATION_MISSING');
-    const job = await api('/narration/assemble', { path, baseRevision: state.narration.revision, takeIds, treatment: { preset } });
-    return { jobId: job.id, scenes: takeIds.length, hint: 'Use job_wait; depois timeline_auto_assemble.' };
+    const setup = await api('/setup/status'); const ready = id => setup.items.find(item => item.id === id)?.ready || false;
+    // Cenas geradas pela voz clonada já saem limpas: por padrão só junta e acerta o volume.
+    const treatment = { aiDenoise: false, removeBreaths: false, trimPauses: false, compress: false, normalize: true, targetLufs: -16, ...Object.fromEntries(Object.entries(overrides).filter(([, value]) => value !== undefined)) };
+    const off = [];
+    if (treatment.aiDenoise && !ready('deepfilternet')) { treatment.aiDenoise = false; off.push('limpeza por IA (instale deepfilternet)'); }
+    if ((treatment.removeBreaths || treatment.trimPauses) && !(ready('whisper-cli') && ready('silero-vad'))) { treatment.removeBreaths = false; treatment.trimPauses = false; off.push('pausas e respiros (instale whisper-cli com silero-vad)'); }
+    const job = await api('/narration/assemble', { path, baseRevision: state.narration.revision, takeIds, treatment });
+    return { jobId: job.id, scenes: takeIds.length, treatment, ...(off.length ? { disabled: off } : {}), hint: 'Use job_wait; depois timeline_auto_assemble.' };
   });
 
   tool(server, 'motion_kit', 'Kit de motion do Content Lab (modo composição, o jeito principal de montar vídeos): regras de ritmo, cenas com props e exemplos, humores, formato do pacote de personagem, SFX e fundos. Leia antes de escrever ou ajustar beats.', {}, async () => api('/production/motion-kit', {}));

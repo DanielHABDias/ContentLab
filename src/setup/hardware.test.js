@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { detectHardware, planVoiceRuntime } from './hardware.js';
+import { detectHardware, planVoiceRuntime, topApps } from './hardware.js';
 
 const GiB = 1024 ** 3;
 const meminfo = (total, available) => `MemTotal: ${total * 1024 * 1024} kB\nMemFree: 1 kB\nMemAvailable: ${available * 1024 * 1024} kB\nSwapTotal: 2097148 kB\n`;
@@ -62,4 +62,11 @@ test('limite e núcleos acompanham a máquina; estimativa usa a medição quando
   expect(big.warnings.join(' ')).not.toMatch(/bfloat16/);
   expect(planVoiceRuntime(profile(), { calibration: { device: 'cpu', realtimeFactor: 27.3 } }).estimate).toEqual({ realtimeFactor: 27.3, source: 'medido' });
   expect(planVoiceRuntime(profile(), { calibration: { device: 'cuda', realtimeFactor: 0.4 } }).estimate.source).toBe('referência');
+});
+
+test('sugere fechar os programas que mais usam RAM, sem contar o sistema nem o Content Lab', () => {
+  const ps = ['2000000 ChatGPT', '1500000 ChatGPT', '2900000 brave', '900000 node', '300000 gnome-shell', '100000 gedit'].join('\n');
+  expect(topApps(ps).map(app => app.name)).toEqual(['ChatGPT', 'brave']);
+  expect(topApps(ps)[0].bytes).toBe(3500000 * 1024);
+  expect(topApps(null)).toEqual([]);
 });
