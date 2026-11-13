@@ -74,7 +74,6 @@ export function missingStageArtifacts(project, stageId) {
   const narration = project.narrationMediaId ? project.media?.find(item => item.id === project.narrationMediaId) : project.media?.filter(item => item.role === 'narration').at(-1);
   const needsTranscript = narration && (narration.transcript?.model !== 'whisper-large-v3' || !(narration.transcript?.words > 0));
   if (stageId === 'narration') {
-    if (needsTranscript) return ['transcrição palavra por palavra da narração'];
     if (narration) return [];
     if (project.narrationBy && motion?.narration !== false) return ['narração montada'];
     return audioClips.length || motion ? [] : ['narração montada'];

@@ -449,3 +449,6 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-vi
 .audio-selection-info { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; font-size: 13px; }
 .audio-selection-info output { color: var(--ink); font-variant-numeric: tabular-nums; }
 .audio-selection-info small { color: var(--muted); font-size: 12px; }
+
+.final-head { flex-wrap: wrap; }.final-head > div { flex: 1; min-width: 180px; }.final-folder { display: inline-flex; align-items: center; justify-content: center; gap: 7px; margin-left: auto; flex-shrink: 0; }
+.narration > .view-only-fieldset { display: grid; gap: 18px; }

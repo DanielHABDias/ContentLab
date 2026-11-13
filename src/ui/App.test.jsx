@@ -505,3 +505,22 @@ test('etapa aprovada abre só para ver: conteúdo visível, nada salvo e sem apr
   expect(screen.getByRole('heading', { name: /título e thumbnail/i })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /aprovar e seguir/i })).toBeInTheDocument();
 });
+
+
+test('áudio final libera aprovação mesmo com transcrição pendente e segue para Edição', async () => {
+  const base = realDetails();
+  const stages = base.project.stages.map((stage, index) => ({ ...stage, state: index < 4 ? 'approved' : index === 4 ? 'active' : 'pending' }));
+  const media = [{ id: 'media_voice', kind: 'audio', role: 'narration', transcript: null }];
+  const initial = realDetails({ stages, narrationBy: 'creator', narrationMediaId: 'media_voice', media });
+  const advanced = realDetails({ ...initial.project, revision: 2, stages: stages.map(stage => ({ ...stage, state: stage.id === 'narration' ? 'approved' : stage.id === 'edit' ? 'active' : stage.state })) });
+  localApi.listProjects.mockResolvedValue({ projects: [initial.card] });
+  localApi.openProject.mockResolvedValue(initial);
+  localApi.productionLive.mockResolvedValue({ revision: 1, agentWaiting: null });
+  localApi.runProjectAction.mockResolvedValue(advanced);
+  render(<App/>);
+  fireEvent.click(await screen.findByRole('button', { name: /abrir meu projeto/i }));
+  expect(await screen.findByRole('button', { name: /aprovar e seguir/i })).toBeEnabled();
+  fireEvent.click(screen.getByRole('button', { name: /aprovar e seguir/i }));
+  await waitFor(() => expect(localApi.runProjectAction).toHaveBeenCalledWith({ path: '/tmp/meu_projeto', baseRevision: 1, action: { type: 'stage.approve', stageId: 'narration', expectedRevision: 0 } }));
+  expect(await screen.findByText('Para aprovar, falta: transcrição palavra por palavra da narração.')).toBeInTheDocument();
+});

@@ -4,7 +4,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { NarrationStudio } from './NarrationStudio.jsx';
 import { localApi } from './local-api.js';
 
-vi.mock('./local-api.js', () => ({ localApi: { getSettings: vi.fn(), updateSettings: vi.fn(), setupStatus: vi.fn(), narration: vi.fn(), jobs: vi.fn(), cancelJob: vi.fn(), chooseMedia: vi.fn(), narrationImport: vi.fn(), updateTake: vi.fn(), reorderTakes: vi.fn(), deleteTake: vi.fn(), narrationPreview: vi.fn(), assembleNarration: vi.fn(), generateVoice: vi.fn(), voicePlan: vi.fn(), productionTranscribeNarration: vi.fn(), uploadTake: vi.fn(), runProjectAction: vi.fn(), systemApps: vi.fn(), closeApp: vi.fn() } }));
+vi.mock('./local-api.js', () => ({ localApi: { getSettings: vi.fn(), updateSettings: vi.fn(), setupStatus: vi.fn(), narration: vi.fn(), openProject: vi.fn(), revealNarration: vi.fn(), jobs: vi.fn(), cancelJob: vi.fn(), chooseMedia: vi.fn(), narrationImport: vi.fn(), updateTake: vi.fn(), reorderTakes: vi.fn(), deleteTake: vi.fn(), narrationPreview: vi.fn(), assembleNarration: vi.fn(), generateVoice: vi.fn(), voicePlan: vi.fn(), productionTranscribeNarration: vi.fn(), uploadTake: vi.fn(), runProjectAction: vi.fn(), systemApps: vi.fn(), closeApp: vi.fn() } }));
 
 const setup = (voice = true) => ({ items: [{ id: 'ffmpeg', label: 'FFmpeg', ready: true }, { id: 'ffprobe', label: 'FFprobe', ready: true }, { id: 'voxcpm2', label: 'VoxCPM2 (voz clonada)', ready: voice }] });
 const measures = (lufs) => ({ durationSeconds: 20, integratedLufs: lufs, truePeakDb: -1.5, sampleRate: 48000, channels: 1, wav48kMono: true });
@@ -306,4 +306,68 @@ test('falha ao iniciar a montagem mostra aviso junto ao botão e permite tentar 
   fireEvent.click(await screen.findByRole('button', { name: 'Montar narração final' }));
   expect(await screen.findByText('Não foi possível iniciar a montagem. Confira o aviso de erro e tente novamente.')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Montar narração final' })).toBeEnabled();
+});
+
+
+test('narração final abre a pasta real, indica espera e permite tentar novamente após erro', async () => {
+  localApi.narration.mockResolvedValue(state({ narration: { ...state().narration, assembled: { mediaId: 'media_voice', measures: measures(-16) } } }));
+  let rejectOpen;
+  localApi.revealNarration.mockImplementationOnce(() => new Promise((resolve, reject) => { rejectOpen = reject; })).mockResolvedValue({ revealed: '/p/narration/assembled' });
+  render(<NarrationStudio details={details('creator')} setup={setup()}/>);
+  fireEvent.click(await screen.findByRole('button', { name: 'Abrir pasta' }));
+  expect(screen.getByRole('button', { name: 'Abrindo pasta…' })).toBeDisabled();
+  expect(localApi.revealNarration).toHaveBeenCalledWith('/p');
+  await act(async () => rejectOpen(new Error('Não foi possível abrir a pasta.')));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível abrir a pasta.');
+  fireEvent.click(screen.getByRole('button', { name: 'Abrir pasta' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Abrir pasta' })).toBeEnabled());
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+});
+
+test('conclusão da transcrição atualiza o projeto usado pela aprovação', async () => {
+  const job = { id: 'transcription_one', kind: 'transcription', label: 'Transcrever', state: 'running', progress: { phase: 'Transcrevendo', done: 0, total: 100 } };
+  localApi.jobs.mockResolvedValue({ jobs: [job] });
+  const updated = { ...details('creator'), project: { ...details('creator').project, revision: 8 } };
+  localApi.openProject.mockResolvedValue(updated);
+  const onUpdated = vi.fn();
+  render(<NarrationStudio details={details('creator')} setup={setup()} onUpdated={onUpdated}/>);
+  await screen.findByText('Áudio final disponível. O Whisper está preparando os tempos de cada palavra em segundo plano.');
+  expect(onUpdated).not.toHaveBeenCalled();
+  localApi.jobs.mockResolvedValue({ jobs: [{ ...job, state: 'completed' }] });
+  await waitFor(() => expect(onUpdated).toHaveBeenCalledWith(updated), { timeout: 3500 });
+  expect(localApi.openProject).toHaveBeenCalledWith('/p');
+});
+
+test('áudio final aparece durante a transcrição quando o projeto recebe a montagem', async () => {
+  const job = { id: 'assembling', kind: 'narration.assemble', label: 'Montar', state: 'running', progress: { phase: 'Montando', done: 0, total: 4 } };
+  localApi.jobs.mockResolvedValue({ jobs: [job] });
+  const view = render(<NarrationStudio details={details('creator')} setup={setup()}/>);
+  await screen.findByRole('button', { name: 'Montando narração…' });
+  expect(screen.queryByRole('button', { name: 'Abrir pasta' })).not.toBeInTheDocument();
+  localApi.narration.mockResolvedValue(state({ narration: { ...state().narration, assembled: { mediaId: 'media_voice', measures: measures(-16) } }, transcription: { status: 'running' } }));
+  view.rerender(<NarrationStudio details={{ ...details('creator'), project: { ...details('creator').project, revision: 8 } }} setup={setup()}/>);
+  expect(await screen.findByRole('button', { name: 'Abrir pasta' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Montando narração…' })).toBeDisabled();
+  expect(screen.getByText('Áudio final disponível. O Whisper está preparando os tempos de cada palavra em segundo plano.')).toBeInTheDocument();
+});
+
+test('painel da edição permite retomar a transcrição sem reabrir a gravação aprovada', async () => {
+  localApi.narration.mockResolvedValue(state({ narration: { ...state().narration, assembled: { mediaId: 'voice', measures: measures(-16) } }, transcription: { status: 'failed', error: 'O Whisper falhou.' } }));
+  localApi.productionTranscribeNarration.mockResolvedValue({ jobId: 'retry' });
+  render(<NarrationStudio timingOnly details={details('creator')} setup={setup()}/>);
+  fireEvent.click(await screen.findByRole('button', { name: 'Gerar transcrição palavra por palavra' }));
+  await waitFor(() => expect(localApi.productionTranscribeNarration).toHaveBeenCalledWith({ path: '/p' }));
+  expect(screen.queryByRole('button', { name: 'Permitir microfone' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('radio', { name: /eu gravo/i })).not.toBeInTheDocument();
+});
+
+test('narração aprovada permite abrir a pasta e retomar os tempos, preservando os takes', async () => {
+  localApi.narration.mockResolvedValue(state({ narration: { ...state().narration, assembled: { mediaId: 'voice', measures: measures(-16) } }, transcription: { status: 'failed', error: 'O Whisper falhou.' } }));
+  localApi.revealNarration.mockResolvedValue({ revealed: '/p/narration/assembled' });
+  render(<NarrationStudio readOnly details={details('creator')} setup={setup()}/>);
+  expect(await screen.findByRole('button', { name: 'Abrir pasta' })).toBeEnabled();
+  expect(screen.getAllByRole('button', { name: 'Editar' })[0]).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Gerar transcrição palavra por palavra' })).toBeEnabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Abrir pasta' }));
+  await waitFor(() => expect(localApi.revealNarration).toHaveBeenCalledWith('/p'));
 });

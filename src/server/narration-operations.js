@@ -226,6 +226,13 @@ export class NarrationOperations {
   }
 
   /** Arquivo de áudio para ouvir na interface: take, preview, montagem ou amostra do perfil. */
+  async reveal({ path: directory }) {
+    const { file } = await this.file({ path: directory, assembled: true });
+    const folder = path.dirname(file);
+    await this.app.opener.reveal(folder);
+    return { revealed: folder, file };
+  }
+
   async file({ path: directory, takeId, preview, assembled, profileId, check, original }) {
     let target;
     if (profileId) {

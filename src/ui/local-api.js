@@ -123,6 +123,7 @@ export const localApi = {
   deleteTake: input => post('/narration/take-delete', input),
   narrationPreview: input => post('/narration/preview', input),
   assembleNarration: input => post('/narration/assemble', input),
+  revealNarration: path => post('/narration/reveal', { path }),
   createVoiceProfile: input => post('/narration/profile-create', input),
   voiceProfileReport: profileId => post('/narration/profile-report', { profileId }),
   deleteVoiceProfile: profileId => post('/narration/profile-delete', { profileId, confirm: true }),

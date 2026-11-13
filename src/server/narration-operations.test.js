@@ -296,7 +296,7 @@ test('montar narração transcreve automaticamente antes de concluir e expõe pa
   expect((await service.narrationState({ path: project.path })).transcription.status).toBe('ready');
 });
 
-test('falha de transcrição preserva a narração, bloqueia aprovação e permite retomar sem gravar novamente', async () => {
+test('falha de transcrição preserva o áudio aprovado, bloqueia conclusão da edição e permite retomar', async () => {
   let fail = true;
   const transcriber = async () => ({ transcribe: async (...args) => { if (fail) throw new Error('Falha de teste no Whisper'); return (await fakeWordTranscriber()).transcribe(...args); } });
   const { root, service, project } = await setup({ transcriber });
@@ -307,7 +307,13 @@ test('falha de transcrição preserva a narração, bloqueia aprovação e permi
   expect(state.narration.assembled.mediaId).toBeTruthy();
   expect(state.transcription.status).toBe('failed');
   const details = await service.inspectProject(project.path);
-  await expect(service.runProjectAction({ path: project.path, baseRevision: details.project.revision, action: { type: 'stage.approve', stageId: 'narration', expectedRevision: 0 } })).rejects.toMatchObject({ code: 'WORDS_MISSING' });
+  const creative = { ...details.project.creative, brief: { thesis: 'Tese', audience: 'Público', promise: 'Promessa', notes: '' }, packaging: { ...details.project.creative.packaging, titleA: 'Título' }, script: { ...details.project.creative.script, hook: 'Abertura', development: 'Corpo', payoff: 'Final' } };
+  let current = await service.runProjectAction({ path: project.path, baseRevision: details.project.revision, action: { type: 'creative.update', creative } });
+  for (const stageId of ['brief', 'packaging', 'script', 'media', 'narration']) {
+    current = await service.runProjectAction({ path: project.path, baseRevision: current.project.revision, action: { type: 'stage.approve', stageId, expectedRevision: current.project.stages.find(stage => stage.id === stageId).revision } });
+  }
+  expect(current.project.stages.find(stage => stage.id === 'edit').state).toBe('active');
+  await expect(service.runProjectAction({ path: project.path, baseRevision: current.project.revision, action: { type: 'stage.approve', stageId: 'edit', expectedRevision: 0 } })).rejects.toMatchObject({ code: 'WORDS_MISSING' });
   await expect(service.productionNarrationTranscript({ path: project.path })).rejects.toMatchObject({ code: 'WORDS_MISSING' });
   fail = false;
   const retried = await service.productionTranscribeNarration({ path: project.path });
@@ -347,4 +353,27 @@ test('salva cortes internos sem destruir o take, aplica no preview e invalida a 
   expect(await readFile(path.join(project.path, 'narration', take.original))).toEqual(original);
   await expect(service.narrationUpdateTake({ ...input, baseRevision: updated.narration.revision, segments: [{ start: 0, end: 9 }] })).rejects.toThrow(/Trechos inválidos/);
   expect((await store.read()).revision).toBe(updated.narration.revision);
+});
+
+
+test('abrir pasta resolve o WAV final pelo projeto e recusa narração inexistente', async () => {
+  const { root, service, project } = await setup();
+  const revealed = [];
+  service.opener = { reveal: async folder => { revealed.push(folder); } };
+  const server = createContentLabServer({ application: service });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const reveal = () => fetch(`http://127.0.0.1:${server.address().port}/api/v1/narration/reveal`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-contentlab-client': '1' }, body: JSON.stringify({ path: project.path, file: '/tmp/ignorar.wav' }) });
+  try {
+    expect((await reveal()).ok).toBe(false);
+    expect(revealed).toEqual([]);
+    await service.narrationImport({ path: project.path, sources: [tone(root, 'fala.wav')] });
+    const { narration } = await service.narrationState({ path: project.path });
+    const job = await service.narrationAssemble({ path: project.path, takeIds: narration.takes.map(take => take.id), treatment: { aiDenoise: false, removeBreaths: false, trimPauses: false } });
+    expect((await service.mediaOps.jobs.waitFor(job.id)).state).toBe('completed');
+    const actual = await service.narrationFile({ path: project.path, assembled: true });
+    const response = await reveal();
+    expect(response.ok).toBe(true);
+    expect(await response.json()).toEqual({ revealed: path.dirname(actual.file), file: actual.file });
+    expect(revealed).toEqual([path.dirname(actual.file)]);
+  } finally { await new Promise(resolve => server.close(resolve)); }
 });
