@@ -106,4 +106,3 @@ O modo econômico mantém o perfil e o texto completo da referência. Não encur
 O modo econômico tem instalação própria em Dependências: motor compilado do commit `e1047e121ee83cfa70865c0e4d7ebfb858c2cc69` de `tc-mb/llama.cpp-omni`, com bibliotecas estáticas e CPU, e dois pesos do repositório `DennisHuang648/VoxCPM2-GGUF`, revisão `169f64d8b98bbaab1761e4ca3a83e6af653456cc`. Os downloads somam 3.552.406.272 bytes, possuem SHA-256 fixado no catálogo e passam pelo mesmo instalador com consentimento, progresso, retomada e verificação. O modo Padrão continua disponível.
 
 Quando o modo Padrão não cabe na RAM, o painel também oferece **Trocar para modo econômico**. O clique salva a preferência e fecha o painel; se faltar a instalação, mostra o atalho para Dependências. A pessoa tenta gerar novamente, com o modo escolhido. No modo Econômico o painel continua permitindo fechar aplicativos e tentar de novo, sem oferecer uma troca para o mesmo modo.
-
