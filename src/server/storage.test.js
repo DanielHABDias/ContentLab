@@ -175,3 +175,16 @@ test('projeto movido é relocalizado; pasta de outro projeto é recusada', async
   expect(relocated.path).toBe(moved);
   expect((await service.listProjects()).find(card => card.id === 'movido')).toMatchObject({ status: 'ready', path: moved });
 });
+
+test('modo de voz persiste, mantém outras configurações e rejeita opções desconhecidas', async () => {
+  const { service, make } = await setup();
+  expect((await service.getSettings()).voice).toEqual({ mode: 'standard' });
+  const selected = await service.updateSettings({ baseRevision: 0, voice: { mode: 'economy' } });
+  expect(selected.voice).toEqual({ mode: 'economy' });
+  await expect(service.updateSettings({ baseRevision: 0, voice: { mode: 'standard' } })).rejects.toMatchObject({ code: 'SETTINGS_CONFLICT' });
+  await expect(service.updateSettings({ baseRevision: 1, voice: { mode: 'unknown' } })).rejects.toMatchObject({ code: 'INVALID_VOICE_MODE' });
+  await service.updateSettings({ baseRevision: 1, limits: { minFreeBytes: 42 } });
+  const restarted = make();
+  expect((await restarted.getSettings()).voice).toEqual({ mode: 'economy' });
+  expect(restarted.setup.voiceMode).toBe('economy');
+});

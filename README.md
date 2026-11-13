@@ -70,6 +70,8 @@ A aba **Documentação**, na barra lateral, mostra o que todo projeto traz do ki
 
 A narração por voz de IA do Content Lab é a **sua** voz, clonada de uma amostra gravada por você. A tela **Minha voz**, na barra lateral, mostra um texto de leitura de cerca de 60 s (com perguntas, exclamações e números, para o modelo pegar a entonação), grava pelo microfone só depois do clique, registra o consentimento do titular e cria o perfil. Cada perfil tem o botão **Ouvir como ficou**, que gera uma frase curta com a voz clonada para você conferir o resultado. Dá para ter vários perfis e escolher qual usar em cada projeto.
 
+Em **Configurações → Voz de IA**, escolha **Padrão** (11,5 GB livres em CPU) ou **Econômico** (VoxCPM2 Q8 em CPU, reserva de 10,5 GB e instalação própria). Se faltar RAM ao tentar gerar uma amostra ou narração, o painel oferece fechar aplicativos e, no modo Padrão, trocar para o Econômico. O painel some ao tentar novamente e só volta se a memória continuar insuficiente.
+
 Enquanto não houver nenhum perfil gravado, a opção de narração por voz de IA fica bloqueada nos projetos: resta gravar a narração você mesmo na etapa Narração. Detalhes em [docs/NARRACAO_E_VOZ.md](docs/NARRACAO_E_VOZ.md).
 
 ### Personagem do projeto

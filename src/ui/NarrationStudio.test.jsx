@@ -3,7 +3,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { NarrationStudio } from './NarrationStudio.jsx';
 import { localApi } from './local-api.js';
 
-vi.mock('./local-api.js', () => ({ localApi: { narration: vi.fn(), jobs: vi.fn(), cancelJob: vi.fn(), chooseMedia: vi.fn(), narrationImport: vi.fn(), updateTake: vi.fn(), reorderTakes: vi.fn(), deleteTake: vi.fn(), narrationPreview: vi.fn(), assembleNarration: vi.fn(), generateVoice: vi.fn(), voicePlan: vi.fn(), uploadTake: vi.fn(), runProjectAction: vi.fn(), systemApps: vi.fn(), closeApp: vi.fn() } }));
+vi.mock('./local-api.js', () => ({ localApi: { getSettings: vi.fn(), updateSettings: vi.fn(), setupStatus: vi.fn(), narration: vi.fn(), jobs: vi.fn(), cancelJob: vi.fn(), chooseMedia: vi.fn(), narrationImport: vi.fn(), updateTake: vi.fn(), reorderTakes: vi.fn(), deleteTake: vi.fn(), narrationPreview: vi.fn(), assembleNarration: vi.fn(), generateVoice: vi.fn(), voicePlan: vi.fn(), uploadTake: vi.fn(), runProjectAction: vi.fn(), systemApps: vi.fn(), closeApp: vi.fn() } }));
 
 const setup = (voice = true) => ({ items: [{ id: 'ffmpeg', label: 'FFmpeg', ready: true }, { id: 'ffprobe', label: 'FFprobe', ready: true }, { id: 'voxcpm2', label: 'VoxCPM2 (voz clonada)', ready: voice }] });
 const measures = (lufs) => ({ durationSeconds: 20, integratedLufs: lufs, truePeakDb: -1.5, sampleRate: 48000, channels: 1, wav48kMono: true });
@@ -18,7 +18,7 @@ function state(overrides = {}) {
   };
 }
 
-beforeEach(() => { vi.clearAllMocks(); localApi.narration.mockResolvedValue(state()); localApi.jobs.mockResolvedValue({ jobs: [] }); });
+beforeEach(() => { vi.resetAllMocks(); localApi.voicePlan.mockResolvedValue({ plan: { status: 'ready' } }); localApi.narration.mockResolvedValue(state()); localApi.jobs.mockResolvedValue({ jobs: [] }); });
 
 test('voz clonada bloqueada sem VoxCPM2 leva às dependências', async () => {
   const onOpenSetup = vi.fn();
@@ -130,6 +130,8 @@ test('sem RAM livre, mostra o que fechar e fecha com confirmação', async () =>
   localApi.systemApps.mockResolvedValue({ supported: true, apps: [{ name: 'ChatGPT', bytes: 3.2 * 1024 ** 3, processes: 8, kind: 'app' }, { name: 'brave', bytes: 2.9 * 1024 ** 3, processes: 12, kind: 'browser' }] });
   localApi.closeApp.mockResolvedValue({ name: 'ChatGPT', closed: true, freedBytes: 3.2 * 1024 ** 3, remaining: 0 });
   render(<NarrationStudio details={details('ai')} setup={setup()} onOpenSetup={vi.fn()}/>);
+  expect(screen.queryByRole('region', { name: /libere/i })).not.toBeInTheDocument();
+  fireEvent.click(await screen.findByRole('button', { name: /gerar 1 cena pendente/i }));
   const panel = await screen.findByRole('region', { name: /libere 2,5 gb de memória/i });
   expect(await within(panel).findByText(/shift\+esc/i)).toBeInTheDocument();
   expect(within(panel).getByRole('button', { name: 'Fechar brave inteiro' })).toBeInTheDocument();
@@ -147,6 +149,25 @@ test('sem memória, gerar não abre tarefa: mostra o painel para liberar', async
   render(<NarrationStudio details={details('ai')} setup={setup()} onOpenSetup={vi.fn()}/>);
   fireEvent.click(await screen.findByRole('button', { name: /gerar 1 cena pendente/i }));
   expect(await screen.findByRole('region', { name: /libere 0,8 gb/i })).toBeInTheDocument();
-  await waitFor(() => expect(localApi.voicePlan).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(localApi.voicePlan).toHaveBeenCalledTimes(1));
   expect(localApi.generateVoice).not.toHaveBeenCalled();
+});
+
+test('projeto só mostra o painel após tentar gerar e a nova tentativa executa as mesmas cenas', async () => {
+  localApi.voicePlan.mockResolvedValue({ plan: { status: 'needs-free-memory', requiredBytes: 11.5 * 1024 ** 3, availableBytes: 9 * 1024 ** 3, mode: 'standard' } });
+  localApi.systemApps.mockResolvedValue({ apps: [] });
+  localApi.generateVoice.mockResolvedValue({ id: 'retry_project', kind: 'voice.generate', state: 'completed', progress: {} });
+  render(<NarrationStudio details={details('ai')} setup={setup()} onOpenSetup={vi.fn()}/>);
+  const generate = await screen.findByRole('button', { name: /gerar 1 cena pendente/i });
+  expect(localApi.voicePlan).not.toHaveBeenCalled();
+  expect(screen.queryByRole('region', { name: /libere/i })).not.toBeInTheDocument();
+  fireEvent.click(generate);
+  const panel = await screen.findByRole('region', { name: /libere/i });
+  expect(within(panel).getByRole('button', { name: /trocar para modo econômico/i })).toBeInTheDocument();
+  let resolvePlan;
+  localApi.voicePlan.mockImplementationOnce(() => new Promise(resolve => { resolvePlan = resolve; }));
+  fireEvent.click(within(panel).getByRole('button', { name: /tentar de novo/i }));
+  expect(screen.queryByRole('region', { name: /libere/i })).not.toBeInTheDocument();
+  resolvePlan({ plan: { status: 'ready' } });
+  await waitFor(() => expect(localApi.generateVoice).toHaveBeenCalledWith({ path: '/p', profileId: 'voice_abc123', sceneIds: ['development-1'] }));
 });

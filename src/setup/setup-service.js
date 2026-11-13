@@ -1,3 +1,4 @@
+import { voiceMode } from '../core/voice-modes.js';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { copyFile, chmod, mkdir, readFile, rename, rm, stat, statfs, writeFile } from 'node:fs/promises';
@@ -24,6 +25,7 @@ async function defaultRun(command, args, options = {}) {
  */
 export class SetupService {
   #jobs = new Map();
+  #recordQueue = Promise.resolve();
 
   constructor({ toolsDirectory, catalog = defaultCatalog(), platform = process.platform, arch = process.arch, nodeVersion = process.version, run = defaultRun, download = downloadVerified, statfsImpl = statfs, osRelease = '/etc/os-release', env = process.env, repositoryRoot = REPOSITORY_ROOT, detectHardware: detect = () => detectHardware({ platform }) }) {
     this.toolsDirectory = path.resolve(toolsDirectory);
@@ -41,6 +43,7 @@ export class SetupService {
 
   /** Executável (shim) e pasta de pesos de um runtime Python de voz instalado. */
   voiceRuntime(id = 'voxcpm2') {
+    if (id === 'voxcpm2-q8') return { runtime: 'native', runner: path.join(this.toolsDirectory, 'bin/voxcpm2-cli'), modelPath: this.modelPath('voxcpm2-q8-base'), acousticPath: this.modelPath('voxcpm2-q8-acoustic') };
     const item = this.catalog.find(entry => entry.id === id);
     if (!item?.weights) throw new Error(`Runtime de voz desconhecido: ${id}`);
     return { runner: path.join(this.toolsDirectory, item.destination), modelPath: path.join(this.toolsDirectory, item.weights.destination) };
@@ -58,9 +61,11 @@ export class SetupService {
     const plan = hardware ? planVoiceRuntime(hardware, { calibration: state.calibration?.voxcpm2 || null }) : null;
     const items = await Promise.all(this.catalog.map(async item => {
       const inspected = await this.#inspect(item, state);
+      const selected = item.id === voiceMode(this.voiceMode).dependency;
+      if (item.runtime === 'voice-q8') return { ...inspected, selected, runtime: hardware ? this.#plan(hardware, state, 'economy') : null };
       if (item.runtime !== 'voice' || !plan) return inspected;
       const recorded = state.items[item.id];
-      const withRuntime = { ...inspected, runtime: plan };
+      const withRuntime = { ...inspected, selected, runtime: plan };
       if (plan.status === 'unsupported') return { ...withRuntime, ready: false, installable: false, problem: 'Este computador não comporta o modelo', reason: plan.reasons.join(' ') };
       if (inspected.ready && recorded?.torchBuild && recorded.torchBuild !== plan.torchBuild) return { ...withRuntime, ready: false, installable: true, problem: `Instalado para ${recorded.device}; reinstale para usar ${plan.device}` };
       return withRuntime;
@@ -207,14 +212,20 @@ export class SetupService {
       job.phase = 'Baixando código-fonte';
       await rm(sourceDirectory, { recursive: true, force: true });
       await mkdir(path.dirname(sourceDirectory), { recursive: true });
-      await this.run('git', ['clone', '--depth', '1', '--branch', item.source.tag, item.source.repository, sourceDirectory], { signal, timeout: 30 * 60_000 });
+      if (item.source.tag) await this.run('git', ['clone', '--depth', '1', '--branch', item.source.tag, item.source.repository, sourceDirectory], { signal, timeout: 30 * 60_000 });
+      else {
+        await mkdir(sourceDirectory, { recursive: true });
+        await this.run('git', ['init', sourceDirectory], { signal });
+        await this.run('git', ['-C', sourceDirectory, 'fetch', '--depth', '1', item.source.repository, item.source.commit], { signal, timeout: 30 * 60_000 });
+        await this.run('git', ['-C', sourceDirectory, 'checkout', '--detach', 'FETCH_HEAD'], { signal });
+      }
       current = await head();
     }
     if (current !== item.source.commit) { await rm(sourceDirectory, { recursive: true, force: true }); throw new SetupError('CHECKSUM_MISMATCH', `Código-fonte não confere com o commit fixado (${item.source.commit.slice(0, 12)})`); }
     job.phase = 'Compilando (pode levar alguns minutos)';
     const buildDirectory = path.join(sourceDirectory, 'build');
-    await this.run('cmake', ['-S', sourceDirectory, '-B', buildDirectory, '-DCMAKE_BUILD_TYPE=Release', '-DWHISPER_BUILD_TESTS=OFF', '-DWHISPER_BUILD_EXAMPLES=ON'], { signal, timeout: 30 * 60_000 });
-    await this.run('cmake', ['--build', buildDirectory, '--config', 'Release', '--target', 'whisper-cli', ...(item.extraTargets || []).map(extra => extra.target), '-j'], { signal, timeout: 60 * 60_000 });
+    await this.run('cmake', ['-S', sourceDirectory, '-B', buildDirectory, '-DCMAKE_BUILD_TYPE=Release', ...(item.cmakeArgs || ['-DWHISPER_BUILD_TESTS=OFF', '-DWHISPER_BUILD_EXAMPLES=ON'])], { signal, timeout: 30 * 60_000 });
+    await this.run('cmake', ['--build', buildDirectory, '--config', 'Release', '--target', item.buildTarget || 'whisper-cli', ...(item.extraTargets || []).map(extra => extra.target), '-j', '3'], { signal, timeout: 60 * 60_000 });
     for (const extra of item.extraTargets || []) {
       const builtExtra = path.join(buildDirectory, 'bin', extra.target);
       await stat(builtExtra).catch(() => { throw new SetupError('BUILD_FAILED', `A compilação terminou sem gerar ${extra.target}`); });
@@ -222,8 +233,8 @@ export class SetupService {
       await mkdir(path.dirname(extraTarget), { recursive: true });
       await copyFile(builtExtra, `${extraTarget}.partial`); await chmod(`${extraTarget}.partial`, 0o755); await rename(`${extraTarget}.partial`, extraTarget);
     }
-    const built = path.join(buildDirectory, 'bin', 'whisper-cli');
-    await stat(built).catch(() => { throw new SetupError('BUILD_FAILED', 'A compilação terminou sem gerar whisper-cli'); });
+    const built = path.join(buildDirectory, 'bin', item.buildTarget || 'whisper-cli');
+    await stat(built).catch(() => { throw new SetupError('BUILD_FAILED', `A compilação terminou sem gerar ${item.buildTarget || 'whisper-cli'}`); });
     job.phase = 'Verificando binário';
     await mkdir(path.dirname(target), { recursive: true });
     const partial = `${target}.partial`;
@@ -303,9 +314,17 @@ export class SetupService {
   /** Perfil de hardware atual e plano de execução da voz clonada. */
   async hardware() { return await this.detectHardware(); }
 
-  async voicePlan() {
+  #plan(hardware, state, mode) {
+    if (mode !== 'economy') return { ...planVoiceRuntime(hardware, { calibration: state.calibration?.voxcpm2 || null }), mode: 'standard' };
+    // Q8 roda em CPU; a margem inclui pesos, caches e decodificação acústica.
+    const cpu = { ...hardware, gpus: [] };
+    const plan = planVoiceRuntime(cpu, { requirements: { cpu: { memoryBytes: 10.5 * 1024 ** 3, referenceRealtimeFactor: 0, referenceThreads: 8 }, gpu: {} }, calibration: state.calibration?.['voxcpm2-q8-v1'] || null });
+    return { ...plan, mode: 'economy', warnings: plan.warnings.filter(warning => !warning.includes('bfloat16')), torch: null, torchBuild: null };
+  }
+
+  async voicePlan({ mode = this.voiceMode || 'standard' } = {}) {
     const state = await this.#readState();
-    return planVoiceRuntime(await this.detectHardware(), { calibration: state.calibration?.voxcpm2 || null });
+    return this.#plan(await this.detectHardware(), state, mode);
   }
 
   /** Guarda a velocidade real medida, para estimativas futuras desta máquina. */
@@ -329,11 +348,17 @@ export class SetupService {
     await rm(`${path.join(this.toolsDirectory, item.destination)}.partial`, { force: true });
   }
 
-  async #record(item, result) {
-    const state = await this.#readState();
-    const artifact = artifactFor(item, this.platform, this.arch);
-    state.items[item.id] = { version: item.version || null, sha256: artifact?.sha256 || item.wheel?.sha256 || null, size: artifact?.size || null, commit: item.source?.commit || null, revision: item.weights?.revision || null, torchBuild: result.torchBuild || null, device: result.device || null, path: result.path, installedAt: new Date().toISOString() };
-    await this.#writeState(state);
+  #record(item, result) {
+    // As partes de um modelo podem terminar juntas; preserve todos os registros.
+    const save = async () => {
+      const state = await this.#readState();
+      const artifact = artifactFor(item, this.platform, this.arch);
+      state.items[item.id] = { version: item.version || null, sha256: artifact?.sha256 || item.wheel?.sha256 || null, size: artifact?.size || null, commit: item.source?.commit || null, revision: item.weights?.revision || null, torchBuild: result.torchBuild || null, device: result.device || null, path: result.path, installedAt: new Date().toISOString() };
+      await this.#writeState(state);
+    };
+    const pending = this.#recordQueue.then(save);
+    this.#recordQueue = pending.catch(() => {});
+    return pending;
   }
 
   async #inspect(item, state) {

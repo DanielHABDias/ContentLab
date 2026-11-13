@@ -96,3 +96,21 @@ test('sem systemd usa só prioridade baixa', () => {
   const voice = new VoxCPMVoice({ runner: 'contentlab-voice', platform: 'darwin' });
   expect(voice.command(plan({ memoryGuard: 'none' }), ['--x'])).toEqual(['nice', ['-n', '15', 'contentlab-voice', '--x']]);
 });
+
+test('Q8 usa o motor nativo, a mesma referência e só promove o WAV depois de validar', async () => {
+  const { root, a } = await setup(); const calls = [];
+  const base = path.join(root, 'base.gguf'); const acoustic = path.join(root, 'acoustic.gguf');
+  await writeFile(base, 'weights'); await writeFile(acoustic, 'weights');
+  const spawnFile = (command, args, options, callback) => {
+    calls.push({ command, args });
+    const output = args[args.indexOf('--output') + 1];
+    execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-i', a, '-ar', '48000', '-ac', '1', output]);
+    callback(null, '', 'WAV saved');
+  };
+  const voice = new VoxCPMVoice({ runtime: 'native', runner: await runner(root), modelPath: base, acousticPath: acoustic, planner: async () => plan(), spawnFile, platform: 'linux' });
+  const output = path.join(root, 'q8.wav');
+  expect(await voice.generate({ text: 'Texto novo', profile: consented(a), output })).toMatchObject({ model: 'voxcpm2-q8-v1', audioSeconds: 4 });
+  expect(calls[0].args).toEqual(expect.arrayContaining(['--cpu', '--stream', '--prompt-wav', a, '--prompt-text', 'Olá, eu sou o Daniel.', base, acoustic]));
+  expect((await stat(output)).size).toBeGreaterThan(100);
+  await expect(stat(`${output}.partial.wav`)).rejects.toMatchObject({ code: 'ENOENT' });
+});

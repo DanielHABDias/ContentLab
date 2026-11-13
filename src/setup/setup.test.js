@@ -293,3 +293,15 @@ test('Whisper aparece como um item só: motor + modelo, instalados juntos', asyn
   expect(jobs.map(job => job.itemId)).toEqual(['whisper-cli', 'whisper-large-v3', 'silero-vad']);
   await Promise.all(jobs.map(job => setup.waitFor(job.id)));
 });
+
+test('modo econômico planeja RAM própria em CPU e marca a dependência selecionada', async () => {
+  const root = await temp();
+  const setup = new SetupService({ toolsDirectory: root, detectHardware: async () => cpuMachine(), run: fakeRun([]), statfsImpl: bigDisk });
+  setup.voiceMode = 'economy';
+  expect(await setup.voicePlan()).toMatchObject({ mode: 'economy', device: 'cpu', requiredBytes: 10.5 * GiB, status: 'ready', torch: null });
+  const status = await setup.status();
+  expect(status.items.find(item => item.id === 'voxcpm2-q8')).toMatchObject({ selected: true });
+  expect(status.items.find(item => item.id === 'voxcpm2').selected).toBe(false);
+  const standard = await setup.voicePlan({ mode: 'standard' });
+  expect(standard.requiredBytes).toBeGreaterThan((await setup.voicePlan()).requiredBytes);
+});

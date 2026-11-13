@@ -4,6 +4,7 @@ import { localApi } from './local-api.js';
 import { ConfirmDialog, useDialogFocus } from './Dialogs.jsx';
 import { JobsPanel, clock } from './MediaLibrary.jsx';
 import { DependencyNotice } from './DependencyGate.jsx';
+import { useVoiceGeneration } from './useVoiceGeneration.js';
 import { MemoryPanel } from './MemoryPanel.jsx';
 import { featureBlock } from '../core/capabilities.js';
 
@@ -17,8 +18,6 @@ const profileSampleUrl = (profileId, check = false) => `/api/v1/narration/file?p
  */
 export function VoiceScreen({ setup, onOpenSetup, onBack, onProfilesChanged }) {
   const [state, setState] = useState(null); const [error, setError] = useState(null); const [status, setStatus] = useState('');
-  const [plan, setPlan] = useState(null); const [checking, setChecking] = useState(false);
-  const memoryFailures = useRef(new Set());
   const [jobs, setJobs] = useState([]); const [recording, setRecording] = useState(false); const [removing, setRemoving] = useState(null);
   const missing = setup ? featureBlock('voice.synthetic', setup.items) : [];
 
@@ -34,30 +33,14 @@ export function VoiceScreen({ setup, onOpenSetup, onBack, onProfilesChanged }) {
 
   const act = async (task, done) => { setError(null); setStatus(''); try { const result = await task(); await load(); if (done) setStatus(done); return result; } catch (issue) { setError(issue); return null; } };
   const askRemove = async profile => { const report = await act(() => localApi.voiceProfileReport(profile.id)); if (report) setRemoving(report); };
-  const checkPlan = async () => { const { plan: next } = await localApi.voicePlan(); setPlan(next); return next; };
-  // A memória pode se esgotar entre a conferência e a geração no servidor.
-  useEffect(() => {
-    const failed = jobs.filter(job => job.state === 'failed' && ['NEEDS_FREE_MEMORY', 'MEMORY_LIMIT'].includes(job.code) && !memoryFailures.current.has(job.id));
-    if (!failed.length) return;
-    failed.forEach(job => memoryFailures.current.add(job.id));
-    checkPlan().catch(setError);
-  }, [jobs]);
+  const resources = useVoiceGeneration(jobs);
   const check = async profile => {
-    setChecking(true); setError(null); setStatus('');
-    try {
-      const next = await checkPlan();
-      if (next.status === 'needs-free-memory') {
-        window.requestAnimationFrame(() => document.getElementById('memory-panel')?.scrollIntoView?.({ behavior: 'smooth', block: 'center' }));
-        return;
-      }
-      if (next.status !== 'ready') { setError(new Error(next.reasons.join(' ') || 'Recursos insuficientes para gerar a voz.')); return; }
-      const job = await localApi.generateVoiceCheck(profile.id);
-      if (job?.id) { setJobs(previous => [job, ...previous]); refreshJobs(); }
-      await load();
-    } catch (issue) {
-      setError(issue);
-      if (['NEEDS_FREE_MEMORY', 'MEMORY_LIMIT'].includes(issue.code)) await checkPlan().catch(() => null);
-    } finally { setChecking(false); }
+    const job = await resources.attempt(() => localApi.generateVoiceCheck(profile.id));
+    if (job?.id) { setJobs(previous => [job, ...previous]); refreshJobs(); await load(); }
+  };
+  const retry = async () => {
+    const job = await resources.retry();
+    if (job?.id) { setJobs(previous => [job, ...previous]); refreshJobs(); await load(); }
   };
 
   if (!state) return <main id="main" className="project-home"><p className="empty-state">{error ? error.message : 'Carregando perfis de voz…'}</p></main>;
@@ -73,12 +56,13 @@ export function VoiceScreen({ setup, onOpenSetup, onBack, onProfilesChanged }) {
     </header>
 
     <div aria-live="polite">{status && <div className="notice" role="status">{status}</div>}</div>
-    <DependencyNotice error={error} onOpenSetup={onOpenSetup}/>
+    <DependencyNotice error={error || resources.error} onOpenSetup={onOpenSetup}/>
+    {resources.status && <p className="notice" role="status">{resources.status}</p>}
     {missing.length > 0 && <div className="notice error" role="alert">
       <span>Para clonar a voz, instale: {missing.map(item => item.label).join(', ')}. Dá para gravar a amostra depois de instalar.</span>
       <button className="mini-button" onClick={() => onOpenSetup(missing.map(item => item.id))}>Instalar dependências</button>
     </div>}
-    {plan?.status === 'needs-free-memory' && <MemoryPanel plan={plan} onChanged={() => checkPlan().catch(setError)}/>}
+    {resources.plan && <MemoryPanel plan={resources.plan} onChanged={resources.refresh} onRetry={retry} onUseEconomy={resources.useEconomy} busy={resources.busy}/>}
     <JobsPanel jobs={jobs} uploads={[]} onCancel={async jobId => { await localApi.cancelJob(jobId); refreshJobs(); }}/>
 
     <section aria-labelledby="profiles-title">
@@ -102,7 +86,7 @@ export function VoiceScreen({ setup, onOpenSetup, onBack, onProfilesChanged }) {
             {profile.checkSample
               ? <><audio controls preload="none" src={profileSampleUrl(profile.id, true)} aria-label={`Ouvir a voz clonada de ${profile.name}`}/><small>Gerada em {new Date(profile.checkSample.generatedAt).toLocaleDateString('pt-BR')}</small></>
               : <small className="field-hint">Ainda sem amostra da voz clonada.</small>}
-            <button className="mini-button" disabled={checking || running || Boolean(missing.length)} onClick={() => check(profile)}><Play size={15} aria-hidden="true"/> {profile.checkSample ? 'Gerar de novo' : 'Ouvir como ficou'}</button>
+            <button className="mini-button" disabled={resources.busy || running || Boolean(missing.length)} onClick={() => check(profile)}><Play size={15} aria-hidden="true"/> {profile.checkSample ? 'Gerar de novo' : 'Ouvir como ficou'}</button>
           </div>
         </div>
       </li>)}</ul> : <div className="empty-state voice-empty">

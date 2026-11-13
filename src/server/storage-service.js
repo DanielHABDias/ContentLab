@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { copyFile, lstat, mkdir, readFile, readdir, rename, rm, rmdir, stat, statfs, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { voiceMode } from '../core/voice-modes.js';
 import { LifecycleError } from './project-lifecycle.js';
 
 const SETTINGS_SCHEMA = 'contentlab-settings-v1';
@@ -30,7 +31,7 @@ export class SettingsStore {
 
   async write(settings) {
     const value = normalize(settings, this.defaults);
-    const serialized = `${JSON.stringify({ schema: SETTINGS_SCHEMA, revision: value.revision, roots: value.roots, limits: value.limits }, null, 2)}\n`;
+    const serialized = `${JSON.stringify({ schema: SETTINGS_SCHEMA, revision: value.revision, roots: value.roots, limits: value.limits, voice: value.voice }, null, 2)}\n`;
     await mkdir(path.dirname(this.file), { recursive: true });
     await copyFile(this.file, `${this.file}.bak`).catch(error => { if (error.code !== 'ENOENT') throw error; });
     const temporary = `${this.file}.${randomUUID()}.tmp`;
@@ -46,7 +47,7 @@ function normalize(value, defaults) {
   if (value.roots && value.roots.renderOutput === null) roots.renderOutput = null;
   const limits = { ...defaults.limits };
   for (const key of Object.keys(defaults.limits)) { const number = value.limits?.[key]; if (number === null || (Number.isInteger(number) && number >= 0)) limits[key] = number; }
-  return { revision: Number.isInteger(value.revision) ? value.revision : 0, roots, limits };
+  return { revision: Number.isInteger(value.revision) ? value.revision : 0, roots, limits, voice: { mode: voiceMode(value.voice?.mode).id } };
 }
 
 /** Testa uma pasta antes de aceitá-la: absoluta, criável, gravável e legível. */

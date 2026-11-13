@@ -1,3 +1,4 @@
+import { voiceMode, VOICE_MODES } from '../core/voice-modes.js';
 import { mkdir, rm, stat } from 'node:fs/promises';
 import { createWriteStream } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
@@ -21,7 +22,10 @@ const PREVIEW_SECONDS = 20;
 export class NarrationOperations {
   constructor(app, { voice = null } = {}) {
     this.app = app;
-    this.voiceFactory = voice || (async () => new VoxCPMVoice({ ...app.setup.voiceRuntime('voxcpm2'), planner: () => app.setup.voicePlan(), onMeasured: value => app.setup.recordCalibration('voxcpm2', value) }));
+    this.voiceFactory = voice || (async () => {
+      const mode = voiceMode(app.settings.voice?.mode);
+      return new VoxCPMVoice({ ...app.setup.voiceRuntime(mode.dependency), tools: this.tools, planner: () => app.setup.voicePlan({ mode: mode.id }), onMeasured: value => app.setup.recordCalibration(mode.model, value) });
+    });
   }
 
   get jobs() { return this.app.mediaOps.jobs; }
@@ -41,11 +45,11 @@ export class NarrationOperations {
       if (take.origin !== 'generated') return take;
       const scene = scenes.find(item => item.id === take.sceneId);
       const profile = profiles.find(item => item.id === take.profileId);
-      return { ...take, stale: !scene || !profile || generationKey({ profile, text: scene.text }) !== take.cacheKey };
+      return { ...take, stale: !scene || !profile || generationKey({ model: voiceMode(this.app.settings.voice?.mode).model, profile, text: scene.text }) !== take.cacheKey };
     });
     return {
       narration: { ...session, takes },
-      scenes: scenes.map(scene => ({ ...scene, generated: Object.fromEntries(profiles.map(profile => [profile.id, takes.find(take => take.origin === 'generated' && take.cacheKey === generationKey({ profile, text: scene.text }))?.id || null])) })),
+      scenes: scenes.map(scene => ({ ...scene, generated: Object.fromEntries(profiles.map(profile => [profile.id, takes.find(take => take.origin === 'generated' && take.cacheKey === generationKey({ model: voiceMode(this.app.settings.voice?.mode).model, profile, text: scene.text }))?.id || null])) })),
       profiles: profiles.map(publicProfile),
       previewSeconds: PREVIEW_SECONDS,
     };
@@ -302,8 +306,10 @@ export class NarrationOperations {
   }
 
   async voicePlan() {
-    const plan = await this.app.setup.voicePlan();
-    return { plan };
+    await this.app.ready();
+    const mode = voiceMode(this.app.settings.voice?.mode);
+    const plan = await this.app.setup.voicePlan({ mode: mode.id });
+    return { plan: { ...plan, mode: mode.id }, modes: VOICE_MODES, revision: this.app.settings.revision };
   }
 
   /**
@@ -334,14 +340,14 @@ export class NarrationOperations {
       const results = [];
       for (const [index, scene] of scenes.entries()) {
         if (combined.aborted) throw Object.assign(new Error('Cancelado'), { code: 'CANCELLED' });
-        const cacheKey = generationKey({ profile, text: scene.text });
+        const cacheKey = generationKey({ model: voice.model || VoxCPMVoice.model, profile, text: scene.text });
         const existing = (await store.read()).takes.find(take => take.cacheKey === cacheKey);
         if (existing) { results.push({ sceneId: scene.id, status: 'cached', takeId: existing.id }); continue; }
         const estimateSeconds = factor ? Math.round(estimateSpeech(scene.text) * factor) : null;
         progress({ done: index, total: scenes.length, phase: `${scene.label}${estimateSeconds ? ` · cerca de ${minutes(estimateSeconds)}` : ''}` });
         const cacheFile = path.join(store.root, 'generated', `${cacheKey}.wav`);
         if (!(await stat(cacheFile).catch(() => null))) { await mkdir(path.dirname(cacheFile), { recursive: true }); await voice.generate({ text: scene.text, profile, output: cacheFile, signal: combined }); }
-        const take = await store.createTake({ source: cacheFile, name: `Voz · ${scene.label}`, origin: 'generated', signal: combined, extra: { sceneId: scene.id, profileId: profile.id, cacheKey, model: VoxCPMVoice.model }, ...this.tools });
+        const take = await store.createTake({ source: cacheFile, name: `Voz · ${scene.label}`, origin: 'generated', signal: combined, extra: { sceneId: scene.id, profileId: profile.id, cacheKey, model: voice.model || VoxCPMVoice.model }, ...this.tools });
         await store.mutate(undefined, value => { value.takes.push(take); });
         await rm(cacheFile, { force: true });
         results.push({ sceneId: scene.id, status: 'generated', takeId: take.id });

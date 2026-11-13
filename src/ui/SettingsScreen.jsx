@@ -1,3 +1,4 @@
+import { VoiceModeSettings, saveVoiceMode } from './VoiceModeSettings.jsx';
 import { useCallback, useEffect, useState } from 'react';
 import { Check, FolderOpen, HardDrive, RefreshCw, Trash2, X } from 'lucide-react';
 import { localApi } from './local-api.js';
@@ -15,7 +16,7 @@ const ROOT_LABELS = {
 const USAGE_LABELS = { projects: 'Projetos', renders: 'Renders nos projetos', objects: 'Mídias originais (cache)', cuts: 'Cortes', staging: 'Downloads temporários', renderCache: 'Cache de render', models: 'Modelos de IA', tools: 'Ferramentas' };
 const GB = 1024 ** 3;
 
-export function SettingsScreen({ onBack }) {
+export function SettingsScreen({ onBack, onOpenSetup, onChanged }) {
   const [settings, setSettings] = useState(null); const [usage, setUsage] = useState(null); const [jobs, setJobs] = useState([]); const [error, setError] = useState(''); const [status, setStatus] = useState('');
   const [decision, setDecision] = useState(null); const [orphans, setOrphans] = useState(null); const [backups, setBackups] = useState([]); const [busy, setBusy] = useState(false); const [confirming, setConfirming] = useState(null);
   const load = useCallback(async () => {
@@ -45,10 +46,12 @@ export function SettingsScreen({ onBack }) {
   if (!settings) return <main id="main" className="workspace settings">{error ? <div className="notice error" role="alert"><X size={16}/>{error}</div> : <p className="empty-state" role="status">Carregando configurações…</p>}</main>;
 
   return <main id="main" className="workspace settings">
-    <header className="project-header"><div><span className="eyebrow">Armazenamento e recuperação</span><h1>Configurações</h1></div><button className="button quiet" onClick={onBack}>Voltar</button></header>
+    <header className="project-header"><div><span className="eyebrow">Preferências do aplicativo</span><h1>Configurações</h1></div><button className="button quiet" onClick={onBack}>Voltar</button></header>
     {error && <div className="notice error" role="alert"><X size={16}/>{error}</div>}
     <div aria-live="polite">{status && <div className="notice" role="status"><Check size={16}/>{status}</div>}</div>
     {(settings.recoveredFrom || settings.registryRecovery) && <div className="notice error" role="alert">{settings.recoveredFrom && 'As configurações estavam corrompidas e foram restauradas do backup. '}{settings.registryRecovery && `O registro de projetos estava corrompido e foi recuperado (${settings.registryRecovery.source === 'backup' ? 'do backup' : 'varrendo a pasta de projetos'}, ${settings.registryRecovery.recovered} projetos). O arquivo original foi preservado em ${settings.registryRecovery.corrupted}.`}</div>}
+
+    <VoiceModeSettings settings={settings} busy={busy} onOpenSetup={onOpenSetup} onSave={mode => act(async () => { await saveVoiceMode(settings, mode); await onChanged?.(); }, 'Modo de voz salvo.')}/>
 
     <section className="workflow-card" aria-labelledby="roots-title">
       <div className="section-title"><h2 id="roots-title">Pastas</h2></div>

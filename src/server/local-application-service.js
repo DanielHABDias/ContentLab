@@ -1,3 +1,4 @@
+import { VOICE_MODES } from '../core/voice-modes.js';
 import { lstat, mkdir, readFile, rename, rm, stat } from 'node:fs/promises';
 import { MIGRATABLE, ROOT_KINDS, SettingsStore, StorageService, sizeOf, validateFolder } from './storage-service.js';
 import os from 'node:os';
@@ -78,12 +79,13 @@ export class LocalApplicationService {
   }
 
   #apply(settings) {
-    this.settings = { revision: settings.revision, roots: settings.roots, limits: settings.limits };
+    this.settings = { revision: settings.revision, roots: settings.roots, limits: settings.limits, voice: settings.voice || { mode: 'standard' } };
     this.settingsRecovered = settings.recoveredFrom || null;
     this.projectsDirectory = settings.roots.projects;
     if (!this.injected.media) this.media = new MediaService(settings.roots.media);
     if (!this.injected.renderer) { this.componentRuntime = new RemotionComponentRuntime(settings.roots.renderCache, this.components); this.renderer = new FfmpegRenderer(settings.roots.renderCache, { componentRuntime: this.componentRuntime }); }
     if (!this.injected.setup && this.setup.toolsDirectory !== settings.roots.tools) this.setup = new SetupService({ toolsDirectory: settings.roots.tools });
+    this.setup.voiceMode = this.settings.voice.mode;
     return this.settings;
   }
 
@@ -97,7 +99,7 @@ export class LocalApplicationService {
       const info = await stat(value).catch(() => null);
       return [kind, { path: value, exists: Boolean(info?.isDirectory()), isDefault: value === this.defaults.roots[kind] }];
     }));
-    return { revision: this.settings.revision, roots: Object.fromEntries(roots), limits: this.settings.limits, defaults: this.defaults, migratable: MIGRATABLE, recoveredFrom: this.settingsRecovered, registryRecovery: this.registry.lastRecovery };
+    return { revision: this.settings.revision, roots: Object.fromEntries(roots), limits: this.settings.limits, voice: this.settings.voice, defaults: this.defaults, migratable: MIGRATABLE, recoveredFrom: this.settingsRecovered, registryRecovery: this.registry.lastRecovery };
   }
 
   async validateFolder({ path: folder }) { return await validateFolder(folder); }
@@ -106,10 +108,14 @@ export class LocalApplicationService {
    * Muda raízes/limites com revisão otimista. Nunca move dados: se a raiz atual
    * de um item migrável tem conteúdo, exige escolher migrar ou começar vazia.
    */
-  async updateSettings({ baseRevision, roots = {}, limits = {}, emptyRoots = [] }) {
+  async updateSettings({ baseRevision, roots = {}, limits = {}, emptyRoots = [], voice }) {
     await this.ready();
     if (baseRevision !== this.settings.revision) throw new LifecycleError('SETTINGS_CONFLICT', `Configurações mudaram em outra janela (revisão ${this.settings.revision}); recarregue`);
-    const next = { revision: this.settings.revision + 1, roots: { ...this.settings.roots }, limits: { ...this.settings.limits } };
+    const next = { revision: this.settings.revision + 1, roots: { ...this.settings.roots }, limits: { ...this.settings.limits }, voice: { ...this.settings.voice } };
+    if (voice !== undefined) {
+      if (!VOICE_MODES.some(mode => mode.id === voice?.mode)) throw new LifecycleError('INVALID_VOICE_MODE', 'Escolha um modo de voz válido');
+      next.voice = { mode: voice.mode };
+    }
     for (const [kind, value] of Object.entries(roots)) {
       if (!ROOT_KINDS.includes(kind)) throw new Error(`Raiz desconhecida: ${kind}`);
       if (kind === 'renderOutput' && value === null) { next.roots.renderOutput = null; continue; }
@@ -131,7 +137,7 @@ export class LocalApplicationService {
   }
 
   async #migrated(kind, target) {
-    const next = { revision: this.settings.revision + 1, roots: { ...this.settings.roots, [kind]: target }, limits: this.settings.limits };
+    const next = { revision: this.settings.revision + 1, roots: { ...this.settings.roots, [kind]: target }, limits: this.settings.limits, voice: this.settings.voice };
     if (kind === 'tools') await this.setup.relocate?.(target);
     this.#apply(await this.settingsStore.write(next));
   }

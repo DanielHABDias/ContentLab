@@ -4,7 +4,7 @@ import { VoiceScreen } from './VoiceScreen.jsx';
 import { localApi } from './local-api.js';
 import { VOICE_SAMPLE_TEXT } from '../audio/narration-service.js';
 
-vi.mock('./local-api.js', () => ({ localApi: { voicePlan: vi.fn(), systemApps: vi.fn(), closeApp: vi.fn(), voiceStudio: vi.fn(), jobs: vi.fn(), cancelJob: vi.fn(), uploadVoiceSample: vi.fn(), discardVoiceSample: vi.fn(), createVoiceProfile: vi.fn(), generateVoiceCheck: vi.fn(), voiceProfileReport: vi.fn(), deleteVoiceProfile: vi.fn() } }));
+vi.mock('./local-api.js', () => ({ localApi: { getSettings: vi.fn(), updateSettings: vi.fn(), setupStatus: vi.fn(), voicePlan: vi.fn(), systemApps: vi.fn(), closeApp: vi.fn(), voiceStudio: vi.fn(), jobs: vi.fn(), cancelJob: vi.fn(), uploadVoiceSample: vi.fn(), discardVoiceSample: vi.fn(), createVoiceProfile: vi.fn(), generateVoiceCheck: vi.fn(), voiceProfileReport: vi.fn(), deleteVoiceProfile: vi.fn() } }));
 
 const setup = (voice = true) => ({ items: [{ id: 'ffmpeg', label: 'FFmpeg', ready: true }, { id: 'ffprobe', label: 'FFprobe', ready: true }, { id: 'voxcpm2', label: 'VoxCPM2 (voz clonada)', ready: voice }] });
 const profile = (extra = {}) => ({ id: 'voice_abc123', name: 'Minha voz', consent: { granted: true, holder: 'Daniel', grantedAt: '2026-11-11T00:00:00Z' }, durationSeconds: 57.6, checkSample: null, ...extra });
@@ -128,10 +128,52 @@ test('falha ao verificar recursos impede a geração', async () => {
   expect(localApi.generateVoiceCheck).not.toHaveBeenCalled();
 });
 
-test('falha de memória no job de conferência também mostra o painel', async () => {
+test('falha de memória durante a geração da conferência também mostra o painel', async () => {
   localApi.voiceStudio.mockResolvedValue(studio([profile()]));
-  localApi.jobs.mockResolvedValue({ jobs: [{ id: 'job_failed', kind: 'voice.check', label: 'Amostra', state: 'failed', code: 'NEEDS_FREE_MEMORY', error: 'Falta memória', progress: { phase: 'Falhou' } }] });
-  localApi.voicePlan.mockResolvedValue({ plan: lowMemory() });
+  const job = { id: 'job_failed', kind: 'voice.check', label: 'Amostra', state: 'failed', code: 'MEMORY_LIMIT', error: 'Falta memória', progress: { phase: 'Falhou' } };
+  localApi.generateVoiceCheck.mockResolvedValue(job);
+  localApi.jobs.mockResolvedValue({ jobs: [job] });
+  localApi.voicePlan.mockResolvedValueOnce({ plan: { status: 'ready' } }).mockResolvedValue({ plan: lowMemory() });
   render(<VoiceScreen setup={setup()} onOpenSetup={vi.fn()}/>);
-  expect(await screen.findByRole('region', { name: /libere 2,5 gb/i })).toBeInTheDocument();
+  expect(screen.queryByRole('region', { name: /memória/i })).not.toBeInTheDocument();
+  fireEvent.click(await screen.findByRole('button', { name: /ouvir como ficou/i }));
+  expect(await screen.findByRole('region', { name: /atingiu o limite de memória/i })).toBeInTheDocument();
+});
+
+test('ao tentar de novo o painel some durante a conferência e só volta se faltar RAM', async () => {
+  localApi.voiceStudio.mockResolvedValue(studio([profile()]));
+  localApi.voicePlan.mockResolvedValue({ plan: lowMemory() });
+  localApi.generateVoiceCheck.mockResolvedValue({ id: 'retry', kind: 'voice.check', state: 'completed', progress: {} });
+  render(<VoiceScreen setup={setup()} onOpenSetup={vi.fn()}/>);
+  fireEvent.click(await screen.findByRole('button', { name: /ouvir como ficou/i }));
+  const panel = await screen.findByRole('region', { name: /libere/i });
+  let resolvePlan;
+  localApi.voicePlan.mockImplementationOnce(() => new Promise(resolve => { resolvePlan = resolve; }));
+  fireEvent.click(within(panel).getByRole('button', { name: /tentar de novo/i }));
+  expect(screen.queryByRole('region', { name: /libere/i })).not.toBeInTheDocument();
+  resolvePlan({ plan: lowMemory() });
+  const again = await screen.findByRole('region', { name: /libere/i });
+  expect(localApi.generateVoiceCheck).not.toHaveBeenCalled();
+  localApi.voicePlan.mockResolvedValue({ plan: { status: 'ready' } });
+  fireEvent.click(within(again).getByRole('button', { name: /tentar de novo/i }));
+  await waitFor(() => expect(localApi.generateVoiceCheck).toHaveBeenCalledWith('voice_abc123'));
+  expect(screen.queryByRole('region', { name: /libere/i })).not.toBeInTheDocument();
+});
+
+test('falta de memória oferece modo econômico, salva a escolha e leva à instalação se necessário', async () => {
+  localApi.voiceStudio.mockResolvedValue(studio([profile()]));
+  localApi.voicePlan.mockResolvedValue({ plan: { ...lowMemory(), mode: 'standard' } });
+  localApi.getSettings.mockResolvedValue({ revision: 4 });
+  localApi.updateSettings.mockResolvedValue({ voice: { mode: 'economy' } });
+  localApi.setupStatus.mockResolvedValue({ items: [{ id: 'voxcpm2-q8', ready: false }] });
+  const onOpenSetup = vi.fn();
+  render(<VoiceScreen setup={setup()} onOpenSetup={onOpenSetup}/>);
+  fireEvent.click(await screen.findByRole('button', { name: /ouvir como ficou/i }));
+  fireEvent.click(await screen.findByRole('button', { name: /trocar para modo econômico/i }));
+  await waitFor(() => expect(localApi.updateSettings).toHaveBeenCalledWith({ baseRevision: 4, voice: { mode: 'economy' } }));
+  expect(await screen.findByText(/instale o modo econômico/i)).toBeInTheDocument();
+  expect(screen.queryByRole('region', { name: /libere/i })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /instalar dependências/i }));
+  expect(onOpenSetup).toHaveBeenCalledWith(['voxcpm2-q8']);
+  expect(localApi.generateVoiceCheck).not.toHaveBeenCalled();
 });

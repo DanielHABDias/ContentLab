@@ -469,3 +469,15 @@ test('mostra quando a IA espera a decisão e recarrega o que ela mudou', async (
   expect(await screen.findByRole('heading', { name: 'Mudado pela IA' })).toBeInTheDocument();
   expect(await screen.findByText(/a ia está esperando você revisar/i)).toBeInTheDocument();
 });
+
+test('configurações escolhem e persistem o modo de voz usado nas duas telas', async () => {
+  mockSettings();
+  localApi.updateSettings.mockResolvedValue({ ...settingsFixture(), revision: 4, voice: { mode: 'economy' } });
+  render(<App/>);
+  fireEvent.click(await screen.findByRole('button', { name: /configurações/i }));
+  const select = await screen.findByLabelText('Modo de geração');
+  fireEvent.change(select, { target: { value: 'economy' } });
+  fireEvent.click(screen.getByRole('button', { name: /salvar modo de voz/i }));
+  await waitFor(() => expect(localApi.updateSettings).toHaveBeenCalledWith({ baseRevision: 3, voice: { mode: 'economy' } }));
+  expect(await screen.findByText('Modo de voz salvo.')).toBeInTheDocument();
+});

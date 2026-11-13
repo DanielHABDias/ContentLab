@@ -39,5 +39,6 @@ export function stageBlock(stageId, items) {
 export function featureBlock(featureId, items) {
   const feature = FEATURES[featureId];
   if (!feature) throw new Error(`Recurso desconhecido: ${featureId}`);
-  return missingDependencies(feature.requires, items);
+  const selectedVoice = featureId === 'voice.synthetic' && items.find(item => item.id === 'voxcpm2-q8' && item.selected);
+  return missingDependencies(selectedVoice ? ['voxcpm2-q8'] : feature.requires, items);
 }

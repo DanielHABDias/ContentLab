@@ -9,7 +9,7 @@ const gbText = bytes => `${(bytes / 1024 ** 3).toLocaleString('pt-BR', { maximum
  * memória, com botão para fechar cada um (com confirmação). Navegadores ganham a opção de
  * fechar só algumas abas pelo gerenciador de tarefas deles.
  */
-export function MemoryPanel({ plan, onChanged }) {
+export function MemoryPanel({ plan, onChanged, onRetry, onUseEconomy, busy }) {
   const [apps, setApps] = useState(null); const [confirming, setConfirming] = useState(null); const [message, setMessage] = useState(''); const [error, setError] = useState('');
   const load = async () => { try { setApps((await localApi.systemApps()).apps); } catch (issue) { setError(issue.message); } };
   useEffect(() => { load(); }, [plan.availableBytes]);
@@ -25,10 +25,11 @@ export function MemoryPanel({ plan, onChanged }) {
   };
   return <div id="memory-panel" className="memory-panel" role="region" aria-labelledby="memory-title">
     <div className="memory-head">
-      <div><strong id="memory-title">Libere {gbText(missingBytes)} de memória para gerar</strong><small>A voz clonada precisa de {gbText(plan.requiredBytes)} livres; há {gbText(plan.availableBytes)} agora. Feche algum destes programas:</small></div>
-      <button className="mini-button" onClick={async () => { await onChanged(); await load(); }}>Verificar de novo</button>
+      <div><strong id="memory-title">{plan.runtimeFailure ? 'A geração atingiu o limite de memória' : `Libere ${gbText(missingBytes)} de memória para gerar`}</strong><small>A voz clonada precisa de {gbText(plan.requiredBytes)} livres; há {gbText(plan.availableBytes)} agora. Feche algum destes programas:</small></div>
+      <button className="mini-button" disabled={busy} onClick={onRetry}>Tentar de novo</button>
     </div>
     <span className="memory-meter" aria-hidden="true"><i style={{ width: `${Math.min(100, (plan.availableBytes / plan.requiredBytes) * 100)}%` }}/></span>
+    {plan.mode !== 'economy' && onUseEconomy && <p className="setup-actions"><span>Você também pode usar o VoxCPM2 econômico, que precisa de menos memória.</span><button className="button quiet" disabled={busy} onClick={onUseEconomy}>Trocar para modo econômico</button></p>}
     {message && <p className="notice" role="status">{message}</p>}
     {error && <p className="notice error" role="alert">{error}</p>}
     {apps === null ? <p className="plan-line">Procurando programas abertos…</p> : apps.length ? <ul className="memory-apps">{apps.map(app => <li key={app.name}>

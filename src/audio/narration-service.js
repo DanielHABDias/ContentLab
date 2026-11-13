@@ -362,12 +362,16 @@ function round(value, digits = 3) { const factor = 10 ** digits; return Math.rou
  */
 export class VoxCPMVoice {
   static model = 'voxcpm2';
-  constructor({ runner = 'contentlab-voice', modelPath, planner, onMeasured = async () => {}, spawnFile = execFile, platform = process.platform } = {}) {
-    this.runner = runner; this.modelPath = modelPath; this.planner = planner; this.onMeasured = onMeasured; this.spawnFile = spawnFile; this.platform = platform;
+  constructor({ runner = 'contentlab-voice', runtime = 'python', acousticPath, tools = { ffmpeg: 'ffmpeg', ffprobe: 'ffprobe' }, modelPath, planner, onMeasured = async () => {}, spawnFile = execFile, platform = process.platform } = {}) {
+    this.runner = runner; this.runtime = runtime; this.acousticPath = acousticPath; this.tools = tools; this.model = runtime === 'native' ? 'voxcpm2-q8-v1' : VoxCPMVoice.model; this.modelPath = modelPath; this.planner = planner; this.onMeasured = onMeasured; this.spawnFile = spawnFile; this.platform = platform;
   }
 
   async diagnose() {
-    try { await run(this.runner, ['--version'], { timeout: 10_000 }); }
+    try {
+      if (this.runtime === 'native') {
+        for (const file of [this.runner, this.modelPath, this.acousticPath]) if (!file || !(await stat(file).catch(() => null))) throw new Error('Modo econômico não instalado');
+      } else await run(this.runner, ['--version'], { timeout: 10_000 });
+    }
     catch (error) { return { ready: false, model: VoxCPMVoice.model, issues: [error.code === 'ENOENT' ? 'VoxCPM2 não instalado' : `VoxCPM2 indisponível: ${error.message}`] }; }
     return this.modelPath ? { ready: true, model: VoxCPMVoice.model, issues: [] } : { ready: false, model: VoxCPMVoice.model, issues: ['Pesos do VoxCPM2 não configurados'] };
   }
@@ -384,12 +388,17 @@ export class VoxCPMVoice {
     if (!profile?.consent?.granted) throw Object.assign(new Error('Perfil sem consentimento válido do titular da voz'), { code: 'CONSENT_REQUIRED' });
     if (!profile.referenceText?.trim()) throw Object.assign(new Error('O perfil precisa do texto exato lido na amostra'), { code: 'REFERENCE_TEXT_REQUIRED' });
     if (!text?.trim()) throw new Error('Texto vazio');
-    const status = await this.diagnose(); if (!status.ready) throw Object.assign(new Error(status.issues.join('; ')), { code: 'DEPENDENCY_MISSING', details: { missing: ['voxcpm2'] } });
+    const status = await this.diagnose(); if (!status.ready) throw Object.assign(new Error(status.issues.join('; ')), { code: 'DEPENDENCY_MISSING', details: { missing: [this.runtime === 'native' ? 'voxcpm2-q8' : 'voxcpm2'] } });
     const plan = await this.planner();
     if (plan.status !== 'ready') throw Object.assign(new Error(plan.reasons.join(' ') || 'Recursos insuficientes'), { code: plan.status === 'unsupported' ? 'HARDWARE_UNSUPPORTED' : 'NEEDS_FREE_MEMORY', details: { plan } });
     const target = path.resolve(output);
     await mkdir(path.dirname(target), { recursive: true });
-    const args = ['--model', this.modelPath, '--device', plan.device, '--threads', String(plan.threads), '--reference', profile.samplePath, '--reference-text', profile.referenceText, '--text', text, '--output', target];
+    const native = this.runtime === 'native';
+    const nativeOutput = `${target}.partial.wav`;
+    const args = native
+      ? ['--cpu', '--stream', '--text', text, '--prompt-wav', profile.samplePath, '--prompt-text', profile.referenceText, '--output', nativeOutput, '--steps', '2000', this.modelPath, this.acousticPath]
+      : ['--model', this.modelPath, '--device', plan.device, '--threads', String(plan.threads), '--reference', profile.samplePath, '--reference-text', profile.referenceText, '--text', text, '--output', target];
+    const started = Date.now();
     const [command, commandArgs] = this.command(plan, args);
     let stdout;
     const options = { timeout: 6 * 60 * 60_000, maxBuffer: 16 * 1024 * 1024, signal, env: { ...process.env, OMP_NUM_THREADS: String(plan.threads), MKL_NUM_THREADS: String(plan.threads), HF_HUB_OFFLINE: '1' } };
@@ -397,12 +406,21 @@ export class VoxCPMVoice {
     catch (error) {
       await rm(`${target}.partial.wav`, { force: true });
       if (signal?.aborted) throw Object.assign(new Error('Geração de voz cancelada'), { code: 'CANCELLED' });
-      if (error.code === 137 || error.signal === 'SIGKILL') throw Object.assign(new Error(`A geração passou do limite de memória (${Math.round(plan.memoryLimitBytes / 1024 ** 3)} GB) e foi encerrada sem afetar o sistema. Feche programas e tente de novo.`), { code: 'MEMORY_LIMIT', details: { plan } });
+      if (error.code === 137 || (error.code === 143 && plan.memoryGuard === 'systemd') || error.signal === 'SIGKILL') throw Object.assign(new Error(`A geração passou do limite de memória (${Math.round(plan.memoryLimitBytes / 1024 ** 3)} GB) e foi encerrada sem afetar o sistema. Feche programas e tente de novo.`), { code: 'MEMORY_LIMIT', details: { plan } });
       throw new Error(`Falha na geração de voz: ${`${error.stderr || error.message}`.trim().split(/\r?\n/).slice(-2).join(' ')}`);
     }
-    const result = JSON.parse(`${stdout}`.trim().split(/\r?\n/).at(-1));
+    let result;
+    if (native) {
+      try {
+        const measured = await measureAudio(this.tools, nativeOutput);
+        if (!(measured.durationSeconds > 0) || measured.sampleRate !== 48000 || measured.channels !== 1) throw new Error('O modo econômico não gerou um WAV 48 kHz mono válido');
+        await rename(nativeOutput, target);
+        const seconds = (Date.now() - started) / 1000;
+        result = { generationSeconds: seconds, audioSeconds: measured.durationSeconds, realtimeFactor: seconds / measured.durationSeconds };
+      } catch (error) { await rm(nativeOutput, { force: true }); throw error; }
+    } else result = JSON.parse(`${stdout}`.trim().split(/\r?\n/).at(-1));
     await this.onMeasured({ device: plan.device, realtimeFactor: result.realtimeFactor });
-    return { path: target, model: VoxCPMVoice.model, device: plan.device, seconds: result.generationSeconds, audioSeconds: result.audioSeconds, realtimeFactor: result.realtimeFactor };
+    return { path: target, model: this.model, device: plan.device, seconds: result.generationSeconds, audioSeconds: result.audioSeconds, realtimeFactor: result.realtimeFactor };
   }
 }
 

@@ -4,6 +4,7 @@ import { ConfirmDialog } from './Dialogs.jsx';
 import { localApi } from './local-api.js';
 import { JobsPanel, clock } from './MediaLibrary.jsx';
 import { DependencyNotice } from './DependencyGate.jsx';
+import { useVoiceGeneration } from './useVoiceGeneration.js';
 import { MemoryPanel } from './MemoryPanel.jsx';
 import { featureBlock } from '../core/capabilities.js';
 
@@ -38,7 +39,7 @@ export function NarrationStudio({ details, setup, onOpenSetup, onUpdated, onOpen
     <JobsPanel jobs={jobs} uploads={[]} onCancel={async jobId => { await localApi.cancelJob(jobId); refreshJobs(); }}/>
     <NarratorChoice project={details.project} profiles={state.profiles} path={projectPath} onUpdated={onUpdated} onOpenVoice={onOpenVoice}/>
     {/* Só aparecem as seções do jeito escolhido: voz de IA gera por cena; "Eu gravo" grava ou importa takes. */}
-    {mode === 'ai' && <VoiceSection projectPath={projectPath} narration={narration} finalTakeIds={finalTakeIds} base={base} state={state} setup={setup} onOpenSetup={onOpenSetup} act={act} startJob={startJob} running={running} onOpenVoice={onOpenVoice}/>}
+    {mode === 'ai' && <VoiceSection projectPath={projectPath} narration={narration} finalTakeIds={finalTakeIds} base={base} state={state} setup={setup} onOpenSetup={onOpenSetup} act={act} startJob={startJob} reload={load} jobs={jobs} running={running} onOpenVoice={onOpenVoice}/>}
     {mode === 'creator' && <TakesSection projectPath={projectPath} narration={narration} act={act} base={base}/>}
     {mode === 'creator' && <TreatmentSection takeIds={finalTakeIds} projectPath={projectPath} narration={narration} previewSeconds={state.previewSeconds} act={act} startJob={startJob} base={base} setup={setup} onOpenSetup={onOpenSetup}/>}
   </div>;
@@ -201,29 +202,24 @@ function FinalNarration({ projectPath, narration }) {
 /** Voz de IA já sai limpa: na montagem só junta as cenas e acerta o volume, sem limpeza nem cortes. */
 export const AI_FINAL_TREATMENT = { aiDenoise: false, removeBreaths: false, trimPauses: false, compress: false, normalize: true, targetLufs: -16 };
 
-function VoiceSection({ projectPath, narration, finalTakeIds, base, state, setup, onOpenSetup, act, startJob, running, onOpenVoice }) {
+function VoiceSection({ projectPath, narration, finalTakeIds, base, state, setup, onOpenSetup, act, startJob, reload, jobs, running, onOpenVoice }) {
   const missing = setup ? featureBlock('voice.synthetic', setup.items) : [];
-  const [profileId, setProfileId] = useState(state.profiles[0]?.id || ''); const [plan, setPlan] = useState(null);
+  const [profileId, setProfileId] = useState(state.profiles[0]?.id || '');
+  const resources = useVoiceGeneration(jobs, reload);
+  const generating = running || resources.busy;
   useEffect(() => { if (!state.profiles.some(profile => profile.id === profileId)) setProfileId(state.profiles[0]?.id || ''); }, [state.profiles]);
   const pending = state.scenes.filter(scene => !scene.generated[profileId]);
-  const checkPlan = async () => { const next = (await act(() => localApi.voicePlan()))?.plan || null; setPlan(next); return next; };
-  // Antes de gerar, confere a memória de novo: se faltar, mostra o painel para liberar em vez de abrir uma tarefa que falha.
-  const generate = async sceneIds => {
-    const next = await checkPlan();
-    if (next?.status === 'needs-free-memory') { window.requestAnimationFrame(() => document.getElementById('memory-panel')?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })); return; }
-    await startJob(() => localApi.generateVoice({ path: projectPath, profileId, sceneIds }));
-  };
-  // Confere a memória assim que a seção abre, para mostrar antes de gerar o que dá para fechar.
-  useEffect(() => { if (state.profiles.length && !missing.length) Promise.resolve(localApi.voicePlan()).then(result => setPlan(result?.plan || null), () => null); }, [state.profiles.length, missing.length]);
+  const generate = sceneIds => startJob(() => resources.attempt(() => localApi.generateVoice({ path: projectPath, profileId, sceneIds })));
   return <section className="workflow-card" aria-labelledby="voice-title">
     <div className="section-title"><div><span className="eyebrow">Voz clonada · VoxCPM2</span><h2 id="voice-title">Narração com a sua voz</h2></div>{onOpenVoice && <span className="header-actions"><button className="button quiet" onClick={onOpenVoice}><Mic size={17} aria-hidden="true"/> Minha voz</button></span>}</div>
     {missing.length > 0 ? <div className="notice error" role="alert"><span>Para gerar voz, instale: {missing.map(item => item.label).join(', ')}.</span><button className="mini-button" onClick={() => onOpenSetup(missing.map(item => item.id))}>Instalar dependências</button></div> : <>
       {!state.profiles.length && <div className="empty-state"><strong>Nenhum perfil de voz.</strong><span>Grave uma amostra da sua voz em “Minha voz” (barra lateral): o Content Lab mostra um texto de cerca de 60 s, grava e cria o perfil. A narração por voz de IA só fica disponível depois disso.</span>{onOpenVoice && <button className="button primary" onClick={onOpenVoice}><Mic size={17} aria-hidden="true"/> Abrir Minha voz</button>}</div>}
       {state.profiles.length > 0 && <>
-        <div className="generate-bar"><label>Perfil<select value={profileId} onChange={event => setProfileId(event.target.value)}>{state.profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label><button className="mini-button" onClick={checkPlan}>Verificar recursos</button><button className="button primary" disabled={!pending.length || running} onClick={() => generate(pending.map(scene => scene.id))}>Gerar {pending.length} cena{pending.length === 1 ? '' : 's'} pendente{pending.length === 1 ? '' : 's'}</button></div>
-        {plan && plan.status !== 'needs-free-memory' && <p className="plan-line" role="status">{plan.status === 'ready' ? `Pronto: ${plan.device.toUpperCase()}, ${plan.threads} núcleos, até ${Math.round(plan.memoryLimitBytes / 1024 ** 3)} GB.` : plan.reasons.join(' ')}{plan.estimate?.realtimeFactor ? ` Cerca de ${plan.estimate.realtimeFactor} s de processamento por segundo de fala (${plan.estimate.source}).` : ''}</p>}
-        {plan?.status === 'needs-free-memory' && <MemoryPanel plan={plan} onChanged={checkPlan}/>}
-        {state.scenes.length ? <ol className="media-list">{state.scenes.map(scene => <li key={scene.id}><span><strong>{scene.label}</strong><small>{scene.text.length > 140 ? `${scene.text.slice(0, 140)}…` : scene.text}</small></span>{scene.generated[profileId] ? <span className="available">Gerada</span> : <button className="mini-button" disabled={running} onClick={() => generate([scene.id])}>Gerar</button>}</li>)}</ol> : <div className="empty-state"><span>Escreva abertura, desenvolvimento ou payoff no roteiro para gerar cenas.</span></div>}
+        <div className="generate-bar"><label>Perfil<select value={profileId} onChange={event => setProfileId(event.target.value)}>{state.profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label><button className="button primary" disabled={!pending.length || generating} onClick={() => generate(pending.map(scene => scene.id))}>Gerar {pending.length} cena{pending.length === 1 ? '' : 's'} pendente{pending.length === 1 ? '' : 's'}</button></div>
+        <DependencyNotice error={resources.error} onOpenSetup={onOpenSetup}/>
+        {resources.status && <p className="notice" role="status">{resources.status}</p>}
+        {resources.plan && <MemoryPanel plan={resources.plan} onChanged={resources.refresh} onRetry={() => startJob(resources.retry)} onUseEconomy={resources.useEconomy} busy={resources.busy}/>}
+        {state.scenes.length ? <ol className="media-list">{state.scenes.map(scene => <li key={scene.id}><span><strong>{scene.label}</strong><small>{scene.text.length > 140 ? `${scene.text.slice(0, 140)}…` : scene.text}</small></span>{scene.generated[profileId] ? <span className="available">Gerada</span> : <button className="mini-button" disabled={generating} onClick={() => generate([scene.id])}>Gerar</button>}</li>)}</ol> : <div className="empty-state"><span>Escreva abertura, desenvolvimento ou payoff no roteiro para gerar cenas.</span></div>}
         <div className="voice-final">
           <div><strong>Narração final</strong><small>{pending.length ? `Faltam ${pending.length} cena${pending.length === 1 ? '' : 's'} para gerar. ` : ''}Junta as cenas geradas, na ordem do roteiro, num único áudio no volume padrão do YouTube. A voz de IA já sai limpa: não passa por tratamento.</small></div>
           <button className="button primary" disabled={!finalTakeIds.length || running} onClick={() => startJob(() => localApi.assembleNarration({ ...base, takeIds: finalTakeIds, treatment: AI_FINAL_TREATMENT }))}><Wand2 size={17} aria-hidden="true"/> {narration.assembled ? 'Montar de novo' : 'Montar narração final'}</button>

@@ -77,4 +77,23 @@ Não existe voz sintética genérica no Content Lab: a narração por IA é semp
 
 ## Liberar memória para a voz clonada
 
-Ao abrir “Narração com a sua voz” e antes de gerar a amostra em “Minha voz” (botões “Ouvir como ficou” e “Gerar de novo”), o app confere a RAM. Em “Minha voz”, a conferência que falha não inicia a geração; depois de liberar memória, clique novamente para tentar. Se a geração falhar por memória no servidor, os recursos são conferidos novamente para mostrar o mesmo painel quando ainda faltar RAM. Se faltar memória (`needs-free-memory`), aparece o painel **Libere X GB**: quanto falta e os programas do usuário que mais usam RAM (`src/system/apps.js`, via `ps`, Linux e macOS). Cada um tem **Fechar** com confirmação: primeiro `SIGTERM` e espera até 5 s; se o programa não responder, a interface oferece **Forçar fechamento** (`SIGKILL`, perde o que não foi salvo). Navegadores mostram a opção de fechar só algumas abas pelo gerenciador de tarefas deles (Shift+Esc). Nunca aparecem nem podem ser fechados: processos do sistema e da sessão gráfica, terminais, o próprio Content Lab (node, Python do VoxCPM2, ferramentas de `.tools`) e o Claude Code. Mesma operação na API (`/api/v1/system/apps`, `/api/v1/system/close-app`) e na CLI (`system.apps`, `system.close-app`); o MCP não fecha programas.
+O painel aparece **somente depois de uma tentativa de geração que encontra falta de memória**, tanto em Narração quanto em Minha voz. Não aparece ao abrir a página nem por causa de tarefas antigas que falharam. A conferência é feita antes de iniciar a geração; uma falta de memória durante o job também abre o painel.
+
+**Tentar de novo** remove o painel imediatamente, confere os recursos atuais e repete a mesma solicitação (perfil e cenas). O painel só volta se a memória continuar insuficiente. Outros erros usam o aviso correspondente. Não há troca automática de modo.
+
+O painel mostra quanto falta e os programas do usuário que mais usam RAM (`src/system/apps.js`, via `ps`, Linux e macOS). Cada programa tem **Fechar** com confirmação: primeiro `SIGTERM`, com espera de até 5 s; se não responder, oferece **Forçar fechamento** (`SIGKILL`, perde o que não foi salvo). Navegadores mostram a alternativa de fechar abas pelo gerenciador de tarefas deles (Shift+Esc). O filtro bloqueia os nomes de processos centrais da sessão gráfica, terminais, Content Lab e Claude Code; nomes internos desconhecidos ainda podem aparecer, pois o agrupamento é pelo nome do processo. API: `/api/v1/system/apps`, `/api/v1/system/close-app`; CLI: `system.apps`, `system.close-app`. O MCP não fecha programas.
+
+## Modos de voz
+
+Em **Configurações → Voz de IA**, a pessoa escolhe um modo global, usado tanto pela narração dos projetos quanto por “Ouvir como ficou”. A escolha persiste em `settings.json`, com revisão otimista; configurações antigas continuam no modo Padrão. Mudar pastas ou limites preserva a escolha. Áudios anteriores não são apagados, mas o cache de novas gerações distingue o modo utilizado.
+
+| Modo | Execução | Reserva em CPU |
+|---|---|---|
+| Padrão | VoxCPM2 original, PyTorch/BF16 | 11,5 GiB |
+| Econômico | VoxCPM2 com BaseLM Q8 e parte acústica F16, llama.cpp-omni em CPU | 10,5 GiB |
+
+O modo econômico mantém o perfil e o texto completo da referência. Não encurta a amostra nem reduz os passos de difusão. A saída é decodificada em streaming com contexto e só é promovida depois de validar duração e WAV 48 kHz mono. A margem de 10,5 GiB é conservadora: um teste real em 2026-11-13, com referência de 56,16 s e frase nova em português, gerou 3,04 s de áudio em cerca de 95 s totais; o pico RSS reportado foi 10,04 GiB. A transcrição com Whisper large-v3 reproduziu todas as palavras pedidas. É uma verificação de integração em uma máquina, não uma avaliação auditiva de equivalência dos modos nem garantia de consumo para todo roteiro. O teste com limite de 6 GiB falhou: o tamanho dos pesos não representa a RAM total necessária.
+
+O modo econômico tem instalação própria em Dependências: motor compilado do commit `e1047e121ee83cfa70865c0e4d7ebfb858c2cc69` de `tc-mb/llama.cpp-omni`, com bibliotecas estáticas e CPU, e dois pesos do repositório `DennisHuang648/VoxCPM2-GGUF`, revisão `169f64d8b98bbaab1761e4ca3a83e6af653456cc`. Os downloads somam 3.552.406.272 bytes, possuem SHA-256 fixado no catálogo e passam pelo mesmo instalador com consentimento, progresso, retomada e verificação. O modo Padrão continua disponível.
+
+Quando o modo Padrão não cabe na RAM, o painel também oferece **Trocar para modo econômico**. O clique salva a preferência e fecha o painel; se faltar a instalação, mostra o atalho para Dependências. A pessoa tenta gerar novamente, com o modo escolhido. No modo Econômico o painel continua permitindo fechar aplicativos e tentar de novo, sem oferecer uma troca para o mesmo modo.

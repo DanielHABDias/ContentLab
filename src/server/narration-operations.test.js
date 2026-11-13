@@ -203,3 +203,31 @@ test('outra geração de voz em outro processo vivo bloqueia a nova', async () =
   expect((await service.mediaOps.jobs.waitFor((await service.voiceGenerate({ path: project.path, profileId: profile.id })).id)).state).toBe('completed');
   expect(await exists(path.join(lock, '.contentlab.lock'))).toBe(false);
 });
+
+test('trocar o modo distingue os caches de voz e voltar ao padrão reaproveita seus takes', async () => {
+  const { root, service, project } = await setup();
+  const original = service.narrationOps.voiceFactory;
+  service.narrationOps.voiceFactory = async () => ({ ...(await original()), model: service.settings.voice?.mode === 'economy' ? 'voxcpm2-q8-v1' : 'voxcpm2' });
+  await writeScript(service, project, { hook: 'Uma fala de teste.' });
+  const profile = await makeProfile(service, project, root);
+  const generate = async () => service.mediaOps.jobs.waitFor((await service.voiceGenerate({ path: project.path, profileId: profile.id })).id);
+  expect((await generate()).result.generated).toBe(1);
+  await service.updateSettings({ baseRevision: 0, voice: { mode: 'economy' } });
+  let state = await service.narrationState({ path: project.path });
+  expect(state.scenes[0].generated[profile.id]).toBeNull();
+  expect(state.narration.takes.find(take => take.origin === 'generated').stale).toBe(true);
+  expect((await generate()).result.generated).toBe(1);
+  state = await service.narrationState({ path: project.path });
+  expect(state.narration.takes.filter(take => take.origin === 'generated' && !take.stale)).toHaveLength(1);
+  expect(state.narration.takes.find(take => take.origin === 'generated' && !take.stale).model).toBe('voxcpm2-q8-v1');
+  await service.updateSettings({ baseRevision: 1, voice: { mode: 'standard' } });
+  expect((await generate()).result.cached).toBe(1);
+  expect((await service.narrationState({ path: project.path })).narration.takes.filter(take => take.origin === 'generated')).toHaveLength(2);
+});
+
+test('modo econômico selecionado exige sua instalação mesmo quando o padrão está pronto', async () => {
+  const { service } = await setup();
+  await service.updateSettings({ baseRevision: 0, voice: { mode: 'economy' } });
+  service.setup.status = async () => ({ items: [...ALL.map(id => ({ id, label: id, ready: true })), { id: 'voxcpm2-q8', ready: false, selected: true }] });
+  await expect(service.requireFeature('voice.synthetic')).rejects.toMatchObject({ code: 'DEPENDENCY_MISSING', details: { missing: ['voxcpm2-q8'] } });
+});
