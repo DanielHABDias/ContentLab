@@ -39,8 +39,9 @@ test('arrastar seleciona um erro; excluir fecha o intervalo, desfazer/refazer e 
   fireEvent.pointerDown(track, { button: 0, clientX: 200, pointerId: 1 });
   fireEvent.pointerMove(track, { clientX: 400, pointerId: 1 });
   fireEvent.pointerUp(track, { clientX: 400, pointerId: 1 });
-  expect(within(dialog).getByLabelText('Início (s)')).toHaveValue(2);
-  expect(within(dialog).getByLabelText('Fim (s)')).toHaveValue(4);
+  expect(within(dialog).getByLabelText('Duração da seleção')).toHaveTextContent('2.00 s selecionados');
+  expect(within(dialog).queryByLabelText('Início (s)')).not.toBeInTheDocument();
+  expect(within(dialog).queryByLabelText('Fim (s)')).not.toBeInTheDocument();
   fireEvent.click(within(dialog).getByRole('button', { name: 'Excluir seleção' }));
   expect(screen.getByText(/8.00 s após os cortes/)).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Desfazer corte' }));
@@ -89,4 +90,21 @@ test('servidor antigo que devolve WAV em vez de ondas mostra como corrigir', asy
   render(<WaveAudioPlayer src={source} label="Teste" duration={10}/>);
   expect(await screen.findByText(/Reinicie o Content Lab para carregar a atualização das ondas/)).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Reproduzir: Teste' })).toBeEnabled();
+});
+
+
+test('salva os cortes aplicados com uma nova seleção fracionária ativa, sem zerá-la ou aplicá-la', async () => {
+  const onSave = vi.fn();
+  render(<AudioTakeEditor take={{ name: 'Take', durationSeconds: 10 }} src={source} onSave={onSave} onClose={vi.fn()}/>);
+  const track = screen.getByRole('group', { name: 'Onda do áudio: Ouvir edição do take' });
+  vi.spyOn(track, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 1000 });
+  fireEvent.pointerDown(track, { button: 0, clientX: 200 });
+  fireEvent.pointerUp(track, { button: 0, clientX: 400 });
+  fireEvent.click(screen.getByRole('button', { name: 'Excluir seleção' }));
+  fireEvent.pointerDown(track, { button: 0, clientX: 123.456 });
+  fireEvent.pointerUp(track, { button: 0, clientX: 456.789 });
+  expect(screen.getByLabelText('Duração da seleção')).not.toHaveTextContent('0.00 s selecionados');
+  expect(screen.getByRole('dialog', { name: 'Editar take' }).checkValidity()).toBe(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+  await waitFor(() => expect(onSave).toHaveBeenCalledWith({ name: 'Take', segments: [{ start: 0, end: 2 }, { start: 4, end: 10 }] }));
 });

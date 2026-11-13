@@ -25,13 +25,26 @@ export const measureLine = measures => `${clock(measures.durationSeconds)} · ${
 export function NarrationStudio({ details, setup, onOpenSetup, onUpdated, onOpenVoice }) {
   const projectPath = details.path;
   const [state, setState] = useState(null); const [jobs, setJobs] = useState([]); const [error, setError] = useState(null); const [status, setStatus] = useState('');
+  const [jobRequest, setJobRequest] = useState(null); const requestLock = useRef(false);
+  const [assemblyError, setAssemblyError] = useState('');
   const load = async () => { try { setState(await localApi.narration(projectPath)); } catch (issue) { setError(issue); } };
   const refreshJobs = async () => { const { jobs: list } = await localApi.jobs(projectPath).catch(() => ({ jobs: [] })); const mine = list.filter(job => job.kind.startsWith('narration') || job.kind === 'voice.generate' || job.kind === 'transcription'); setJobs(previous => { if (previous.some(job => job.state === 'running') && !mine.some(job => job.state === 'running')) load(); return mine; }); };
   useEffect(() => { load(); refreshJobs(); }, [projectPath]);
   const running = jobs.some(job => job.state === 'running');
   useEffect(() => { if (!running) return undefined; const timer = window.setInterval(refreshJobs, 1500); return () => window.clearInterval(timer); }, [running]);
   const act = async (task, done) => { setError(null); setStatus(''); try { const result = await task(); if (result?.narration) setState(previous => ({ ...previous, narration: result.narration })); else await load(); if (done) setStatus(done); return result; } catch (issue) { setError(issue); if (issue.code === 'NARRATION_CONFLICT') await load(); return null; } };
-  const startJob = async task => { const job = await act(task); if (job?.id) setJobs(previous => [job, ...previous]); if (job?.id || job?.jobId) refreshJobs(); };
+  const startJob = async (task, kind = 'other') => {
+    if (requestLock.current || jobs.some(job => job.state === 'running')) return;
+    requestLock.current = true; setJobRequest(kind);
+    if (kind === 'narration.assemble') setAssemblyError('');
+    try {
+      const job = await act(task);
+      if (job?.id) setJobs(previous => [job, ...previous]);
+      if (job?.id || job?.jobId) refreshJobs();
+      else if (kind === 'narration.assemble') setAssemblyError('Não foi possível iniciar a montagem. Confira o aviso de erro e tente novamente.');
+    } finally { requestLock.current = false; setJobRequest(null); }
+  };
+  const assembly = { requesting: jobRequest === 'narration.assemble', job: jobs.find(job => job.kind === 'narration.assemble' && job.state === 'running'), error: assemblyError };
   if (!state) return <section className="workflow-card"><p className="empty-state">{error ? error.message : 'Carregando narração…'}</p></section>;
   const { narration } = state; const base = { path: projectPath, baseRevision: narration.revision };
   const mode = details.project.narrationBy === 'ai' ? 'ai' : details.project.narrationBy === 'creator' ? 'creator' : null;
@@ -44,10 +57,10 @@ export function NarrationStudio({ details, setup, onOpenSetup, onUpdated, onOpen
     <JobsPanel jobs={jobs} uploads={[]} onCancel={async jobId => { await localApi.cancelJob(jobId); refreshJobs(); }}/>
     <NarratorChoice project={details.project} profiles={state.profiles} path={projectPath} onUpdated={onUpdated} onOpenVoice={onOpenVoice}/>
     {/* Só aparecem as seções do jeito escolhido: voz de IA gera por cena; "Eu gravo" grava ou importa takes. */}
-    {mode === 'ai' && <VoiceSection projectPath={projectPath} narration={narration} finalTakeIds={finalTakeIds} base={base} state={state} setup={setup} onOpenSetup={onOpenSetup} act={act} startJob={startJob} reload={load} jobs={jobs} running={running} onOpenVoice={onOpenVoice}/>}
+    {mode === 'ai' && <VoiceSection projectPath={projectPath} narration={narration} finalTakeIds={finalTakeIds} base={base} state={state} setup={setup} onOpenSetup={onOpenSetup} act={act} startJob={startJob} reload={load} jobs={jobs} running={running || Boolean(jobRequest)} assembly={assembly} onOpenVoice={onOpenVoice}/>}
     {mode === 'creator' && <ScriptToRead scenes={state.scenes} projectPath={projectPath}/>}
     {mode === 'creator' && <TakesSection projectPath={projectPath} narration={narration} act={act} base={base}/>}
-    {mode === 'creator' && <TreatmentSection takeIds={finalTakeIds} projectPath={projectPath} narration={narration} previewSeconds={state.previewSeconds} act={act} startJob={startJob} base={base} setup={setup} onOpenSetup={onOpenSetup}/>}
+    {mode === 'creator' && <TreatmentSection takeIds={finalTakeIds} projectPath={projectPath} narration={narration} previewSeconds={state.previewSeconds} act={act} startJob={startJob} assembly={assembly} running={running || Boolean(jobRequest)} base={base} setup={setup} onOpenSetup={onOpenSetup}/>}
     {mode && <TranscriptionStatus transcription={state.transcription} assembled={narration.assembled} running={running} onRetry={() => startJob(() => localApi.productionTranscribeNarration({ path: projectPath }))}/>}
   </div>;
 }
@@ -169,7 +182,7 @@ const TARGETS = [[-14, '-14', 'Mais alto'], [-16, '-16', 'YouTube'], [-19, '-19'
 const PAUSES = [[0.25, 'Curtas'], [0.4, 'Naturais'], [0.7, 'Calmas']];
 const seconds = value => `${value.toFixed(value < 1 ? 2 : 1).replace('.', ',')} s`;
 
-function TreatmentSection({ takeIds, projectPath, narration, previewSeconds, act, startJob, base, setup, onOpenSetup }) {
+function TreatmentSection({ takeIds, projectPath, narration, previewSeconds, act, startJob, assembly, running, base, setup, onOpenSetup }) {
   const [settings, setSettings] = useState({ maxPauseSeconds: 0.4, aiDenoise: true, removeBreaths: true, trimPauses: true, ...narration.treatment }); const [preview, setPreview] = useState(null); const [busy, setBusy] = useState(false);
   const missing = feature => (setup && feature ? featureBlock(feature, setup.items) : []);
   // Recurso sem modelo instalado fica desligado e travado até instalar.
@@ -207,10 +220,20 @@ function TreatmentSection({ takeIds, projectPath, narration, previewSeconds, act
         {chips('target-lufs', 'Alvo (LUFS)', TARGETS.map(([value, , hint]) => [value, hint]), effective.targetLufs, 'targetLufs', !effective.normalize, value => String(value))}
       </fieldset>
     </div>
-    <div className="treat-actions"><button className="button quiet" disabled={!takeIds.length || busy} onClick={listen}><Headphones size={17} aria-hidden="true"/> {busy ? 'Preparando…' : `Ouvir preview (${previewSeconds} s)`}</button><button className="button primary" disabled={!takeIds.length} onClick={() => startJob(() => localApi.assembleNarration({ ...base, takeIds, treatment: effective }))}><Wand2 size={17}/> {narration.assembled ? 'Montar de novo' : 'Montar narração final'}</button></div>
+    <div className="treat-actions"><button className="button quiet" disabled={!takeIds.length || busy || running} onClick={listen}><Headphones size={17} aria-hidden="true"/> {busy ? 'Preparando…' : `Ouvir preview (${previewSeconds} s)`}</button><AssemblyButton assembled={narration.assembled} disabled={!takeIds.length || busy || running} assembly={assembly} onClick={() => startJob(() => localApi.assembleNarration({ ...base, takeIds, treatment: effective }), 'narration.assemble')}/></div>
     {preview && <div className="ab-preview">{[['original', 'Sem tratamento'], ['treated', 'Com tratamento']].map(([key, label]) => <div key={key} className={key}><span className="ab-label"><AudioLines size={14} aria-hidden="true"/> {label}{key === 'treated' && preview.removedSeconds > 0 ? ` · ${seconds(preview.removedSeconds)} de pausas a menos` : ''}</span><WaveAudioPlayer src={fileUrl(projectPath, { preview: preview[key].file })} label={`Preview ${label.toLowerCase()}`} duration={preview[key].measures.durationSeconds}/><small>{measureLine(preview[key].measures)}</small></div>)}</div>}
     <FinalNarration projectPath={projectPath} narration={narration}/>
   </section>;
+}
+
+/** Feedback junto ao clique, desde o envio até a montagem e a transcrição terminarem. */
+function AssemblyButton({ assembled, disabled, assembly, onClick }) {
+  const busy = assembly.requesting || Boolean(assembly.job);
+  return <div className="assembly-control">
+    <button type="button" className="button primary" disabled={disabled || busy} aria-busy={busy} onClick={onClick}>{busy ? <Loader2 size={17} className="spin" aria-hidden="true"/> : <Wand2 size={17} aria-hidden="true"/>} {assembly.requesting ? 'Iniciando montagem…' : assembly.job ? 'Montando narração…' : assembled ? 'Montar de novo' : 'Montar narração final'}</button>
+    {busy && <p role="status">{assembly.requesting ? 'Solicitando a montagem da narração…' : assembly.job.progress?.phase || 'Montagem iniciada. Preparando o áudio e a transcrição.'}</p>}
+    {assembly.error && <p className="missing" role="alert">{assembly.error}</p>}
+  </div>;
 }
 
 /** O áudio montado que a edição usa (fica nas mídias do projeto). */
@@ -226,7 +249,7 @@ function FinalNarration({ projectPath, narration }) {
 /** Voz de IA já sai limpa: na montagem só junta as cenas e acerta o volume, sem limpeza nem cortes. */
 export const AI_FINAL_TREATMENT = { aiDenoise: false, removeBreaths: false, trimPauses: false, compress: false, normalize: true, targetLufs: -16 };
 
-function VoiceSection({ projectPath, narration, finalTakeIds, base, state, setup, onOpenSetup, act, startJob, reload, jobs, running, onOpenVoice }) {
+function VoiceSection({ projectPath, narration, finalTakeIds, base, state, setup, onOpenSetup, act, startJob, reload, jobs, running, assembly, onOpenVoice }) {
   const missing = setup ? featureBlock('voice.synthetic', setup.items) : [];
   const [profileId, setProfileId] = useState(state.profiles[0]?.id || '');
   const resources = useVoiceGeneration(jobs, reload);
@@ -248,7 +271,7 @@ function VoiceSection({ projectPath, narration, finalTakeIds, base, state, setup
         {state.scenes.length ? <ol className="media-list">{state.scenes.map(scene => <li key={scene.id} className={voiceJob?.progress.sceneId === scene.id ? 'scene-generating' : undefined}><span><strong>{scene.label}</strong><small>{scene.text.length > 140 ? `${scene.text.slice(0, 140)}…` : scene.text}</small></span>{voiceJob?.progress.sceneId === scene.id ? <span className="scene-status"><Loader2 size={14} className="spin" aria-hidden="true"/> Criando…</span> : scene.generated[profileId] ? <span className="available">Gerada</span> : <button className="mini-button" disabled={generating} onClick={() => generate([scene.id])}>Gerar</button>}</li>)}</ol> : <div className="empty-state"><span>Escreva abertura, desenvolvimento ou payoff no roteiro para gerar cenas.</span></div>}
         <div className="voice-final">
           <div><strong>Narração final</strong><small>{pending.length ? `Faltam ${pending.length} cena${pending.length === 1 ? '' : 's'} para gerar. ` : ''}Junta as cenas geradas, na ordem do roteiro, num único áudio no volume padrão do YouTube. A voz de IA já sai limpa: não passa por tratamento.</small></div>
-          <button className="button primary" disabled={!finalTakeIds.length || running} onClick={() => startJob(() => localApi.assembleNarration({ ...base, takeIds: finalTakeIds, treatment: AI_FINAL_TREATMENT }))}><Wand2 size={17} aria-hidden="true"/> {narration.assembled ? 'Montar de novo' : 'Montar narração final'}</button>
+          <AssemblyButton assembled={narration.assembled} disabled={!finalTakeIds.length || running} assembly={assembly} onClick={() => startJob(() => localApi.assembleNarration({ ...base, takeIds: finalTakeIds, treatment: AI_FINAL_TREATMENT }), 'narration.assemble')}/>
         </div>
         <FinalNarration projectPath={projectPath} narration={narration}/>
       </>}

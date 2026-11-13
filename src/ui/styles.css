@@ -376,9 +376,6 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-vi
 .audio-editor-tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 18px; }
 .audio-editor-tools label { display: flex; gap: 8px; align-items: center; margin-left: auto; }
 .audio-time-ruler { display: flex; justify-content: space-between; padding: 8px 0; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
-.audio-selection-fields { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 16px; font-size: 13px; }
-.audio-selection-fields label { display: grid; gap: 6px; }
-.audio-selection-fields input { width: 110px; min-height: 38px; color: var(--ink); background: #10121b; border: 1px solid #354454; border-radius: 6px; padding: 8px; }
 .audio-take-editor .dialog-actions .hint { margin-right: auto; }
 
 /* Catálogo em grade; a prévia abre sem apertar os cartões. */
@@ -406,7 +403,6 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-vi
 
 
 
-.audio-take-editor .audio-selection-fields label { border: 0; padding: 0; }
 
 /* Navegação da onda sem barras nativas; a roda fica dedicada ao eixo horizontal. */
 
@@ -444,9 +440,12 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-vi
 .audio-editor-tools { position: sticky; top: 0; z-index: 2; padding: 4px 0 10px; margin: 0; background: #181820; }
 .audio-take-editor .wave-track { height: clamp(110px, 19vh, 170px); }
 .audio-take-editor .wave-player { padding: 12px; }
-.audio-take-editor .audio-selection-fields { margin-top: 12px; }
-.audio-take-editor .audio-selection-fields label { display: flex; align-items: center; gap: 6px; }
-.audio-selection-fields input { width: 86px; min-height: 34px; padding: 6px; }
 .audio-take-editor .dialog-actions { flex-shrink: 0; margin: 0; padding: 12px 0 0; border-top: 1px solid var(--line); }
 @media (max-width: 640px) { .narration .recorder { padding: 16px; } .recorder-finish .button { width: 100%; justify-content: center; } .recorder-time { font-size: 20px; } .dialog.audio-take-editor { padding: 16px; } .audio-editor-tools .button { font-size: 12px; padding: 8px; } }
 .recording-script-shortcut .button, .script-to-read > .button { color: var(--ink); text-decoration: none; }
+.assembly-control { display: grid; justify-items: end; gap: 8px; max-width: 460px; }
+.assembly-control p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; text-align: right; }
+.assembly-control p.missing { color: #ff8797; }
+.audio-selection-info { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; font-size: 13px; }
+.audio-selection-info output { color: var(--ink); font-variant-numeric: tabular-nums; }
+.audio-selection-info small { color: var(--muted); font-size: 12px; }

@@ -1,5 +1,5 @@
 import { scenesFromScript } from '../audio/narration-service.js';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
 import { NarrationStudio } from './NarrationStudio.jsx';
 import { localApi } from './local-api.js';
@@ -79,8 +79,10 @@ test('reordena, corta sem destruir e mostra preview A/B medido', async () => {
   fireEvent.click(await screen.findByRole('button', { name: 'Descer Abertura' }));
   await waitFor(() => expect(localApi.reorderTakes).toHaveBeenCalledWith({ path: '/p', baseRevision: 3, order: ['take_bbbbbb2', 'take_aaaaaa1'] }));
   fireEvent.click(screen.getAllByRole('button', { name: 'Editar' })[0]);
-  fireEvent.change(screen.getByLabelText('Início (s)'), { target: { value: '1' } });
-  fireEvent.change(screen.getByLabelText('Fim (s)'), { target: { value: '4' } });
+  const wave = screen.getByRole('group', { name: 'Onda do áudio: Ouvir edição do take' });
+  vi.spyOn(wave, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 1000 });
+  fireEvent(wave, new MouseEvent('pointerdown', { button: 0, clientX: 80, bubbles: true }));
+  fireEvent(wave, new MouseEvent('pointerup', { button: 0, clientX: 320, bubbles: true }));
   fireEvent.click(screen.getByRole('button', { name: 'Manter seleção' }));
   fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
   await waitFor(() => expect(localApi.updateTake).toHaveBeenCalledWith(expect.objectContaining({ takeId: 'take_aaaaaa1', segments: [{ start: 1, end: 4 }] })));
@@ -274,4 +276,34 @@ test('pausar e retomar mantém um único take; falha de envio permite salvar a m
   expect(await screen.findByRole('button', { name: 'Gravar' })).toBeInTheDocument();
   expect(stopTrack).not.toHaveBeenCalled();
   view.unmount(); globalThis.MediaRecorder = previous;
+});
+
+test.each(['creator', 'ai'])('montagem em %s confirma o clique antes da resposta e acompanha o job junto ao botão', async mode => {
+  const initial = state();
+  localApi.narration.mockResolvedValue({ ...initial, narration: { ...initial.narration, takes: [...initial.narration.takes, take('take_x', 'Cena', { origin: 'generated', sceneId: 'hook-1' })] } });
+  let resolveRequest;
+  localApi.assembleNarration.mockImplementation(() => new Promise(resolve => { resolveRequest = resolve; }));
+  render(<NarrationStudio details={details(mode)} setup={setup()}/>);
+  fireEvent.click(await screen.findByRole('button', { name: 'Montar narração final' }));
+  const starting = screen.getByRole('button', { name: 'Iniciando montagem…' });
+  expect(starting).toBeDisabled(); expect(starting).toHaveAttribute('aria-busy', 'true');
+  expect(screen.getByText('Solicitando a montagem da narração…')).toBeInTheDocument();
+  fireEvent.click(starting);
+  expect(localApi.assembleNarration).toHaveBeenCalledTimes(1);
+  const job = { id: 'assemble_one', label: 'Montar narração', kind: 'narration.assemble', state: 'running', progress: { phase: 'Montando e tratando', done: 0, total: 4 } };
+  localApi.jobs.mockResolvedValue({ jobs: [job] });
+  await act(async () => { resolveRequest(job); });
+  const assembling = await screen.findByRole('button', { name: 'Montando narração…' });
+  expect(assembling).toBeDisabled();
+  expect(within(assembling.parentElement).getByRole('status')).toHaveTextContent('Montando e tratando');
+  localApi.jobs.mockResolvedValue({ jobs: [{ ...job, state: 'completed' }] });
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Montar narração final' })).toBeEnabled(), { timeout: 3000 });
+});
+
+test('falha ao iniciar a montagem mostra aviso junto ao botão e permite tentar novamente', async () => {
+  localApi.assembleNarration.mockRejectedValue(new Error('Falha ao iniciar'));
+  render(<NarrationStudio details={details('creator')} setup={setup()}/>);
+  fireEvent.click(await screen.findByRole('button', { name: 'Montar narração final' }));
+  expect(await screen.findByText('Não foi possível iniciar a montagem. Confira o aviso de erro e tente novamente.')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Montar narração final' })).toBeEnabled();
 });
