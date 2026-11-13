@@ -12,7 +12,7 @@ const details = (narrationBy = 'ai') => ({ path: '/p', project: { id: 'projeto',
 function state(overrides = {}) {
   return {
     narration: { revision: 3, takes: [take('take_aaaaaa1', 'Abertura'), take('take_bbbbbb2', 'Corpo', { origin: 'import' })], treatment: { trimSilence: true, denoise: true, highpass: true, compress: true, normalize: true, targetLufs: -16, preset: 'original' }, assembled: null },
-    scenes: [{ id: 'hook-1', label: 'Abertura 1', text: 'Você já reparou nisso?', generated: { voice_abc123: 'take_x' } }, { id: 'development-1', label: 'Desenvolvimento 1', text: 'Primeiro ponto.', generated: { voice_abc123: null } }],
+    scenes: [{ id: 'hook-1', label: 'Abertura 1', text: 'Você já reparou nisso?', generated: { voice_abc123: 'take_x' } }, { id: 'development-1', label: 'Desenvolvimento 1', text: 'Primeiro ponto. Segundo.', lines: [{ text: 'Primeiro ponto.', direction: 'titulo' }, { text: 'Segundo.', direction: null }], generated: { voice_abc123: null } }],
     profiles: [{ id: 'voice_abc123', name: 'Minha voz', consent: { granted: true, holder: 'Daniel', grantedAt: '2026-11-11T00:00:00Z' }, durationSeconds: 15, checkSample: null }],
     previewSeconds: 20, ...overrides,
   };
@@ -179,4 +179,12 @@ test('projeto só mostra o painel após tentar gerar e a nova tentativa executa 
   expect(screen.queryByRole('region', { name: /libere/i })).not.toBeInTheDocument();
   resolvePlan({ plan: { status: 'ready' } });
   await waitFor(() => expect(localApi.generateVoice).toHaveBeenCalledWith({ path: '/p', profileId: 'voice_abc123', sceneIds: ['development-1'] }));
+});
+
+test('quem grava vê o roteiro falado, uma frase por linha, sem a direção visual', async () => {
+  render(<NarrationStudio details={details('creator')} setup={setup(true)} onOpenSetup={vi.fn()}/>);
+  const script = await screen.findByRole('region', { name: 'Roteiro' });
+  expect(within(script).getByText('Primeiro ponto.')).toBeInTheDocument();
+  expect(within(script).getByText('Segundo.')).toBeInTheDocument();
+  expect(within(script).queryByText(/titulo/)).not.toBeInTheDocument();
 });

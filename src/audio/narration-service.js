@@ -200,10 +200,25 @@ export const SCENE_SECTIONS = { hook: 'Abertura', development: 'Desenvolvimento'
 export function scenesFromScript(script = {}) {
   const scenes = [];
   for (const [section, label] of Object.entries(SCENE_SECTIONS)) {
-    const paragraphs = String(script[section] || '').split(/\n\s*\n/).map(text => text.replace(/\s+/g, ' ').trim()).filter(Boolean);
-    for (const [index, text] of paragraphs.entries()) scenes.push({ id: `${section}-${index + 1}`, section, label: `${label} ${index + 1}`, text, characters: text.length });
+    const paragraphs = String(script[section] || '').split(/\n\s*\n/).map(scriptLines).filter(lines => lines.length);
+    for (const [index, lines] of paragraphs.entries()) {
+      const text = lines.map(line => line.text).join(' ');
+      scenes.push({ id: `${section}-${index + 1}`, section, label: `${label} ${index + 1}`, text, characters: text.length, lines });
+    }
   }
   return scenes;
+}
+
+/**
+ * Linhas faladas de um parágrafo do roteiro. A direção visual entre colchetes (ex.: "[evidencia: capa.jpg]")
+ * guia a montagem e nunca é narrada, lida pela voz, legendada nem posta em slide.
+ */
+export function scriptLines(paragraph = '') {
+  return String(paragraph).split(/\n/).map(raw => {
+    const direction = [...raw.matchAll(/\[([^\]]*)\]/g)].map(match => match[1].trim()).filter(Boolean);
+    const text = raw.replace(/\[[^\]]*\]/g, ' ').replace(/\s+/g, ' ').trim();
+    return { text, direction: direction.join('; ') || null };
+  }).filter(line => line.text);
 }
 
 /** Chave de cache de uma cena gerada: muda se texto, perfil, amostra ou modelo mudarem. */

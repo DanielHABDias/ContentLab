@@ -40,6 +40,7 @@ export function NarrationStudio({ details, setup, onOpenSetup, onUpdated, onOpen
     <NarratorChoice project={details.project} profiles={state.profiles} path={projectPath} onUpdated={onUpdated} onOpenVoice={onOpenVoice}/>
     {/* Só aparecem as seções do jeito escolhido: voz de IA gera por cena; "Eu gravo" grava ou importa takes. */}
     {mode === 'ai' && <VoiceSection projectPath={projectPath} narration={narration} finalTakeIds={finalTakeIds} base={base} state={state} setup={setup} onOpenSetup={onOpenSetup} act={act} startJob={startJob} reload={load} jobs={jobs} running={running} onOpenVoice={onOpenVoice}/>}
+    {mode === 'creator' && <ScriptToRead scenes={state.scenes}/>}
     {mode === 'creator' && <TakesSection projectPath={projectPath} narration={narration} act={act} base={base}/>}
     {mode === 'creator' && <TreatmentSection takeIds={finalTakeIds} projectPath={projectPath} narration={narration} previewSeconds={state.previewSeconds} act={act} startJob={startJob} base={base} setup={setup} onOpenSetup={onOpenSetup}/>}
   </div>;
@@ -252,6 +253,16 @@ function VoiceProgress({ job, scenes }) {
     <span className={`voice-progress-bar${share == null || over ? ' indeterminate' : ''}`}><i style={share != null && !over ? { width: `${Math.round(share * 100)}%` } : undefined}/></span>
     <small className="voice-progress-hint">Pode continuar usando o app. Feche programas pesados para acelerar.</small>
   </div>;
+}
+
+/** O roteiro para ler ao gravar: só o que é falado, uma frase por linha, cena a cena (sem a direção visual). */
+function ScriptToRead({ scenes }) {
+  return <section className="workflow-card script-to-read" aria-labelledby="script-read-title">
+    <details open>
+      <summary><span className="eyebrow">Para gravar</span><h2 id="script-read-title">Roteiro</h2><small>{scenes.length} {scenes.length === 1 ? 'cena' : 'cenas'} · grave uma cena por take</small></summary>
+      {scenes.length ? <ol className="read-scenes">{scenes.map(scene => <li key={scene.id}><strong>{scene.label}</strong>{(scene.lines || [{ text: scene.text }]).map((line, index) => <p key={index}>{line.text}</p>)}</li>)}</ol> : <p className="empty-state">O roteiro ainda não tem texto para narrar.</p>}
+    </details>
+  </section>;
 }
 
 function TakeDialog({ take, onClose, onSave }) {

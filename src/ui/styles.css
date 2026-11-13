@@ -293,3 +293,11 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-vi
 .media-overview strong { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .media-overview small { color: var(--muted); font-size: 12px; }
 @media (max-width: 760px) { .view-only-bar .button { width: 100%; justify-content: center; } }
+.script-to-read details > summary { list-style: none; cursor: pointer; display: grid; gap: 4px; }
+.script-to-read details > summary::-webkit-details-marker { display: none; }
+.script-to-read summary h2 { margin: 0; }
+.script-to-read summary small { color: var(--muted); font-size: 13px; }
+.read-scenes { list-style: none; margin: 18px 0 0; padding: 0; display: grid; gap: 14px; max-height: 60vh; overflow-y: auto; padding-right: 6px; }
+.read-scenes li { border-left: 3px solid var(--blue); padding: 6px 0 6px 16px; }
+.read-scenes strong { display: block; color: var(--blue); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.read-scenes p { margin: 0 0 6px; font-size: 18px; line-height: 1.5; color: var(--ink); max-width: 70ch; }

@@ -48,6 +48,12 @@ test('roteiro vira cenas só com o que é narrado', () => {
   expect(scenesFromScript({ hook: 'Oi.', development: 'A\n\nB', payoff: '  ', visual: 'Câmera', sources: 'x' }).map(scene => scene.label)).toEqual(['Abertura 1', 'Desenvolvimento 1', 'Desenvolvimento 2']);
 });
 
+test('direção visual entre colchetes não entra no texto falado', () => {
+  const [scene] = scenesFromScript({ hook: 'Imagina um herói que nunca perde. [titulo]\nEm 1938, ele levantava um carro. [evidencia: action-comics-1.jpg]\n[aparte: surpreso]' });
+  expect(scene.text).toBe('Imagina um herói que nunca perde. Em 1938, ele levantava um carro.');
+  expect(scene.lines).toEqual([{ text: 'Imagina um herói que nunca perde.', direction: 'titulo' }, { text: 'Em 1938, ele levantava um carro.', direction: 'evidencia: action-comics-1.jpg' }]);
+});
+
 test('perfil de voz exige consentimento verificável', async () => {
   const { root, a } = await setup(); const store = new VoiceProfileStore(path.join(root, 'voices'));
   await expect(store.create({ name: 'Sem consentimento', holder: 'Daniel', samplePath: a, referenceText: 'Texto' })).rejects.toThrow(/consentimento/i);
