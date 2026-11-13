@@ -15,7 +15,7 @@ export function clock(seconds) {
   const minutes = Math.floor(total / 60); const rest = (total - minutes * 60).toFixed(1).padStart(4, '0');
   return `${minutes}:${rest.replace('.', ',')}`;
 }
-const mediaUrl = (project, mediaId, cutId) => `/api/v1/media/file?path=${encodeURIComponent(project)}&media=${encodeURIComponent(mediaId)}${cutId ? `&cut=${encodeURIComponent(cutId)}` : ''}`;
+export const mediaUrl = (project, mediaId, cutId) => `/api/v1/media/file?path=${encodeURIComponent(project)}&media=${encodeURIComponent(mediaId)}${cutId ? `&cut=${encodeURIComponent(cutId)}` : ''}`;
 
 /** Catálogo de mídia do projeto: importação, URL, preview, cortes e transcrição. */
 export function MediaLibrary({ details, onBack, onUpdated, setup, onOpenSetup }) {

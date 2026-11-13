@@ -482,3 +482,22 @@ test('configurações escolhem e persistem o modo de voz usado nas duas telas', 
   await waitFor(() => expect(localApi.updateSettings).toHaveBeenCalledWith({ baseRevision: 3, voice: { mode: 'economy' } }));
   expect(await screen.findByText('Modo de voz salvo.')).toBeInTheDocument();
 });
+
+test('etapa aprovada abre só para ver: conteúdo visível, nada salvo e sem aprovar', async () => {
+  const base = realDetails();
+  const stages = base.project.stages.map(stage => ({ ...stage, state: stage.id === 'brief' ? 'approved' : stage.id === 'packaging' ? 'active' : 'pending' }));
+  const details = realDetails({ stages, creative: { ...base.project.creative, brief: { thesis: 'Tese aprovada', audience: 'Público', promise: 'Promessa', notes: '' } } });
+  localApi.listProjects.mockResolvedValue({ projects: [details.card] }); localApi.openProject.mockResolvedValue(details);
+  render(<App/>); fireEvent.click(await screen.findByRole('button', { name: /abrir meu projeto/i }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Ver Ideia' }));
+  const thesis = screen.getByDisplayValue('Tese aprovada');
+  expect(thesis).toHaveAttribute('readonly');
+  fireEvent.change(thesis, { target: { value: 'Outra' } });
+  expect(screen.getAllByText('Só visualização').length).toBeGreaterThan(0);
+  expect(screen.queryByRole('button', { name: /aprovar e seguir/i })).not.toBeInTheDocument();
+  await new Promise(resolve => setTimeout(resolve, 700));
+  expect(localApi.runProjectAction).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: /ir para a etapa atual/i }));
+  expect(screen.getByRole('heading', { name: /título e thumbnail/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /aprovar e seguir/i })).toBeInTheDocument();
+});

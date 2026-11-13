@@ -11,7 +11,7 @@ const STYLES = { legenda: 'Legenda', destaque: 'Destaque', titulo: 'Título' };
 const newId = prefix => `${prefix}_${Math.random().toString(36).slice(2, 12)}`;
 
 /** Editor da timeline: mesmos comandos versionados do núcleo, preview pelo grafo do render final. */
-export function TimelineEditor({ details, onUpdated }) {
+export function TimelineEditor({ details, onUpdated, readOnly = false }) {
   const { project, path } = details;
   const timeline = project.timeline; const fps = timeline.fps;
   const [edit, setEdit] = useState(details.edit || null); const [components, setComponents] = useState(details.components || []); const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
@@ -20,7 +20,7 @@ export function TimelineEditor({ details, onUpdated }) {
   const [aspectReport, setAspectReport] = useState(null);
   useEffect(() => { localApi.editState(path).then(state => { setEdit(state.edit); setComponents(state.components || []); }).catch(() => {}); }, [path]);
   const accept = state => { setEdit(state.edit); if (state.components) setComponents(state.components); onUpdated(state); };
-  const call = async (task, { quiet = false } = {}) => { setBusy(true); setError(''); try { const state = await task(); if (state?.project) accept(state); return state; } catch (issue) { if (!quiet) setError(issue.message); throw issue; } finally { setBusy(false); } };
+  const call = async (task, { quiet = false } = {}) => { if (readOnly) return null; setBusy(true); setError(''); try { const state = await task(); if (state?.project) accept(state); return state; } catch (issue) { if (!quiet) setError(issue.message); throw issue; } finally { setBusy(false); } };
   const apply = (commands, label) => call(() => localApi.editApply({ path, baseRevision: project.revision, commands, label })).catch(() => null);
   const located = useMemo(() => { if (!selected) return null; for (const track of timeline.tracks) { const clip = track.clips.find(item => item.id === selected); if (clip) return { track, clip }; } return null; }, [selected, timeline]);
 
@@ -51,24 +51,26 @@ export function TimelineEditor({ details, onUpdated }) {
 
   return <section className="timeline-editor" aria-label="Editor de timeline">
     <div className="editor-toolbar" role="toolbar" aria-label="Ferramentas da timeline">
+      {!readOnly && <>
       <button className="mini-button" onClick={undo} disabled={!edit?.canUndo || busy} title={edit?.undoLabel ? `Desfazer: ${edit.undoLabel} (Ctrl+Z)` : 'Nada para desfazer'}><Undo2 size={15}/> Desfazer</button>
       <button className="mini-button" onClick={redo} disabled={!edit?.canRedo || busy} title={edit?.redoLabel ? `Refazer: ${edit.redoLabel} (Ctrl+Shift+Z)` : 'Nada para refazer'}><Redo2 size={15}/> Refazer</button>
       <button className="mini-button" onClick={split} disabled={!located || busy} title="Dividir no playhead (S)"><Scissors size={15}/> Dividir</button>
       <button className="mini-button" onClick={remove} disabled={!located || busy} title="Excluir clip (Delete)"><Trash2 size={15}/> Excluir</button>
       <label className="check"><input type="checkbox" checked={snap} onChange={event => setSnap(event.target.checked)}/> <Magnet size={14}/> Encaixe</label>
       <label className="check"><input type="checkbox" checked={ripple} onChange={event => setRipple(event.target.checked)}/> Ripple</label>
+      </>}
       <label>Zoom<input type="range" min="8" max="160" value={zoom} onChange={event => setZoom(Number(event.target.value))} aria-label="Zoom da timeline"/></label>
       <label>Proporção<select value={ratio} onChange={event => setRatio(event.target.value)}>{RATIOS.map(item => <option key={item} value={item}>{item}{item === project.aspectRatio ? ' (projeto)' : ''}</option>)}</select></label>
-      {ratio !== project.aspectRatio && <button className="mini-button" onClick={() => changeRatio(false)}>Usar {ratio} no projeto</button>}
+      {!readOnly && ratio !== project.aspectRatio && <button className="mini-button" onClick={() => changeRatio(false)}>Usar {ratio} no projeto</button>}
       <label className="check"><input type="checkbox" checked={safe} onChange={event => setSafe(event.target.checked)}/> Área segura</label>
     </div>
     {error && <div className="notice error" role="alert">{error}</div>}
     <div className="editor-main">
       <Preview path={path} project={project} frame={playhead} ratio={ratio} safe={safe}/>
-      <Inspector key={located?.clip.id || 'none'} located={located} ratio={ratio} fps={fps} playhead={playhead} media={project.media} components={components} busy={busy} onApply={apply}/>
+      {!readOnly && <Inspector key={located?.clip.id || 'none'} located={located} ratio={ratio} fps={fps} playhead={playhead} media={project.media} components={components} busy={busy} onApply={apply}/>}
     </div>
-    <AddPanel path={path} project={project} playhead={playhead} components={components} call={call}/>
-    <Tracks timeline={timeline} zoom={zoom} playhead={playhead} setPlayhead={setPlayhead} selected={selected} setSelected={setSelected} snap={snap} busy={busy} onApply={apply}/>
+    {!readOnly && <AddPanel path={path} project={project} playhead={playhead} components={components} call={call}/>}
+    <Tracks timeline={timeline} zoom={zoom} playhead={playhead} setPlayhead={setPlayhead} selected={selected} setSelected={setSelected} snap={snap} busy={busy || readOnly} onApply={apply}/>
     {aspectReport && <ConfirmDialog title="Trocar proporção do projeto" message={`De ${aspectReport.from} para ${aspectReport.to}. ${aspectReport.clipsWithoutLayout.length ? `${aspectReport.clipsWithoutLayout.length} clip(s) sem enquadramento próprio para ${aspectReport.to} vão ocupar a tela inteira.` : ''} ${aspectReport.reopens.length ? 'A edição aprovada será reaberta para revisão.' : ''}`} details={aspectReport.clipsWithoutLayout.slice(0, 8)} confirm={`Usar ${aspectReport.to}`} onClose={() => setAspectReport(null)} onConfirm={() => changeRatio(true)}/>}
   </section>;
 }
@@ -195,8 +197,8 @@ function Tracks({ timeline, zoom, playhead, setPlayhead, selected, setSelected, 
       </div>
       {timeline.tracks.map(track => <div key={track.id} className={`track-row ${track.kind} ${track.locked ? 'locked' : ''} ${track.muted ? 'muted' : ''}`}>
         <div className="track-head"><strong>{track.name}</strong>
-          <button className="icon-button" aria-label={`${track.muted ? 'Ativar' : 'Silenciar'} ${track.name}`} aria-pressed={track.muted} onClick={() => onApply([{ op: 'track.update', trackId: track.id, muted: !track.muted }], track.muted ? 'Ativar track' : 'Silenciar track')}>{track.kind === 'audio' ? (track.muted ? <VolumeX size={14}/> : <Volume2 size={14}/>) : (track.muted ? <EyeOff size={14}/> : <Eye size={14}/>)}</button>
-          <button className="icon-button" aria-label={`${track.locked ? 'Desbloquear' : 'Bloquear'} ${track.name}`} aria-pressed={track.locked} onClick={() => onApply([{ op: 'track.update', trackId: track.id, locked: !track.locked }], track.locked ? 'Desbloquear track' : 'Bloquear track')}>{track.locked ? <Lock size={14}/> : <LockOpen size={14}/>}</button>
+          <button className="icon-button" disabled={busy} aria-label={`${track.muted ? 'Ativar' : 'Silenciar'} ${track.name}`} aria-pressed={track.muted} onClick={() => onApply([{ op: 'track.update', trackId: track.id, muted: !track.muted }], track.muted ? 'Ativar track' : 'Silenciar track')}>{track.kind === 'audio' ? (track.muted ? <VolumeX size={14}/> : <Volume2 size={14}/>) : (track.muted ? <EyeOff size={14}/> : <Eye size={14}/>)}</button>
+          <button className="icon-button" disabled={busy} aria-label={`${track.locked ? 'Desbloquear' : 'Bloquear'} ${track.name}`} aria-pressed={track.locked} onClick={() => onApply([{ op: 'track.update', trackId: track.id, locked: !track.locked }], track.locked ? 'Desbloquear track' : 'Bloquear track')}>{track.locked ? <Lock size={14}/> : <LockOpen size={14}/>}</button>
         </div>
         <div className="track-lane">
           {track.clips.map(clip => { const live = drag?.clip.id === clip.id; const start = live && drag.mode === 'move' ? drag.preview : clip.startFrame; const duration = live && drag.mode === 'trim' ? drag.preview : clip.durationInFrames; return <div key={clip.id} role="button" tabIndex={0} aria-pressed={selected === clip.id} aria-label={`${clip.name || clip.text || clip.id}, ${clock(start / fps)} a ${clock((start + duration) / fps)}`} className={`clip ${selected === clip.id ? 'selected' : ''}`} style={{ left: toPx(start), width: Math.max(6, toPx(duration)) }} onPointerDown={event => begin(event, track, clip, 'move')} onClick={() => setSelected(clip.id)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelected(clip.id); } }}>
