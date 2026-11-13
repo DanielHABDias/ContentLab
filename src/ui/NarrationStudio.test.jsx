@@ -1,7 +1,7 @@
 import { scenesFromScript } from '../audio/narration-service.js';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
-import { NarrationStudio } from './NarrationStudio.jsx';
+import { NarrationStudio, transcriptionTiming } from './NarrationStudio.jsx';
 import { localApi } from './local-api.js';
 
 vi.mock('./local-api.js', () => ({ localApi: { getSettings: vi.fn(), updateSettings: vi.fn(), setupStatus: vi.fn(), narration: vi.fn(), openProject: vi.fn(), revealNarration: vi.fn(), jobs: vi.fn(), cancelJob: vi.fn(), chooseMedia: vi.fn(), narrationImport: vi.fn(), updateTake: vi.fn(), reorderTakes: vi.fn(), deleteTake: vi.fn(), narrationPreview: vi.fn(), assembleNarration: vi.fn(), generateVoice: vi.fn(), voicePlan: vi.fn(), productionTranscribeNarration: vi.fn(), uploadTake: vi.fn(), runProjectAction: vi.fn(), systemApps: vi.fn(), closeApp: vi.fn() } }));
@@ -331,7 +331,7 @@ test('conclusão da transcrição atualiza o projeto usado pela aprovação', as
   localApi.openProject.mockResolvedValue(updated);
   const onUpdated = vi.fn();
   render(<NarrationStudio details={details('creator')} setup={setup()} onUpdated={onUpdated}/>);
-  await screen.findByText('Áudio final disponível. O Whisper está preparando os tempos de cada palavra em segundo plano.');
+  await screen.findByText('O áudio final já pode ser usado. Os tempos de cada palavra ficam prontos em segundo plano.');
   expect(onUpdated).not.toHaveBeenCalled();
   localApi.jobs.mockResolvedValue({ jobs: [{ ...job, state: 'completed' }] });
   await waitFor(() => expect(onUpdated).toHaveBeenCalledWith(updated), { timeout: 3500 });
@@ -348,7 +348,7 @@ test('áudio final aparece durante a transcrição quando o projeto recebe a mon
   view.rerender(<NarrationStudio details={{ ...details('creator'), project: { ...details('creator').project, revision: 8 } }} setup={setup()}/>);
   expect(await screen.findByRole('button', { name: 'Abrir pasta' })).toBeEnabled();
   expect(screen.getByRole('button', { name: 'Montando narração…' })).toBeDisabled();
-  expect(screen.getByText('Áudio final disponível. O Whisper está preparando os tempos de cada palavra em segundo plano.')).toBeInTheDocument();
+  expect(screen.getByText('O áudio final já pode ser usado. Os tempos de cada palavra ficam prontos em segundo plano.')).toBeInTheDocument();
 });
 
 test('painel da edição permite retomar a transcrição sem reabrir a gravação aprovada', async () => {
@@ -370,4 +370,25 @@ test('narração aprovada permite abrir a pasta e retomar os tempos, preservando
   expect(screen.getByRole('button', { name: 'Gerar transcrição palavra por palavra' })).toBeEnabled();
   fireEvent.click(screen.getByRole('button', { name: 'Abrir pasta' }));
   await waitFor(() => expect(localApi.revealNarration).toHaveBeenCalledWith('/p'));
+});
+
+test('ao pedir a transcrição mostra carregamento, progresso e tempo estimado', async () => {
+  localApi.narration.mockResolvedValue(state({ narration: { ...state().narration, assembled: { mediaId: 'voice', measures: measures(-16) } }, transcription: { status: 'failed', error: 'O Whisper falhou.' } }));
+  const startedAt = new Date(Date.now() - 30_000).toISOString();
+  const job = { id: 'job_t', kind: 'transcription', label: 'Transcrever voice', state: 'running', progress: { phase: 'Transcrevendo', done: 50, total: 100 }, startedAt };
+  localApi.productionTranscribeNarration.mockResolvedValue(job);
+  localApi.jobs.mockResolvedValueOnce({ jobs: [] }).mockResolvedValue({ jobs: [job] });
+  render(<NarrationStudio timingOnly details={details('creator')} setup={setup()}/>);
+  fireEvent.click(await screen.findByRole('button', { name: 'Gerar transcrição palavra por palavra' }));
+  expect(await screen.findByText('Transcrevendo com o Whisper')).toBeInTheDocument();
+  expect(screen.getByText(/· Transcrevendo · 50%/)).toBeInTheDocument();
+  expect(screen.getByText(/Tempo decorrido: 3\d s · faltam cerca de/)).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Gerar transcrição palavra por palavra' })).not.toBeInTheDocument();
+});
+
+test('estimativa só aparece com progresso suficiente', () => {
+  const now = Date.parse('2026-11-13T12:01:00Z');
+  expect(transcriptionTiming({ startedAt: '2026-11-13T12:00:00Z', progress: { done: 25, total: 100 } }, now)).toEqual({ elapsed: 60, percent: 25, remaining: 180 });
+  expect(transcriptionTiming({ startedAt: '2026-11-13T12:00:00Z', progress: { done: 2, total: 100 } }, now).remaining).toBeNull();
+  expect(transcriptionTiming(undefined, now)).toEqual({ elapsed: 0, percent: null, remaining: null });
 });

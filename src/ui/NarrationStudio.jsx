@@ -55,7 +55,7 @@ export function NarrationStudio({ timingOnly = false, readOnly = false, details,
   const assembly = { requesting: jobRequest === 'narration.assemble', job: jobs.find(job => job.kind === 'narration.assemble' && job.state === 'running'), error: assemblyError };
   if (!state) return <section className="workflow-card"><p className="empty-state">{error ? error.message : 'Carregando narração…'}</p></section>;
   const { narration } = state; const base = { path: projectPath, baseRevision: narration.revision };
-  if (timingOnly) return <div className="narration"><DependencyNotice error={error} onOpenSetup={onOpenSetup}/><JobsPanel jobs={jobs} uploads={[]} onCancel={async jobId => { await localApi.cancelJob(jobId); refreshJobs(); }}/><TranscriptionStatus transcription={state.transcription} assembled={narration.assembled} running={running} onRetry={() => startJob(() => localApi.productionTranscribeNarration({ path: projectPath }))}/></div>;
+  if (timingOnly) return <div className="narration"><DependencyNotice error={error} onOpenSetup={onOpenSetup}/><JobsPanel jobs={jobs} uploads={[]} onCancel={async jobId => { await localApi.cancelJob(jobId); refreshJobs(); }}/><TranscriptionStatus transcription={state.transcription} assembled={narration.assembled} running={running} job={jobs.find(job => job.state === 'running' && (job.kind === 'transcription' || job.kind === 'narration.assemble'))} requesting={jobRequest === 'transcription'} onRetry={() => startJob(() => localApi.productionTranscribeNarration({ path: projectPath }), 'transcription')}/></div>;
   const mode = details.project.narrationBy === 'ai' ? 'ai' : details.project.narrationBy === 'creator' ? 'creator' : null;
   // Voz de IA: a cena gerada mais recente de cada cena, na ordem do roteiro. Eu gravo: os takes na ordem da lista.
   const latest = new Map(narration.takes.filter(take => take.origin === 'generated' && !take.stale).map(take => [take.sceneId, take.id]));
@@ -73,7 +73,7 @@ export function NarrationStudio({ timingOnly = false, readOnly = false, details,
     {mode === 'creator' && <TreatmentSection hideFinal={readOnly} takeIds={finalTakeIds} projectPath={projectPath} narration={narration} previewSeconds={state.previewSeconds} act={act} startJob={startJob} assembly={assembly} running={running || Boolean(jobRequest)} base={base} setup={setup} onOpenSetup={onOpenSetup}/>}
     </fieldset>
     {readOnly && <section className="workflow-card"><FinalNarration projectPath={projectPath} narration={narration}/></section>}
-    {mode && <TranscriptionStatus transcription={state.transcription} assembled={narration.assembled} running={running} onRetry={() => startJob(() => localApi.productionTranscribeNarration({ path: projectPath }))}/>}
+    {mode && <TranscriptionStatus transcription={state.transcription} assembled={narration.assembled} running={running} job={jobs.find(job => job.state === 'running' && (job.kind === 'transcription' || job.kind === 'narration.assemble'))} requesting={jobRequest === 'transcription'} onRetry={() => startJob(() => localApi.productionTranscribeNarration({ path: projectPath }), 'transcription')}/>}
   </div>;
 }
 
@@ -332,12 +332,36 @@ function ScriptToRead({ scenes, projectPath }) {
   </section>;
 }
 
-function TranscriptionStatus({ transcription, assembled, running, onRetry }) {
+const duration = totalSeconds => { const value = Math.max(0, Math.round(totalSeconds)); const minutes = Math.floor(value / 60); return minutes ? `${minutes} min ${String(value % 60).padStart(2, '0')} s` : `${value} s`; };
+
+/** Tempo decorrido do trabalho e, quando já há progresso suficiente, a estimativa do que falta. */
+export function transcriptionTiming(job, now = Date.now()) {
+  const elapsed = job?.startedAt ? Math.max(0, (now - Date.parse(job.startedAt)) / 1000) : 0;
+  const percent = job?.progress?.total ? Math.min(100, Math.round((100 * job.progress.done) / job.progress.total)) : null;
+  const remaining = percent >= 5 && percent < 100 && elapsed >= 5 ? (elapsed * (100 - percent)) / percent : null;
+  return { elapsed, percent, remaining };
+}
+
+function TranscriptionProgress({ job }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 1000); return () => window.clearInterval(timer); }, []);
+  const { elapsed, percent, remaining } = transcriptionTiming(job, now);
+  const transcribing = !job || job.kind === 'transcription';
+  const phase = job?.progress?.phase || 'Preparando';
+  return <div className="transcription-progress" role="status">
+    <p><Loader2 size={16} className="spin" aria-hidden="true"/> <strong>{transcribing ? 'Transcrevendo com o Whisper' : 'Montando a narração'}</strong>{` · ${phase}${percent != null ? ` · ${percent}%` : ''}`}</p>
+    <span className={`voice-progress-bar${percent == null ? ' indeterminate' : ''}`} aria-hidden="true"><i style={percent == null ? undefined : { width: `${percent}%` }}/></span>
+    <small>{`Tempo decorrido: ${duration(elapsed)}`}{remaining != null ? ` · faltam cerca de ${duration(remaining)}` : ' · calculando o tempo restante…'}</small>
+    <small>O áudio final já pode ser usado. Os tempos de cada palavra ficam prontos em segundo plano.</small>
+  </div>;
+}
+
+function TranscriptionStatus({ transcription, assembled, running, job, requesting = false, onRetry }) {
   const ready = transcription?.status === 'ready' && !assembled?.outdated;
-  const working = running || transcription?.status === 'running';
+  const working = requesting || running || transcription?.status === 'running';
   return <section className="workflow-card narration-transcription" aria-labelledby="narration-transcript-title"><h2 id="narration-transcript-title">Tempos para edição</h2>
     <p>Depois de montar a narração, o Whisper large-v3 completo transcreve automaticamente cada palavra com início e fim.</p>
-    {ready ? <p role="status" className="ready">Transcrição pronta · {transcription.words} palavras com tempo. A IA já pode usá-las na edição.</p> : working ? <p role="status">Áudio final disponível. O Whisper está preparando os tempos de cada palavra em segundo plano.</p> : assembled ? <><p role="status">{transcription?.error || 'Os tempos para edição ainda não estão prontos. Gere a transcrição para a IA sincronizar as cenas e legendas.'}</p><button type="button" className="button quiet" disabled={assembled.outdated} onClick={onRetry}>Gerar transcrição palavra por palavra</button>{assembled.outdated && <p>Os takes mudaram. Monte a narração novamente.</p>}</> : <p>Grave ou gere os takes e monte a narração para preparar os tempos.</p>}
+    {ready ? <p role="status" className="ready">Transcrição pronta · {transcription.words} palavras com tempo. A IA já pode usá-las na edição.</p> : working ? <TranscriptionProgress job={job}/> : assembled ? <><p role="status">{transcription?.error || 'Os tempos para edição ainda não estão prontos. Gere a transcrição para a IA sincronizar as cenas e legendas.'}</p><button type="button" className="button quiet" disabled={assembled.outdated} onClick={onRetry}>Gerar transcrição palavra por palavra</button>{assembled.outdated && <p>Os takes mudaram. Monte a narração novamente.</p>}</> : <p>Grave ou gere os takes e monte a narração para preparar os tempos.</p>}
   </section>;
 }
 

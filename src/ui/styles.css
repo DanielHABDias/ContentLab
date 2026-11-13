@@ -333,6 +333,9 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-vi
 .read-chapter .read-scenes { margin: 12px 0 0; }
 .narration-transcription p { font-size: 14px; line-height: 1.6; }
 .narration-transcription .ready { color: #a7dfc8; }
+.transcription-progress { display: grid; gap: 8px; }
+.transcription-progress p { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 0; }
+.transcription-progress small { color: var(--muted, #9aa7b4); }
 
 /* Leitura em uma segunda tela, com rolagem única para o roteiro inteiro. */
 .narration-reader { min-height: 100vh; }
