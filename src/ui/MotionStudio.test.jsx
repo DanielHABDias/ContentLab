@@ -36,3 +36,14 @@ test('o resumo do beat diz o que aparece na tela', () => {
   expect(beatSummary(details.project.motion.beats[0])).toBe('GAIOLA.');
   expect(beatSummary(details.project.motion.beats[1])).toBe('VENOM 3 · com o áudio original');
 });
+
+test('Short usa prévias verticais e uma thumbnail no resultado da edição', async () => {
+  const short = structuredClone(details);
+  Object.assign(short.project, { type: 'short', aspectRatio: '9:16' });
+  short.project.creative.packaging.thumbnailB = 't1';
+  const { container } = render(<MotionPanel details={short}/>);
+  await screen.findByAltText('Prévia em 0:11');
+  expect(container.querySelector('.portrait-previews')).toBeInTheDocument();
+  expect(container.querySelector('.portrait-result')).toBeInTheDocument();
+  expect(container.querySelectorAll('.thumb-variants figure')).toHaveLength(1);
+});

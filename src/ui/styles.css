@@ -512,3 +512,29 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-vi
   .publish-actions .button { flex: 1 1 auto; }
   .publish-heading .button { width: 100%; }
 }
+
+/* Portrait projects keep their artwork in its native frame. Long videos retain their layout. */
+.portrait-project .publish-variants { grid-template-columns: minmax(0, 1fr); }
+.portrait-project .publish-variant { grid-template-columns: minmax(160px, 260px) minmax(0, 1fr); grid-template-rows: auto; align-items: center; }
+.portrait-project .publish-variants.vertical .publish-thumb { width: 100%; max-height: none; aspect-ratio: 9 / 16; }
+.portrait-project .publish-thumb img { object-fit: contain; }
+.portrait-project .publish-variant-body { gap: 18px; padding: clamp(20px, 4vw, 48px); }
+.portrait-project .publish-title { font-size: clamp(22px, 2.6vw, 34px); line-height: 1.2; }
+.portrait-packaging { grid-template-columns: minmax(0, 1fr) minmax(240px, 320px); align-items: start; }
+.portrait-packaging .thumb-variants, .portrait-result .thumb-variants { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+.portrait-packaging .thumb-variants figure, .portrait-result .thumb-variants figure { width: min(100%, 260px); }
+.portrait-packaging .thumb-variants img, .portrait-result .thumb-variants img { aspect-ratio: 9 / 16; max-height: none; object-fit: contain; }
+.portrait-result .final-video { display: block; width: auto; max-width: 100%; height: min(68vh, 640px); aspect-ratio: 9 / 16; object-fit: contain; margin: 20px auto; }
+.portrait-previews .preview-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 160px)); }
+.portrait-previews .preview-grid img { aspect-ratio: 9 / 16; object-fit: contain; background: #0b0b10; }
+.portrait-editor { grid-template-columns: minmax(0, 1fr) minmax(260px, 1fr); }
+.portrait-editor .preview-frame { width: min(100%, 29.25vh); aspect-ratio: 9 / 16; }
+.portrait-editor .preview-actions { flex-wrap: wrap; justify-content: center; }
+@media (max-width: 760px) {
+  .portrait-project .publish-variant { grid-template-columns: minmax(0, 1fr); }
+  .portrait-project .publish-variants.vertical .publish-thumb { width: min(100%, 240px); justify-self: center; }
+  .portrait-packaging, .portrait-editor { grid-template-columns: minmax(0, 1fr); }
+}
+.portrait-packaging > * { min-width: 0; }
+.portrait-packaging .thumb-panel label { display: grid; gap: 8px; min-width: 0; }
+.portrait-packaging .thumb-panel select { width: 100%; min-width: 0; max-width: 100%; text-overflow: ellipsis; }

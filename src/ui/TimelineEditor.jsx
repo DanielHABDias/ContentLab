@@ -65,7 +65,7 @@ export function TimelineEditor({ details, onUpdated, readOnly = false }) {
       <label className="check"><input type="checkbox" checked={safe} onChange={event => setSafe(event.target.checked)}/> Área segura</label>
     </div>
     {error && <div className="notice error" role="alert">{error}</div>}
-    <div className="editor-main">
+    <div className={`editor-main ${ratio === '9:16' ? 'portrait-editor' : ''}`}>
       <Preview path={path} project={project} frame={playhead} ratio={ratio} safe={safe}/>
       {!readOnly && <Inspector key={located?.clip.id || 'none'} located={located} ratio={ratio} fps={fps} playhead={playhead} media={project.media} components={components} busy={busy} onApply={apply}/>}
     </div>

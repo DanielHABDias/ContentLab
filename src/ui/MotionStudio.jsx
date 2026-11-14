@@ -43,10 +43,10 @@ export function FinalResult({ details, outputs: given }) {
   const packaging = details.project.creative?.packaging || {};
   const media = details.project.media || [];
   const labels = packagingVariants(details.project); const single = labels.length === 1;
-  const thumbs = labels.map(label => [label, packaging[`thumbnail${label}`]]).filter(([, id]) => id && media.some(item => item.id === id));
+  const thumbs = labels.map(label => [label, packaging[`thumbnail${label}`] || (label === 'A' ? packaging.thumbnailMediaId : null)]).filter(([, id]) => id && media.some(item => item.id === id));
   if (!outputs) return <section className="workflow-card"><p className="empty-state">Carregando o resultado…</p></section>;
   const latest = outputs.renders[0];
-  return <section className="workflow-card final-result" aria-labelledby="final-result-title">
+  return <section className={`workflow-card final-result ${details.project.aspectRatio === '9:16' ? 'portrait-result' : ''}`} aria-labelledby="final-result-title">
     <div className="section-title"><div><h2 id="final-result-title"><Film size={19} aria-hidden="true"/> Resultado final</h2><span>{latest ? `${latest.name} · ${new Date(latest.modifiedAt).toLocaleString()}` : 'O vídeo aparece aqui assim que o render terminar.'}</span></div>
       <div className="take-actions">{latest && <FolderButton projectPath={projectPath} folder="output" label="Abrir pasta do vídeo"/>}{outputs.thumbnails.length > 0 && <FolderButton projectPath={projectPath} folder="thumbnails" label="Abrir pasta das thumbnails"/>}{outputs.delivery && <FolderButton projectPath={projectPath} folder="entrega" label="Abrir pasta de entrega"/>}</div></div>
     {latest ? <video className="final-video" controls preload="metadata" src={outputUrl(projectPath, latest.name, latest.modifiedAt)} aria-label="Vídeo final"/> : <div className="empty-state"><strong>Nenhum vídeo renderizado ainda.</strong></div>}
@@ -82,7 +82,7 @@ export function MotionPanel({ details }) {
       </dl>
       <p className="scene-mix">{scenes.map(([scene, count]) => <span key={scene} className="chip">{SCENES[scene] || scene} · {count}</span>)}</p>
     </section>
-    <section className="workflow-card motion-previews" aria-labelledby="previews-title">
+    <section className={`workflow-card motion-previews ${details.project.aspectRatio === '9:16' ? 'portrait-previews' : ''}`} aria-labelledby="previews-title">
       <div className="section-title"><div><h2 id="previews-title">Prévias</h2><span>{previews.length ? `${previews.length} quadros conferidos pela IA antes do render` : 'Os quadros de prévia aparecem aqui quando a IA gerar.'}</span></div>{previews.length > 0 && <FolderButton projectPath={projectPath} folder="previas" label="Abrir pasta das prévias"/>}</div>
       {previews.length > 0 && <ul className="preview-grid">{previews.map(item => <li key={item.name}><a href={outputUrl(projectPath, item.name, item.modifiedAt)} target="_blank" rel="noreferrer"><img loading="lazy" src={outputUrl(projectPath, item.name, item.modifiedAt)} alt={`Prévia em ${clock(item.second)}`}/></a><small>{clock(item.second)}</small></li>)}</ul>}
     </section>

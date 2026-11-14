@@ -51,9 +51,9 @@ export function PublishView({ details, onBack, onEdit }) {
   const vertical = project.aspectRatio === '9:16';
   const reviewed = project.stages.find(stage => stage.id === 'review')?.state === 'approved';
   const labels = packagingVariants(project); const single = labels.length === 1;
-  const variants = labels.map(label => [label, packaging[`title${label}`], packaging[`thumbnail${label}`]]).filter(([, title, thumb]) => title || thumb);
+  const variants = labels.map(label => [label, packaging[`title${label}`], packaging[`thumbnail${label}`] || (label === 'A' ? packaging.thumbnailMediaId : null)]).filter(([, title, thumb]) => title || thumb);
   const hasThumb = id => id && media.some(item => item.id === id);
-  return <main id="main" className="workspace publish-view">
+  return <main id="main" className={`workspace publish-view ${vertical ? 'portrait-project' : ''}`}>
     <button className="text-button" aria-label="Voltar aos projetos" onClick={onBack}><ArrowLeft size={16}/> Projetos</button>
     <header className="publish-hero">
       <div>
