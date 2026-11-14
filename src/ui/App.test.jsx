@@ -4,7 +4,7 @@ import { App } from './App.jsx';
 import { localApi } from './local-api.js';
 
 vi.mock('./KitPreview.jsx', () => ({ ScenePlayer: ({ scene, vertical }) => <div data-testid="scene-player">{scene} {vertical ? '9:16' : '16:9'}</div>, BackgroundPlayer: ({ kind, tint }) => <div data-testid="background-player">{[kind, tint].filter(Boolean).join(' ')}</div> }));
-vi.mock('./local-api.js', () => ({ OFFLINE_EVENT: 'contentlab:connection', localApi: { listProjects: vi.fn(), openProject: vi.fn(), createProject: vi.fn(), chooseDirectory: vi.fn(), choosePackage: vi.fn(), chooseMedia: vi.fn(), inspectPackage: vi.fn(), importPackage: vi.fn(), importMedia: vi.fn(), runProjectAction: vi.fn(), renderPresets: vi.fn(), renderJobs: vi.fn(), enqueueRender: vi.fn(), cancelRender: vi.fn(), retryRender: vi.fn(), revealRender: vi.fn(), renderLog: vi.fn(), forgetProject: vi.fn(), revealProject: vi.fn(), renameProject: vi.fn(), changeProjectId: vi.fn(), duplicateProject: vi.fn(), exportProject: vi.fn(), deleteProject: vi.fn(), restoreProject: vi.fn(), projectActivities: vi.fn(), cancelProjectActivities: vi.fn(), setupStatus: vi.fn(), setupJobs: vi.fn(), setupInstall: vi.fn(), setupPause: vi.fn(), setupResume: vi.fn(), setupCancel: vi.fn(), setupOnboarding: vi.fn(), relocateProject: vi.fn(), getSettings: vi.fn(), about: vi.fn(), serverWork: vi.fn(), productionSlides: vi.fn(), productionAssemble: vi.fn(), productionThumbnails: vi.fn(), productionDeliverable: vi.fn(), productionLive: vi.fn(async () => ({ revision: 0, agentWaiting: null })), shutdown: vi.fn(), updateStatus: vi.fn(), updateCheck: vi.fn(), updateApply: vi.fn(), updateRollback: vi.fn(), updateConfigure: vi.fn(), validateFolder: vi.fn(), updateSettings: vi.fn(), storageUsage: vi.fn(), storageOrphans: vi.fn(), storageCleanup: vi.fn(), planMigration: vi.fn(), startMigration: vi.fn(), storageJobs: vi.fn(), cancelMigration: vi.fn(), backupRegistry: vi.fn(), registryBackups: vi.fn(), restoreRegistry: vi.fn(), importFiles: vi.fn(), importUrl: vi.fn(), mediaUsage: vi.fn(), removeMedia: vi.fn(), createCut: vi.fn(), removeCut: vi.fn(), transcribe: vi.fn(), transcript: vi.fn(), saveTranscript: vi.fn(), searchTranscripts: vi.fn(), jobs: vi.fn(), cancelJob: vi.fn(), upload: vi.fn(), brandDocs: vi.fn(), brandFileUrl: (kind, name) => `/api/v1/brand/file?kind=${kind}&name=${name}` } }));
+vi.mock('./local-api.js', () => ({ OFFLINE_EVENT: 'contentlab:connection', localApi: { listProjects: vi.fn(), openProject: vi.fn(), createProject: vi.fn(), chooseDirectory: vi.fn(), choosePackage: vi.fn(), chooseMedia: vi.fn(), inspectPackage: vi.fn(), importPackage: vi.fn(), importMedia: vi.fn(), runProjectAction: vi.fn(), renderPresets: vi.fn(), renderJobs: vi.fn(), enqueueRender: vi.fn(), cancelRender: vi.fn(), retryRender: vi.fn(), revealRender: vi.fn(), renderLog: vi.fn(), forgetProject: vi.fn(), revealProject: vi.fn(), renameProject: vi.fn(), changeProjectId: vi.fn(), duplicateProject: vi.fn(), exportProject: vi.fn(), deleteProject: vi.fn(), restoreProject: vi.fn(), projectActivities: vi.fn(), cancelProjectActivities: vi.fn(), setupStatus: vi.fn(), setupJobs: vi.fn(), setupInstall: vi.fn(), setupPause: vi.fn(), setupResume: vi.fn(), setupCancel: vi.fn(), setupOnboarding: vi.fn(), relocateProject: vi.fn(), getSettings: vi.fn(), about: vi.fn(), serverWork: vi.fn(), productionSlides: vi.fn(), productionAssemble: vi.fn(), productionThumbnails: vi.fn(), productionDeliverable: vi.fn(), productionLive: vi.fn(async () => ({ revision: 0, agentWaiting: null })), productionOutputs: vi.fn(async () => ({ renders: [], thumbnails: [] })), revealOutput: vi.fn(), shutdown: vi.fn(), updateStatus: vi.fn(), updateCheck: vi.fn(), updateApply: vi.fn(), updateRollback: vi.fn(), updateConfigure: vi.fn(), validateFolder: vi.fn(), updateSettings: vi.fn(), storageUsage: vi.fn(), storageOrphans: vi.fn(), storageCleanup: vi.fn(), planMigration: vi.fn(), startMigration: vi.fn(), storageJobs: vi.fn(), cancelMigration: vi.fn(), backupRegistry: vi.fn(), registryBackups: vi.fn(), restoreRegistry: vi.fn(), importFiles: vi.fn(), importUrl: vi.fn(), mediaUsage: vi.fn(), removeMedia: vi.fn(), createCut: vi.fn(), removeCut: vi.fn(), transcribe: vi.fn(), transcript: vi.fn(), saveTranscript: vi.fn(), searchTranscripts: vi.fn(), jobs: vi.fn(), cancelJob: vi.fn(), upload: vi.fn(), brandDocs: vi.fn(), brandFileUrl: (kind, name) => `/api/v1/brand/file?kind=${kind}&name=${name}` } }));
 
 function setupStatus(overrides = {}) {
   const items = [
@@ -239,10 +239,25 @@ test('render bloqueado oferece configurar as dependências', async () => {
   const details = realDetails({ stages: stageAt('review') });
   localApi.setupStatus.mockResolvedValue(gatedSetup(['ffprobe', 'zenity'])); localApi.listProjects.mockResolvedValue({ projects: [details.card] }); localApi.openProject.mockResolvedValue(details);
   render(<App/>); fireEvent.click(await screen.findByRole('button', { name: /abrir meu projeto/i }));
+  fireEvent.click(await screen.findByRole('button', { name: /editar projeto/i }));
   fireEvent.click(await screen.findByRole('button', { name: /continuar/i }));
   expect(await screen.findByText(/precisa de ffmpeg/i)).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /instalar dependências/i }));
   expect(await screen.findByRole('heading', { name: /prepare seu computador/i })).toBeInTheDocument();
+});
+
+test('projeto com a edição concluída abre na apresentação, com o que copiar', async () => {
+  const details = realDetails({ stages: stageAt('review') });
+  details.project.creative.packaging = { ...details.project.creative.packaging, titleA: 'Título de teste A', titleB: 'Título de teste B', description: 'Descrição de teste', tags: 'um, dois' };
+  localApi.setupStatus.mockResolvedValue(gatedSetup([])); localApi.listProjects.mockResolvedValue({ projects: [details.card] }); localApi.openProject.mockResolvedValue(details);
+  const writeText = vi.fn(async () => {}); Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+  render(<App/>); fireEvent.click(await screen.findByRole('button', { name: /abrir meu projeto/i }));
+  expect(await screen.findByText('Título de teste A')).toBeInTheDocument();
+  expect(screen.getByText('Descrição de teste')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /copiar título b/i }));
+  await waitFor(() => expect(writeText).toHaveBeenCalledWith('Título de teste B'));
+  fireEvent.click(screen.getByRole('button', { name: /editar projeto/i }));
+  expect(await screen.findByRole('button', { name: /apresentação/i })).toBeInTheDocument();
 });
 
 function settingsFixture() {
