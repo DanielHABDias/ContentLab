@@ -71,8 +71,18 @@ O campo `som.eventos` do catálogo informa nome, fração e volume sugeridos. Ao
 }
 ```
 
-As frações sugeridas se referem aos exemplos. Para `limiar`, o cruzamento usa a curva de easing do kit: `0,1 + 0,65 × inversaEase((limite - de) / (valor - de))`, se estiver dentro do intervalo. `ease` é a Bézier (0,16; 1; 0,3; 1) de `fx`; resolver a inversa por busca binária. O exemplo cruza em aproximadamente 20,29% do beat; arredondar para o frame e pôr o som nesse instante. Para listas de tamanho diferente, casar cada pista/plano/etapa com sua entrada. Não tocar efeitos de um evento que não ocorre.
+As frações sugeridas se referem aos exemplos de quatro segundos a 30 fps. Usar `narrativeEvents(scene, props, duration, fps)` de `src/motion/kit/narrative/events.js` para recalcular a lista do beat quando mudar quantidade de itens, duração, `virada`, escolha ou revelação. O helper não insere áudio por conta própria: sua saída vai em `beat.sfx`. Para `limiar`, ele calcula o primeiro frame do cruzamento usando a mesma curva do valor, inclusive em movimento descendente. Sem cruzamento, não há SFX de erro; `revelar: false` não produz som de revelação e bifurcação aberta não produz som de escolha. A lupa usa coordenadas da imagem fonte e compensa as margens de `contain`.
 
 ## Prévia isolada
 
-`node scripts/preview-narrative.mjs` gera três frames por cena e por orientação em `output/narrative-preview/`, com mídias próprias neutras. `--video` gera também duas prévias MP4 com som; `--output=<pasta>` escolhe o destino. O script não abre nem modifica projetos. Usar `npm run check` e `npm run qa:motion -- --only=b` para verificar o modo composição sem depender de voz clonada. As opções completas do QA incluem cenários narrados que exigem perfil de voz.
+`node scripts/preview-narrative.mjs` gera oito frames por cena e por orientação em `output/narrative-preview/`, com mídias próprias neutras. `--video` gera também duas prévias MP4 com som; `--horizontal` limita a 16:9; `--scenes=dossie,bifurcacao` revisa só as cenas indicadas; `--seconds=6` permite avaliar a leitura com outra duração; `--output=<pasta>` escolhe o destino. O script não abre nem modifica projetos. Usar `npm run check` e `npm run qa:motion -- --only=b` para verificar o modo composição sem depender de voz clonada. As opções completas do QA incluem cenários narrados que exigem perfil de voz.
+
+## Conferência de animação
+
+Comparar com `comparacao` (Versus) e com as entradas dos componentes HQ: deslocamento visível, antecipação, overshoot controlado, desaceleração e impacto motivado pela narrativa. Conferir cada cena ao longo do beat, não só no frame final. Testes de código não certificam qualidade visual.
+
+- Entradas de cartões ficam em um elemento interno; movimento espacial e perspectiva ficam no externo. Um `transform` de profundidade nunca pode cancelar a entrada ou mostrar um item antes do tempo.
+- Dossiê conecta e carimba pistas; cronologia distribui caminhos a partir da bifurcação; camadas saem inteiras; contradição risca e substitui a afirmação; dominó transfere o impacto entre peças.
+- Constelação expande e pulsa conexões; profundidade alterna foco entre planos; lupa se desloca do ponto observado e amplia a mesma fonte; escolha aproxima a opção selecionada e recua a alternativa.
+- Limiar tem preparação e impacto no cruzamento; balança recebe cargas e oscila com amortecimento; eco alinha recorrências; peça ausente encaixa a nova prova; convergência conduz sinais paralelos até o encontro.
+- Verificar 16:9 e 9:16, abertura, etapas intermediárias, virada, leitura final e preparação do corte. Repetir com limites de itens e com `revelar: false`/escolha aberta. Não aplicar explosões ou tremor constante: impactos são locais e não escondem a mídia ou a fonte.

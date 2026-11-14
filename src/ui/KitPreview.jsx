@@ -12,7 +12,7 @@ const FPS = 30;
 
 function SceneDemo({ scene, props, len }) {
   const Scene = SCENES[scene];
-  const demoAssets = { demo0: { src: shield, kind: 'image' }, demo1: { src: lamp, kind: 'image' }, demo2: { src: scale, kind: 'image' } };
+  const demoAssets = { demo0: { src: shield, kind: 'image', w: 1000, h: 1000 }, demo1: { src: lamp, kind: 'image', w: 1000, h: 1000 }, demo2: { src: scale, kind: 'image', w: 1000, h: 1000 } };
   const demo = (value, index = 0, nested = false) => Array.isArray(value) ? value.map((item, i) => demo(item, i, true)) : value && typeof value === 'object' ? { ...Object.fromEntries(Object.entries(value).map(([key, item]) => [key, demo(item, index, true)])), ...(nested && 'titulo' in value ? { midia: `media:demo${index % 3}` } : {}) } : value;
   const input = NARRATIVE_SCENES[scene] ? { ...demo(props), ...(scene === 'lupaEvidencia' ? { midia: 'media:demo0' } : {}) } : props;
   return <Assets.Provider value={demoAssets}><AbsoluteFill style={{ background: '#000' }}>{Scene ? <Scene len={len} {...input}/> : null}<Film/></AbsoluteFill></Assets.Provider>;

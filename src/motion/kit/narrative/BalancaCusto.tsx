@@ -1,7 +1,23 @@
 import React from 'react';
-import { Board, Card, Wire, Common, Item, useBoard, phase, C } from './shared';
-/** Peso é avaliação editorial explícita, nunca medida científica implícita. */
-export const BalancaCusto: React.FC<Common & { ganho:Item; custo:Item; pesoGanho?:number; pesoCusto?:number; fonte?:string }> = p => {
- const b=useBoard(),t=phase(b.f,p.len,.25,.4);const diff=Math.max(-1,Math.min(1,((p.pesoCusto??2)-(p.pesoGanho??1))/3));const tilt=diff*13*t,cx=b.w/2,cy=b.V?600:430,span=b.V?360:610;
- return <Board {...p}><div style={{position:'absolute',left:cx-16,top:cy-30,width:32,height:b.V?280:220,background:C.yellow,clipPath:'polygon(40% 0,60% 0,100% 100%,0 100%)'}}/><div style={{position:'absolute',left:cx,top:cy,transform:`rotate(${tilt}deg)`}}><div style={{position:'absolute',left:-span,top:0,width:span*2,height:15,background:C.yellow,boxShadow:`5px 5px 0 ${C.red}`}}/>{[p.ganho,p.custo].map((item,i)=><div key={i} style={{position:'absolute',left:i?span-160:-span-160,top:70,transform:`rotate(${-tilt}deg)`}}><Wire x1={160} y1={-70} x2={160} y2={0} progress={1}/><Card item={{...item,tom:i?'vermelho':'azul'}} len={p.len} x={0} y={0} w={320} h={b.V?210:190}/></div>)}</div><div style={{position:'absolute',bottom:0,left:40,color:'#bcc5d9',fontSize:26}}>{p.fonte||'PESO NARRATIVO · AVALIAÇÃO EDITORIAL'}</div></Board>;
+import { spring } from 'remotion';
+import { Board,Card,Caption,Impact,Common,Item,useBoard,phase,hit,C } from './shared';
+/** Loading each pan changes the balance; damped spring and counter-rotation preserve readable cards. */
+export const BalancaCusto:React.FC<Common & {ganho:Item;custo:Item;pesoGanho?:number;pesoCusto?:number;fonte?:string}> = p => {
+  const b=useBoard(),diff=Math.max(-1,Math.min(1,((p.pesoCusto??2)-(p.pesoGanho??1))/3)),at=hit(p.len,.4);
+  const settle=b.f<at?0:spring({frame:b.f-at,fps:b.fps,config:{damping:9,stiffness:130,mass:1.2}});
+  const preload=-6*phase(b.f,p.len,.1,.16)*(1-phase(b.f,p.len,.32,.1)),tilt=preload+diff*15*settle;
+  const cx=b.w/2,cy=b.V?550:330,span=b.V?300:540,enter=phase(b.f,p.len,0);
+  const sway=b.f<at?0:Math.sin((b.f-at)/b.fps*9)*Math.exp(-(b.f-at)/b.fps*3)*5;
+  return <Board {...p} impactos={[.28,.4]}>
+    <div style={{position:'absolute',left:cx-25,top:cy-10,width:50,height:b.V?340:280,background:C.yellow,clipPath:'polygon(44% 0,56% 0,100% 100%,0 100%)',transform:`scaleY(${enter})`,transformOrigin:'bottom'}}/>
+    <div style={{position:'absolute',left:cx,top:cy,transform:`rotate(${tilt}deg)`,width:0,height:0}}>
+      <div style={{position:'absolute',left:-span,top:0,width:span*2,height:18,background:C.yellow,boxShadow:`5px 5px 0 ${C.red}`,transform:`scaleX(${enter})`}}/>
+      {[p.ganho,p.custo].map((item,i)=><div key={i} style={{position:'absolute',left:i?span-160:-span-160,top:0,width:320,height:340,transform:`rotate(${-tilt+(i?1:-1)*sway}deg)`,transformOrigin:'160px 0'}}>
+        <svg style={{position:'absolute',left:0,top:0,width:320,height:130,opacity:phase(b.f,p.len,i?.28:.08)}}><path d="M 160 0 L 20 115 L 300 115 Z" fill="none" stroke={C.yellow} strokeWidth={5}/></svg>
+        <Card item={{...item,tom:i?'vermelho':'azul'}} len={p.len} x={0} y={125} w={320} h={b.V?250:220} at={hit(p.len,i?.28:.08)} entrada="cima"/>
+      </div>)}
+    </div>
+    <Impact at={at} x={cx} y={cy} size={230}/>
+    <Caption text={p.fonte||'PESO NARRATIVO · AVALIAÇÃO EDITORIAL'} x={40} y={b.h-25} w={b.w-80} size={26} style={{textAlign:'center'}}/>
+  </Board>;
 };

@@ -406,7 +406,7 @@
         "conclusao": "CRUZAR ANTES DE CONCLUIR"
       },
       "som": {
-        "regra": "SFX no campo sfx do beat; at = fração × duration. Ajustar à fala e às props; não toca automaticamente na prévia visual.",
+        "regra": "Eventos do exemplo de 4 s a 30 fps. Recalcular pelo conteúdo, duração e virada; narrativeEvents em src/motion/kit/narrative/events.js produz SFX em segundos, alinhados ao frame. A prévia visual da Documentação é muda.",
         "eventos": [
           {
             "name": "camera",
@@ -414,18 +414,33 @@
             "volume": 0.4
           },
           {
-            "name": "type",
-            "fracao": 0.13,
+            "name": "pop",
+            "fracao": 0.13333333333333333,
             "volume": 0.4
           },
           {
-            "name": "tick",
-            "fracao": 0.26,
+            "name": "camera",
+            "fracao": 0.25833333333333336,
             "volume": 0.4
+          },
+          {
+            "name": "type",
+            "fracao": 0.5,
+            "volume": 0.32
           },
           {
             "name": "ding",
-            "fracao": 0.76,
+            "fracao": 0.5416666666666666,
+            "volume": 0.32
+          },
+          {
+            "name": "tick",
+            "fracao": 0.5833333333333334,
+            "volume": 0.32
+          },
+          {
+            "name": "impact",
+            "fracao": 0.7583333333333333,
             "volume": 0.4
           }
         ]
@@ -460,7 +475,7 @@
         ]
       },
       "som": {
-        "regra": "SFX no campo sfx do beat; at = fração × duration. Ajustar à fala e às props; não toca automaticamente na prévia visual.",
+        "regra": "Eventos do exemplo de 4 s a 30 fps. Recalcular pelo conteúdo, duração e virada; narrativeEvents em src/motion/kit/narrative/events.js produz SFX em segundos, alinhados ao frame. A prévia visual da Documentação é muda.",
         "eventos": [
           {
             "name": "whoosh",
@@ -468,13 +483,18 @@
             "volume": 0.4
           },
           {
-            "name": "tick",
+            "name": "pop",
+            "fracao": 0.18333333333333332,
+            "volume": 0.4
+          },
+          {
+            "name": "camera",
             "fracao": 0.25,
             "volume": 0.4
           },
           {
-            "name": "ding",
-            "fracao": 0.43,
+            "name": "swish",
+            "fracao": 0.43333333333333335,
             "volume": 0.4
           }
         ]
@@ -504,26 +524,31 @@
         "conclusao": "AGORA FAZ SENTIDO"
       },
       "som": {
-        "regra": "SFX no campo sfx do beat; at = fração × duration. Ajustar à fala e às props; não toca automaticamente na prévia visual.",
+        "regra": "Eventos do exemplo de 4 s a 30 fps. Recalcular pelo conteúdo, duração e virada; narrativeEvents em src/motion/kit/narrative/events.js produz SFX em segundos, alinhados ao frame. A prévia visual da Documentação é muda.",
         "eventos": [
           {
             "name": "swish",
-            "fracao": 0.12,
+            "fracao": 0.11666666666666667,
             "volume": 0.4
           },
           {
             "name": "whoosh",
-            "fracao": 0.29,
+            "fracao": 0.30833333333333335,
             "volume": 0.4
           },
           {
             "name": "whoosh-rapido",
-            "fracao": 0.46,
+            "fracao": 0.49166666666666664,
             "volume": 0.4
           },
           {
             "name": "impact",
-            "fracao": 0.82,
+            "fracao": 0.625,
+            "volume": 0.4
+          },
+          {
+            "name": "sub",
+            "fracao": 0.8166666666666667,
             "volume": 0.4
           }
         ]
@@ -554,21 +579,26 @@
         "veredito": "TEM UMA CONTRADIÇÃO"
       },
       "som": {
-        "regra": "SFX no campo sfx do beat; at = fração × duration. Ajustar à fala e às props; não toca automaticamente na prévia visual.",
+        "regra": "Eventos do exemplo de 4 s a 30 fps. Recalcular pelo conteúdo, duração e virada; narrativeEvents em src/motion/kit/narrative/events.js produz SFX em segundos, alinhados ao frame. A prévia visual da Documentação é muda.",
         "eventos": [
           {
-            "name": "type",
+            "name": "whoosh",
             "fracao": 0,
             "volume": 0.4
           },
           {
             "name": "error",
-            "fracao": 0.42,
+            "fracao": 0.4166666666666667,
             "volume": 0.4
           },
           {
+            "name": "sub",
+            "fracao": 0.4166666666666667,
+            "volume": 0.3
+          },
+          {
             "name": "impact",
-            "fracao": 0.76,
+            "fracao": 0.7583333333333333,
             "volume": 0.4
           }
         ]
@@ -602,26 +632,31 @@
         "conclusao": "O CUSTO SE ESPALHA"
       },
       "som": {
-        "regra": "SFX no campo sfx do beat; at = fração × duration. Ajustar à fala e às props; não toca automaticamente na prévia visual.",
+        "regra": "Eventos do exemplo de 4 s a 30 fps. Recalcular pelo conteúdo, duração e virada; narrativeEvents em src/motion/kit/narrative/events.js produz SFX em segundos, alinhados ao frame. A prévia visual da Documentação é muda.",
         "eventos": [
           {
             "name": "tick",
-            "fracao": 0.12,
-            "volume": 0.4
-          },
-          {
-            "name": "camera",
-            "fracao": 0.27,
+            "fracao": 0.15833333333333333,
             "volume": 0.4
           },
           {
             "name": "impact",
-            "fracao": 0.42,
+            "fracao": 0.30833333333333335,
             "volume": 0.4
           },
           {
             "name": "sub",
-            "fracao": 0.57,
+            "fracao": 0.4583333333333333,
+            "volume": 0.4
+          },
+          {
+            "name": "impact",
+            "fracao": 0.6083333333333333,
+            "volume": 0.4
+          },
+          {
+            "name": "sub",
+            "fracao": 0.7583333333333333,
             "volume": 0.4
           }
         ]
@@ -666,21 +701,36 @@
         ]
       },
       "som": {
-        "regra": "SFX no campo sfx do beat; at = fração × duration. Ajustar à fala e às props; não toca automaticamente na prévia visual.",
+        "regra": "Eventos do exemplo de 4 s a 30 fps. Recalcular pelo conteúdo, duração e virada; narrativeEvents em src/motion/kit/narrative/events.js produz SFX em segundos, alinhados ao frame. A prévia visual da Documentação é muda.",
         "eventos": [
           {
             "name": "pop",
-            "fracao": 0.08,
-            "volume": 0.4
+            "fracao": 0.08333333333333333,
+            "volume": 0.3
           },
           {
             "name": "tick",
-            "fracao": 0.22,
-            "volume": 0.4
+            "fracao": 0.15833333333333333,
+            "volume": 0.3
           },
           {
-            "name": "ding",
+            "name": "pop",
+            "fracao": 0.24166666666666667,
+            "volume": 0.3
+          },
+          {
+            "name": "tick",
+            "fracao": 0.31666666666666665,
+            "volume": 0.3
+          },
+          {
+            "name": "swish",
             "fracao": 0.6,
+            "volume": 0.3
+          },
+          {
+            "name": "impact",
+            "fracao": 0.65,
             "volume": 0.4
           }
         ]
@@ -713,22 +763,32 @@
         ]
       },
       "som": {
-        "regra": "SFX no campo sfx do beat; at = fração × duration. Ajustar à fala e às props; não toca automaticamente na prévia visual.",
+        "regra": "Eventos do exemplo de 4 s a 30 fps. Recalcular pelo conteúdo, duração e virada; narrativeEvents em src/motion/kit/narrative/events.js produz SFX em segundos, alinhados ao frame. A prévia visual da Documentação é muda.",
         "eventos": [
           {
-            "name": "whoosh-lento",
+            "name": "whoosh",
             "fracao": 0,
             "volume": 0.4
           },
           {
             "name": "camera",
-            "fracao": 0.09,
+            "fracao": 0.11666666666666667,
+            "volume": 0.4
+          },
+          {
+            "name": "camera",
+            "fracao": 0.24166666666666667,
             "volume": 0.4
           },
           {
             "name": "swish",
-            "fracao": 0.18,
-            "volume": 0.4
+            "fracao": 0.35,
+            "volume": 0.3
+          },
+          {
+            "name": "swish",
+            "fracao": 0.6916666666666667,
+            "volume": 0.3
           }
         ]
       }
@@ -740,7 +800,7 @@
         "fundo": "estrelas | escuro | meio-tom | explosao (padrão estrelas)",
         "tom": "amarelo | vermelho | azul | #RRGGBB",
         "midia": "media:<id> da imagem",
-        "foco": "{ x: 0–1, y: 0–1 }, coordenadas no quadro contain",
+        "foco": "{ x: 0–1, y: 0–1 }, coordenadas na imagem fonte; margens de contain são compensadas",
         "ampliacao": "1,2–4 (padrão 2)",
         "detalhe": "legenda da observação",
         "fonte": "crédito da fonte"
@@ -756,7 +816,7 @@
         "fonte": "FONTE DA IMAGEM"
       },
       "som": {
-        "regra": "SFX no campo sfx do beat; at = fração × duration. Ajustar à fala e às props; não toca automaticamente na prévia visual.",
+        "regra": "Eventos do exemplo de 4 s a 30 fps. Recalcular pelo conteúdo, duração e virada; narrativeEvents em src/motion/kit/narrative/events.js produz SFX em segundos, alinhados ao frame. A prévia visual da Documentação é muda.",
         "eventos": [
           {
             "name": "camera",
@@ -770,7 +830,7 @@
           },
           {
             "name": "ding",
-            "fracao": 0.6,
+            "fracao": 0.48333333333333334,
             "volume": 0.4
           }
         ]
@@ -805,7 +865,7 @@
         "conclusao": "A ESCOLHA TEM UM CUSTO"
       },
       "som": {
-        "regra": "SFX no campo sfx do beat; at = fração × duration. Ajustar à fala e às props; não toca automaticamente na prévia visual.",
+        "regra": "Eventos do exemplo de 4 s a 30 fps. Recalcular pelo conteúdo, duração e virada; narrativeEvents em src/motion/kit/narrative/events.js produz SFX em segundos, alinhados ao frame. A prévia visual da Documentação é muda.",
         "eventos": [
           {
             "name": "pop",
@@ -814,12 +874,17 @@
           },
           {
             "name": "swish",
-            "fracao": 0.32,
+            "fracao": 0.31666666666666665,
             "volume": 0.4
           },
           {
             "name": "impact",
             "fracao": 0.6,
+            "volume": 0.4
+          },
+          {
+            "name": "sub",
+            "fracao": 0.7583333333333333,
             "volume": 0.4
           }
         ]
@@ -851,22 +916,27 @@
         "fonte": "SIMULAÇÃO"
       },
       "som": {
-        "regra": "SFX no campo sfx do beat; at = fração × duration. Ajustar à fala e às props; não toca automaticamente na prévia visual.",
+        "regra": "Eventos do exemplo de 4 s a 30 fps. Recalcular pelo conteúdo, duração e virada; narrativeEvents em src/motion/kit/narrative/events.js produz SFX em segundos, alinhados ao frame. A prévia visual da Documentação é muda.",
         "eventos": [
           {
             "name": "tick",
-            "fracao": 0.1,
+            "fracao": 0.11666666666666667,
             "volume": 0.4
           },
           {
             "name": "error",
-            "fracao": 0.20287403743648158,
+            "fracao": 0.45,
             "volume": 0.4
           },
           {
             "name": "impact",
-            "fracao": 0.65,
-            "volume": 0.4
+            "fracao": 0.45,
+            "volume": 0.32
+          },
+          {
+            "name": "ding",
+            "fracao": 0.7,
+            "volume": 0.3
           }
         ]
       }
@@ -897,22 +967,27 @@
         "pesoCusto": 3
       },
       "som": {
-        "regra": "SFX no campo sfx do beat; at = fração × duration. Ajustar à fala e às props; não toca automaticamente na prévia visual.",
+        "regra": "Eventos do exemplo de 4 s a 30 fps. Recalcular pelo conteúdo, duração e virada; narrativeEvents em src/motion/kit/narrative/events.js produz SFX em segundos, alinhados ao frame. A prévia visual da Documentação é muda.",
         "eventos": [
           {
             "name": "camera",
-            "fracao": 0,
+            "fracao": 0.08333333333333333,
             "volume": 0.4
           },
           {
-            "name": "whoosh",
-            "fracao": 0.25,
+            "name": "swish",
+            "fracao": 0.2833333333333333,
+            "volume": 0.4
+          },
+          {
+            "name": "impact",
+            "fracao": 0.4,
             "volume": 0.4
           },
           {
             "name": "sub",
-            "fracao": 0.65,
-            "volume": 0.4
+            "fracao": 0.4,
+            "volume": 0.28
           }
         ]
       }
@@ -945,21 +1020,31 @@
         "motivo": "A PROMESSA VOLTA"
       },
       "som": {
-        "regra": "SFX no campo sfx do beat; at = fração × duration. Ajustar à fala e às props; não toca automaticamente na prévia visual.",
+        "regra": "Eventos do exemplo de 4 s a 30 fps. Recalcular pelo conteúdo, duração e virada; narrativeEvents em src/motion/kit/narrative/events.js produz SFX em segundos, alinhados ao frame. A prévia visual da Documentação é muda.",
         "eventos": [
           {
             "name": "camera",
             "fracao": 0,
-            "volume": 0.4
+            "volume": 0.32
           },
           {
             "name": "tick",
-            "fracao": 0.14,
-            "volume": 0.4
+            "fracao": 0.14166666666666666,
+            "volume": 0.32
+          },
+          {
+            "name": "camera",
+            "fracao": 0.2833333333333333,
+            "volume": 0.32
           },
           {
             "name": "swish",
             "fracao": 0.55,
+            "volume": 0.4
+          },
+          {
+            "name": "impact",
+            "fracao": 0.7583333333333333,
             "volume": 0.4
           }
         ]
@@ -994,7 +1079,7 @@
         "pergunta": "E O QUE VEIO ANTES?"
       },
       "som": {
-        "regra": "SFX no campo sfx do beat; at = fração × duration. Ajustar à fala e às props; não toca automaticamente na prévia visual.",
+        "regra": "Eventos do exemplo de 4 s a 30 fps. Recalcular pelo conteúdo, duração e virada; narrativeEvents em src/motion/kit/narrative/events.js produz SFX em segundos, alinhados ao frame. A prévia visual da Documentação é muda.",
         "eventos": [
           {
             "name": "camera",
@@ -1007,8 +1092,13 @@
             "volume": 0.4
           },
           {
-            "name": "impact",
+            "name": "whoosh",
             "fracao": 0.6,
+            "volume": 0.4
+          },
+          {
+            "name": "impact",
+            "fracao": 0.6333333333333333,
             "volume": 0.4
           }
         ]
@@ -1042,27 +1132,37 @@
         }
       },
       "som": {
-        "regra": "SFX no campo sfx do beat; at = fração × duration. Ajustar à fala e às props; não toca automaticamente na prévia visual.",
+        "regra": "Eventos do exemplo de 4 s a 30 fps. Recalcular pelo conteúdo, duração e virada; narrativeEvents em src/motion/kit/narrative/events.js produz SFX em segundos, alinhados ao frame. A prévia visual da Documentação é muda.",
         "eventos": [
           {
             "name": "camera",
             "fracao": 0,
-            "volume": 0.4
+            "volume": 0.32
           },
           {
             "name": "tick",
             "fracao": 0.1,
-            "volume": 0.4
+            "volume": 0.32
           },
           {
-            "name": "swish",
+            "name": "camera",
             "fracao": 0.2,
-            "volume": 0.4
+            "volume": 0.32
+          },
+          {
+            "name": "whoosh-lento",
+            "fracao": 0.43333333333333335,
+            "volume": 0.3
           },
           {
             "name": "impact",
             "fracao": 0.65,
             "volume": 0.4
+          },
+          {
+            "name": "sub",
+            "fracao": 0.65,
+            "volume": 0.3
           }
         ]
       }

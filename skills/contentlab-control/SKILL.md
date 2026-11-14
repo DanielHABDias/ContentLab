@@ -44,3 +44,5 @@ Para pacotes, use a skill `contentlab-packages`.
 ## Componentes narrativos
 
 Para investigação, ramificações, revelações e relações causais, consultar [as 14 cenas narrativas](../../docs/MOTION-NARRATIVE.md) e as props/exemplos atuais em `motion_kit`. Reutilizar a cena apropriada; não criar TSX no projeto. Os eventos de som do catálogo usam frações do beat: `sfx.at = fracao × duration`, ajustadas à fala e à virada configurada. Conferir frames antes, durante e depois da virada em 16:9 e 9:16.
+
+Na revisão de animação, comparar cada cena com o Versus (`comparacao`): entrada, progressão, virada, desaceleração e leitura final. Inspecionar sequências de frames e prévia animada, não apenas stills finais. O movimento espacial não pode sobrescrever a entrada do cartão. Recalcular os SFX com `narrativeEvents` quando as props ou a duração mudarem, conforme o guia das cenas narrativas.
