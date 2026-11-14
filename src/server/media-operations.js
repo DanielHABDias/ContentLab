@@ -19,7 +19,7 @@ const MAX_UPLOAD = 4 * 1024 ** 3;
 export class MediaOperations {
   constructor(app, { transcriber = null } = {}) {
     this.app = app;
-    this.jobs = new JobQueue();
+    this.jobs = new JobQueue({ scheduler: app.workScheduler, file: path.join(app.dataDirectory, 'processing-jobs.json') });
     this.transcriberFactory = transcriber || (async () => new PortugueseTranscriber({ binary: await app.setup.toolPath('whisper-cli'), modelPath: app.setup.modelPath('whisper-large-v3') }));
   }
 
@@ -167,7 +167,7 @@ export class MediaOperations {
       if (!media.transcript || media.transcript.model !== key.model || media.transcript.words !== (meta.words || 0)) await this.app.runProjectAction({ path: directory, baseRevision: project.revision, action: { type: 'media.transcript.set', mediaId, transcript: { status: 'raw', model: key.model, language: key.language, segments: meta.segments, words: meta.words || 0, updatedAt: new Date().toISOString() } } });
       return { status: 'unchanged', segments: meta.segments };
     }
-    if (this.jobs.list({ projectPath: directory }).some(job => job.kind === 'transcription' && job.state === 'running' && job.result === null && job.label.endsWith(mediaId))) throw new LifecycleError('TRANSCRIPTION_RUNNING', 'Esta mídia já está sendo transcrita');
+    if (this.jobs.list({ projectPath: directory }).some(job => job.kind === 'transcription' && ['queued', 'running'].includes(job.state) && job.result === null && job.label.endsWith(mediaId))) throw new LifecycleError('TRANSCRIPTION_RUNNING', 'Esta mídia já está sendo transcrita');
     const source = await this.app.resolveMediaPath(media);
     if (!source) throw new Error('Arquivo da mídia não encontrado');
     const transcriber = await this.transcriberFactory();

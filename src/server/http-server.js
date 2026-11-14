@@ -79,6 +79,10 @@ export function createContentLabServer({ dataDirectory = roots.dataDirectory, st
       if (narrationMatch && narrationRoutes[narrationMatch[1]]) return json(response, 200, await application[narrationRoutes[narrationMatch[1]]](await readJson(request)));
       if (request.method === 'POST' && url.pathname === '/api/v1/system/apps') return json(response, 200, await application.systemApps());
       if (request.method === 'POST' && url.pathname === '/api/v1/system/close-app') return json(response, 200, await application.systemCloseApp(await readJson(request)));
+      if (request.method === 'GET' && url.pathname === '/api/v1/queue') return json(response, 200, await application.processingQueue());
+      const queueRoutes = { cancel: 'cancelProcessingJob', 'cancel-all': 'cancelProcessingQueue', clear: 'clearProcessingHistory' };
+      const queueMatch = request.method === 'POST' && url.pathname.match(/^\/api\/v1\/queue\/([a-z-]+)$/);
+      if (queueMatch && queueRoutes[queueMatch[1]]) return json(response, 200, await application[queueRoutes[queueMatch[1]]](await readJson(request)));
       if (request.method === 'POST' && url.pathname === '/api/v1/jobs/cancel') return json(response, 200, application.cancelJob(await readJson(request)));
       const getRoutes = { '/api/v1/settings': 'getSettings', '/api/v1/storage/usage': 'storageUsage', '/api/v1/storage/orphans': 'storageOrphans', '/api/v1/storage/jobs': 'storageJobs', '/api/v1/registry/backups': 'listRegistryBackups', '/api/v1/update/status': 'updateStatus' };
       if (request.method === 'GET' && getRoutes[url.pathname]) return json(response, 200, await application[getRoutes[url.pathname]]());

@@ -13,3 +13,16 @@ test('shows visible render percentage and updates progress without reloading', a
   await waitFor(() => expect(screen.getByText('Concluído · 100%')).toBeInTheDocument(), { timeout: 2500 });
   expect(screen.getByRole('button', { name: 'Mostrar arquivo' })).toBeInTheDocument();
 });
+
+test('project panel shows only the running render or the most recent result', async () => {
+  localApi.renderPresets.mockResolvedValue({ presets: [] });
+  localApi.renderJobs.mockResolvedValue({ jobs: [
+    { id: 'queued', state: 'queued', progress: 0, phase: 'Aguardando', attempt: 1 },
+    { id: 'running', state: 'running', progress: .2, phase: 'Trabalho atual', attempt: 1 },
+    { id: 'old', state: 'failed', progress: 0, phase: 'Erro antigo', attempt: 1 },
+  ] });
+  render(<RenderPanel projectPath="/another-project"/>);
+  expect(await screen.findByText('Renderizando · 20%')).toBeInTheDocument();
+  expect(screen.queryByText(/Erro antigo/)).not.toBeInTheDocument(); expect(screen.queryByText('Na fila · 0%')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Ver fila de processamento' })).toBeInTheDocument();
+});

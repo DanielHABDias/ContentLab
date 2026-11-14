@@ -77,6 +77,9 @@ Um servidor MCP não inicia mensagens no chat por conta própria. Depois de envi
 | `chapters_get` | Capítulos a partir dos tempos reais da narração |
 | `thumbnails_generate` | Gera as thumbnails A e B (título sobre um frame do vídeo, ou sobre um degradê) e grava na embalagem |
 | `render_start` | Envia o render à fila persistente; o agente avisa e encerra a resposta |
+| `queue_list` | Fila global de processamento, posições e histórico; um trabalho por vez entre todos os projetos |
+| `queue_cancel`, `queue_cancel_all` | Cancela um trabalho ou todos os ativos e aguardando |
+| `queue_clear_history` | Limpa só os registros encerrados, preservando fila ativa e arquivos |
 | `job_status` | Consulta única do estado; render é consultado na retomada pelo usuário |
 | `job_wait` | Espera narração, montagem, transcrição ou importação |
 | `deliverable_build`, `project_export` | Monta `output/entrega/` (roteiro.md, embalagem.md com capítulos, thumbnail-A/B no longo ou thumbnail-A no Short, video.mp4, verificacao.md) e exporta ZIP ou `.contentlab` |

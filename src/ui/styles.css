@@ -538,3 +538,21 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-vi
 .portrait-packaging > * { min-width: 0; }
 .portrait-packaging .thumb-panel label { display: grid; gap: 8px; min-width: 0; }
 .portrait-packaging .thumb-panel select { width: 100%; min-width: 0; max-width: 100%; text-overflow: ellipsis; }
+
+.processing-queue h1 { display: flex; align-items: center; gap: 12px; }
+.processing-queue section + section { margin-top: 32px; }
+.processing-jobs { list-style: none; padding: 0; display: grid; gap: 14px; }
+.processing-job { border: 1px solid var(--border, #30303d); border-radius: 14px; padding: 20px; background: var(--surface, #171720); }
+.processing-job.running { border-color: #9b8afb; }
+.processing-job-heading { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.processing-job h3 { margin: 0 0 6px; }
+.processing-job p { margin: 6px 0; overflow-wrap: anywhere; }
+.processing-job small { display: block; color: #b6b6c4; }
+.processing-job .take-actions { margin-top: 14px; flex-wrap: wrap; }
+.queue-state { font-size: 13px; font-weight: 700; }
+.queue-state.running { color: #bcaaff; }
+.queue-state.queued { color: #e7c584; }
+.queue-state.failed, .queue-error { color: #ff9caa; }
+.queue-state.completed { color: #98d8bc; }
+.processing-queue .home-header .take-actions { flex-wrap: wrap; }
+@media (max-width: 760px) { .processing-queue .home-header { align-items: stretch; flex-direction: column; } .processing-job-heading { flex-wrap: wrap; } }

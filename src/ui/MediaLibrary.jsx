@@ -28,10 +28,10 @@ export function MediaLibrary({ details, onBack, onUpdated, setup, onOpenSetup })
   const refresh = useCallback(async () => onUpdated(await localApi.openProject(projectPath)), [onUpdated, projectPath]);
   const loadJobs = useCallback(async () => { try { const value = await localApi.jobs(projectPath); setJobs(value.jobs); return value.jobs; } catch { return []; } }, [projectPath]);
   useEffect(() => { loadJobs(); }, [loadJobs]);
-  const running = jobs.some(job => job.state === 'running');
+  const running = jobs.some(job => ['queued', 'running'].includes(job.state));
   useEffect(() => {
     if (!running) return undefined;
-    const timer = window.setInterval(async () => { const next = await loadJobs(); if (!next.some(job => job.state === 'running')) refresh(); }, 1000);
+    const timer = window.setInterval(async () => { const next = await loadJobs(); if (!next.some(job => ['queued', 'running'].includes(job.state))) refresh(); }, 1000);
     return () => window.clearInterval(timer);
   }, [running, loadJobs, refresh]);
   const act = async task => { setError(null); try { await task(); } catch (issue) { setError(issue); } };
@@ -138,8 +138,8 @@ export function JobsPanel({ jobs, uploads, onCancel }) {
   if (!jobs.length && !uploads.length) return null;
   return <section className="workflow-card jobs" aria-label="Tarefas de mídia" aria-live="polite"><ul className="media-list">
     {uploads.map(item => <li key={item.id}><span><strong>{item.name}</strong><small>{item.state === 'enviando' ? `Enviando ${Math.round((100 * item.loaded) / Math.max(1, item.total))}%` : item.state}</small></span></li>)}
-    {jobs.slice(0, 8).map(job => <li key={job.id}><span><strong>{job.label}</strong><small>{job.progress.phase}{job.progress.total ? ` · ${job.progress.done}/${job.progress.total}` : ''}{job.error ? ` — ${job.error}` : ''}{job.result?.imported != null ? ` · ${job.result.imported} importado(s), ${job.result.duplicates} repetido(s), ${job.result.failed} com falha` : ''}{job.result?.generated != null ? ` · ${job.result.generated} gerada(s), ${job.result.cached} do cache` : ''}</small>{job.state === 'running' && job.progress.total ? <span className="progress"><i style={{ width: `${Math.round((100 * job.progress.done) / job.progress.total)}%` }}/></span> : null}</span>
-      {job.state === 'running' ? <button className="mini-button" onClick={() => onCancel(job.id)}>Cancelar</button> : <span className={job.state === 'completed' ? 'available' : 'missing'}>{({ completed: 'Concluído', failed: 'Falhou', cancelled: 'Cancelado' })[job.state]}</span>}</li>)}
+    {jobs.slice(0, 8).map(job => <li key={job.id}><span><strong>{job.label}</strong><small>{job.progress.phase}{job.progress.total ? ` · ${job.progress.done}/${job.progress.total}` : ''}{job.error ? ` — ${job.error}` : ''}{job.result?.imported != null ? ` · ${job.result.imported} importado(s), ${job.result.duplicates} repetido(s), ${job.result.failed} com falha` : ''}{job.result?.generated != null ? ` · ${job.result.generated} gerada(s), ${job.result.cached} do cache` : ''}</small>{['queued', 'running'].includes(job.state) && job.progress.total ? <span className="progress"><i style={{ width: `${Math.round((100 * job.progress.done) / job.progress.total)}%` }}/></span> : null}</span>
+      {['queued', 'running'].includes(job.state) ? <button className="mini-button" onClick={() => onCancel(job.id)}>Cancelar</button> : <span className={job.state === 'completed' ? 'available' : 'missing'}>{({ completed: 'Concluído', failed: 'Falhou', cancelled: 'Cancelado' })[job.state]}</span>}</li>)}
   </ul></section>;
 }
 

@@ -65,7 +65,7 @@ export class NarrationOperations {
     const transcript = await new TranscriptStore(directory).read(media.id);
     const ready = !session.assembled.outdated && transcript?.meta?.sha256 === media.sha256 && transcript.meta.model === 'whisper-large-v3' && validWordTimings(transcript.words) && media.transcript?.model === 'whisper-large-v3' && media.transcript.words === transcript.words.length;
     const job = this.jobs.list({ projectPath: directory }).find(item => item.kind === 'transcription' && item.label.endsWith(media.id));
-    return { status: ready ? 'ready' : job?.state === 'running' ? 'running' : job?.state === 'failed' ? 'failed' : 'pending', mediaId: media.id, model: 'whisper-large-v3', words: ready ? transcript.words.length : 0, error: ready ? null : job?.error || null };
+    return { status: ready ? 'ready' : ['queued', 'running'].includes(job?.state) ? job.state : job?.state === 'failed' ? 'failed' : 'pending', mediaId: media.id, model: 'whisper-large-v3', words: ready ? transcript.words.length : 0, error: ready ? null : job?.error || null };
   }
 
   async importFiles({ path: directory, sources = [] }) {
@@ -265,7 +265,7 @@ export class NarrationOperations {
   }
 
   /** Uma geração de voz por vez: as cenas do projeto e a amostra de conferência disputam a mesma RAM. */
-  #voiceRunning() { return this.jobs.list().some(job => ['voice.generate', 'voice.check'].includes(job.kind) && job.state === 'running'); }
+  #voiceRunning() { return this.jobs.list().some(job => ['voice.generate', 'voice.check'].includes(job.kind) && ['queued', 'running'].includes(job.state)); }
 
   #stagingRoot() { return path.join(this.app.dataDirectory, 'voices', '.staging'); }
 
@@ -314,7 +314,6 @@ export class NarrationOperations {
     await this.app.requireFeature('voice.synthetic');
     const profile = await this.profiles.read(profileId);
     if (!profile.consent?.granted) throw Object.assign(new Error('Perfil sem consentimento do titular'), { code: 'CONSENT_REQUIRED' });
-    if (this.#voiceRunning()) throw new LifecycleError('VOICE_BUSY', 'Já existe uma geração de voz em andamento; aguarde ou cancele');
     const lockDirectory = path.join(this.app.dataDirectory, 'voices', '.generation');
     await mkdir(lockDirectory, { recursive: true });
     const owner = await readLock(lockDirectory);
@@ -338,7 +337,7 @@ export class NarrationOperations {
     await this.app.ready();
     const mode = voiceMode(this.app.settings.voice?.mode);
     const plan = await this.app.setup.voicePlan({ mode: mode.id });
-    return { plan: { ...plan, mode: mode.id }, modes: VOICE_MODES, revision: this.app.settings.revision };
+    return { queueBusy: Boolean(this.app.workScheduler.active), plan: { ...plan, mode: mode.id }, modes: VOICE_MODES, revision: this.app.settings.revision };
   }
 
   /**
@@ -347,6 +346,7 @@ export class NarrationOperations {
    */
   async generate({ path: directory, profileId, sceneIds }) {
     await this.app.requireFeature('voice.synthetic');
+    if (this.jobs.list({ projectPath: directory }).some(job => job.kind === 'voice.generate' && ['queued', 'running'].includes(job.state))) throw new LifecycleError('VOICE_BUSY', 'Este projeto já tem uma geração de voz na fila; aguarde ou cancele');
     if (!profileId) throw new LifecycleError('VOICE_PROFILE_REQUIRED', 'Escolha um perfil de voz: grave a sua voz em “Minha voz” antes de gerar a narração');
     const project = await readProjectDirectory(directory);
     const profile = await this.profiles.read(profileId);
@@ -354,7 +354,6 @@ export class NarrationOperations {
     const all = scenesFromScript(project.creative?.script);
     const scenes = sceneIds?.length ? sceneIds.map(id => all.find(scene => scene.id === id) || (() => { throw new Error(`Cena desconhecida: ${id}`); })()) : all;
     if (!scenes.length) throw new Error('O roteiro não tem texto em blocos de narração');
-    if (this.#voiceRunning()) throw new LifecycleError('VOICE_BUSY', 'Já existe uma geração de voz em andamento; aguarde ou cancele');
     // Uma geração por computador também entre processos (interface, CLI e MCP): cada uma pode usar a RAM quase toda.
     const lockDirectory = path.join(this.app.dataDirectory, 'voices', '.generation');
     await mkdir(lockDirectory, { recursive: true });

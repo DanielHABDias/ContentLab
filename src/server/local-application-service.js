@@ -27,6 +27,7 @@ import { FfmpegRenderer } from '../render/ffmpeg-renderer.js';
 import { ComponentRegistry } from '../timeline/component-registry.js';
 import { RemotionComponentRuntime } from '../render/remotion-component-runtime.js';
 import { fileURLToPath } from 'node:url';
+import { WorkScheduler } from './work-scheduler.js';
 import { RenderQueue } from '../render/render-queue.js';
 import { BUNDLED_COMPONENTS } from '../timeline/components/catalog.js';
 
@@ -41,6 +42,8 @@ export class LocalApplicationService {
     this.registry = new ProjectRegistry(this.dataDirectory, { scanRoots: () => [this.projectsDirectory] });
     this.injected = { media: Boolean(media), renderer: Boolean(renderer), setup: Boolean(setup) };
     this.defaults = { roots: { projects: this.projectsDirectory, media: path.join(this.dataDirectory, 'media'), renderCache: path.resolve(renderCacheDirectory || path.join(this.dataDirectory, 'render')), tools: path.resolve(toolsDirectory || path.join(this.dataDirectory, 'tools')), renderOutput: null }, limits: { cacheMaxBytes: null, minFreeBytes: 2 * 1024 ** 3 } };
+    this.workScheduler = new WorkScheduler();
+    this.renderOutputReservations = new Set();
     this.mediaOps = new MediaOperations(this, { transcriber });
     this.narrationOps = new NarrationOperations(this, { voice });
     this.editOps = new EditOperations(this);
@@ -61,11 +64,11 @@ export class LocalApplicationService {
     this.opener = opener;
     this.activities = activities;
     this.setup = setup || new SetupService({ toolsDirectory: toolsDirectory || path.join(this.dataDirectory, 'tools') });
-    this.renderQueue = new RenderQueue(path.join(this.dataDirectory, 'render-jobs.json'), { render: (...args) => this.renderer.render(...args) });
+    this.renderQueue = new RenderQueue(path.join(this.dataDirectory, 'render-jobs.json'), { render: (...args) => this.renderer.render(...args) }, { scheduler: this.workScheduler });
   }
 
   /** Carrega as configurações uma vez e aplica as raízes aos serviços. */
-  ready() { this.readyPromise ||= this.settingsStore.read().then(async settings => { this.#apply(settings); await this.#prepareComponents(); await this.renderQueue.restore(); return this.settings; }); return this.readyPromise; }
+  ready() { this.readyPromise ||= this.settingsStore.read().then(async settings => { this.#apply(settings); await this.#prepareComponents(); await this.mediaOps.jobs.restore(); await this.renderQueue.restore(); for (const job of this.renderQueue.jobs) if (job.payload?.options?.output) this.renderOutputReservations.add(job.payload.options.output); return this.settings; }); return this.readyPromise; }
 
   /** Registra (ou atualiza, se a fonte mudou) as cenas embutidas do catálogo. */
   async #prepareComponents() {
@@ -521,7 +524,7 @@ export class LocalApplicationService {
 
   /** Cancela o que está rodando para que os processos filhos (FFmpeg, voz, downloads) terminem junto. */
   async prepareShutdown() {
-    for (const job of this.mediaOps.jobs.list()) if (job.state === 'running') { try { this.mediaOps.jobs.cancel(job.id); } catch { /* já terminou */ } }
+    for (const job of this.mediaOps.jobs.list()) if (['queued', 'running'].includes(job.state)) { try { this.mediaOps.jobs.cancel(job.id); } catch { /* já terminou */ } }
     for (const job of this.setup.jobs()) if (['running', 'downloading'].includes(job.state)) { try { this.setup.cancel(job.id); } catch { /* já terminou */ } }
     for (const job of this.storage.jobs()) if (job.state === 'running') { try { this.storage.cancel(job.id); } catch { /* já terminou */ } }
     this.activities.cancelAll();
@@ -553,7 +556,7 @@ export class LocalApplicationService {
     const targetDirectory = outputDirectory ? path.resolve(outputDirectory) : this.settings.roots.renderOutput || path.join(path.resolve(directory), 'output');
     await mkdir(targetDirectory, { recursive: true });
     const output = path.join(targetDirectory, `${project.id}-r${project.revision}.mp4`);
-    return await this.activities.track(directory, 'render', signal => this.renderer.render(project, { output, signal }), { cancellable: true });
+    return await this.activities.track(directory, 'render', signal => this.workScheduler.run({ id: `direct_${randomUUID()}`, signal, run: () => this.renderer.render(project, { output, signal }) }), { cancellable: true });
   }
 
   async renderPresets({ path: directory }) {
@@ -571,11 +574,40 @@ export class LocalApplicationService {
     // Modo composição: narração, tempos das palavras e trilha vão junto no pedido (o render roda fora do projeto).
     if (project.motion?.beats?.length) project.motionInputs = await this.productionOps.motionInputs(directory, project);
     const targetDirectory = outputDirectory ? path.resolve(outputDirectory) : this.settings.roots.renderOutput || path.join(path.resolve(directory), 'output'); await mkdir(targetDirectory, { recursive: true });
-    const output = await availableFile(path.join(targetDirectory, `${project.id}-r${project.revision}-${preset.id}.mp4`));
+    const output = await availableFile(path.join(targetDirectory, `${project.id}-r${project.revision}-${preset.id}.mp4`), this.renderOutputReservations);
     return await this.renderQueue.enqueue(project, { output, scale: preset.scale }, { projectPath: directory, presetId });
   }
 
-  async listRenderJobs({ path: directory }) { await this.ready(); return { jobs: this.renderQueue.list({ projectPath: directory }) }; }
+  async processingQueue() {
+    await this.ready();
+    const projects = await this.registry.list({ withSize: false });
+    const titles = new Map(projects.map(project => [project.path, project.title]));
+    const jobs = [...this.renderQueue.list(), ...this.mediaOps.jobs.list()].map(job => ({ ...job, label: job.label || `Render · ${titles.get(job.projectPath) || job.projectId}`, projectTitle: titles.get(job.projectPath) || job.projectId || 'Minha voz', queuePosition: this.workScheduler.position(job.id) }));
+    const rank = job => job.state === 'running' ? 0 : job.state === 'queued' ? 1 : 2;
+    jobs.sort((a, b) => rank(a) - rank(b) || (rank(a) === 1 ? (a.queuePosition ?? Infinity) - (b.queuePosition ?? Infinity) : (b.createdAt || b.startedAt || '').localeCompare(a.createdAt || a.startedAt || '')));
+    return { jobs, concurrency: 1 };
+  }
+
+  async cancelProcessingJob({ jobId }) { await this.ready(); return jobId.startsWith('render_') ? this.renderQueue.cancel(jobId) : this.mediaOps.jobs.cancel(jobId); }
+
+  async cancelProcessingQueue() {
+    await this.ready(); this.workScheduler.pause();
+    try {
+      const jobs = [...this.renderQueue.list(), ...this.mediaOps.jobs.list()].filter(job => ['queued', 'running'].includes(job.state));
+      // Cancel queued tickets before releasing the active slot.
+      jobs.sort((a, b) => (a.state === 'running') - (b.state === 'running'));
+      for (const job of jobs) await this.cancelProcessingJob({ jobId: job.id });
+      return { cancelled: jobs.length };
+    } finally { this.workScheduler.resume(); }
+  }
+
+  async clearProcessingHistory() {
+    await this.ready();
+    const removed = await this.renderQueue.clearHistory() + this.mediaOps.jobs.clearHistory();
+    await this.mediaOps.jobs.flush(); return { removed };
+  }
+
+  async listRenderJobs({ path: directory }) { await this.ready(); return { jobs: this.renderQueue.list({ projectPath: directory }), current: directory ? this.renderQueue.latest(directory) : null, latestCompleted: directory ? this.renderQueue.latestCompleted(directory) : null }; }
   async cancelRenderJob({ jobId }) { return await this.renderQueue.cancel(jobId); }
   async retryRenderJob({ jobId }) { return await this.renderQueue.retry(jobId); }
   async renderJobLog({ jobId }) { return this.renderQueue.get(jobId); }
@@ -603,12 +635,13 @@ export class LocalApplicationService {
   }
 }
 
-async function availableFile(preferred) {
+async function availableFile(preferred, reserved = new Set()) {
   const extension = path.extname(preferred);
   const base = preferred.slice(0, -extension.length);
   for (let index = 0; index < 1000; index += 1) {
     const candidate = index ? `${base}-${index + 1}${extension}` : preferred;
-    try { await lstat(candidate); } catch (error) { if (error.code === 'ENOENT') return candidate; throw error; }
+    if (reserved.has(candidate)) continue;
+    try { await lstat(candidate); } catch (error) { if (error.code !== 'ENOENT') throw error; if (reserved.has(candidate)) continue; reserved.add(candidate); return candidate; }
   }
   throw new Error('Não foi possível gerar um nome de arquivo disponível');
 }

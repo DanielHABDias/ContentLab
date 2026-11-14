@@ -123,3 +123,34 @@ test('sobre e diagnóstico mostra versões e esconde dados pessoais', async () =
   expect(text).not.toContain('projeto_secreto');
   if (root.startsWith(os.homedir())) expect(text).not.toContain(os.homedir());
 });
+
+test('fila global cancela todos sem iniciar os aguardando e limpa só o histórico', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'contentlab-processing-queue-')); roots.push(root);
+  const service = new LocalApplicationService({ dataDirectory: path.join(root, 'data') });
+  const project = await service.createProject({ title: 'Fila compartilhada', type: 'long', aspectRatio: '16:9' });
+  let release; const hold = new Promise(resolve => { release = resolve; }); const started = [];
+  const first = service.mediaOps.jobs.start({ kind: 'transcription', projectPath: project.path, label: 'Transcrição', run: async ({ signal }) => { started.push('first'); await new Promise(resolve => { if (signal.aborted) resolve(); else signal.addEventListener('abort', resolve, { once: true }); }); } });
+  await new Promise(resolve => setTimeout(resolve, 10));
+  const pending = service.mediaOps.jobs.start({ kind: 'voice.generate', projectPath: project.path, label: 'Voz', run: () => { started.push('pending'); return hold; } });
+  const render = await service.renderQueue.enqueue({ id: project.project.id, revision: 1 }, { output: path.join(root, 'out.mp4') }, { projectPath: project.path });
+  expect((await service.processingQueue()).jobs.filter(job => job.state === 'queued')).toHaveLength(2);
+  expect(await service.cancelProcessingQueue()).toEqual({ cancelled: 3 }); release();
+  await Promise.all([service.mediaOps.jobs.waitFor(first.id), service.mediaOps.jobs.waitFor(pending.id), service.renderQueue.wait(render.id)]);
+  expect(started).toEqual(['first']);
+  expect((await service.processingQueue()).jobs.every(job => job.state === 'cancelled')).toBe(true);
+  expect((await service.clearProcessingHistory()).removed).toBe(3);
+  expect((await service.processingQueue()).jobs).toEqual([]);
+});
+
+test('quatro envios simultâneos reservam arquivos diferentes sem executar em paralelo', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'contentlab-render-reservations-')); roots.push(root);
+  const setup = { status: async () => ({ items: [{ id: 'ffmpeg', ready: true }, { id: 'ffprobe', ready: true }] }) };
+  const service = new LocalApplicationService({ dataDirectory: path.join(root, 'data'), setup });
+  const created = await service.createProject({ title: 'Vários renders', type: 'long', aspectRatio: '16:9' });
+  service.workScheduler.pause();
+  const jobs = await Promise.all(Array.from({ length: 4 }, () => service.enqueueRender({ path: created.path })));
+  expect(jobs.every(job => job.state === 'queued')).toBe(true);
+  expect(new Set(service.renderQueue.jobs.map(job => job.payload.options.output)).size).toBe(4);
+  await service.cancelProcessingQueue(); service.workScheduler.resume();
+  await Promise.all(jobs.map(job => service.renderQueue.wait(job.id)));
+});

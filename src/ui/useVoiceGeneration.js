@@ -23,9 +23,9 @@ export function useVoiceGeneration(jobs = [], onModeChanged) {
     if (!task) return null;
     lastTask.current = task; setPlan(null); setError(null); setStatus(''); setBusy(true);
     try {
-      const { plan: next } = await localApi.voicePlan();
-      if (next.status === 'needs-free-memory' || next.status === 'unsupported') { setPlan(next); return null; }
-      if (next.status !== 'ready') throw new Error(next.reasons?.join(' ') || 'Não foi possível verificar os recursos de voz.');
+      const { plan: next, queueBusy } = await localApi.voicePlan();
+      if ((!queueBusy && next.status === 'needs-free-memory') || next.status === 'unsupported') { setPlan(next); return null; }
+      if (next.status !== 'ready' && !(queueBusy && next.status === 'needs-free-memory')) throw new Error(next.reasons?.join(' ') || 'Não foi possível verificar os recursos de voz.');
       const job = await task();
       if (job?.id) watched.current.add(job.id);
       return job;

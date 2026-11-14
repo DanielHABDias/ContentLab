@@ -43,6 +43,17 @@ Respostas devem ser compactas: IDs, revisão, mudança, estado e erro acionável
 
 Para pacotes, use a skill `contentlab-packages`.
 
+## Fila de processamento
+
+Render, transcrição, voz de IA, montagem WAV e importações de todos os projetos passam pela mesma fila FIFO, com um trabalho por vez. Vários projetos podem enviar pedidos; os demais ficam aguardando. A aba **Fila de processamento** mostra execução, posições e histórico de sucessos, falhas e cancelamentos. No projeto, Edição/Revisão mostra apenas o render atual ou o último e o botão **Ver fila de processamento**.
+
+- `queue_list`: lê a fila global e o histórico.
+- `queue_cancel` (`jobId`): cancela um trabalho aguardando ou em execução; o próximo só inicia quando o processo atual terminar de encerrar.
+- `queue_cancel_all`: cancela todos os trabalhos ativos e aguardando, quando solicitado.
+- `queue_clear_history`: remove somente concluídos, falhos e cancelados; preserva os ativos, os aguardando e os arquivos gerados. O último resultado do projeto continua acessível.
+
+O histórico é salvo localmente. Renders interrompidos retomam pela fila após reabrir o app; transcrição, voz e montagem interrompidas ficam marcadas para novo envio pelo projeto. Para render, continua valendo enviar, avisar e encerrar o turno; a IA só retoma quando a pessoa voltar.
+
 ## Componentes narrativos
 
 Para investigação, ramificações, revelações e relações causais, consultar [as 14 cenas narrativas](../../docs/MOTION-NARRATIVE.md) e as props/exemplos atuais em `motion_kit`. Reutilizar a cena apropriada; não criar TSX no projeto. Os eventos de som do catálogo usam frações do beat: `sfx.at = fracao × duration`, ajustadas à fala e à virada configurada. Conferir frames antes, durante e depois da virada em 16:9 e 9:16.

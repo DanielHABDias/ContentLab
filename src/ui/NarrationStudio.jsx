@@ -30,7 +30,7 @@ export function NarrationStudio({ timingOnly = false, readOnly = false, details,
   const load = async () => { try { setState(await localApi.narration(projectPath)); } catch (issue) { setError(issue); } };
   const refreshJobs = async () => { const { jobs: list } = await localApi.jobs(projectPath).catch(() => ({ jobs: [] })); const mine = list.filter(job => job.kind.startsWith('narration') || job.kind === 'voice.generate' || job.kind === 'transcription'); setJobs(mine); };
   useEffect(() => { load(); refreshJobs(); }, [projectPath, details.project.revision]);
-  const running = jobs.some(job => job.state === 'running');
+  const running = jobs.some(job => ['queued', 'running'].includes(job.state));
   const wasRunning = useRef(false);
   useEffect(() => {
     if (wasRunning.current && !running) {
@@ -42,7 +42,7 @@ export function NarrationStudio({ timingOnly = false, readOnly = false, details,
   useEffect(() => { if (!running) return undefined; const timer = window.setInterval(refreshJobs, 1500); return () => window.clearInterval(timer); }, [running]);
   const act = async (task, done) => { setError(null); setStatus(''); try { const result = await task(); if (result?.narration) setState(previous => ({ ...previous, narration: result.narration })); else await load(); if (done) setStatus(done); return result; } catch (issue) { setError(issue); if (issue.code === 'NARRATION_CONFLICT') await load(); return null; } };
   const startJob = async (task, kind = 'other') => {
-    if (requestLock.current || jobs.some(job => job.state === 'running')) return;
+    if (requestLock.current || jobs.some(job => ['queued', 'running'].includes(job.state))) return;
     requestLock.current = true; setJobRequest(kind);
     if (kind === 'narration.assemble') setAssemblyError('');
     try {
@@ -52,10 +52,10 @@ export function NarrationStudio({ timingOnly = false, readOnly = false, details,
       else if (kind === 'narration.assemble') setAssemblyError('Não foi possível iniciar a montagem. Confira o aviso de erro e tente novamente.');
     } finally { requestLock.current = false; setJobRequest(null); }
   };
-  const assembly = { requesting: jobRequest === 'narration.assemble', job: jobs.find(job => job.kind === 'narration.assemble' && job.state === 'running'), error: assemblyError };
+  const assembly = { requesting: jobRequest === 'narration.assemble', job: jobs.find(job => job.kind === 'narration.assemble' && ['queued', 'running'].includes(job.state)), error: assemblyError };
   if (!state) return <section className="workflow-card"><p className="empty-state">{error ? error.message : 'Carregando narração…'}</p></section>;
   const { narration } = state; const base = { path: projectPath, baseRevision: narration.revision };
-  if (timingOnly) return <div className="narration"><DependencyNotice error={error} onOpenSetup={onOpenSetup}/><JobsPanel jobs={jobs} uploads={[]} onCancel={async jobId => { await localApi.cancelJob(jobId); refreshJobs(); }}/><TranscriptionStatus transcription={state.transcription} assembled={narration.assembled} running={jobs.some(job => job.state === 'running' && job.kind === 'transcription')} busy={running || Boolean(jobRequest)} job={jobs.find(job => job.state === 'running' && job.kind === 'transcription')} requesting={jobRequest === 'transcription'} onRetry={() => startJob(() => localApi.productionTranscribeNarration({ path: projectPath }), 'transcription')}/></div>;
+  if (timingOnly) return <div className="narration"><DependencyNotice error={error} onOpenSetup={onOpenSetup}/><JobsPanel jobs={jobs} uploads={[]} onCancel={async jobId => { await localApi.cancelJob(jobId); refreshJobs(); }}/><TranscriptionStatus transcription={state.transcription} assembled={narration.assembled} running={jobs.some(job => ['queued', 'running'].includes(job.state) && job.kind === 'transcription')} busy={running || Boolean(jobRequest)} job={jobs.find(job => ['queued', 'running'].includes(job.state) && job.kind === 'transcription')} requesting={jobRequest === 'transcription'} onRetry={() => startJob(() => localApi.productionTranscribeNarration({ path: projectPath }), 'transcription')}/></div>;
   const mode = details.project.narrationBy === 'ai' ? 'ai' : details.project.narrationBy === 'creator' ? 'creator' : null;
   // Voz de IA: a cena gerada mais recente de cada cena, na ordem do roteiro. Eu gravo: os takes na ordem da lista.
   const latest = new Map(narration.takes.filter(take => take.origin === 'generated' && !take.stale).map(take => [take.sceneId, take.id]));
@@ -73,7 +73,7 @@ export function NarrationStudio({ timingOnly = false, readOnly = false, details,
     {mode === 'creator' && <TreatmentSection hideFinal={readOnly} takeIds={finalTakeIds} projectPath={projectPath} narration={narration} previewSeconds={state.previewSeconds} act={act} startJob={startJob} assembly={assembly} running={running || Boolean(jobRequest)} base={base} setup={setup} onOpenSetup={onOpenSetup}/>}
     </fieldset>
     {readOnly && <section className="workflow-card"><FinalNarration projectPath={projectPath} narration={narration}/></section>}
-    {mode && <TranscriptionStatus transcription={state.transcription} assembled={narration.assembled} running={jobs.some(job => job.state === 'running' && job.kind === 'transcription')} busy={running || Boolean(jobRequest)} job={jobs.find(job => job.state === 'running' && job.kind === 'transcription')} requesting={jobRequest === 'transcription'} onRetry={() => startJob(() => localApi.productionTranscribeNarration({ path: projectPath }), 'transcription')}/>}
+    {mode && <TranscriptionStatus transcription={state.transcription} assembled={narration.assembled} running={jobs.some(job => ['queued', 'running'].includes(job.state) && job.kind === 'transcription')} busy={running || Boolean(jobRequest)} job={jobs.find(job => ['queued', 'running'].includes(job.state) && job.kind === 'transcription')} requesting={jobRequest === 'transcription'} onRetry={() => startJob(() => localApi.productionTranscribeNarration({ path: projectPath }), 'transcription')}/>}
   </div>;
 }
 
@@ -276,7 +276,7 @@ function VoiceSection({ hideFinal = false, projectPath, narration, finalTakeIds,
   const generating = running || resources.busy;
   useEffect(() => { if (!state.profiles.some(profile => profile.id === profileId)) setProfileId(state.profiles[0]?.id || ''); }, [state.profiles]);
   const pending = state.scenes.filter(scene => !scene.generated[profileId]);
-  const voiceJob = jobs.find(job => job.kind === 'voice.generate' && job.state === 'running');
+  const voiceJob = jobs.find(job => job.kind === 'voice.generate' && ['queued', 'running'].includes(job.state));
   const generate = sceneIds => startJob(() => resources.attempt(() => localApi.generateVoice({ path: projectPath, profileId, sceneIds })));
   return <section className="workflow-card" aria-labelledby="voice-title">
     <div className="section-title"><div><span className="eyebrow">Voz clonada · VoxCPM2</span><h2 id="voice-title">Narração com a sua voz</h2></div>{onOpenVoice && <span className="header-actions"><button className="button quiet" onClick={onOpenVoice}><Mic size={17} aria-hidden="true"/> Minha voz</button></span>}</div>
@@ -305,6 +305,7 @@ const mmss = seconds => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds
 function VoiceProgress({ job, scenes }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 1000); return () => window.clearInterval(timer); }, []);
+  if (job.state === 'queued') return <div className="voice-progress" role="status"><strong>Voz de IA na fila</strong><p>Aguarda sua vez na fila de processamento.</p></div>;
   const { sceneId, sceneStartedAt, estimateSeconds, done = 0, total } = job.progress;
   const scene = scenes.find(item => item.id === sceneId);
   const elapsed = Math.max(0, (now - Date.parse(sceneStartedAt || job.startedAt)) / 1000);
@@ -345,6 +346,7 @@ export function transcriptionTiming(job, now = Date.now()) {
 function TranscriptionProgress({ job }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 1000); return () => window.clearInterval(timer); }, []);
+  if (job?.state === 'queued') return <div className="transcription-progress" role="status"><strong>Transcrição na fila</strong><p>Aguarda sua vez na fila de processamento.</p></div>;
   const { elapsed, percent, remaining } = transcriptionTiming(job, now);
   const phase = job?.progress?.phase || 'Preparando';
   return <div className="transcription-progress" role="status">
@@ -357,7 +359,7 @@ function TranscriptionProgress({ job }) {
 
 function TranscriptionStatus({ transcription, assembled, running, busy = false, job, requesting = false, onRetry }) {
   const ready = transcription?.status === 'ready' && !assembled?.outdated;
-  const working = requesting || running || transcription?.status === 'running';
+  const working = requesting || running || ['queued', 'running'].includes(transcription?.status);
   return <section className="workflow-card narration-transcription" aria-labelledby="narration-transcript-title"><h2 id="narration-transcript-title">Tempos para edição</h2>
     <p>Com a narração montada, clique para o Whisper large-v3 completo marcar o início e o fim de cada palavra. Se quiser tratar o áudio fora antes, use Abrir pasta, importe e monte a versão nova e só então transcreva.</p>
     {ready ? <p role="status" className="ready">Transcrição pronta · {transcription.words} palavras com tempo. A IA já pode usá-las na edição.</p> : working ? <TranscriptionProgress job={job}/> : assembled ? <><p role="status">{transcription?.error || 'Narração montada. Quando o áudio estiver do jeito que você quer, gere a transcrição para a IA sincronizar as cenas e legendas.'}</p><button type="button" className="button quiet" disabled={assembled.outdated || busy} onClick={onRetry}>Gerar transcrição palavra por palavra</button>{assembled.outdated && <p>Os takes mudaram. Monte a narração novamente.</p>}</> : <p>Grave ou gere os takes e monte a narração para preparar os tempos.</p>}

@@ -14,6 +14,10 @@ O Content Lab é uma ferramenta audiovisual local. O agente opera o mesmo projet
 8. Depois de `render_start` confirmar o envio à fila, avise e encerre a resposta, inclusive em modo automático. Não aguarde render, consulte porcentagens repetidamente, crie monitor ou prometa retorno automático. O usuário volta ao chat para retomar; só então consulte `job_status` uma vez e, se concluído, confira o arquivo. Se ainda estiver rodando, informe e encerre novamente.
 9. Na retomada, depois de conferir o render, termine com `deliverable_build` e `project_export`. Publicação é manual.
 
+## Fila de processamento
+
+A aba **Fila de processamento** reúne render, transcrição, voz de IA, montagem WAV e importações de todos os projetos em uma fila FIFO: apenas um trabalho executa por vez. Envie pelos controles normais ou MCP. Na Edição/Revisão aparece somente o render atual ou o último, com um botão para abrir a fila. `queue_list` consulta a fila; `queue_cancel` cancela um trabalho, `queue_cancel_all` cancela os ativos e aguardando, e `queue_clear_history` remove só registros encerrados, preservando a fila ativa e os arquivos.
+
 ## Conteúdo e verificação
 
 O Content Lab é neutro: marca, regras editoriais e personagens vêm do projeto ou plugin do criador. Importe mídias e trilha com direitos confirmados; personagem entra por `character_import`. Cena no roteiro é planejamento, não clipe/áudio pronto. Confira imagem, som, sincronismo e legibilidade no render antes de declarar a entrega concluída. Em conflito de revisão, releia e recalcule; não sobrescreva mudanças da pessoa.

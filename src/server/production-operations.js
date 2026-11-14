@@ -556,7 +556,7 @@ export class ProductionOperations {
     const session = await new NarrationStore(directory).read();
     const narration = session.assembled?.mediaId && project.media.find(item => item.id === session.assembled.mediaId);
     if (!narration || session.assembled.outdated) throw Object.assign(new Error('Monte a narração atual antes de transcrever'), { code: 'NARRATION_MISSING' });
-    const running = this.app.mediaOps.jobs.list({ projectPath: directory }).find(job => job.kind === 'transcription' && job.state === 'running' && job.label.endsWith(narration.id));
+    const running = this.app.mediaOps.jobs.list({ projectPath: directory }).find(job => job.kind === 'transcription' && ['queued', 'running'].includes(job.state) && job.label.endsWith(narration.id));
     if (running) return { jobId: running.id, mediaId: narration.id };
     const result = await this.app.mediaOps.transcribe({ path: directory, mediaId: narration.id, force, requireWords: true });
     return result?.id ? { jobId: result.id, mediaId: narration.id } : { status: result.status, mediaId: narration.id };
@@ -681,7 +681,8 @@ export class ProductionOperations {
       const source = media && await this.app.resolveMediaPath(media);
       if (source) { const name = `thumbnail-${label}${path.extname(source) || '.png'}`; await copyFile(source, path.join(target, name)); files.push(name); }
     }
-    const renders = (await this.app.listRenderJobs({ path: directory })).jobs.filter(job => job.state === 'completed' && job.output && existsSync(job.output));
+    const renderState = await this.app.listRenderJobs({ path: directory });
+    const renders = [...renderState.jobs, ...(renderState.latestCompleted ? [renderState.latestCompleted] : [])].filter(job => job.state === 'completed' && job.output && existsSync(job.output));
     const latest = renders.sort((a, b) => String(b.finishedAt).localeCompare(String(a.finishedAt)))[0];
     if (latest) { const name = `video${path.extname(latest.output)}`; const destination = path.join(target, name); await rm(destination, { force: true }); await link(latest.output, destination).catch(() => copyFile(latest.output, destination)); files.push(name); }
     const session = await new NarrationStore(directory).read().catch(() => ({}));

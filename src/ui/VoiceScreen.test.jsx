@@ -177,3 +177,13 @@ test('falta de memória oferece modo econômico, salva a escolha e leva à insta
   expect(onOpenSetup).toHaveBeenCalledWith(['voxcpm2-q8']);
   expect(localApi.generateVoiceCheck).not.toHaveBeenCalled();
 });
+
+test('a voz pode entrar na fila enquanto outro processamento ocupa a memória', async () => {
+  localApi.voiceStudio.mockResolvedValue(studio([profile()]));
+  localApi.voicePlan.mockResolvedValue({ queueBusy: true, plan: { status: 'needs-free-memory' } });
+  localApi.generateVoiceCheck.mockResolvedValue({ id: 'job_queued_voice', state: 'queued', kind: 'voice.check', progress: { phase: 'Na fila' } });
+  render(<VoiceScreen setup={setup()} onOpenSetup={vi.fn()}/>);
+  fireEvent.click(await screen.findByRole('button', { name: /ouvir como ficou/i }));
+  await waitFor(() => expect(localApi.generateVoiceCheck).toHaveBeenCalledWith('voice_abc123'));
+  expect(screen.queryByRole('region', { name: /libere .* memória/i })).not.toBeInTheDocument();
+});

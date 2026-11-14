@@ -26,10 +26,10 @@ export function VoiceScreen({ setup, onOpenSetup, onBack, onProfilesChanged }) {
   const refreshJobs = async () => {
     const { jobs: list } = await localApi.jobs().catch(() => ({ jobs: [] }));
     const mine = list.filter(job => job.kind === 'voice.check');
-    setJobs(previous => { if (previous.some(job => job.state === 'running') && !mine.some(job => job.state === 'running')) load(); return mine; });
+    setJobs(previous => { if (previous.some(job => ['queued', 'running'].includes(job.state)) && !mine.some(job => ['queued', 'running'].includes(job.state))) load(); return mine; });
   };
   useEffect(() => { load(); refreshJobs(); }, []);
-  const running = jobs.some(job => job.state === 'running');
+  const running = jobs.some(job => ['queued', 'running'].includes(job.state));
   useEffect(() => { if (!running) return undefined; const timer = window.setInterval(refreshJobs, 1500); return () => window.clearInterval(timer); }, [running]);
 
   const act = async (task, done) => { setError(null); setStatus(''); try { const result = await task(); await load(); if (done) setStatus(done); return result; } catch (issue) { setError(issue); return null; } };
