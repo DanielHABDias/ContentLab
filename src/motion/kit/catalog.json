@@ -387,7 +387,9 @@
       "lado": "esquerda | direita — lado do texto",
       "tom": "amarelo | vermelho | azul",
       "selo": "selo curto (até 18 caracteres)",
-      "fundo": "preto (padrão) | branco | cena — limpo: fundo liso e o personagem em destaque; cena: mídia na imagem toda"
+      "fundo": "preto (padrão) | branco | cena — limpo: fundo liso e o personagem em destaque; cena: mídia na imagem toda",
+      "layout": "lado (padrão: texto de um lado, assunto do outro) | centro: rosto do personagem grande no meio, a palavra enorme na frente dele embaixo, o personagem do projeto no canto (lado = canto)",
+      "foco": "parte da mídia no quadro (object-position), ex.: '50% 25%' para manter o rosto"
     },
     "regras": [
       "limpa: fundo preto ou branco e o personagem grande (PNG transparente vira recorte)",

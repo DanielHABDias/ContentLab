@@ -9,7 +9,7 @@ import { promisify } from 'node:util';
 import { readProjectDirectory } from './project-registry.js';
 import { NarrationStore, scenesFromScript } from '../audio/narration-service.js';
 import { TranscriptStore, validWordTimings } from '../media/transcript-store.js';
-import { impact, planMotion } from './motion-planner.js';
+import { alignWindows, impact, planMotion } from './motion-planner.js';
 import { narrationToVideo } from '../motion/kit/pausas.js';
 
 /** Trilha da composição: a escolhida no plano (music.mediaId) ou a última importada com papel música. */
@@ -270,7 +270,7 @@ export class ProductionOperations {
       if (!text) throw new Error('Informe o texto curto de cada thumbnail (até 4 palavras)');
       if (text.replace(/\*/g, '').split(/\s+/).filter(Boolean).length > 4) throw Object.assign(new Error(`Texto da thumbnail ${variant.label || index + 1} tem mais de 4 palavras: "${text}"`), { code: 'THUMB_TEXT_LONG' });
       const media = variant.mediaId || content[index % Math.max(1, content.length)]?.id;
-      return { label: variant.label === 'B' || index === 1 ? 'B' : 'A', texto: text.toUpperCase().replace(/\s*\/\s*/g, '\n'), midia: media ? `media:${media}` : undefined, midiaB: variant.mediaIdB ? `media:${variant.mediaIdB}` : undefined, humor: variant.humor, lado: variant.side, tom: variant.tone, selo: variant.badge, fundo: variant.background };
+      return { label: variant.label === 'B' || index === 1 ? 'B' : 'A', texto: text.toUpperCase().replace(/\s*\/\s*/g, '\n'), midia: media ? `media:${media}` : undefined, midiaB: variant.mediaIdB ? `media:${variant.mediaIdB}` : undefined, humor: variant.humor, lado: variant.side, tom: variant.tone, selo: variant.badge, fundo: variant.background, layout: variant.layout, foco: variant.focus, pose: variant.pose, zoom: variant.zoom };
     });
     const refs = kit.flatMap(item => [item.midia, item.midiaB]).filter(Boolean).map(ref => ref.slice(6));
     const missing = refs.filter(id => !project.media.some(item => item.id === id));
@@ -571,7 +571,9 @@ export class ProductionOperations {
     const session = await new NarrationStore(directory).read().catch(() => ({}));
     const narration = session.assembled?.mediaId && project.media.find(item => item.id === session.assembled.mediaId);
     if (!narration?.metadata?.durationSeconds) return { chapters: [], verified: false };
-    const windows = this.#windows(project, session, narration.metadata.durationSeconds);
+    // Tempos reais das palavras (Whisper) quando houver transcrição; sem ela, a estimativa pelo texto.
+    const words = await this.#narrationWords(directory, narration).catch(() => []);
+    const windows = alignWindows(this.#windows(project, session, narration.metadata.durationSeconds), words);
     const stamp = seconds => { const s = Math.floor(seconds); const h = Math.floor(s / 3600); const m = Math.floor(s / 60) % 60; return `${h ? `${h}:${String(m).padStart(2, '0')}` : m}:${String(s % 60).padStart(2, '0')}`; };
     const seen = new Set();
     const starts = windows.filter(window => {
@@ -582,7 +584,10 @@ export class ProductionOperations {
     // Pausas da composição (trechos com áudio original) empurram os capítulos para frente no vídeo final.
     const at = window => (window.start ? narrationToVideo(window.start, project.motion?.pausas) : 0);
     const chapters = starts.map((window, index) => ({ time: index === 0 ? 0 : at(window), stamp: stamp(index === 0 ? 0 : at(window)), title: window.scene.chapterTitle || headline(window.scene.text, 48).replace(/[.!?…]+$/, '') }));
-    return { chapters, verified: true };
+    // A tela final do vídeo longo vira o último capítulo (onde ficam os elementos finais do YouTube).
+    const ending = project.motion?.beats?.find(beat => beat.scene === 'telafinal');
+    if (ending && ending.at > (chapters.at(-1)?.time ?? 0) + 10) chapters.push({ time: ending.at, stamp: stamp(ending.at), title: 'Continue no canal' });
+    return { chapters, verified: true, timing: words.length ? 'palavras' : 'estimativa' };
   }
 
   /** Resumo para agentes: etapa atual, o que falta, estado de cada etapa e próximos passos. */
@@ -717,7 +722,7 @@ export class ProductionOperations {
     let windows; let words = [];
     if (narration?.metadata?.durationSeconds) {
       if (session.assembled.outdated) throw Object.assign(new Error('A narração mudou; monte e transcreva novamente antes da edição'), { code: 'NARRATION_MISSING' });
-      windows = this.#windows(project, session, narration.metadata.durationSeconds); words = await this.#narrationWords(directory, narration);
+      words = await this.#narrationWords(directory, narration); windows = alignWindows(this.#windows(project, session, narration.metadata.durationSeconds), words);
       if (!words.length) throw Object.assign(new Error('Conclua a transcrição palavra por palavra da narração antes de editar'), { code: 'WORDS_MISSING' });
     }
     else { let cursor = 0; windows = scenes.map(scene => { const window = { scene, start: cursor, length: Math.max(2, scene.text.length / 15) }; cursor += window.length; return window; }); }

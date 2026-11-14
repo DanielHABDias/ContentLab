@@ -265,7 +265,7 @@ export function createMcpServer() {
       label: z.enum(['A', 'B']), title: z.string().optional(), text: z.string().optional().describe('Até 4 palavras; complementa o título, não repete'),
       mediaId: z.string().optional().describe('Assunto dominante (mídia da obra com direitos)'), mediaIdB: z.string().optional().describe('Segunda mídia: layout VS'),
       humor: z.enum(['bravo', 'feliz', 'surpreso', 'tedio', 'confuso', 'piscada', 'determinado', 'triste']).optional().describe('Personagem do projeto na pose desse humor; omita para sem personagem'),
-      side: z.enum(['esquerda', 'direita']).optional().describe('Lado do texto'), tone: z.enum(['amarelo', 'vermelho', 'azul']).optional(), badge: z.string().max(18).optional().describe('Selo curto, ex.: "HQ 1986"'),
+      side: z.enum(['esquerda', 'direita']).optional().describe('Lado do texto'), tone: z.enum(['amarelo', 'vermelho', 'azul']).optional(), badge: z.string().max(18).optional().describe('Selo curto, ex.: "HQ 1986"'), layout: z.enum(['lado', 'centro']).optional().describe('centro: personagem grande no meio, a palavra na frente dele e o personagem do projeto no canto (side = canto)'), focus: z.string().max(20).optional().describe('Parte da mídia no quadro, ex.: "50% 25%" para manter o rosto'), pose: z.string().max(40).optional().describe('Pose exata do personagem do projeto (ex.: rindo, facepalm); sem ela, sai do humor'), zoom: z.number().min(1).max(3).optional().describe('Aproxima a mídia em volta do foco (rosto)'),
       background: z.enum(['preto', 'branco', 'cena']).optional().describe('preto (padrão) ou branco: fundo liso e limpo com o personagem em destaque; cena: a mídia ocupa a imagem toda'),
       frameSeconds: z.number().nonnegative().optional(),
     })).max(2).optional(),

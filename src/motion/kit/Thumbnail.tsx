@@ -24,14 +24,22 @@ export type ThumbProps = {
   selo?: string;
   /** preto (padrão) ou branco: fundo liso e limpo, personagem em destaque; cena: a mídia ocupa a imagem toda. */
   fundo?: 'preto' | 'branco' | 'cena';
+  /** centro: personagem grande no meio, a palavra na frente dele embaixo e o personagem do projeto no canto. */
+  layout?: 'lado' | 'centro';
+  /** Pose exata do personagem do projeto (nome do catálogo); sem ela, a pose sai do humor. */
+  pose?: string;
+  /** Parte da mídia que fica no quadro (object-position), ex.: '50% 25%' para manter o rosto. */
+  foco?: string;
+  /** Aproxima a mídia em volta do foco (1 = sem zoom), para o rosto ocupar o quadro. */
+  zoom?: number;
 };
 
 const TONS = { amarelo: C.yellow, vermelho: C.red, azul: C.blue };
 
-const Subject: React.FC<{ id?: string; style?: React.CSSProperties; fit?: 'cover' | 'contain' }> = ({ id, style, fit = 'cover' }) => {
+const Subject: React.FC<{ id?: string; style?: React.CSSProperties; fit?: 'cover' | 'contain'; foco?: string; zoom?: number }> = ({ id, style, fit = 'cover', foco, zoom = 1 }) => {
   const assets = useContext(Assets);
   const asset = id ? assets[id.startsWith('media:') ? id.slice(6) : id] : null;
-  const css: React.CSSProperties = { width: '100%', height: '100%', objectFit: fit, filter: 'contrast(1.12) saturate(1.2)', ...style };
+  const css: React.CSSProperties = { width: '100%', height: '100%', objectFit: fit, objectPosition: foco, transform: zoom !== 1 ? `scale(${zoom})` : undefined, transformOrigin: foco, filter: 'contrast(1.12) saturate(1.2)', ...style };
   if (!asset) return <SpeedBurst bg={C.ink} color="#1d1d28" />;
   return asset.kind === 'video' ? <OffthreadVideo src={asset.src} muted style={css} /> : <Img src={asset.src} style={css} />;
 };
@@ -56,13 +64,38 @@ const BigText: React.FC<{ text: string; size: number; clean?: 'preto' | 'branco'
 
 export const Thumbnail: React.FC<ThumbProps> = (raw) => {
   useAnton();
-  const { assets, personagem = { poses: {} }, midia, midiaB, texto, humor: wanted, lado = 'esquerda', tom = 'amarelo', selo, width = 1280, height = 720, fundo = 'preto' } = resolvePublic(raw) as ThumbProps;
-  const humor = wanted && Object.keys(personagem.poses || {}).length ? wanted : undefined;
+  const { assets, personagem = { poses: {} }, midia, midiaB, texto, humor: wanted, lado = 'esquerda', tom = 'amarelo', selo, width = 1280, height = 720, fundo = 'preto', layout = 'lado', foco, pose, zoom } = resolvePublic(raw) as ThumbProps;
+  const humor = (wanted || pose) && Object.keys(personagem.poses || {}).length ? (wanted || 'feliz') : undefined;
   const accent = TONS[tom] || C.yellow;
   const words = texto.replace(/\*/g, '').split(/\s+/).filter(Boolean).length;
   const size = Math.round(height * (words <= 2 ? 0.25 : words <= 3 ? 0.21 : 0.18) * (humor && !midiaB ? 0.88 : 1));
   const left = lado === 'esquerda';
   const versus = Boolean(midiaB);
+  if (layout === 'centro' && !versus) {
+    // Limpa e centrada: fundo liso, o rosto do personagem grande no meio fundindo no fundo, a palavra enorme na
+    // frente dele (embaixo) e o personagem do projeto no canto (lado escolhido), com a expressão do vídeo.
+    const bg = fundo === 'branco' ? '#ffffff' : C.ink;
+    const fade = 'radial-gradient(ellipse 50% 72% at 50% 42%, #000 45%, transparent 100%)';
+    const cornerH = height * 0.46;
+    const lines = texto.split('\n').filter(Boolean).length;
+    const big = Math.round(height * (lines > 1 ? 0.2 : words <= 1 ? 0.3 : 0.24));
+    const ink = fundo === 'branco' ? C.white : C.ink;
+    return (
+      <Assets.Provider value={assets}><PersonagemCtx.Provider value={personagem}>
+        <AbsoluteFill style={{ background: bg, overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: 0, height: height * 0.98, left: width * 0.14, width: width * 0.72, maskImage: fade, WebkitMaskImage: fade } as React.CSSProperties}><Subject id={midia} fit="cover" foco={foco || '50% 25%'} zoom={zoom} /></div>
+          <AbsoluteFill style={{ background: `linear-gradient(to top, ${bg} 0%, ${bg}cc 14%, transparent 42%)` }} />
+          <div style={{ position: 'absolute', left: width * 0.04, right: width * 0.04, bottom: height * 0.05, textAlign: 'center', filter: `drop-shadow(0 ${height * 0.012}px 0 ${ink}) drop-shadow(0 0 ${height * 0.03}px ${ink})` }}>
+            <div style={{ fontFamily: ANTON, fontSize: big, lineHeight: 0.9, textTransform: 'uppercase', letterSpacing: big * 0.01 }}>
+              {texto.split('\n').map(line => line.trim()).filter(Boolean).map((line, i) => <div key={i}>{line.split(/(\*[^*]+\*)/).filter(Boolean).map((part, k) => { const hot = part.startsWith('*'); return <span key={k} style={{ color: hot ? accent : fundo === 'branco' ? C.ink : C.white, WebkitTextStroke: `${big * 0.035}px ${ink}`, paintOrder: 'stroke fill' }}>{hot ? part.slice(1, -1) : part}</span>; })}</div>)}
+            </div>
+          </div>
+          {humor && <Figura pose={pose} humor={humor} seed="thumb" height={cornerH} x={left ? width * 0.015 : width - figW(cornerH) - width * 0.015} y={height - cornerH * 0.98} flip={!left} />}
+          {selo && <div style={{ position: 'absolute', top: height * 0.06, [left ? 'right' : 'left']: width * 0.04, background: accent, color: C.ink, fontFamily: ANTON, fontSize: height * 0.06, padding: '2px 16px', textTransform: 'uppercase' } as React.CSSProperties}>{selo}</div>}
+        </AbsoluteFill>
+      </PersonagemCtx.Provider></Assets.Provider>
+    );
+  }
   if (fundo !== 'cena') {
     // Limpa: fundo liso, o personagem grande do lado oposto ao texto, bordas da imagem fundindo no fundo
     // (com PNG transparente, o recorte aparece direto). Texto sem contorno, só a palavra-chave em cor.

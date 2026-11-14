@@ -71,6 +71,36 @@ const NUMBER = /(\d+(?:[.,]\d+)?)\s*(%|mil|milhões|bilhões|anos)?/gi;
 const numberIn = text => [...String(text).matchAll(NUMBER)].find(match => !/^(1[0-9]{3}|20[0-9]{2})$/.test(match[1]) || match[2] === '%') || null;
 
 /** Distribui cada frase do roteiro no tempo: palavras do Whisper dentro da janela do trecho, ou proporcional a caracteres. */
+/**
+ * Acerta o início de cada trecho do roteiro pelos tempos reais das palavras (Whisper): procura as primeiras
+ * palavras de cada trecho na transcrição, perto da posição esperada. Sem achar, mantém a estimativa.
+ */
+export function alignWindows(windows, words = []) {
+  if (!words.length || !windows.length) return windows;
+  const said = words.map(word => fold(word.text).replace(/[^\p{L}\p{N}]/gu, ''));
+  const total = windows.reduce((sum, window) => sum + tokens(window.scene.text).length, 0) || 1;
+  let before = 0; let cursor = 0;
+  const starts = windows.map(window => {
+    const own = tokens(window.scene.text).map(word => fold(word).replace(/[^\p{L}\p{N}]/gu, '')).filter(Boolean);
+    const expected = Math.round((before / total) * words.length); before += own.length;
+    // Procura 3 palavras seguidas do começo do trecho; tolera uma palavra diferente no início
+    // (o Whisper escreve "está" onde o roteiro diz "tá") pulando até 3 palavras.
+    let found = -1;
+    for (const [offset, size] of [[0, 3], [1, 3], [2, 3], [3, 3], [0, 2]]) {
+      const head = own.slice(offset, offset + size); if (head.length < size) continue;
+      for (let i = Math.max(cursor, expected - 120); i < Math.min(said.length, expected + 120); i += 1) if (head.every((word, k) => said[i + k] === word)) { found = Math.max(cursor, i - offset); break; }
+      if (found >= 0) break;
+    }
+    if (found >= 0) cursor = found + 1;
+    return found >= 0 ? words[found].start : null;
+  });
+  return windows.map((window, i) => {
+    const start = i === 0 ? 0 : starts[i] ?? window.start;
+    const next = windows[i + 1] ? (starts[i + 1] ?? windows[i + 1].start) : window.start + window.length;
+    return { ...window, start: round(start), length: round(Math.max(0.5, next - start)) };
+  });
+}
+
 export function timeSentences(windows, words = []) {
   const out = [];
   for (const [w, window] of windows.entries()) {
