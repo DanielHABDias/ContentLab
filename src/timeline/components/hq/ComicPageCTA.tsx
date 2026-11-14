@@ -223,7 +223,9 @@ function ComicPageCTA({
         width: "100%",
         textAlign: "center",
         fontSize: 32 * unit,
-        color: ink,
+        color: "#FFFFFF",
+        textShadow: "0 2px 6px #000000",
+        background: "rgba(11,11,16,.85)",
         opacity: pageIn
       }, children: channelName })
     ] });
@@ -331,7 +333,9 @@ function ComicPageCTA({
       zIndex: 8,
       right: w * 0.05,
       bottom: h * 0.035,
-      color: ink,
+      color: "#FFFFFF",
+      textShadow: "0 2px 6px #000000",
+      background: "rgba(11,11,16,.85)",
       fontSize: 36 * v,
       opacity: bubbleIn
     }, children: channelName })

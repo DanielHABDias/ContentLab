@@ -124,7 +124,8 @@
         "som": "vídeo: true toca o áudio original (use junto de uma pausa na narração, campo pausas do plano)",
         "volume": "vídeo com som: 0–1 (padrão 1)",
         "zoom": "multiplica o zoom da mídia (1,15 preenche clipes 4:3 e corta bordas)",
-        "foco": "parte da mídia que fica no quadro quando ela é cortada (object-position, ex.: '50% 20%' mantém o rosto no alto). Capa vertical fora da tela cheia vira painel em pé, sem corte"
+        "foco": "parte da mídia que fica no quadro quando ela é cortada (object-position, ex.: '50% 20%' mantém o rosto no alto). Capa vertical fora da tela cheia vira painel em pé, sem corte",
+        "ajuste": "cover (padrão) ou contain: mostra a mídia inteira com margem segura durante o movimento"
       },
       "exemplo": {
         "midia": "media:<id>",
