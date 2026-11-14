@@ -556,3 +556,5 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-vi
 .queue-state.completed { color: #98d8bc; }
 .processing-queue .home-header .take-actions { flex-wrap: wrap; }
 @media (max-width: 760px) { .processing-queue .home-header { align-items: stretch; flex-direction: column; } .processing-job-heading { flex-wrap: wrap; } }
+
+.recent-projects { display: flex; flex-wrap: wrap; gap: 10px; }.recent-projects button { max-width: 100%; overflow-wrap: anywhere; text-align: left; }.all-projects { margin-top: 32px; }.project-search { display: grid; gap: 8px; margin: 0 0 18px; font-size: 13px; }.project-search input { width: 100%; min-height: 44px; padding: 10px 12px; color: var(--ink); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; }

@@ -539,3 +539,14 @@ test('áudio final libera aprovação mesmo com transcrição pendente e segue p
   await waitFor(() => expect(localApi.runProjectAction).toHaveBeenCalledWith({ path: '/tmp/meu_projeto', baseRevision: 1, action: { type: 'stage.approve', stageId: 'narration', expectedRevision: 0 } }));
   expect(await screen.findByText('Para aprovar, falta: transcrição palavra por palavra da narração.')).toBeInTheDocument();
 });
+
+test('mostra três recentes e pesquisa todos os projetos pelo nome sem exigir acentos', async () => {
+  localApi.listProjects.mockResolvedValue({ projects: Array.from({ length: 5 }, (_, index) => cardWith({ id: `project_${index}`, title: index === 4 ? 'Narração do Venom' : `Projeto ${index}`, path: `/tmp/project_${index}`, openedAt: `2026-11-${10 + index}T12:00:00Z` })) });
+  render(<App/>);
+  await screen.findByRole('button', { name: 'Abrir Narração do Venom' });
+  expect(screen.getAllByRole('button', { name: /^Retomar / })).toHaveLength(3);
+  expect(screen.getAllByRole('button', { name: /^Abrir (Projeto|Narração)/ })).toHaveLength(5);
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Pesquisar por nome' }), { target: { value: 'narracao' } });
+  expect(screen.getByRole('button', { name: 'Abrir Narração do Venom' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Abrir Projeto 0' })).not.toBeInTheDocument();
+});

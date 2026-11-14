@@ -41,8 +41,12 @@ export class ProjectRegistry {
    * Recentes são um índice de conveniência: caminhos ausentes ou inválidos
    * continuam listados com aviso até o usuário removê-los, nunca são apagados.
    */
-  async list({ withSize = true } = {}) {
+  async list({ withSize = true, discover = false } = {}) {
     const entries = await this.#read();
+    if (discover) {
+      const known = new Set(entries.map(entry => path.resolve(entry.path)));
+      entries.push(...(await this.#scan()).filter(entry => !known.has(path.resolve(entry.path))));
+    }
     return await Promise.all(entries.map(async entry => {
       try {
         const project = await readProjectDirectory(entry.path);

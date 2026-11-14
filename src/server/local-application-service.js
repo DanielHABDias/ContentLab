@@ -183,7 +183,7 @@ export class LocalApplicationService {
     return { status: 'ready', api: 'contentlab-local-v1', dataDirectory: this.dataDirectory };
   }
 
-  async listProjects() { await this.ready(); return await this.registry.list(); }
+  async listProjects() { await this.ready(); return await this.registry.list({ discover: true }); }
 
   async inspectProject(directory) {
     const project = await readProjectDirectory(directory);

@@ -31,3 +31,17 @@ test('recusa pasta sem project.json válido', async () => {
   const registry = new ProjectRegistry(path.join(root, 'data'));
   await expect(registry.open(root)).rejects.toThrow();
 });
+
+test('descobre projetos fora dos recentes sem duplicar ou alterar o histórico', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'contentlab-discovery-')); roots.push(root);
+  const projects = path.join(root, 'projects');
+  const store = new ProjectStore(projects);
+  await store.create(project('opened_project', 'Aberto'));
+  await store.create(project('new_short', 'Short novo'));
+  const registry = new ProjectRegistry(path.join(root, 'data'), { scanRoots: () => [projects] });
+  await registry.open(path.join(projects, 'opened_project'));
+  const cards = await registry.list({ discover: true, withSize: false });
+  expect(cards).toHaveLength(2);
+  expect(cards.find(card => card.id === 'new_short')).toMatchObject({ title: 'Short novo', status: 'ready', openedAt: null });
+  expect(await registry.list()).toHaveLength(1);
+});
