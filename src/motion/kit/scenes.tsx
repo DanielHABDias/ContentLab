@@ -11,7 +11,9 @@ import { IconArt } from './icons';
  * o conteúdo fica entre 12% e 72% da altura, fora da faixa da interface do Shorts e da legenda.
  */
 const clamp = { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' } as const;
-export type Asset = { src: string; kind: 'image' | 'video' };
+export type Asset = { src: string; kind: 'image' | 'video'; w?: number; h?: number };
+/** Imagem bem mais alta que larga (capa de HQ, pôster). */
+export const isPortrait = (asset?: Asset | null) => Boolean(asset && asset.kind === 'image' && asset.w && asset.h && asset.h > asset.w * 1.1);
 export const Assets = createContext<Record<string, Asset>>({});
 const useAsset = (ref?: string): Asset | null => { const assets = useContext(Assets); if (!ref) return null; const id = ref.startsWith('media:') ? ref.slice(6) : ref; return assets[id] || null; };
 type Base = { len: number };
@@ -49,13 +51,14 @@ export const Camera: React.FC<{ children: React.ReactNode; push?: number; from?:
 };
 
 /** Mídia (imagem ou vídeo sem áudio) cobrindo a caixa, com Ken Burns: entrar, sair ou panorâmica. */
-export const Media: React.FC<{ asset: Asset | null; len: number; motion?: 'entrar' | 'sair' | 'panoramica'; fit?: 'cover' | 'contain'; style?: React.CSSProperties; inicio?: number; som?: boolean; volume?: number; zoom?: number }> = ({ asset, len, motion = 'entrar', fit = 'cover', style: extra, inicio = 0, som = false, volume = 1, zoom = 1 }) => {
+export const Media: React.FC<{ asset: Asset | null; len: number; motion?: 'entrar' | 'sair' | 'panoramica'; fit?: 'cover' | 'contain'; style?: React.CSSProperties; inicio?: number; som?: boolean; volume?: number; zoom?: number; foco?: string }> = ({ asset, len, motion = 'entrar', fit = 'cover', style: extra, inicio = 0, som = false, volume = 1, zoom = 1, foco }) => {
   const f = useCurrentFrame(); const { fps } = useVideoConfig();
   if (!asset) return <AbsoluteFill style={{ background: C.ink }} />;
   const t = f / Math.max(1, len);
   const scale = (motion === 'sair' ? 1.18 - 0.14 * t : 1.04 + 0.14 * t) * zoom;
   const x = motion === 'panoramica' ? interpolate(t, [0, 1], [-4, 4]) : 0;
-  const style: React.CSSProperties = { width: '100%', height: '100%', objectFit: fit, transform: `scale(${scale}) translateX(${x}%)`, ...extra };
+  // `foco` (object-position) escolhe a parte que fica no quadro quando a mídia é cortada (ex.: '50% 20%' = rosto no alto).
+  const style: React.CSSProperties = { width: '100%', height: '100%', objectFit: fit, objectPosition: foco, transform: `scale(${scale}) translateX(${x}%)`, transformOrigin: foco, ...extra };
   // Vídeo: `inicio` escolhe o trecho da fonte; `som` deixa ouvir o áudio original (trecho com pausa na narração).
   return asset.kind === 'video' ? <OffthreadVideo src={asset.src} muted={!som} volume={som ? volume : 0} trimBefore={Math.max(0, Math.round(inicio * fps))} style={style} /> : <Img src={asset.src} style={style} />;
 };
@@ -120,19 +123,25 @@ export const PersonagemCena: React.FC<Base & { humor?: Mood; texto?: string; sub
 };
 
 /** Evidência da obra: imagem/vídeo num painel HQ com Ken Burns, etiqueta, legenda e reação opcional do personagem (só a parte de cima, num canto). */
-export const Evidencia: React.FC<Base & { midia: string; rotulo?: string; legenda?: string; humor?: Mood; movimento?: 'entrar' | 'sair' | 'panoramica'; fundo?: Bg; tom?: string; tela?: boolean; cheia?: boolean; inicio?: number; som?: boolean; volume?: number; zoom?: number }> = ({ len, midia, rotulo, legenda, humor, movimento = 'entrar', fundo = 'papel', tom, tela = false, cheia, inicio, som, volume, zoom }) => {
+export const Evidencia: React.FC<Base & { midia: string; rotulo?: string; legenda?: string; humor?: Mood; movimento?: 'entrar' | 'sair' | 'panoramica'; fundo?: Bg; tom?: string; tela?: boolean; cheia?: boolean; inicio?: number; som?: boolean; volume?: number; zoom?: number; foco?: string }> = ({ len, midia, rotulo, legenda, humor, movimento = 'entrar', fundo = 'papel', tom, tela = false, cheia, inicio, som, volume, zoom, foco }) => {
   const f = useCurrentFrame(); const { W, H, V } = useStage();
   const asset = useAsset(midia);
   const full = cheia ?? false;
   const reage = Boolean(humor) && useHasPersonagem();
-  const box = full ? { x: -10, y: -10, w: W + 20, h: H + 20 } : V ? { x: 40, y: H * 0.13, w: W - 80, h: H * 0.5 } : { x: reage ? 90 : 180, y: 110, w: reage ? 1300 : 1560, h: 820 };
+  // Capa/pôster vertical no 16:9: painel em pé, do tamanho da proporção da imagem, para não cortar o rosto.
+  const tall = !full && !V && isPortrait(asset);
+  const tallH = 880; const tallW = tall ? Math.max(420, Math.min(900, tallH * (asset!.w! / asset!.h!))) : 0;
+  const box = full ? { x: -10, y: -10, w: W + 20, h: H + 20 } : tall ? { x: (W - tallW) / 2 - (reage ? 200 : 0), y: (H - tallH) / 2, w: tallW, h: tallH } : V ? { x: 40, y: H * 0.13, w: W - 80, h: H * 0.5 } : { x: reage ? 90 : 180, y: 110, w: reage ? 1300 : 1560, h: 820 };
+  // Imagem vertical em tela cheia: o rosto costuma ficar no terço de cima.
+  const focus = foco || (full && isPortrait(asset) ? '50% 28%' : undefined);
   const peek = reage ? interpolate(f, [2, 10], [0, 1], { ...clamp, easing: ease }) : 0;
   const nh = V ? 760 : 620;
   return (
     <Camera from={1.1}>
       <Background kind={fundo} tint={tom} />
+      {tall && <AbsoluteFill style={{ opacity: 0.6 }}><Media asset={asset} len={len} motion="panoramica" style={{ filter: 'blur(26px) brightness(.5) saturate(1.2)' }} /></AbsoluteFill>}
       <Panel x={box.x} y={box.y} w={box.w} h={box.h} rotate={full ? 0 : -1.2} bg={C.ink} style={tela ? { borderRadius: 30 } : full ? { border: 'none', boxShadow: 'none' } : undefined}>
-        <Media asset={asset} len={len} motion={movimento} inicio={inicio} som={som} volume={volume} zoom={zoom} />
+        <Media asset={asset} len={len} motion={movimento} inicio={inicio} som={som} volume={volume} zoom={zoom} foco={focus} />
         {tela && <AbsoluteFill style={{ background: 'repeating-linear-gradient(to bottom, rgba(0,0,0,.18) 0 2px, transparent 2px 5px)', boxShadow: 'inset 0 0 120px rgba(0,0,0,.8)' }} />}
         {rotulo && <div style={{ position: 'absolute', left: 0, top: 0, background: C.yellow, borderRight: `7px solid ${C.ink}`, borderBottom: `7px solid ${C.ink}`, padding: '8px 22px', fontFamily: ANTON, fontSize: V ? 56 : 52, color: C.ink, transform: `translateX(${(1 - slide(f, 4, 8)) * -400}px)` }}>{rotulo}</div>}
       </Panel>

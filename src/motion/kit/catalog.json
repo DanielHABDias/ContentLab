@@ -15,7 +15,8 @@
     "Caixinhas HQ de lembrete (inscreva-se, like, opinião, spoiler) e recortes PNG do que está sendo falado entram como extras ao longo do vídeo.",
     "Legenda palavra a palavra: nos Shorts (9:16) o tempo todo; no vídeo longo (16:9) só em trechos — o gancho dos primeiros segundos e os apartes do personagem — com legenda: false nos outros beats.",
     "Trecho com o áudio original da obra: o plano ganha pausas [{ em, duracao }] (em = segundo da narração montada, entre duas palavras); durante a pausa a voz para, a trilha abaixa e o beat é evidencia com som:true e inicio no trecho. Os beats seguintes andam duracao segundos para frente.",
-    "Vídeo longo termina com telafinal (5–20 s) depois da última fala; a trilha continua até o fim e sai em fade (music.fade)."
+    "Vídeo longo termina com telafinal (5–20 s) depois da última fala; a trilha continua até o fim e sai em fade (music.fade).",
+    "Use imagem grande (pelo menos ~1000 px no lado maior) quando ela ocupa a tela; capa vertical entra em painel em pé (evidencia sem cheia) ou em tela cheia com foco no rosto."
   ],
   "humores": [
     "bravo",
@@ -122,7 +123,8 @@
         "inicio": "vídeo: segundo da fonte em que o trecho começa (evita abrir no logo do estúdio)",
         "som": "vídeo: true toca o áudio original (use junto de uma pausa na narração, campo pausas do plano)",
         "volume": "vídeo com som: 0–1 (padrão 1)",
-        "zoom": "multiplica o zoom da mídia (1,15 preenche clipes 4:3 e corta bordas)"
+        "zoom": "multiplica o zoom da mídia (1,15 preenche clipes 4:3 e corta bordas)",
+        "foco": "parte da mídia que fica no quadro quando ela é cortada (object-position, ex.: '50% 20%' mantém o rosto no alto). Capa vertical fora da tela cheia vira painel em pé, sem corte"
       },
       "exemplo": {
         "midia": "media:<id>",

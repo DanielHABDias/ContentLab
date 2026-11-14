@@ -84,7 +84,9 @@ export class MotionRenderer {
       const item = project.media.find(media => media.id === id);
       if (!item?.uri) throw Object.assign(new Error(`Mídia citada não está no projeto: ${id}`), { code: 'MEDIA_MISSING' });
       const file = `media/${id}${path.extname(item.uri).toLowerCase()}`; await place(item.uri, path.join(publicDir, file));
-      assets[id] = { src: `public:${file}`, kind: item.kind === 'video' ? 'video' : 'image' };
+      // Largura e altura deixam a cena enquadrar imagem vertical sem cortar o rosto.
+      const { width, height } = item.metadata || {};
+      assets[id] = { src: `public:${file}`, kind: item.kind === 'video' ? 'video' : 'image', ...(width && height ? { w: width, h: height } : {}) };
     }
     return assets;
   }
