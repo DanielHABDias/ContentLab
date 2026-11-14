@@ -69,12 +69,16 @@ const PalavraLayout: React.FC<{ p: ThumbProps & { width: number; height: number 
   // Anton é condensada (~0,5 em por letra): a linha mais longa ocupa quase toda a largura, alongada na vertical.
   const size = Math.min(height * (lines.length > 1 ? 0.36 : 0.6), (width * 0.94) / (longest * 0.5));
   const lineH = size * 0.95 * stretch;
-  const center = height * (alturaTexto ?? 0.5);
+  // Vertical (Shorts): o personagem ocupa a parte de cima, a palavra cruza o peito dele e o Nox fica no canto de baixo.
+  const portrait = height > width;
+  const center = height * (alturaTexto ?? (portrait ? 0.4 : 0.5));
   const box = (i: number): React.CSSProperties => ({ position: 'absolute', left: 0, right: 0, top: center + (i - (lines.length - 1) / 2) * lineH, transform: `translateY(-50%) scaleY(${stretch})`, textAlign: 'center', fontFamily: ANTON, fontSize: size, lineHeight: 1, letterSpacing: size * 0.01, textTransform: 'uppercase', whiteSpace: 'nowrap' });
   const glow = `0 0 ${size * 0.03}px ${pal.glow}, 0 0 ${size * 0.1}px ${pal.glow}, 0 0 ${size * 0.25}px ${pal.glow}`;
   const stroke = Math.max(1.5, size * 0.0055);
   const left = lado === 'esquerda';
-  const noxH = height * 1.08;
+  const noxH = portrait ? height * 0.56 : height * 1.08;
+  const noxY = portrait ? height - noxH * 0.74 : height * 0.42;
+  const subjectBox: React.CSSProperties = portrait ? { top: 0, height: height * 0.78, left: 0, width } : { top: 0, bottom: 0, left: width * 0.15, width: width * 0.7 };
   const fade = 'radial-gradient(ellipse 48% 70% at 50% 45%, #000 50%, transparent 100%)';
   const dots = 'radial-gradient(circle, rgba(255,255,255,.14) 28%, transparent 31%)';
   return (
@@ -92,13 +96,13 @@ const PalavraLayout: React.FC<{ p: ThumbProps & { width: number; height: number 
       {/* camada de trás: a palavra cheia, brilhando */}
       {lines.map((line, i) => <div key={`b${i}`} style={{ ...box(i), color: pal.word, textShadow: glow }}>{line}</div>)}
       {/* o personagem, dentro da palavra */}
-      <div style={{ position: 'absolute', top: 0, bottom: 0, left: width * 0.15, width: width * 0.7, ...(cutout ? { filter: `drop-shadow(0 0 ${height * 0.04}px rgba(0,0,0,.85))` } : { maskImage: fade, WebkitMaskImage: fade }) } as React.CSSProperties}>
-        <Subject id={midia} fit={cutout ? 'contain' : 'cover'} foco={foco || (cutout ? '50% 0%' : '50% 25%')} zoom={zoom ?? (cutout ? 1.6 : 1)} />
+      <div style={{ position: 'absolute', ...subjectBox, ...(cutout ? { filter: `drop-shadow(0 0 ${height * 0.04}px rgba(0,0,0,.85))` } : { maskImage: fade, WebkitMaskImage: fade }) } as React.CSSProperties}>
+        <Subject id={midia} fit={cutout ? 'contain' : 'cover'} foco={foco || (cutout ? '50% 0%' : '50% 25%')} zoom={zoom ?? (cutout ? (portrait ? 1.1 : 1.6) : 1)} />
       </div>
       {/* camada da frente: só o contorno fino, alinhado com a palavra de trás */}
       {lines.map((line, i) => <div key={`f${i}`} style={{ ...box(i), color: 'transparent', WebkitTextStroke: `${stroke}px ${C.white}` }}>{line}</div>)}
       <AbsoluteFill style={{ boxShadow: `inset 0 0 ${height * 0.25}px rgba(0,0,0,.75)` }} />
-      {humor && <Figura pose={pose} humor={humor} seed="thumb" height={noxH} x={left ? -width * 0.07 : width - figW(noxH) + width * 0.07} y={height * 0.42} flip={!left} />}
+      {humor && <Figura pose={pose} humor={humor} seed="thumb" height={noxH} x={left ? -width * 0.07 : width - figW(noxH) + width * 0.07} y={noxY} flip={!left} />}
       {selo && <div style={{ position: 'absolute', top: height * 0.05, [left ? 'right' : 'left']: width * 0.04, background: pal.word, color: C.ink, fontFamily: ANTON, fontSize: height * 0.06, padding: '2px 16px', textTransform: 'uppercase' } as React.CSSProperties}>{selo}</div>}
     </AbsoluteFill>
   );

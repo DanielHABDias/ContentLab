@@ -83,14 +83,14 @@ O pacote é uma pasta com os PNGs das poses e um `catalogo.json` (na pasta ou em
 
 ## Thumbnail
 
-`thumbnails_generate` usa o mesmo kit (composição `KitThumb`, 1280×720). Por padrão, a thumbnail é limpa: fundo preto ou branco e o personagem grande; um PNG com fundo transparente aparece como recorte. Cada variante A/B tem:
+`thumbnails_generate` usa o mesmo kit (composição `KitThumb`, 1280×720; 1080×1920 no Short, com o layout `palavra` diagramado na vertical). Por padrão, a thumbnail é limpa: fundo preto ou branco e o personagem grande; um PNG com fundo transparente aparece como recorte. Cada variante A/B tem:
 
 - `mediaId`: a obra, assunto dominante;
 - `text`: até 4 palavras, com a palavra-chave entre `*asteriscos*`;
 - `humor`: o personagem do projeto na pose desse humor, opcional;
 - opcionais: `background` (`preto`, `branco` ou `cena`), `side` (lado do texto), `tone` (cor de destaque), `badge` (selo) e `mediaIdB` (layout VS).
 
-Sem variantes, as palavras de impacto dos títulos A e B viram o texto. Versões de 320 px ficam em `output/previas/` para conferir no tamanho do celular. A thumbnail antiga, com o título sobre um frame, continua disponível com `style: "simple"`.
+O Short não tem teste A/B: um título e uma thumbnail, a A (pedir a B num Short é recusado). Sem variantes, as palavras de impacto dos títulos viram o texto. Versões de 320 px ficam em `output/previas/` para conferir no tamanho do celular. A thumbnail antiga, com o título sobre um frame, continua disponível com `style: "simple"`.
 
 ## Roteiro em beats (`contentlab-motion-v1`)
 
