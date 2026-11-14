@@ -1,7 +1,7 @@
 import { scriptMarkdown } from '../core/script.js';
 import { randomUUID } from 'node:crypto';
 import { execFile } from 'node:child_process';
-import { copyFile, link, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { copyFile, link, mkdir, mkdtemp, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -241,6 +241,8 @@ export class ProductionOperations {
         const text = String(variant.text || variant.title).toUpperCase().slice(0, 70);
         const file = path.join(staging, `thumb-${label}.png`);
         await this.#card({ width, height, lines: wrap(text, project.aspectRatio === '9:16' ? 12 : 20).split('\n').slice(0, 3), background, seekSeconds: seconds, color: label === 'A' ? '#0f2a3d' : '#2a1420', style: label, output: file });
+        const visible = path.join(path.resolve(directory), 'output', 'thumbnails'); await mkdir(visible, { recursive: true });
+        await copyFile(file, path.join(visible, `thumbnail-${label}${path.extname(file) || '.png'}`));
         const attached = await this.#attachGenerated(directory, file, `Thumbnail ${label}`, 'thumbnail');
         result[`thumbnail${label}`] = attached.mediaId;
       }
@@ -287,6 +289,9 @@ export class ProductionOperations {
         const small = path.join(review, `thumb-${label}-celular.png`);
         await run(this.ffmpeg, ['-hide_banner', '-loglevel', 'error', '-y', '-i', file, '-vf', 'scale=320:-2:flags=lanczos', small], { timeout: 60_000 });
         previews.push(small);
+        // Cópia visível na pasta do projeto (antes de vincular, que move o arquivo), para a pessoa abrir e subir no YouTube.
+        const visible = path.join(path.resolve(directory), 'output', 'thumbnails'); await mkdir(visible, { recursive: true });
+        await copyFile(file, path.join(visible, `thumbnail-${label}.png`));
         const attached = await this.#attachGenerated(directory, file, `Thumbnail ${label}`, 'thumbnail');
         result[`thumbnail${label}`] = attached.mediaId;
       }
@@ -295,6 +300,42 @@ export class ProductionOperations {
     const next = { ...fresh.creative, packaging: { ...fresh.creative.packaging, ...result, thumbnailMediaId: result.thumbnailA || fresh.creative.packaging.thumbnailMediaId } };
     const updated = await this.app.runProjectAction({ path: directory, baseRevision: fresh.revision, action: { type: 'creative.update', creative: next } });
     return { ...result, phonePreviews: previews, revision: updated.project.revision, hint: 'Abra as versões de celular (320 px) e confira se o assunto e o texto se leem em 1 segundo.' };
+  }
+
+  /**
+   * O que a edição já produziu, para a pessoa acompanhar no app: prévias (output/previas), vídeos
+   * renderizados (output/*.mp4), thumbnails (output/thumbnails) e a pasta de entrega.
+   */
+  async outputs({ path: directory }) {
+    const root = path.join(path.resolve(directory), 'output');
+    const files = async (folder, pattern) => {
+      const names = (await readdir(folder).catch(() => [])).filter(name => pattern.test(name));
+      const items = await Promise.all(names.map(async name => { const info = await stat(path.join(folder, name)); return { name: path.relative(root, path.join(folder, name)), size: info.size, modifiedAt: info.mtime.toISOString() }; }));
+      return items.sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
+    };
+    const previews = (await files(path.join(root, 'previas'), /^previa-\d+\.png$/)).map(item => ({ ...item, second: Number(item.name.match(/(\d+)\.png$/)[1]) / 10 })).sort((a, b) => a.second - b.second);
+    return { previews, renders: await files(root, /\.mp4$/i), thumbnails: await files(path.join(root, 'thumbnails'), /\.(png|jpe?g)$/i), delivery: existsSync(path.join(root, 'entrega')) };
+  }
+
+  /** Arquivo de output/ para ver no app (só imagem e vídeo, sem sair da pasta). */
+  async outputFile({ path: directory, name }) {
+    const root = path.join(path.resolve(directory), 'output');
+    const file = path.resolve(root, String(name || ''));
+    const types = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.mp4': 'video/mp4' };
+    if (!file.startsWith(root + path.sep) || !types[path.extname(file).toLowerCase()]) throw Object.assign(new Error('Arquivo fora da pasta de saída do projeto'), { code: 'FORBIDDEN_PATH' });
+    const info = await stat(file).catch(() => null);
+    if (!info?.isFile()) throw Object.assign(new Error('Arquivo não encontrado'), { code: 'NOT_FOUND' });
+    return { file, size: info.size, contentType: types[path.extname(file).toLowerCase()] };
+  }
+
+  /** Abre no sistema a pasta de saída, de prévias, de thumbnails ou de entrega do projeto. */
+  async revealOutput({ path: directory, folder = 'output' }) {
+    const names = { output: '', previas: 'previas', thumbnails: 'thumbnails', entrega: 'entrega' };
+    if (!(folder in names)) throw new Error('Pasta desconhecida');
+    const target = path.join(path.resolve(directory), 'output', names[folder]);
+    if (!existsSync(target)) throw Object.assign(new Error('Essa pasta ainda não existe'), { code: 'NOT_FOUND' });
+    await this.app.opener.reveal(target);
+    return { revealed: target };
   }
 
   /** Janela de tempo de cada cena do roteiro dentro da narração montada (segundos). */

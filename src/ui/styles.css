@@ -455,3 +455,21 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-vi
 
 .final-head { flex-wrap: wrap; }.final-head > div { flex: 1; min-width: 180px; }.final-folder { display: inline-flex; align-items: center; justify-content: center; gap: 7px; margin-left: auto; flex-shrink: 0; }
 .narration > .view-only-fieldset { display: grid; gap: 18px; }
+.motion-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 12px 0; }
+.motion-stats div { background: #151b24; border: 1px solid #26323f; border-radius: 10px; padding: 10px 12px; }
+.motion-stats dt { font-size: 12px; color: #9aa7b4; display: flex; align-items: center; gap: 4px; }
+.motion-stats dd { margin: 4px 0 0; font-size: 20px; font-weight: 700; overflow-wrap: anywhere; }
+.scene-mix { display: flex; flex-wrap: wrap; gap: 6px; }
+.scene-mix .chip { background: #1d2733; border-radius: 999px; padding: 3px 10px; font-size: 12px; }
+.preview-grid { list-style: none; padding: 0; margin: 12px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.preview-grid img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; display: block; }
+.preview-grid small { color: #9aa7b4; }
+.final-video { width: 100%; max-height: 70vh; border-radius: 10px; background: #000; margin: 10px 0; }
+.final-result h3 { display: flex; align-items: center; gap: 6px; margin-top: 16px; }
+.beat-list summary { cursor: pointer; list-style: none; }
+.beat-list summary h2 { display: inline; }
+.beat-list ol { list-style: none; padding: 0; margin: 12px 0 0; max-height: 420px; overflow: auto; }
+.beat-list li { display: grid; grid-template-columns: 52px 170px 1fr; gap: 10px; padding: 6px 0; border-bottom: 1px solid #1f2832; font-size: 14px; }
+.beat-list time { color: #9aa7b4; font-variant-numeric: tabular-nums; }
+@media (max-width: 640px) { .beat-list li { grid-template-columns: 48px 1fr; } .beat-list li span { grid-column: 1 / -1; } }
+.motion-stats dd.small { font-size: 14px; font-weight: 600; }

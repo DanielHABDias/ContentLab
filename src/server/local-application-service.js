@@ -460,6 +460,9 @@ export class LocalApplicationService {
   productionMotionAuto(input) { return this.productionOps.motionPlanAuto(input); }
   productionMotionSet(input) { return this.productionOps.motionPlanSet(input); }
   productionMotionPreview(input) { return this.productionOps.motionPreview(input); }
+  productionOutputs(input) { return this.productionOps.outputs(input); }
+  productionOutputFile(input) { return this.productionOps.outputFile(input); }
+  productionRevealOutput(input) { return this.productionOps.revealOutput(input); }
   voicePlan() { return this.narrationOps.voicePlan(); }
   /** Programas abertos que mais usam RAM, para liberar memória antes da voz clonada. */
   async systemApps() { return this.apps.list(); }
