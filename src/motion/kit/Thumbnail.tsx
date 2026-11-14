@@ -33,67 +33,71 @@ export type ThumbProps = {
   /** Aproxima a mídia em volta do foco (1 = sem zoom), para o rosto ocupar o quadro. */
   zoom?: number;
   /** Layout `palavra`: textura do fundo (meio-tom leve ou efeito de TV). */
-  textura?: 'halftone' | 'tv';
+  textura?: 'halftone' | 'tv' | 'nenhuma';
+  /** Layout `palavra`: imagem do fundo, escurecida e borrada. */
+  midiaFundo?: string;
+  /** Layout `palavra`: altura do centro do texto (0 = topo, 1 = base; padrão 0,5). */
+  alturaTexto?: number;
 };
 
 const TONS: Record<string, string> = { amarelo: C.yellow, vermelho: C.red, azul: C.blue, branco: C.white, verde: '#7CFF3A' };
 
-/** Layout `palavra`: cor da palavra (brilho) e um fundo liso que contrasta com ela. */
+/** Layout `palavra`: cor da palavra (brilho) e o tom do fundo escuro, quase preto, que contrasta com ela. */
 const PALAVRA: Record<string, { word: string; glow: string; bg: [string, string] }> = {
-  amarelo: { word: '#FFE94D', glow: '#FFC400', bg: ['#4B1D9E', '#1A0838'] },
-  vermelho: { word: '#FF4655', glow: '#FF1030', bg: ['#0E3D6B', '#04121F'] },
-  azul: { word: '#7FD4FF', glow: '#1E90FF', bg: ['#A3102A', '#3A0410'] },
-  branco: { word: '#FFFFFF', glow: '#FFD0D6', bg: ['#E01B2F', '#5A0410'] },
-  verde: { word: '#C8FF4D', glow: '#5DFF1A', bg: ['#7A1491', '#26052E'] },
+  amarelo: { word: '#FFE94D', glow: '#FFC400', bg: ['#1C1530', '#050308'] },
+  vermelho: { word: '#FF3B4E', glow: '#FF0A2A', bg: ['#1A0B10', '#040203'] },
+  azul: { word: '#8FDCFF', glow: '#1E90FF', bg: ['#0B1626', '#020407'] },
+  branco: { word: '#FFFFFF', glow: '#C9D4FF', bg: ['#16141F', '#030305'] },
+  verde: { word: '#C8FF4D', glow: '#5DFF1A', bg: ['#111A0C', '#030502'] },
 };
 
 /**
- * Palavra gigante brilhando atrás, o personagem "dentro" dela (na frente da palavra cheia e atrás de uma
- * segunda camada só com o contorno fino, alinhada), fundo liso com meio-tom leve ou efeito de TV e o
- * personagem do projeto grande num canto inferior, cortado na cintura.
+ * Palavra (ou frase curta, até 2 linhas) gigante brilhando atrás, o personagem "dentro" dela (na frente da
+ * palavra cheia e atrás de uma segunda camada só com o contorno fino, alinhada), fundo escuro (quase preto ou
+ * a imagem `midiaFundo` escurecida e borrada) com efeito de TV, e o personagem do projeto grande num canto
+ * inferior, cortado na cintura. A mídia principal deve ser um recorte PNG inteiro, em alta resolução.
  */
 const PalavraLayout: React.FC<{ p: ThumbProps & { width: number; height: number }; humor?: Mood }> = ({ p, humor }) => {
-  const { width, height, midia, texto, lado = 'direita', tom = 'amarelo', textura = 'halftone', foco, zoom, pose, selo } = p;
+  const { width, height, midia, midiaFundo, texto, lado = 'direita', tom = 'amarelo', textura = 'tv', foco, zoom, pose, selo, alturaTexto } = p;
   const pal = PALAVRA[tom] || PALAVRA.amarelo;
   const assets = useContext(Assets);
   const asset = midia ? assets[midia.startsWith('media:') ? midia.slice(6) : midia] : null;
   const cutout = Boolean(asset && /\.png($|\?)/i.test(asset.src));
-  const lines = texto.replace(/\*/g, '').split('\n').map(l => l.trim()).filter(Boolean);
-  const main = lines.at(-1) || '';
-  const top = lines.slice(0, -1).join(' ');
-  // Anton é condensada (~0,5 em por letra): a palavra ocupa quase toda a largura, alongada na vertical.
-  const size = Math.min(height * 0.6, (width * 0.94) / Math.max(1, main.length * 0.5));
-  const stretch = 1.18;
-  const wordBox: React.CSSProperties = { position: 'absolute', left: 0, right: 0, top: height * (top ? 0.56 : 0.5), transform: `translateY(-50%) scaleY(${stretch})`, textAlign: 'center', fontFamily: ANTON, fontSize: size, lineHeight: 1, letterSpacing: size * 0.01, textTransform: 'uppercase', whiteSpace: 'nowrap' };
-  const topBox: React.CSSProperties = { ...wordBox, top: height * 0.56 - (size * stretch) / 2 - size * 0.26, fontSize: size * 0.3, transform: 'translateY(-50%)' };
-  const glow = `0 0 ${size * 0.04}px ${pal.glow}, 0 0 ${size * 0.12}px ${pal.glow}, 0 0 ${size * 0.3}px ${pal.glow}`;
-  const stroke = Math.max(3, size * 0.012);
+  const lines = texto.replace(/\*/g, '').split('\n').map(l => l.trim()).filter(Boolean).slice(0, 2);
+  const longest = Math.max(1, ...lines.map(l => l.length));
+  const stretch = 1.15;
+  // Anton é condensada (~0,5 em por letra): a linha mais longa ocupa quase toda a largura, alongada na vertical.
+  const size = Math.min(height * (lines.length > 1 ? 0.36 : 0.6), (width * 0.94) / (longest * 0.5));
+  const lineH = size * 0.95 * stretch;
+  const center = height * (alturaTexto ?? 0.5);
+  const box = (i: number): React.CSSProperties => ({ position: 'absolute', left: 0, right: 0, top: center + (i - (lines.length - 1) / 2) * lineH, transform: `translateY(-50%) scaleY(${stretch})`, textAlign: 'center', fontFamily: ANTON, fontSize: size, lineHeight: 1, letterSpacing: size * 0.01, textTransform: 'uppercase', whiteSpace: 'nowrap' });
+  const glow = `0 0 ${size * 0.03}px ${pal.glow}, 0 0 ${size * 0.1}px ${pal.glow}, 0 0 ${size * 0.25}px ${pal.glow}`;
+  const stroke = Math.max(1.5, size * 0.0055);
   const left = lado === 'esquerda';
   const noxH = height * 1.08;
   const fade = 'radial-gradient(ellipse 48% 70% at 50% 45%, #000 50%, transparent 100%)';
-  const dots = 'radial-gradient(circle, rgba(255,255,255,.22) 28%, transparent 31%)';
+  const dots = 'radial-gradient(circle, rgba(255,255,255,.14) 28%, transparent 31%)';
   return (
     <AbsoluteFill style={{ background: `radial-gradient(ellipse 75% 70% at 50% 48%, ${pal.bg[0]} 0%, ${pal.bg[1]} 100%)`, overflow: 'hidden' }}>
+      {midiaFundo && <AbsoluteFill style={{ transform: 'scale(1.12)', filter: `blur(${height * 0.018}px) brightness(.32) saturate(.8)` }}><Subject id={midiaFundo} fit="cover" /></AbsoluteFill>}
       {textura === 'halftone' ? (
         <AbsoluteFill style={{ backgroundImage: dots, backgroundSize: `${height * 0.022}px ${height * 0.022}px`, maskImage: 'radial-gradient(ellipse 70% 70% at 50% 50%, transparent 25%, #000 100%)', WebkitMaskImage: 'radial-gradient(ellipse 70% 70% at 50% 50%, transparent 25%, #000 100%)' } as React.CSSProperties} />
-      ) : (
+      ) : textura === 'tv' ? (
         <>
-          <AbsoluteFill style={{ backgroundImage: 'repeating-linear-gradient(0deg, rgba(0,0,0,.32) 0px, rgba(0,0,0,.32) 2px, transparent 2px, transparent 5px)' }} />
-          <AbsoluteFill style={{ backgroundImage: 'repeating-linear-gradient(90deg, rgba(255,0,60,.07) 0px, rgba(0,255,120,.07) 2px, rgba(40,90,255,.07) 4px, transparent 6px)' }} />
-          <AbsoluteFill style={{ background: 'linear-gradient(180deg, transparent 38%, rgba(255,255,255,.07) 40%, transparent 46%)' }} />
+          <AbsoluteFill style={{ backgroundImage: 'repeating-linear-gradient(0deg, rgba(0,0,0,.38) 0px, rgba(0,0,0,.38) 2px, transparent 2px, transparent 5px)' }} />
+          <AbsoluteFill style={{ backgroundImage: 'repeating-linear-gradient(90deg, rgba(255,0,60,.05) 0px, rgba(0,255,120,.05) 2px, rgba(40,90,255,.05) 4px, transparent 6px)' }} />
+          <AbsoluteFill style={{ background: 'linear-gradient(180deg, transparent 38%, rgba(255,255,255,.05) 40%, transparent 46%)' }} />
         </>
-      )}
+      ) : null}
       {/* camada de trás: a palavra cheia, brilhando */}
-      {top && <div style={{ ...topBox, color: pal.word, textShadow: glow }}>{top}</div>}
-      <div style={{ ...wordBox, color: pal.word, textShadow: glow }}>{main}</div>
+      {lines.map((line, i) => <div key={`b${i}`} style={{ ...box(i), color: pal.word, textShadow: glow }}>{line}</div>)}
       {/* o personagem, dentro da palavra */}
-      <div style={{ position: 'absolute', top: 0, bottom: 0, left: width * 0.15, width: width * 0.7, ...(cutout ? { filter: `drop-shadow(0 0 ${height * 0.03}px rgba(0,0,0,.7))` } : { maskImage: fade, WebkitMaskImage: fade }) } as React.CSSProperties}>
+      <div style={{ position: 'absolute', top: 0, bottom: 0, left: width * 0.15, width: width * 0.7, ...(cutout ? { filter: `drop-shadow(0 0 ${height * 0.04}px rgba(0,0,0,.85))` } : { maskImage: fade, WebkitMaskImage: fade }) } as React.CSSProperties}>
         <Subject id={midia} fit={cutout ? 'contain' : 'cover'} foco={foco || (cutout ? '50% 0%' : '50% 25%')} zoom={zoom ?? (cutout ? 1.6 : 1)} />
       </div>
       {/* camada da frente: só o contorno fino, alinhado com a palavra de trás */}
-      {top && <div style={{ ...topBox, color: 'transparent', WebkitTextStroke: `${stroke * 0.7}px ${C.white}` }}>{top}</div>}
-      <div style={{ ...wordBox, color: 'transparent', WebkitTextStroke: `${stroke}px ${C.white}` }}>{main}</div>
-      <AbsoluteFill style={{ boxShadow: `inset 0 0 ${height * 0.22}px rgba(0,0,0,.6)` }} />
+      {lines.map((line, i) => <div key={`f${i}`} style={{ ...box(i), color: 'transparent', WebkitTextStroke: `${stroke}px ${C.white}` }}>{line}</div>)}
+      <AbsoluteFill style={{ boxShadow: `inset 0 0 ${height * 0.25}px rgba(0,0,0,.75)` }} />
       {humor && <Figura pose={pose} humor={humor} seed="thumb" height={noxH} x={left ? -width * 0.07 : width - figW(noxH) + width * 0.07} y={height * 0.42} flip={!left} />}
       {selo && <div style={{ position: 'absolute', top: height * 0.05, [left ? 'right' : 'left']: width * 0.04, background: pal.word, color: C.ink, fontFamily: ANTON, fontSize: height * 0.06, padding: '2px 16px', textTransform: 'uppercase' } as React.CSSProperties}>{selo}</div>}
     </AbsoluteFill>
