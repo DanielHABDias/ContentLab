@@ -19,7 +19,7 @@ import { motionPlanSchema } from '../core/contracts.js';
 import { MOTION_KIT } from '../motion/kit-catalog.js';
 import { wrap } from '../render/ffmpeg-graph.js';
 import { mediaRefs, sanitizeProps } from '../render/remotion-component-runtime.js';
-import { missingStageArtifacts } from '../core/workflow.js';
+import { missingStageArtifacts, packagingVariants } from '../core/workflow.js';
 import { SCENES_TRACK, scenesTrack } from './edit-operations.js';
 import { BUNDLED_COMPONENTS } from '../timeline/components/catalog.js';
 
@@ -150,6 +150,15 @@ const clipId = () => `clip_${randomUUID().replaceAll('-', '').slice(0, 10)}`;
  * montagem automática da timeline, espera por aprovação e pasta de entrega.
  * Tudo grava pelo núcleo (mídias com direitos `owned`, edições com histórico).
  */
+/** Short não tem teste A/B: só a primeira variante, sempre como A. Vídeo longo: até duas (A e B). */
+export const defaultVariants = (project, list) => list.filter(item => packagingVariants(project).includes(item.label));
+
+export function singleVariant(project, list) {
+  if (project.type !== 'short') return list.slice(0, 2);
+  if (list.length > 1 || list.some(item => item.label === 'B')) throw Object.assign(new Error('Short não tem teste A/B: gere só a thumbnail A'), { code: 'SHORT_SINGLE_VARIANT' });
+  return list.slice(0, 1).map(item => ({ ...item, label: 'A' }));
+}
+
 export class ProductionOperations {
   constructor(app) { this.app = app; this.waiters = new Map(); }
   get ffmpeg() { return this.app.media?.ffmpeg || 'ffmpeg'; }
@@ -217,7 +226,7 @@ export class ProductionOperations {
   }
 
   /**
-   * Thumbnails A e B: título sobre um frame do vídeo (ou cor), em dois estilos para teste A/B.
+   * Thumbnails A e B: título sobre um frame do vídeo (ou cor), em dois estilos para teste A/B; no Short, só a A.
    * Grava em `creative.packaging.thumbnailA/B` (A também vira a thumbnail principal).
    */
   async thumbnails({ path: directory, variants, style = 'kit' }) {
@@ -225,8 +234,8 @@ export class ProductionOperations {
     if (style === 'kit') return this.#kitThumbnails(directory, variants);
     const project = await readProjectDirectory(directory);
     const packaging = project.creative.packaging;
-    const list = (variants?.length ? variants : [{ label: 'A', title: packaging.titleA }, { label: 'B', title: packaging.titleB || packaging.titleA }]).slice(0, 2);
-    if (list.some(item => !String(item.title || '').trim())) throw new Error('Escreva os títulos A/B (ou informe o texto de cada thumbnail)');
+    const list = singleVariant(project, variants?.length ? variants : defaultVariants(project, [{ label: 'A', title: packaging.titleA }, { label: 'B', title: packaging.titleB || packaging.titleA }]));
+    if (list.some(item => !String(item.title || '').trim())) throw new Error(project.type === 'short' ? 'Escreva o título (ou informe o texto da thumbnail)' : 'Escreva os títulos A/B (ou informe o texto de cada thumbnail)');
     const [width, height] = THUMB_SIZES[project.aspectRatio] || THUMB_SIZES['16:9'];
     const content = project.media.filter(item => ['video', 'image'].includes(item.kind) && !['thumbnail', 'background', 'character'].includes(item.role));
     const staging = await mkdtemp(path.join(os.tmpdir(), 'contentlab-thumbs-'));
@@ -264,7 +273,7 @@ export class ProductionOperations {
     // Sem variantes: as palavras de impacto de cada título (até 3), a última em amarelo.
     const fromTitle = title => { const words = impact(title || '', 3); return words.length ? [...words.slice(0, -1), `*${words.at(-1)}*`].join(' ') : ''; };
     const humor = mood => (project.character ? mood : undefined);
-    const list = (variants?.length ? variants : [{ label: 'A', text: fromTitle(packaging.titleA), humor: humor('surpreso') }, { label: 'B', text: fromTitle(packaging.titleB || packaging.titleA), humor: humor('determinado'), side: 'direita' }]).slice(0, 2);
+    const list = singleVariant(project, variants?.length ? variants : defaultVariants(project, [{ label: 'A', text: fromTitle(packaging.titleA), humor: humor('surpreso') }, { label: 'B', text: fromTitle(packaging.titleB || packaging.titleA), humor: humor('determinado'), side: 'direita' }]));
     const kit = list.map((variant, index) => {
       const text = String(variant.text || variant.title || '').trim();
       if (!text) throw new Error('Informe o texto curto de cada thumbnail (até 4 palavras)');
@@ -655,7 +664,7 @@ export class ProductionOperations {
     return { stageId: target, decision: null, waiting: true, message: 'Ainda aguardando a decisão no Content Lab; chame de novo.' };
   }
 
-  /** Pasta `output/entrega/`: roteiro, títulos e descrição, thumbnails A/B e o vídeo final mais recente. */
+  /** Pasta `output/entrega/`: roteiro, títulos e descrição, thumbnails (A/B no longo, só A no Short) e o vídeo final mais recente. */
   async deliverable({ path: directory }) {
     const project = await readProjectDirectory(directory);
     const target = path.join(path.resolve(directory), 'output', 'entrega');
@@ -664,9 +673,10 @@ export class ProductionOperations {
     await writeFile(path.join(target, 'roteiro.md'), `# ${project.title}\n\n## Ideia\n\n- Tese: ${brief.thesis}\n- Público: ${brief.audience}\n- Promessa: ${brief.promise}\n\n${scriptMarkdown(script)}\n`);
     const { chapters } = project.type === 'long' ? await this.chapters({ path: directory }) : { chapters: [] };
     const chapterText = chapters.length >= 3 ? `\n## Capítulos\n\n${chapters.map(item => `${item.stamp} ${item.title}`).join('\n')}\n` : '';
-    await writeFile(path.join(target, 'embalagem.md'), `# Embalagem\n\n- Título A: ${packaging.titleA}\n- Título B: ${packaging.titleB}\n\n## Descrição\n\n${packaging.description}\n${chapterText}\n## Tags\n\n${packaging.tags}\n\n## SEO\n\n${packaging.seo}\n`);
+    const titles = project.type === 'short' ? `- Título: ${packaging.titleA}` : `- Título A: ${packaging.titleA}\n- Título B: ${packaging.titleB}`;
+    await writeFile(path.join(target, 'embalagem.md'), `# Embalagem\n\n${titles}\n\n## Descrição\n\n${packaging.description}\n${chapterText}\n## Tags\n\n${packaging.tags}\n\n## SEO\n\n${packaging.seo}\n`);
     const files = ['roteiro.md', 'embalagem.md'];
-    for (const label of ['A', 'B']) {
+    for (const label of packagingVariants(project)) {
       const media = project.media.find(item => item.id === packaging[`thumbnail${label}`]);
       const source = media && await this.app.resolveMediaPath(media);
       if (source) { const name = `thumbnail-${label}${path.extname(source) || '.png'}`; await copyFile(source, path.join(target, name)); files.push(name); }
@@ -798,6 +808,13 @@ export class ProductionOperations {
     return { id: 'music', label: 'Trilha licenciada', ok: !generated.length, detail: generated.length ? 'trilha sintetizada é rascunho: troque por faixa licenciada antes de publicar' : `${music.length} faixa(s) com licença registrada` };
   }
 
+  /** Embalagem: no vídeo longo, títulos e thumbnails A/B; no Short, um título e uma thumbnail. */
+  #packagingCheck(project, files, approved) {
+    const labels = packagingVariants(project);
+    const thumbs = labels.filter(label => files.includes(`thumbnail-${label}.png`)).length;
+    return { id: 'packaging', label: labels.length > 1 ? 'Títulos e thumbnails A/B' : 'Título e thumbnail', ok: approved && thumbs === labels.length, detail: `${thumbs}/${labels.length} thumbnail${labels.length > 1 ? 's' : ''}${approved ? ', embalagem aprovada' : ', embalagem não aprovada'}` };
+  }
+
   #checks(project, inspection, latest, files, chapters, byWord = false) {
     const stage = id => project.stages.find(item => item.id === id)?.state === 'approved';
     const pending = project.media.filter(item => item.rights === 'pending');
@@ -805,7 +822,7 @@ export class ProductionOperations {
     const captions = motion ? (motion.captions !== false && byWord ? 1 : 0) : project.timeline.tracks.filter(track => track.kind === 'caption').reduce((sum, track) => sum + track.clips.length, 0);
     return [
       { id: 'script', label: 'Roteiro', ok: stage('script'), detail: stage('script') ? 'aprovado' : 'etapa ainda não aprovada' },
-      { id: 'packaging', label: 'Títulos e thumbnails A/B', ok: stage('packaging') && files.includes('thumbnail-A.png') && files.includes('thumbnail-B.png'), detail: `${files.filter(name => name.startsWith('thumbnail-')).length}/2 thumbnails${stage('packaging') ? ', embalagem aprovada' : ', embalagem não aprovada'}` },
+      this.#packagingCheck(project, files, stage('packaging')),
       { id: 'rights', label: 'Direitos das mídias', ok: pending.length === 0, detail: pending.length ? `${pending.length} mídia(s) com direitos pendentes` : `${project.media.length} mídia(s) próprias ou licenciadas` },
       { id: 'render', label: 'Vídeo final', ok: Boolean(latest && inspection?.audio), detail: latest ? (inspection ? `${inspection.width}×${inspection.height}, ${Number(inspection.duration || 0).toFixed(1)} s, conferido com ffprobe` : 'render concluído') : 'sem render concluído' },
       this.#visualCheck(project),

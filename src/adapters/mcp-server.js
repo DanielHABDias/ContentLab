@@ -118,7 +118,7 @@ export function createMcpServer() {
     path: projectPath,
     brief: z.object({ thesis: z.string(), audience: z.string(), promise: z.string(), notes: z.string() }).partial().optional(),
     script: z.object({ chapters: scriptChaptersSchema.describe('Capítulos ordenados com blocos narration (só fala), scene (descrição de cena/som original, não narrada) e direction (instruções, não narradas). Títulos nunca são narrados.'), sources: z.string(), visual: z.string(), hook: z.string(), development: z.string(), payoff: z.string() }).partial().optional(),
-    packaging: z.object({ titleA: z.string(), titleB: z.string(), description: z.string(), tags: z.string(), seo: z.string() }).partial().optional(),
+    packaging: z.object({ titleA: z.string(), titleB: z.string().describe('Só no vídeo longo: Short tem um título só (titleA), sem teste A/B'), description: z.string(), tags: z.string(), seo: z.string() }).partial().optional(),
   }, async ({ path, brief, script, packaging }) => {
     const { project } = await openProject(path);
     const creative = structuredClone(project.creative);
@@ -259,7 +259,7 @@ export function createMcpServer() {
 
   tool(server, 'chapters_get', 'Capítulos do vídeo longo a partir dos tempos reais da narração montada (um por trecho do roteiro).', { path: projectPath }, async ({ path }) => api('/production/chapters', { path }));
 
-  tool(server, 'thumbnails_generate', 'Gera as thumbnails A e B com o kit (style "kit", padrão): limpas, com fundo preto ou branco e o personagem em destaque (mídia da obra; PNG transparente vira recorte), até 4 palavras em Anton (*palavra* fica amarela; "/" quebra a linha), personagem do projeto na pose do humor (se houver), selo opcional e duas mídias em VS. Grava na embalagem e devolve versões de 320 px em output/previas para conferir no tamanho do celular. A e B devem ter ângulos diferentes. style "simple" usa o título sobre um frame.', {
+  tool(server, 'thumbnails_generate', 'Gera as thumbnails A e B com o kit (style "kit", padrão); no Short, só a A (Short não tem teste A/B: um título e uma thumbnail): limpas, com fundo preto ou branco e o personagem em destaque (mídia da obra; PNG transparente vira recorte), até 4 palavras em Anton (*palavra* fica amarela; "/" quebra a linha), personagem do projeto na pose do humor (se houver), selo opcional e duas mídias em VS. Grava na embalagem e devolve versões de 320 px em output/previas para conferir no tamanho do celular. A e B devem ter ângulos diferentes. style "simple" usa o título sobre um frame.', {
     path: projectPath, style: z.enum(['kit', 'simple']).default('kit'),
     variants: z.array(z.object({
       label: z.enum(['A', 'B']), title: z.string().optional(), text: z.string().optional().describe('Até 4 palavras; complementa o título, não repete'),
@@ -286,7 +286,7 @@ export function createMcpServer() {
     return { ...last, waiting: true, message: 'Ainda em andamento; chame job_wait de novo.' };
   });
 
-  tool(server, 'deliverable_build', 'Monta output/entrega/ no projeto: roteiro.md, embalagem.md (títulos A/B, descrição, capítulos, tags), thumbnails A/B, o vídeo final e verificacao.md (o que foi conferido e o que falta). Devolve checks.', { path: projectPath }, async ({ path }) => api('/production/deliverable', { path }));
+  tool(server, 'deliverable_build', 'Monta output/entrega/ no projeto: roteiro.md, embalagem.md (títulos A/B, ou o título único do Short, descrição, capítulos, tags), thumbnails (A/B no longo, só A no Short), o vídeo final e verificacao.md (o que foi conferido e o que falta). Devolve checks.', { path: projectPath }, async ({ path }) => api('/production/deliverable', { path }));
 
   tool(server, 'project_export', 'Exporta o projeto como .contentlab ou ZIP (opcionalmente com o vídeo renderizado).', { path: projectPath, format: z.enum(['zip', 'contentlab']).default('zip'), outputDirectory: z.string(), includeRenders: z.boolean().default(true) }, async ({ path, format, outputDirectory, includeRenders }) => api('/projects/export', { path, format, outputDirectory, includeRenders }));
 

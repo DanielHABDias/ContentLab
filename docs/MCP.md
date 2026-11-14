@@ -61,7 +61,7 @@ Um servidor MCP não consegue iniciar uma mensagem no chat por conta própria; q
 | --- | --- |
 | `contentlab_status`, `contentlab_start`, `contentlab_open`, `contentlab_stop` | Mostram se o app está aberto e quais dependências estão prontas; abrem o app em segundo plano; abrem o projeto no navegador da pessoa; desligam o app (sem `force`, recusam se houver trabalho em andamento) |
 | `project_list`, `project_create`, `project_get` | Projetos reais dos Recentes. O `mode` do projeto pode ser `review` (espera a sua aprovação) ou `autonomous` (o agente aprova). `project_get` mostra a etapa atual e o que falta nela |
-| `creative_write` | Ideia (brief), roteiro (`script.chapters`: capítulos com blocos `narration`, `scene`, `direction`; só `narration.text` é falado) e embalagem (títulos A/B, descrição, tags, SEO) |
+| `creative_write` | Ideia (brief), roteiro (`script.chapters`: capítulos com blocos `narration`, `scene`, `direction`; só `narration.text` é falado) e embalagem (títulos A/B no vídeo longo; no Short, um título só; descrição, tags, SEO) |
 | `script_get`, `script_edit` | Leitura só do roteiro e edição pontual por IDs, com revisão obrigatória, lote atômico e `dryRun`. [Contrato e exemplo](ROTEIRO.md) |
 | `stage_wait_decision`, `stage_approve`, `stage_request_changes` | Aprovação humana ou do agente. Ver as regras abaixo |
 | `media_import_files`, `media_import_url`, `media_generate_slides` | Mídias próprias ou licenciadas, ou um slide por cena do roteiro quando não há filmagem |
@@ -75,7 +75,7 @@ Um servidor MCP não consegue iniciar uma mensagem no chat por conta própria; q
 | `chapters_get` | Capítulos a partir dos tempos reais da narração |
 | `thumbnails_generate` | Gera as thumbnails A e B (título sobre um frame do vídeo, ou sobre um degradê) e grava na embalagem |
 | `render_start`, `job_wait` | Render final (fila persistente) e espera de qualquer job |
-| `deliverable_build`, `project_export` | Monta `output/entrega/` (roteiro.md, embalagem.md com capítulos, thumbnail-A/B, video.mp4, verificacao.md) e exporta ZIP ou `.contentlab` |
+| `deliverable_build`, `project_export` | Monta `output/entrega/` (roteiro.md, embalagem.md com capítulos, thumbnail-A/B no longo ou thumbnail-A no Short, video.mp4, verificacao.md) e exporta ZIP ou `.contentlab` |
 | `project_run` | Avançado: aplica qualquer ação validada do núcleo, como editar a timeline |
 
 ## Regras de aprovação e direitos

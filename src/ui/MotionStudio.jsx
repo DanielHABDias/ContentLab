@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Clapperboard, FolderOpen, Image as ImageIcon, Loader2, Music, Film } from 'lucide-react';
 import { localApi } from './local-api.js';
 import { mediaUrl } from './MediaLibrary.jsx';
+import { packagingVariants } from '../core/workflow.js';
 
 export const outputUrl = (project, name, version = '') => `/api/v1/production/output-file?path=${encodeURIComponent(project)}&name=${encodeURIComponent(name)}${version ? `&v=${encodeURIComponent(version)}` : ''}`;
 const clock = seconds => { const s = Math.max(0, Math.round(seconds)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
@@ -41,7 +42,8 @@ export function FinalResult({ details, outputs: given }) {
   const outputs = given || own;
   const packaging = details.project.creative?.packaging || {};
   const media = details.project.media || [];
-  const thumbs = [['A', packaging.thumbnailA], ['B', packaging.thumbnailB]].filter(([, id]) => id && media.some(item => item.id === id));
+  const labels = packagingVariants(details.project); const single = labels.length === 1;
+  const thumbs = labels.map(label => [label, packaging[`thumbnail${label}`]]).filter(([, id]) => id && media.some(item => item.id === id));
   if (!outputs) return <section className="workflow-card"><p className="empty-state">Carregando o resultado…</p></section>;
   const latest = outputs.renders[0];
   return <section className="workflow-card final-result" aria-labelledby="final-result-title">
@@ -49,8 +51,8 @@ export function FinalResult({ details, outputs: given }) {
       <div className="take-actions">{latest && <FolderButton projectPath={projectPath} folder="output" label="Abrir pasta do vídeo"/>}{outputs.thumbnails.length > 0 && <FolderButton projectPath={projectPath} folder="thumbnails" label="Abrir pasta das thumbnails"/>}{outputs.delivery && <FolderButton projectPath={projectPath} folder="entrega" label="Abrir pasta de entrega"/>}</div></div>
     {latest ? <video className="final-video" controls preload="metadata" src={outputUrl(projectPath, latest.name, latest.modifiedAt)} aria-label="Vídeo final"/> : <div className="empty-state"><strong>Nenhum vídeo renderizado ainda.</strong></div>}
     {outputs.renders.length > 1 && <details className="older-renders"><summary>Versões anteriores ({outputs.renders.length - 1})</summary><ul>{outputs.renders.slice(1).map(item => <li key={item.name}><a href={outputUrl(projectPath, item.name, item.modifiedAt)} target="_blank" rel="noreferrer">{item.name}</a> <small>{new Date(item.modifiedAt).toLocaleString()}</small></li>)}</ul></details>}
-    <h3><ImageIcon size={17} aria-hidden="true"/> Thumbnails</h3>
-    {thumbs.length ? <div className="thumb-variants">{thumbs.map(([label, id]) => <figure key={label}><img src={mediaUrl(projectPath, id)} alt={`Thumbnail ${label}`}/><figcaption>Thumbnail {label}</figcaption></figure>)}</div> : <p className="hint">Ainda sem thumbnails. Elas aparecem aqui e na aba Título e thumbnail quando a IA gerar.</p>}
+    <h3><ImageIcon size={17} aria-hidden="true"/> {single ? 'Thumbnail' : 'Thumbnails'}</h3>
+    {thumbs.length ? <div className="thumb-variants">{thumbs.map(([label, id]) => <figure key={label}><img src={mediaUrl(projectPath, id)} alt={`Thumbnail ${label}`}/><figcaption>{single ? 'Thumbnail' : `Thumbnail ${label}`}</figcaption></figure>)}</div> : <p className="hint">Ainda sem thumbnails. Elas aparecem aqui e na aba Título e thumbnail quando a IA gerar.</p>}
   </section>;
 }
 

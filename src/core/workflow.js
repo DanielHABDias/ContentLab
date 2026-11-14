@@ -53,6 +53,9 @@ function changeRequest(project, stageId, reason, author, id) {
 }
 
 /** Artefatos mínimos que tornam uma aprovação verdadeira, não apenas um clique. */
+/** Variantes de embalagem: o Short não tem teste A/B (um título e uma thumbnail, a A); o vídeo longo tem A e B. */
+export function packagingVariants(project) { return project?.type === 'short' ? ['A'] : ['A', 'B']; }
+
 export function missingStageArtifacts(project, stageId) {
   const filled = value => Boolean(value?.trim());
   const creative = project.creative || { brief: {}, script: {}, packaging: {} };

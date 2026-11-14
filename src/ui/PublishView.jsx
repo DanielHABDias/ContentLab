@@ -3,6 +3,7 @@ import { ArrowLeft, Check, Copy, Download, Film, FolderOpen, Image as ImageIcon,
 import { localApi } from './local-api.js';
 import { mediaUrl } from './MediaLibrary.jsx';
 import { outputUrl } from './MotionStudio.jsx';
+import { packagingVariants } from '../core/workflow.js';
 
 /** O projeto chegou ao fim da edição: a tela de apresentação substitui o fluxo ao abrir. */
 export const isProjectFinished = project => project.stages.some(stage => stage.id === 'edit' && stage.state === 'approved');
@@ -38,7 +39,7 @@ function useLatestRender(projectPath, revision) {
 }
 
 /**
- * Apresentação do vídeo pronto: as thumbnails A e B com os títulos, a descrição, as tags e o vídeo final,
+ * Apresentação do vídeo pronto: as thumbnails com os títulos (A e B no vídeo longo; no Short, um título e uma thumbnail), a descrição, as tags e o vídeo final,
  * tudo com um botão de copiar. Só leitura; "Editar projeto" volta ao fluxo de etapas.
  */
 export function PublishView({ details, onBack, onEdit }) {
@@ -49,7 +50,8 @@ export function PublishView({ details, onBack, onEdit }) {
   const latest = outputs?.renders?.[0];
   const vertical = project.aspectRatio === '9:16';
   const reviewed = project.stages.find(stage => stage.id === 'review')?.state === 'approved';
-  const variants = [['A', packaging.titleA, packaging.thumbnailA], ['B', packaging.titleB, packaging.thumbnailB]].filter(([, title, thumb]) => title || thumb);
+  const labels = packagingVariants(project); const single = labels.length === 1;
+  const variants = labels.map(label => [label, packaging[`title${label}`], packaging[`thumbnail${label}`]]).filter(([, title, thumb]) => title || thumb);
   const hasThumb = id => id && media.some(item => item.id === id);
   return <main id="main" className="workspace publish-view">
     <button className="text-button" aria-label="Voltar aos projetos" onClick={onBack}><ArrowLeft size={16}/> Projetos</button>
@@ -66,16 +68,16 @@ export function PublishView({ details, onBack, onEdit }) {
     </header>
 
     <section className="publish-section" aria-labelledby="publish-variants">
-      <div className="publish-heading"><h2 id="publish-variants"><ImageIcon size={19} aria-hidden="true"/> Títulos e thumbnails</h2><OpenFolder projectPath={path} folder="thumbnails" label="Pasta das thumbnails"/></div>
+      <div className="publish-heading"><h2 id="publish-variants"><ImageIcon size={19} aria-hidden="true"/> {single ? 'Título e thumbnail' : 'Títulos e thumbnails'}</h2><OpenFolder projectPath={path} folder="thumbnails" label="Pasta das thumbnails"/></div>
       <div className={`publish-variants ${vertical ? 'vertical' : ''}`}>
         {variants.map(([label, title, thumb]) => <article className="publish-variant" key={label}>
-          <div className="publish-thumb">{hasThumb(thumb) ? <img src={mediaUrl(path, thumb)} alt={`Thumbnail ${label}`}/> : <span>Sem thumbnail {label}</span>}<span className="variant-tag">{label}</span></div>
+          <div className="publish-thumb">{hasThumb(thumb) ? <img src={mediaUrl(path, thumb)} alt={single ? 'Thumbnail' : `Thumbnail ${label}`}/> : <span>{single ? 'Sem thumbnail' : `Sem thumbnail ${label}`}</span>}{!single && <span className="variant-tag">{label}</span>}</div>
           <div className="publish-variant-body">
-            <span className="field-label"><Type size={14} aria-hidden="true"/> Título {label}</span>
+            <span className="field-label"><Type size={14} aria-hidden="true"/> {single ? 'Título' : `Título ${label}`}</span>
             <p className="publish-title">{title || '—'}</p>
             <div className="publish-variant-actions">
-              <CopyButton text={title} label={`título ${label}`}/>
-              {hasThumb(thumb) && <a className="copy-button" href={mediaUrl(path, thumb)} download={`thumbnail-${label}.png`}><Download size={15} aria-hidden="true"/><span>Baixar thumbnail</span></a>}
+              <CopyButton text={title} label={single ? 'título' : `título ${label}`}/>
+              {hasThumb(thumb) && <a className="copy-button" href={mediaUrl(path, thumb)} download={single ? 'thumbnail.png' : `thumbnail-${label}.png`}><Download size={15} aria-hidden="true"/><span>Baixar thumbnail</span></a>}
             </div>
           </div>
         </article>)}
