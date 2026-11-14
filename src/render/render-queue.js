@@ -71,8 +71,24 @@ export class RenderQueue {
   #log(job, message) { job.logs ||= []; job.logs.push({ at: new Date().toISOString(), message: String(message).slice(0, 500) }); job.logs = job.logs.slice(-30); }
   #trim() { const terminal = this.jobs.filter(job => TERMINAL.has(job.state)); const remove = terminal.slice(0, Math.max(0, terminal.length - this.keep)); this.jobs = this.jobs.filter(job => !remove.includes(job)); }
   async #save() {
-    const snapshot = `${JSON.stringify({ schema: 'contentlab-render-queue-v1', jobs: this.jobs }, null, 2)}\n`;
-    this.saving = this.saving.then(async () => { await mkdir(path.dirname(this.file), { recursive: true }); const temporary = `${this.file}.${randomUUID()}.tmp`; await writeFile(temporary, snapshot, { mode: 0o600 }); await rename(temporary, this.file); });
+    this.saveRequested = true;
+    if (!this.saveScheduled) {
+      this.saveScheduled = true;
+      this.saving = this.saving.then(async () => {
+        try {
+          await mkdir(path.dirname(this.file), { recursive: true });
+          // Progress can arrive faster than disk writes. Keep only the latest state,
+          // rather than retaining a serialized project for every rendered frame.
+          while (this.saveRequested) {
+            this.saveRequested = false;
+            const snapshot = `${JSON.stringify({ schema: 'contentlab-render-queue-v1', jobs: this.jobs }, null, 2)}\n`;
+            const temporary = `${this.file}.${randomUUID()}.tmp`;
+            await writeFile(temporary, snapshot, { mode: 0o600 });
+            await rename(temporary, this.file);
+          }
+        } finally { this.saveScheduled = false; }
+      });
+    }
     return await this.saving;
   }
 }

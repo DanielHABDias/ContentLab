@@ -18,6 +18,18 @@ const LOUDNESS_TARGET = -14;
 const SCENES_3D = new Set(['paineis3d']);
 const chromium = plan => (plan.beats.some(beat => SCENES_3D.has(beat.scene)) ? { gl: 'swangle' } : {});
 
+/** Reserve CPU and memory for the desktop instead of using Remotion's half-RAM cache default. */
+export function renderResources({ cpus = os.availableParallelism(), freeMemory = os.freemem() } = {}) {
+  const gib = 1024 ** 3;
+  const budget = Math.max(256 * 1024 ** 2, freeMemory - 2 * gib);
+  return {
+    concurrency: Math.max(1, Math.min(4, cpus - 2, Math.floor(budget / gib))),
+    offthreadVideoThreads: 2,
+    offthreadVideoCacheSizeInBytes: Math.floor(Math.min(gib, budget / 4)),
+    mediaCacheSizeInBytes: Math.floor(Math.min(256 * 1024 ** 2, budget / 8)),
+  };
+}
+
 /**
  * Render do modo composição: o plano de motion (beats do kit) vira um único vídeo Remotion.
  * Prepara a pasta pública (fonte, SFX, poses do personagem do projeto e só as mídias citadas), resolve `media:<id>`, renderiza com
@@ -125,7 +137,7 @@ export class MotionRenderer {
       }
       const raw = path.join(work, 'raw.mp4');
       const { cancelSignal: cancel, cancel: stop } = makeCancelSignal(); signal?.addEventListener('abort', stop, { once: true });
-      await renderMedia({ serveUrl, composition, codec: 'h264', crf: 18, outputLocation: raw, inputProps, scale, chromiumOptions, concurrency: Math.max(1, Math.min(6, os.cpus().length - 2)), logLevel: 'error', cancelSignal: cancel, onProgress: ({ progress }) => onProgress({ phase: 'Renderizando a composição', progress: 0.05 + progress * 0.85 }) });
+      await renderMedia({ serveUrl, composition, codec: 'h264', crf: 18, outputLocation: raw, inputProps, scale, chromiumOptions, ...renderResources(), logLevel: 'error', cancelSignal: cancel, onProgress: ({ progress }) => onProgress({ phase: 'Renderizando a composição', progress: 0.05 + progress * 0.85 }) });
       onProgress({ phase: 'Ajustando o volume', progress: 0.92 });
       const temporary = `${output}.partial.mp4`;
       await this.#loudness(raw, temporary);
