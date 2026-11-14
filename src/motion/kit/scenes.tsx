@@ -326,26 +326,65 @@ export const Comparacao: React.FC<Base & { esquerda: { titulo: string; midia?: s
   );
 };
 
-/** Encerramento: nome do canal letra a letra (opcional), personagem trocando de pose, balão com pergunta e botão. */
-export const Cta: React.FC<Base & { titulo?: string; pergunta: string; botao?: string; tom?: string }> = ({ len, titulo = '', pergunta, botao = 'RESPONDE NOS COMENTÁRIOS ↓', tom }) => {
+/**
+ * Encerramento: nome do canal letra a letra (opcional), personagem trocando de pose, balão com pergunta e botão.
+ * Com `midia` (thumbnail do vídeo completo) e `video` (título dele), vira a chamada para o vídeo completo:
+ * a thumbnail num painel com o título embaixo, e o personagem menor no canto com o balão.
+ */
+export const Cta: React.FC<Base & { titulo?: string; pergunta: string; botao?: string; tom?: string; midia?: string; video?: string }> = ({ len, titulo = '', pergunta, botao, tom, midia, video }) => {
   const f = useCurrentFrame(); const { W, H, V } = useStage();
+  const thumb = useAsset(midia);
   const letters = titulo.split('');
   const moods: Mood[] = ['surpreso', 'feliz', 'determinado', 'piscada', 'feliz'];
+  const humor = moods[Math.min(moods.length - 1, Math.floor(f / Math.max(10, len / moods.length)))];
+  const titleRow = (style: React.CSSProperties, max: number) => (
+    <div style={{ position: 'absolute', display: 'flex', ...style }}>
+      {letters.map((l, i) => <div key={i} style={{ transform: `translateY(${(1 - slide(f, 6 + i * 2, 8)) * -300}px) rotate(${(random(`l${i}`) - 0.5) * 8}deg)`, opacity: f >= 6 + i * 2 ? 1 : 0 }}><Punch size={Math.min(max, ((V ? W - 100 : 1800)) / Math.max(6, letters.length))} color="#fff" split={5}>{l === ' ' ? ' ' : l}</Punch></div>)}
+    </div>
+  );
+  const bubble = (style: React.CSSProperties, size: number, tail: number, at: number) => f >= at && (
+    <div style={{ position: 'absolute', ...style, transform: `scale(${pop(f, at) * (1 + Math.sin(f / 8) * 0.015)}) rotate(${-1 + Math.sin(f / 13)}deg)`, transformOrigin: 'left bottom' }}>
+      <div style={{ background: '#fff', border: `8px solid ${C.ink}`, borderRadius: 40, padding: '24px 34px', boxShadow: `12px 12px 0 ${C.ink}`, fontFamily: ROUND, fontWeight: 900, fontSize: size, color: C.ink }}>{pergunta}</div>
+      <div style={{ width: 0, height: 0, marginLeft: tail, borderLeft: '40px solid transparent', borderRight: '10px solid transparent', borderTop: `60px solid ${C.ink}` }} />
+    </div>
+  );
+  if (thumb) {
+    const tw = V ? W - 100 : 1060; const th = tw * 9 / 16;
+    const T = V ? { x: 50, y: H * 0.14 } : { x: 800, y: 110 };
+    const nh = V ? 560 : 640;
+    // No vertical, o personagem fica à esquerda: a coluna de botões do Shorts ocupa a borda direita.
+    const fig = V ? { x: 10, y: H * 0.6 } : { x: 90, y: H - nh + 60 };
+    const thumbAt = 3; const videoAt = 12; const bubbleAt = Math.min(24, len * 0.3);
+    return (
+      <AbsoluteFill style={{ transform: shake(f, [thumbAt], 14) }}>
+        <SpeedBurst bg={color(tom, C.red)} color="rgba(11,11,16,.35)" />
+        {titleRow(V ? { left: 0, right: 0, top: H * 0.06, justifyContent: 'center' } : { left: 90, top: 120 }, V ? 130 : 150)}
+        <Panel x={T.x} y={T.y} w={tw} h={th} rotate={-1.5 + Math.sin(f / 30) * 0.5} bg={C.ink} style={{ transform: `rotate(${-1.5 + Math.sin(f / 30) * 0.5}deg) scale(${pop(f, thumbAt, 10) * (1 + Math.min(f, 300) * 0.0003)})` }}>
+          <Img src={thumb.src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        </Panel>
+        {video && f >= videoAt && <div style={{ position: 'absolute', left: T.x, width: tw, top: T.y + th + 44, transform: `translateY(${(1 - slide(f, videoAt, 8)) * 60}px)`, opacity: slide(f, videoAt, 6) }}>
+          <div style={{ background: '#fff', border: `7px solid ${C.ink}`, boxShadow: `10px 10px 0 ${C.ink}`, padding: '14px 26px', fontFamily: ANTON, fontSize: fit(video, tw - 60, V ? 64 : 58, 2), lineHeight: 1.08, color: C.ink, textTransform: 'uppercase' }}>{video}</div>
+        </div>}
+        <Figura humor={humor} height={nh} x={fig.x} y={interpolate(f, [0, 10], [H + 50, fig.y], { ...clamp, easing: ease })} tilt={Math.sin(f / 10) * 3} />
+        {bubble(V ? { left: figW(nh) - 10, top: H * 0.58, width: W - figW(nh) - 170 } : { left: 90 + figW(nh) - 40, top: H - 300, width: 600 }, V ? 50 : 46, 40, bubbleAt)}
+        {botao && f >= Math.min(90, len * 0.5) && <div style={{ position: 'absolute', left: 0, right: 0, top: V ? H * 0.78 : H - 120, textAlign: 'center', transform: `scale(${pop(f, Math.min(90, len * 0.5))})` }}><span style={{ fontFamily: ANTON, fontSize: 56, color: C.ink, background: C.yellow, border: `6px solid ${C.ink}`, padding: '6px 28px', boxShadow: `8px 8px 0 ${C.ink}` }}>{botao}</span></div>}
+      </AbsoluteFill>
+    );
+  }
   const nh = V ? 720 : 760;
   const L = V ? { title: { left: 0, right: 0, top: H * 0.08, justifyContent: 'center' }, fig: { x: (W - figW(nh)) / 2, y: H * 0.42 }, bubble: { left: 60, top: H * 0.2, width: W - 120 }, button: { left: 0, right: 0, top: H * 0.78, textAlign: 'center' as const } }
     : { title: { left: 760, top: 200 }, fig: { x: 110, y: 300 }, bubble: { left: 770, top: 460, width: 1060 }, button: { left: 780, top: 800 } };
+  const button = botao ?? 'RESPONDE NOS COMENTÁRIOS ↓';
   return (
     <AbsoluteFill style={{ transform: shake(f, [0], 20) }}>
       <SpeedBurst bg={color(tom, C.red)} color="rgba(11,11,16,.35)" />
-      <Figura humor={moods[Math.min(moods.length - 1, Math.floor(f / Math.max(10, len / moods.length)))]} height={nh} x={L.fig.x} y={interpolate(f, [0, 10], [H + 50, L.fig.y], { ...clamp, easing: ease })} tilt={Math.sin(f / 10) * 3} />
-      <div style={{ position: 'absolute', display: 'flex', ...L.title }}>
-        {letters.map((l, i) => <div key={i} style={{ transform: `translateY(${(1 - slide(f, 6 + i * 2, 8)) * -300}px) rotate(${(random(`l${i}`) - 0.5) * 8}deg)`, opacity: f >= 6 + i * 2 ? 1 : 0 }}><Punch size={Math.min(190, ((V ? W - 100 : 1800)) / Math.max(6, letters.length))} color="#fff" split={5}>{l === ' ' ? ' ' : l}</Punch></div>)}
-      </div>
+      <Figura humor={humor} height={nh} x={L.fig.x} y={interpolate(f, [0, 10], [H + 50, L.fig.y], { ...clamp, easing: ease })} tilt={Math.sin(f / 10) * 3} />
+      {titleRow(L.title, 190)}
       {f >= Math.min(40, len * 0.25) && <div style={{ position: 'absolute', ...L.bubble, transform: `scale(${pop(f, Math.min(40, len * 0.25)) * (1 + Math.sin(f / 8) * 0.015)}) rotate(${-1 + Math.sin(f / 13)}deg)`, transformOrigin: V ? 'center bottom' : 'left' }}>
         <div style={{ background: '#fff', border: `8px solid ${C.ink}`, borderRadius: 40, padding: '30px 40px', boxShadow: `12px 12px 0 ${C.ink}`, fontFamily: ROUND, fontWeight: 900, fontSize: V ? 56 : 52, color: C.ink }}>{pergunta}</div>
         <div style={{ width: 0, height: 0, marginLeft: V ? W / 2 - 100 : 80, borderLeft: '40px solid transparent', borderRight: '10px solid transparent', borderTop: `60px solid ${C.ink}` }} />
       </div>}
-      {f >= Math.min(90, len * 0.5) && <div style={{ position: 'absolute', ...L.button, transform: `scale(${pop(f, Math.min(90, len * 0.5))})` }}><span style={{ fontFamily: ANTON, fontSize: V ? 56 : 60, color: C.ink, background: C.yellow, border: `6px solid ${C.ink}`, padding: '6px 28px', boxShadow: `8px 8px 0 ${C.ink}` }}>{botao}</span></div>}
+      {f >= Math.min(90, len * 0.5) && <div style={{ position: 'absolute', ...L.button, transform: `scale(${pop(f, Math.min(90, len * 0.5))})` }}><span style={{ fontFamily: ANTON, fontSize: V ? 56 : 60, color: C.ink, background: C.yellow, border: `6px solid ${C.ink}`, padding: '6px 28px', boxShadow: `8px 8px 0 ${C.ink}` }}>{button}</span></div>}
     </AbsoluteFill>
   );
 };

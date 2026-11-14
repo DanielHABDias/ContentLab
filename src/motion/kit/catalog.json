@@ -275,12 +275,14 @@
       }
     },
     "cta": {
-      "uso": "Encerramento: nome do canal (opcional), personagem trocando de pose, pergunta para os comentários",
+      "uso": "Encerramento: nome do canal (opcional), personagem trocando de pose, pergunta para os comentários; com midia e video, vira a chamada para o vídeo completo (a thumbnail num painel com o título embaixo)",
       "props": {
-        "pergunta": "string (obrigatório)",
+        "pergunta": "string (obrigatório): pergunta para os comentários ou, com midia, a chamada (VAI LÁ VER O VÍDEO COMPLETO!)",
         "titulo": "nome do canal, letra a letra (padrão: sem título)",
-        "botao": "texto do botão",
-        "tom": "cor do fundo"
+        "botao": "texto do botão (padrão sem midia: RESPONDE NOS COMENTÁRIOS ↓; com midia: sem botão)",
+        "tom": "cor do fundo",
+        "midia": "media:<id> da thumbnail do vídeo completo (opcional)",
+        "video": "título do vídeo completo, embaixo da thumbnail"
       },
       "exemplo": {
         "pergunta": "qual fraqueza deixa o seu herói favorito interessante?"

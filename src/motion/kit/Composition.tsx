@@ -39,7 +39,7 @@ const Captions: React.FC<{ words: Word[]; fps: number; hidden: (t: number) => bo
   }
   if (block.length) blocks.push(block);
   const current = blocks.find((b, i) => t >= b[0].start - 0.05 && t < (blocks[i + 1]?.[0].start ?? b[b.length - 1].end + 0.4));
-  if (!current) return null;
+  if (!current || t > current[current.length - 1].end + 0.12) return null;
   return (
     <AbsoluteFill style={{ justifyContent: 'flex-end', alignItems: 'center', paddingBottom: vertical ? '24%' : 70, pointerEvents: 'none' }}>
       <div style={{ fontFamily: ANTON, fontSize: vertical ? 78 : 66, background: 'rgba(11,11,16,.88)', padding: '4px 26px', borderRadius: 10, boxShadow: `6px 6px 0 ${C.red}`, textTransform: 'uppercase', letterSpacing: 1 }}>
