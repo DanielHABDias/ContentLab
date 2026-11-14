@@ -1,15 +1,17 @@
-import { expect, test, vi } from 'vitest';
+import { afterEach, expect, test, vi } from 'vitest';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createMcpServer } from './mcp-server.js';
 
+afterEach(() => vi.restoreAllMocks());
+
 test('MCP expõe o fluxo completo e explica quando o app está fechado', async () => {
-  process.env.CONTENTLAB_PORT = '1';
+  vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('App desligado'));
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
   const server = createMcpServer(); await server.connect(serverSide);
   const client = new Client({ name: 't', version: '1' }); await client.connect(clientSide);
   const names = (await client.listTools()).tools.map(tool => tool.name);
-  for (const name of ['contentlab_start', 'contentlab_open', 'contentlab_stop', 'project_create', 'project_flow_set', 'creative_write', 'script_get', 'script_edit', 'stage_wait_decision', 'stage_approve', 'media_generate_slides', 'narration_generate', 'narration_assemble', 'narration_transcript', 'timeline_auto_assemble', 'thumbnails_generate', 'render_start', 'job_wait', 'deliverable_build', 'project_export']) expect(names).toContain(name);
+  for (const name of ['contentlab_start', 'contentlab_open', 'contentlab_stop', 'project_create', 'project_flow_set', 'creative_write', 'script_get', 'script_edit', 'stage_wait_decision', 'stage_approve', 'media_generate_slides', 'narration_generate', 'narration_assemble', 'narration_transcript', 'timeline_auto_assemble', 'thumbnails_generate', 'render_start', 'job_status', 'job_wait', 'deliverable_build', 'project_export']) expect(names).toContain(name);
   expect(client.getInstructions()).toMatch(/stage_wait_decision/);
   expect(client.getInstructions()).toMatch(/narrationBy começa null/);
   const status = await client.callTool({ name: 'contentlab_status', arguments: {} });
@@ -44,5 +46,43 @@ test('MCP edita só um bloco com revisão otimista e dry-run sem perder fontes o
     expect(project.creative.script.chapters[0].blocks.map(block => block.text)).toEqual(['Depois.', 'Som original.']);
     expect(project.creative.script.sources).toBe('Fonte preservada');
     expect(await call('script_edit', args)).toMatchObject({ code: 'REVISION_CONFLICT' });
+  } finally { await client.close(); fetcher.mockRestore(); }
+});
+
+test('render confirma a fila sem consultar progresso e permite uma consulta na retomada', async () => {
+  const fetcher = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, options) => {
+    if (url.endsWith('/render/start')) {
+      expect(JSON.parse(options.body)).toEqual({ path: '/x', presetId: 'full-hd' });
+      return { ok: true, json: async () => ({ id: 'render_test', state: 'running' }) };
+    }
+    if (url.endsWith('/render/jobs')) return { ok: true, json: async () => ({ jobs: [{ id: 'render_test', state: 'running', progress: 0.25 }] }) };
+    throw new Error(`Consulta inesperada: ${url}`);
+  });
+  const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
+  const server = createMcpServer(); await server.connect(serverSide);
+  const client = new Client({ name: 'render', version: '1' }); await client.connect(clientSide);
+  try {
+    const started = await client.callTool({ name: 'render_start', arguments: { path: '/x' } });
+    expect(started.isError).not.toBe(true);
+    expect(JSON.parse(started.content[0].text)).toMatchObject({ jobId: 'render_test', state: 'running', queued: true, nextAction: 'end_turn' });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(client.getInstructions()).toContain('espere a pessoa voltar ao chat');
+    const status = await client.callTool({ name: 'job_status', arguments: { path: '/x', jobId: 'render_test' } });
+    expect(JSON.parse(status.content[0].text)).toMatchObject({ id: 'render_test', state: 'running', progress: 0.25 });
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  } finally { await client.close(); fetcher.mockRestore(); }
+});
+
+test('render recusado não é anunciado como enviado à fila', async () => {
+  const fetcher = vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false, json: async () => ({ error: 'Projeto incompleto', code: 'RENDER_NOT_READY' }) });
+  const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
+  const server = createMcpServer(); await server.connect(serverSide);
+  const client = new Client({ name: 'render-error', version: '1' }); await client.connect(clientSide);
+  try {
+    const result = await client.callTool({ name: 'render_start', arguments: { path: '/x' } });
+    expect(result.isError).toBe(true);
+    expect(JSON.parse(result.content[0].text)).toMatchObject({ code: 'RENDER_NOT_READY' });
+    expect(JSON.parse(result.content[0].text).queued).toBeUndefined();
+    expect(fetcher).toHaveBeenCalledTimes(1);
   } finally { await client.close(); fetcher.mockRestore(); }
 });

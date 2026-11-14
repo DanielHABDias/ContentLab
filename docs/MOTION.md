@@ -34,8 +34,8 @@ O ritmo padrão é uma troca de informação a cada 1,5–3 s.
    - uma `formula` no princípio;
    - uma `lista` na aplicação;
    - uma `comparacao` no contraponto.
-8. `render_start` com `job_wait`. O render reconhece o modo composição sozinho e normaliza o áudio para cerca de −14 LUFS, com limitador de pico.
-9. `deliverable_build`.
+8. `render_start` envia à fila: confirme, avise a pessoa e encerre o turno. O render roda em segundo plano; não acompanhar porcentagens nem esperar com `job_wait`. O render reconhece o modo composição sozinho e normaliza o áudio para cerca de −14 LUFS, com limitador de pico.
+9. Quando a pessoa voltar ao chat, `job_status` consulta o estado uma vez. Se ainda estiver rodando, informe e encerre; se concluído, confira o arquivo antes de `deliverable_build`.
 
 **Vídeo sem narração** (só texto, som e música): escreva os beats direto em `motion_plan_set` com `narration: false`. Os tempos seguem a música, com tempos de 0,5 s a 120 BPM.
 

@@ -49,11 +49,13 @@ Para mudar no meio do caminho, o agente usa `project_flow_set`.
 
 ## Como o agente "espera do lado de fora"
 
-Trabalhos longos devolvem um `jobId` **na hora**: narração, importação e render. O agente avisa você ("comecei a narração"), e então chama `job_wait`. Cada chamada espera até `timeoutSeconds` e responde com o progresso. Enquanto o job não termina, ela devolve `waiting: true`, e o agente chama de novo.
+Narração, montagem, transcrição e importação devolvem um `jobId` **na hora** e podem usar `job_wait`: cada chamada espera até `timeoutSeconds`; `waiting: true` permite continuar aguardando esses trabalhos.
+
+**Render:** `render_start` apenas envia o vídeo à fila persistente. O agente confirma o envio, avisa "Já coloquei o vídeo na fila de renderização do Content Lab" e encerra a resposta, inclusive em modo automático. O app continua renderizando em segundo plano. A IA não espera, consulta porcentagens repetidamente, cria monitor nem promete retorno automático. Você volta ao chat quando quiser retomar; nessa nova interação, o agente consulta `job_status` uma vez. Se ainda estiver renderizando, informa e encerra novamente; se concluído, confere o arquivo e segue para a entrega.
 
 Para aprovações vale o mesmo: `stage_wait_decision` fica esperando você **aprovar ou pedir mudança no app**. Enquanto o agente espera, a barra da etapa mostra "A IA está esperando você revisar esta etapa". O botão **Aprovar e seguir** (ou **Pedir mudanças**) é o sinal: ela responde, e o agente continua dali. Se você pediu mudança, ele também recebe o motivo. O botão não trava o agente: se você aprovar pelo chat, ele usa `stage_approve` com `userApproved=true` e segue.
 
-Um servidor MCP não consegue iniciar uma mensagem no chat por conta própria; quem volta a perguntar é sempre o agente. Na prática, o efeito é o mesmo: ele espera e retoma sozinho.
+Um servidor MCP não inicia mensagens no chat por conta própria. Depois de enviar um render à fila, o agente só retoma quando você voltar ao chat.
 
 ## Ferramentas
 
@@ -74,7 +76,9 @@ Um servidor MCP não consegue iniciar uma mensagem no chat por conta própria; q
 | `timeline_auto_assemble` | Coloca a narração no áudio, distribui as mídias pela duração e cria legendas sincronizadas por cena. Opcionalmente: cenas HQ (`scenes: "auto"` ou lista), trilha com ducking (`music`), SFX nas trocas (`sfx`). Em 9:16 aplica as áreas seguras de Shorts |
 | `chapters_get` | Capítulos a partir dos tempos reais da narração |
 | `thumbnails_generate` | Gera as thumbnails A e B (título sobre um frame do vídeo, ou sobre um degradê) e grava na embalagem |
-| `render_start`, `job_wait` | Render final (fila persistente) e espera de qualquer job |
+| `render_start` | Envia o render à fila persistente; o agente avisa e encerra a resposta |
+| `job_status` | Consulta única do estado; render é consultado na retomada pelo usuário |
+| `job_wait` | Espera narração, montagem, transcrição ou importação |
 | `deliverable_build`, `project_export` | Monta `output/entrega/` (roteiro.md, embalagem.md com capítulos, thumbnail-A/B no longo ou thumbnail-A no Short, video.mp4, verificacao.md) e exporta ZIP ou `.contentlab` |
 | `project_run` | Avançado: aplica qualquer ação validada do núcleo, como editar a timeline |
 
@@ -97,8 +101,9 @@ Um servidor MCP não consegue iniciar uma mensagem no chat por conta própria; q
 8. `narration_assemble` → `job_wait`
 9. `timeline_auto_assemble` → espera a decisão da narração e depois a da edição
 10. `thumbnails_generate`
-11. `render_start` → `job_wait` → espera a decisão
-12. `deliverable_build` e `project_export` (ZIP)
+11. `render_start` → confirmar envio à fila, avisar e encerrar a resposta
+12. Quando você voltar ao chat: `job_status` uma vez → conferir o render se concluído → retomar a revisão e a entrega
+13. `deliverable_build` e `project_export` (ZIP)
 
 **Jeito principal (modo composição, [MOTION.md](MOTION.md)):** depois do passo 8, rode `narration_transcribe` + `job_wait`, `motion_plan_auto`, `motion_preview` (abra os PNG), ajuste com `motion_plan_set` e siga para o passo 10; o passo 9 não é usado.
 

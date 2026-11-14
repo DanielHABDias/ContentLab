@@ -11,7 +11,8 @@ O Content Lab é uma ferramenta audiovisual local. O agente opera o mesmo projet
 5. Na etapa Narração, escolha a pessoa gravando ou sua voz clonada com consentimento. Voz de IA exige perfil em Minha voz; sem perfil, use a gravação própria. Não existe voz sintética genérica.
 6. Monte a narração e acompanhe `job_wait`. A montagem não transcreve: quando o áudio final estiver definido, rode `narration_transcribe` + `job_wait` (Whisper `large-v3` completo, em português, tempos de início/fim de cada palavra). O áudio montado já permite aprovar Narração; a transcrição é obrigatória antes de sincronizar ou concluir a edição. Se faltar dependência ou houver falha, preserve o áudio, corrija e retome com `narration_transcribe`.
 7. Leia `narration_transcript` (paginado) antes de posicionar imagens, cortes, beats e legendas. Depois use `motion_kit`, `motion_plan_auto`, `motion_preview`, `motion_plan_set` e `render_start`, conferindo os arquivos reais.
-8. Termine com `deliverable_build` e `project_export`. Publicação é manual.
+8. Depois de `render_start` confirmar o envio à fila, avise e encerre a resposta, inclusive em modo automático. Não aguarde render, consulte porcentagens repetidamente, crie monitor ou prometa retorno automático. O usuário volta ao chat para retomar; só então consulte `job_status` uma vez e, se concluído, confira o arquivo. Se ainda estiver rodando, informe e encerre novamente.
+9. Na retomada, depois de conferir o render, termine com `deliverable_build` e `project_export`. Publicação é manual.
 
 ## Conteúdo e verificação
 
