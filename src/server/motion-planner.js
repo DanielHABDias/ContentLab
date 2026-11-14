@@ -129,19 +129,23 @@ export function timeSentences(windows, words = []) {
  */
 export function planMotion({ windows, words = [], media = [], title = '', question = '', end = null, vertical = false, poses = null, report = {} }) {
   const timed = timeSentences(windows, words);
-  // Poses do personagem: todas do catálogo aparecem ao longo do vídeo; dentro do tom, a que ainda não apareceu vem primeiro.
+  // Diversidade dentro do contexto: poses especiais exigem um gatilho textual; não há cota de catálogo.
   const catalog = Object.fromEntries(Object.entries(poses || {}).map(([name, entry]) => [name, Array.isArray(entry) ? entry : entry?.tons || []]));
   const hasChar = Object.keys(catalog).length > 0; const moodOf = text => (hasChar ? mood(text) : undefined);
   const used = new Map(Object.keys(catalog).map(name => [name, 0])); let lastPose = ''; let charSeen = false; let poseTurn = 0;
+  const special = Object.fromEntries(Object.entries(poses || {}).filter(([, e]) => e?.especial).map(([name,e]) => [name,e.gatilhos || []]));
+  let poseText = "";
+  const eligible = name => !special[name] || special[name].some(term => fold(poseText).includes(fold(term)));
   const choosePose = tones => {
-    const fits = Object.keys(catalog).filter(name => name !== lastPose && catalog[name].some(tone => tones.includes(tone)));
-    const options = fits.length ? fits : Object.keys(catalog).filter(name => name !== lastPose);
+    const fits = Object.keys(catalog).filter(name => name !== lastPose && eligible(name) && catalog[name].some(tone => tones.includes(tone)));
+    const options = fits.length ? fits : Object.keys(catalog).filter(name => name !== lastPose && eligible(name));
+    if (!options.length) { const fallback = Object.keys(catalog).find(eligible); if (!fallback) return undefined; used.set(fallback, used.get(fallback) + 1); lastPose = fallback; return fallback; }
     const least = Math.min(...options.map(name => used.get(name)));
     const best = options.filter(name => used.get(name) === least);
     const name = best[poseTurn++ % best.length]; used.set(name, used.get(name) + 1); lastPose = name; return name;
   };
   /** Sequência de poses de uma fala: a primeira no tom exato, as seguintes nos tons vizinhos. */
-  const poseRun = (text, count) => { const tone = !charSeen ? 'abertura' : toneOf(text); charSeen = true; return Array.from({ length: count }, (_, i) => choosePose(i === 0 ? [tone] : NEAR[tone] || NEAR.explicacao)); };
+  const poseRun = (text, count) => { poseText = text; const tone = !charSeen ? 'abertura' : toneOf(text); charSeen = true; return Array.from({ length: count }, (_, i) => choosePose(i === 0 ? [tone] : NEAR[tone] || NEAR.explicacao)); };
   const all = media.map(item => ({ ...item, key: fold(String(item.name || '').replace(/\.[a-z0-9]+$/i, '')) }));
   // Recortes PNG (nome com "recorte" ou "png-"): entram por cima da cena quando citados, não como cena.
   const isCut = item => /(^|[^a-z])(recorte|png)([^a-z]|$)/.test(item.key);
@@ -230,16 +234,6 @@ export function planMotion({ windows, words = [], media = [], title = '', questi
   const host = time => beats.find(b => time >= b.at && time < b.at + b.duration && !['titulo', 'cta', 'aparte'].includes(b.scene) && b.duration >= 1.6);
   if (total >= 25) for (const [share, preset] of [[0.2, 'inscricao'], [0.55, 'like']]) { const beat = host(total * share) || beats.find(b => b.at >= total * share && !['titulo', 'cta', 'aparte'].includes(b.scene)); if (beat) { const duracao = Math.min(3, Math.max(1.4, beat.duration - 0.3)); (beat.extras ||= []).push({ tipo: 'caixinha', preset, at: 0.2, duracao }); (beat.sfx ||= []).push({ name: 'pop', at: 0.2, volume: 0.5 }, { name: 'clique', at: round(0.2 + duracao * 0.5), volume: 0.7 }); } }
   for (const item of timed) if (OPINION.test(item.text)) { const beat = beats.find(b => item.start >= b.at - 0.05 && item.start < b.at + b.duration && !['titulo', 'cta'].includes(b.scene) && b.duration >= 1.2); if (beat && !beat.extras?.some(extra => extra.tipo === 'caixinha')) (beat.extras ||= []).push({ tipo: 'caixinha', preset: 'opiniao', canto: 'superior-esquerdo', at: 0.1, duracao: Math.min(2.5, beat.duration - 0.2) }); }
-  // Poses que ainda não apareceram entram no lugar de repetidas, nas falas seguintes de um tom vizinho.
-  for (const strict of [true, false]) for (const name of Object.keys(catalog).filter(item => !used.get(item))) {
-    for (const beat of beats) {
-      const list = beat.scene === 'aparte' ? beat.props.falas : beat.scene === 'personagem' ? beat.props.poses : null; if (!list) continue;
-      const tone = toneOf(timed.find(item => beat.at >= item.start - 0.05 && beat.at < item.end)?.text || '');
-      const slot = list.findIndex((item, i) => i > 0 && used.get(item.pose) > 1 && (!strict || catalog[name].some(t => (NEAR[tone] || NEAR.explicacao).includes(t))) && list[i - 1]?.pose !== name && list[i + 1]?.pose !== name);
-      if (slot < 0) continue;
-      used.set(list[slot].pose, used.get(list[slot].pose) - 1); list[slot].pose = name; used.set(name, 1); break;
-    }
-  }
   // Piada do personagem: tapa seco; o tapa de meme (com eco) no máximo uma vez a cada 90 s.
   let lastMeme = -Infinity;
   for (const beat of beats) {

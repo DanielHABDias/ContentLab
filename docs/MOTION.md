@@ -51,7 +51,7 @@ Para voltar à timeline de clips, use `motion_plan_set` com `plan: null`. Na int
   - cada pose é um PNG pronto do pacote do personagem (gesto e expressão já desenhados); `<pose>-b`, `-c`… são variantes sorteadas. O kit não desenha expressões: `humor` escolhe a pose pelo tom;
   - enquanto o personagem fala, a pose troca a cada ~0,85 s (até 5 por beat): a primeira no tom da frase (pergunta, piada, erro…), as seguintes em tons vizinhos, sem repetir em seguida; o balão fica até a próxima fala com ícone ou texto;
   - frases de emoção (piada, erro, tristeza, vitória, discordância, surpresa, opinião) chamam o aparte por cima da cena;
-  - todas as poses do catálogo aparecem ao longo do vídeo: o plano prefere a que ainda não apareceu e, no fim, troca repetidas pelas que faltam. `motion_plan_auto` devolve `poses.posesFaltando` e avisa no vídeo longo.
+  - as poses seguem o contexto, sem obrigação de completar o catálogo. `posesFaltando` é inventário informativo. Poses especiais (`especial: true`, com `gatilhos`) só entram automaticamente quando o contexto textual corresponde; seleção por humor não sorteia poses especiais.
 - **Extras por cima da cena** (`extras` no beat):
   - **caixinhas HQ** que não precisam ser faladas: inscrição perto de 20%, like perto de 55% e "minha opinião, tá?" nas frases opinativas;
   - **recortes PNG:** uma mídia com `recorte` no nome (ex.: `recorte-moeda.png`) entra por cima do beat em que é citada, em vez de virar cena.
@@ -74,7 +74,7 @@ O pacote é uma pasta com os PNGs das poses e um `catalogo.json` (na pasta ou em
 
 - Cada pose vira mídia com papel `character`; o catálogo fica em `project.character` (contrato `contentlab-character-v1`). `dryRun: true` só valida.
 - Importar de novo troca o personagem; as poses antigas saem do projeto. Remover a mídia de uma pose tira o arquivo do catálogo.
-- O plano automático lê os tons das poses: troca a pose a cada ~0,85 s de fala, passa por todas e liga frase de emoção ao aparte.
+- O plano automático lê os tons das poses: troca a pose a cada ~0,85 s de fala, escolhe dentro do contexto e liga frase de emoção ao aparte.
 - Tons que o plano reconhece: `abertura`, `base`, `explicacao`, `enfase`, `opiniao`, `piada`, `pergunta`, `surpresa`, `discordancia`, `ressalva`, `bastidor`, `erro`, `tristeza`, `descoberta`, `aprovacao` e `vitoria`.
 
 ## Cena 3D
@@ -137,3 +137,7 @@ O kit é código do Content Lab: cenas em `src/motion/kit/`, catálogo em `src/m
 
 - **Mídia:** o Content Lab não busca nem baixa cenas das obras. Escolher a mídia e confirmar os direitos é com você.
 - **Plano automático:** é um ponto de partida. O resultado melhora quando o agente revisa as prévias e ajusta os beats.
+
+## Cenas narrativas
+
+Investigação, ramificações e revelações usam [as cenas narrativas](MOTION-NARRATIVE.md). Props, exemplos e eventos de som ficam no catálogo do kit. A escolha de poses segue o contexto; `posesFaltando` é apenas inventário, sem obrigação de completar o catálogo.

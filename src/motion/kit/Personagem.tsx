@@ -9,7 +9,7 @@ import { Img, random, useCurrentFrame } from 'remotion';
  */
 export type Mood = 'bravo' | 'feliz' | 'surpreso' | 'tedio' | 'confuso' | 'piscada' | 'determinado' | 'triste';
 export type PoseInfo = { src: string; w: number; h: number; pose?: string };
-export type Character = { poses: Record<string, string | PoseInfo>; tons?: Record<string, string[]> };
+export type Character = { poses: Record<string, string | PoseInfo>; tons?: Record<string, string[]>; especiais?: string[] };
 export const PersonagemCtx = createContext<Character>({ poses: {} });
 export const useHasPersonagem = () => Object.keys(useContext(PersonagemCtx).poses || {}).length > 0;
 
@@ -37,10 +37,11 @@ export const choosePose = (character: Character, { pose, humor, seed = 'personag
   if (!files.length) return null;
   const names = [...new Set(files.map(item => item.pose as string))];
   const wanted = humor ? HUMOR_TONS[humor] || [humor] : [];
-  const byTone = names.filter(name => (character.tons?.[name] || []).some(tone => wanted.includes(tone)));
+  const general = names.filter(name => !character.especiais?.includes(name));
+  const byTone = general.filter(name => (character.tons?.[name] || []).some(tone => wanted.includes(tone)));
   const name = (pose && names.includes(pose) ? pose : null)
     || (byTone.length ? byTone[Math.floor(random(`${seed}${humor}`) * byTone.length)] : null)
-    || (names.includes('parado') ? 'parado' : names[0]);
+    || (general.includes('parado') ? 'parado' : general[0]);
   const options = files.filter(item => item.pose === name);
   return options[Math.floor(random(`${seed}${name}`) * options.length)] || null;
 };

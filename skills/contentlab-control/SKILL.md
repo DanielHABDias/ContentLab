@@ -26,7 +26,7 @@ A voz gera um take por bloco `narration` e lê somente `text`; nunca lê título
 
 ## Edição no modo composição
 
-- **Personagem:** vem do pacote importado no projeto (`character_import`; `dryRun: true` valida). Sem personagem, o plano não tem `aparte` nem a cena `personagem`. Num aparte ou na cena `personagem`, a pose troca a cada ~0,85 s enquanto ele fala (`falas`/`poses` com 2–5 itens), a primeira no tom da frase e sem repetir em seguida. Todas as poses aparecem ao longo do vídeo longo: `motion_plan_auto` devolve `poses.posesFaltando`, e as que faltarem entram em apartes de tom compatível pelo `motion_plan_set`.
+- **Personagem:** vem do pacote importado no projeto (`character_import`; `dryRun: true` valida). Sem personagem, o plano não tem `aparte` nem a cena `personagem`. Num aparte ou na cena `personagem`, a pose troca a cada ~0,85 s enquanto ele fala (`falas`/`poses` com 2–5 itens), a primeira no tom da frase e sem repetir em seguida. Escolher poses pela narrativa, sem obrigar todas a aparecer. `posesFaltando` é inventário informativo. Poses com `especial: true` e `gatilhos` no catálogo só entram automaticamente quando um desses termos ocorre na fala; o agente também pode escolhê-las explicitamente conforme o contexto.
 - **Legenda:** nos Shorts (9:16), o tempo todo. No vídeo longo (16:9), só no gancho (primeiros 6 s) e nos apartes do personagem; nos outros beats, `legenda: false`.
 - **SFX:** os nomes válidos são os da lista `sfx` de `motion_kit`. Cada som cai no quadro do evento da tela (`at` em segundos dentro do beat; negativo começa antes do corte):
   - cortes: `whoosh`, `swish` e `whoosh-rapido` em rodízio; `whoosh-lento` (~1 s antes) em transição longa ou abertura de capítulo;
@@ -40,3 +40,7 @@ A voz gera um take por bloco `narration` e lê somente `text`; nunca lê título
 Respostas devem ser compactas: IDs, revisão, mudança, estado e erro acionável. Jobs longos são acompanhados por ID, sem polling agressivo. Upload e publicação externa não fazem parte do Content Lab.
 
 Para pacotes, use a skill `contentlab-packages`.
+
+## Componentes narrativos
+
+Para investigação, ramificações, revelações e relações causais, consultar [as 14 cenas narrativas](../../docs/MOTION-NARRATIVE.md) e as props/exemplos atuais em `motion_kit`. Reutilizar a cena apropriada; não criar TSX no projeto. Os eventos de som do catálogo usam frações do beat: `sfx.at = fracao × duration`, ajustadas à fala e à virada configurada. Conferir frames antes, durante e depois da virada em 16:9 e 9:16.

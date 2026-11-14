@@ -1,6 +1,10 @@
 import { Player } from '@remotion/player';
 import { AbsoluteFill } from 'remotion';
-import { Background, SCENES } from '../motion/kit/scenes';
+import shield from '../../assets/kit/graphics/escudo.svg?url';
+import lamp from '../../assets/kit/graphics/lampada.svg?url';
+import scale from '../../assets/kit/graphics/balanca.svg?url';
+import { NARRATIVE_SCENES } from '../motion/kit/narrative';
+import { Assets, Background, SCENES } from '../motion/kit/scenes';
 import { Film } from '../motion/kit/fx';
 
 /** Prévias ao vivo do kit no navegador (@remotion/player): as mesmas cenas e fundos do render. */
@@ -8,7 +12,10 @@ const FPS = 30;
 
 function SceneDemo({ scene, props, len }) {
   const Scene = SCENES[scene];
-  return <AbsoluteFill style={{ background: '#000' }}>{Scene ? <Scene len={len} {...props}/> : null}<Film/></AbsoluteFill>;
+  const demoAssets = { demo0: { src: shield, kind: 'image' }, demo1: { src: lamp, kind: 'image' }, demo2: { src: scale, kind: 'image' } };
+  const demo = (value, index = 0, nested = false) => Array.isArray(value) ? value.map((item, i) => demo(item, i, true)) : value && typeof value === 'object' ? { ...Object.fromEntries(Object.entries(value).map(([key, item]) => [key, demo(item, index, true)])), ...(nested && 'titulo' in value ? { midia: `media:demo${index % 3}` } : {}) } : value;
+  const input = NARRATIVE_SCENES[scene] ? { ...demo(props), ...(scene === 'lupaEvidencia' ? { midia: 'media:demo0' } : {}) } : props;
+  return <Assets.Provider value={demoAssets}><AbsoluteFill style={{ background: '#000' }}>{Scene ? <Scene len={len} {...input}/> : null}<Film/></AbsoluteFill></Assets.Provider>;
 }
 
 function BackgroundDemo({ kind, tint }) {

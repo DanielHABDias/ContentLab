@@ -747,7 +747,6 @@ export class ProductionOperations {
       ...(!media.length ? ['Sem imagens/vídeos da obra: o plano usa texto. Importe cenas das obras citadas (direitos confirmados).'] : []),
       ...(!poses ? ['Sem personagem no projeto: o plano não tem apartes nem a cena personagem. Se o vídeo tiver um, importe o pacote com character_import.'] : []),
       ...(!plan.music ? ['Sem trilha: importe uma faixa licenciada com papel music.'] : []),
-      ...(project.aspectRatio !== '9:16' && report.posesFaltando?.length ? [`Poses do personagem que não apareceram: ${report.posesFaltando.join(', ')}. Encaixe-as em apartes de tom compatível (motion_plan_set).`] : []),
     ];
     if (!apply) return { plan, warnings, poses: report };
     const saved = await this.motionPlanSet({ path: directory, plan, source: 'auto' });

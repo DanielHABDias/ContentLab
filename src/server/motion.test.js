@@ -5,6 +5,7 @@ import { motionPlanSchema, MOTION_SCENES } from '../core/contracts.js';
 import { MOTION_KIT } from '../motion/kit-catalog.js';
 import { mediaRefs } from '../render/motion-renderer.js';
 import { missingStageArtifacts } from '../core/workflow.js';
+import { choosePose } from '../motion/kit/Personagem.tsx';
 import { TEST_POSES } from '../test/character-fixture.js';
 
 /** Catálogo do personagem de teste (pose → { tons }), como fica em project.character.poses. */
@@ -130,7 +131,7 @@ test('plano automático: poses no aparte, fundos variados, cena sozinha, caixinh
   expect(mediaRefs(plan)).toContain('m_moeda');
 });
 
-test('plano automático: o personagem troca de pose enquanto fala, passa por todas as poses do catálogo e a legenda segue o formato', () => {
+test('plano automático: o personagem troca de pose enquanto fala, escolhe poses compatíveis e a legenda segue o formato', () => {
   const poses = POSES;
   const w = (id, text, start, length) => ({ scene: { id, label: id, text }, start, length });
   const lines = ['Pra mim, esse é o melhor vilão.', 'Ele perdeu tudo e ninguém ligou?', 'Sério, que absurdo!', 'Mas calma, tem um detalhe.', 'Pouca gente sabe desse bastidor.', 'E aí que está a lição.', 'Ele venceu no fim, campeão.', 'Isso foi um erro enorme.', 'Funciona perfeito, genial.', 'Eu não concordo, é forçado.', 'Ele morreu e foi triste.', 'Olha esse detalhe aqui.'];
@@ -144,7 +145,7 @@ test('plano automático: o personagem troca de pose enquanto fala, passa por tod
   for (const beat of apartes) for (let i = 1; i < beat.props.falas.length; i += 1) expect(beat.props.falas[i].pose).not.toBe(beat.props.falas[i - 1].pose);
   const shown = new Set(plan.beats.flatMap(beat => [...(beat.props.falas || []), ...(beat.props.poses || [])].map(item => item.pose)));
   expect(report.posesFaltando).toEqual([]);
-  for (const name of Object.keys(poses)) expect(shown.has(name)).toBe(true);
+  expect([...shown].every(name => name in poses)).toBe(true);
   // 16:9: legenda só no gancho e nos apartes; 9:16: o tempo todo (fora das cenas que já são o texto).
   for (const beat of plan.beats) if (beat.at >= 6 && beat.scene !== 'aparte') expect(beat.legenda).toBe(false);
   expect(apartes.every(beat => beat.legenda !== false)).toBe(true);
@@ -192,4 +193,36 @@ test('migração: plano antigo com a cena nox vira personagem na leitura', () =>
   const parsed = motionPlanSchema.parse({ schema: 'contentlab-motion-v1', beats: [{ id: 'a', scene: 'nox', at: 0, duration: 2, props: { humor: 'feliz' } }] });
   expect(parsed.beats[0].scene).toBe('personagem');
   expect(MOTION_SCENES).not.toContain('nox');
+});
+
+
+test('poses especiais só entram com gatilho e não são forçadas para completar catálogo', () => {
+  const poses = { ...POSES, investigativo: { arquivos: ['investigativo.png'], tons: ['pergunta', 'explicacao'], especial: true, gatilhos: ['pista'] } };
+  const run = text => {
+    const report = {};
+    const plan = planMotion({ windows: [window('hook-1', 'Um mistério.', 0, 3), window('development-intro', 'O herói encontra uma cena.', 3, 3), ...Array.from({ length: 8 }, (_, i) => window(`development-${i}`, text, 6 + i * 3, 3))], media: [{ id: 'm_cena', name: 'cena.png', kind: 'image' }], poses, report });
+    return { report, shown: plan.beats.flatMap(b => [...(b.props.falas || []), ...(b.props.poses || [])].map(p => p.pose)) };
+  };
+  const plain = run('Por que ele fez isso?');
+  expect(plain.shown).not.toContain('investigativo');
+  expect(plain.report.posesFaltando).toContain('investigativo');
+  expect(run('Essa pista explica o mistério?').shown).toContain('investigativo');
+});
+
+test('as cenas narrativas têm exemplos aceitos pelo contrato e SFX existentes no tempo do beat', () => {
+  const entries = Object.entries(MOTION_KIT.cenas).filter(([, c]) => c.som?.eventos);
+  expect(entries).toHaveLength(14);
+  for (const [scene, c] of entries) {
+    const beat = { id: scene, scene, at: 0, duration: 4, props: c.exemplo, sfx: c.som.eventos.map(e => ({ name: e.name, at: e.fracao * 4, volume: e.volume })) };
+    expect(motionPlanSchema.safeParse({ schema: 'contentlab-motion-v1', beats: [beat] }).success, scene).toBe(true);
+    expect(beat.sfx.every(e => e.at >= 0 && e.at < 4)).toBe(true);
+  }
+});
+
+
+test('reação por humor não sorteia pose especial, mas a escolha explícita continua disponível', () => {
+  const character = { poses: { parado: { src: 'base.png', w: 600, h: 1000 }, especial: { src: 'special.png', w: 600, h: 1000 } }, tons: { parado: ['base'], especial: ['surpresa'] }, especiais: ['especial'] };
+  expect(choosePose(character, { humor: 'surpreso' }).src).toBe('base.png');
+  expect(choosePose(character, { pose: 'especial' }).src).toBe('special.png');
+  expect(choosePose({ poses: { especial: character.poses.especial }, especiais: ['especial'] }, { humor: 'surpreso' })).toBeNull();
 });

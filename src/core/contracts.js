@@ -151,7 +151,7 @@ export const timelineSchema = z.object({
  * Tempos em segundos; props das cenas são JSON e citam mídia como `media:<id>`.
  */
 const motionValue = z.lazy(() => z.union([z.string().max(2000), z.number().finite(), z.boolean(), z.null(), z.array(motionValue).max(40), z.record(z.string().max(64), motionValue)]));
-export const MOTION_SCENES = ['titulo', 'frase', 'personagem', 'evidencia', 'pagina', 'numero', 'ficha', 'formula', 'lista', 'comparacao', 'cta', 'aparte', 'paineis3d', 'telafinal'];
+export const MOTION_SCENES = ['titulo', 'frase', 'personagem', 'evidencia', 'pagina', 'numero', 'ficha', 'formula', 'lista', 'comparacao', 'cta', 'aparte', 'paineis3d', 'telafinal', 'dossie', 'cronologiaRamos', 'revelacaoCamadas', 'contradicao', 'efeitoDomino', 'constelacao', 'quadrosProfundidade', 'lupaEvidencia', 'bifurcacao', 'limiar', 'balancaCusto', 'ecoVisual', 'pecaAusente', 'convergencia'];
 /** Nomes de SFX do kit (lista `sfx` de src/motion/kit/catalog.json; o arquivo fica em assets/kit/sfx). */
 export const MOTION_SFX = kitCatalog.sfx;
 export const motionBeatSchema = z.object({
@@ -206,6 +206,8 @@ export const characterSchema = z.object({
     arquivos: z.array(z.string().regex(POSE_FILE)).min(1).max(12),
     gesto: z.string().max(300).default(''),
     olhos: z.string().max(200).optional(),
+    especial: z.boolean().optional(),
+    gatilhos: z.array(z.string().min(1).max(80)).max(12).optional(),
     tons: z.array(z.string().regex(/^[a-z0-9-]{1,40}$/)).max(16).default([]),
   })).refine(value => Object.keys(value).length >= 1 && Object.keys(value).length <= 80, 'De 1 a 80 poses'),
   /** Arquivo da pose → id da mídia no projeto. */

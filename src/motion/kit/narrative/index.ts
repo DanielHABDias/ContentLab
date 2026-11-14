@@ -1,0 +1,15 @@
+import { Dossie } from './Dossie';
+import { CronologiaRamos } from './CronologiaRamos';
+import { RevelacaoCamadas } from './RevelacaoCamadas';
+import { Contradicao } from './Contradicao';
+import { EfeitoDomino } from './EfeitoDomino';
+import { Constelacao } from './Constelacao';
+import { QuadrosProfundidade } from './QuadrosProfundidade';
+import { LupaEvidencia } from './LupaEvidencia';
+import { Bifurcacao } from './Bifurcacao';
+import { Limiar } from './Limiar';
+import { BalancaCusto } from './BalancaCusto';
+import { EcoVisual } from './EcoVisual';
+import { PecaAusente } from './PecaAusente';
+import { Convergencia } from './Convergencia';
+export const NARRATIVE_SCENES = { dossie:Dossie, cronologiaRamos:CronologiaRamos, revelacaoCamadas:RevelacaoCamadas, contradicao:Contradicao, efeitoDomino:EfeitoDomino, constelacao:Constelacao, quadrosProfundidade:QuadrosProfundidade, lupaEvidencia:LupaEvidencia, bifurcacao:Bifurcacao, limiar:Limiar, balancaCusto:BalancaCusto, ecoVisual:EcoVisual, pecaAusente:PecaAusente, convergencia:Convergencia };

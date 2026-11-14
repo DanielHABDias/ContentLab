@@ -40,10 +40,11 @@ export function renderResources({ cpus = os.availableParallelism(), freeMemory =
  * pasta pública e devolve `{ poses: arquivo → { src, w, h, pose }, tons: pose → tons }` para o kit. Sem personagem, vazio.
  */
 export async function stageCharacter(project, publicDir) {
-  const character = project.character; const poses = {}; const tons = {};
+  const character = project.character; const poses = {}; const tons = {}; const especiais = [];
   if (!character) return { poses, tons };
   for (const [pose, entry] of Object.entries(character.poses)) {
     tons[pose] = entry.tons || [];
+    if (entry.especial) especiais.push(pose);
     for (const file of entry.arquivos) {
       const item = project.media.find(media => media.id === character.files[file]);
       if (!item?.uri) continue;
@@ -52,7 +53,7 @@ export async function stageCharacter(project, publicDir) {
       poses[file.slice(0, -4)] = { src: `public:personagem/${file}`, ...size, pose };
     }
   }
-  return { poses, tons };
+  return { poses, tons, ...(especiais.length ? { especiais } : {}) };
 }
 
 export class MotionRenderer {

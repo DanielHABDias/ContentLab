@@ -62,8 +62,8 @@ const only = process.argv.find(arg => arg.startsWith('--only='))?.slice(7) || 'a
 async function project({ title, brief, script, packaging, type = 'long' }) {
   const created = await call('project_create', { title, type, mode: 'autonomous' }); const projectPath = created.path;
   await call('creative_write', { path: projectPath, brief }); await approve(projectPath);
-  await call('creative_write', { path: projectPath, script }); await approve(projectPath);
   await call('creative_write', { path: projectPath, packaging }); await approve(projectPath);
+  await call('creative_write', { path: projectPath, script }); await approve(projectPath);
   return projectPath;
 }
 async function finish(projectPath, label) {
