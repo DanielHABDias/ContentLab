@@ -20,21 +20,85 @@ export type ThumbProps = {
   /** Poses do personagem do projeto (sem ele, `humor` não mostra nada). */
   personagem?: Character;
   lado?: 'esquerda' | 'direita';
-  tom?: 'amarelo' | 'vermelho' | 'azul';
+  tom?: 'amarelo' | 'vermelho' | 'azul' | 'branco' | 'verde';
   selo?: string;
   /** preto (padrão) ou branco: fundo liso e limpo, personagem em destaque; cena: a mídia ocupa a imagem toda. */
   fundo?: 'preto' | 'branco' | 'cena';
   /** centro: personagem grande no meio, a palavra na frente dele embaixo e o personagem do projeto no canto. */
-  layout?: 'lado' | 'centro';
+  layout?: 'lado' | 'centro' | 'palavra';
   /** Pose exata do personagem do projeto (nome do catálogo); sem ela, a pose sai do humor. */
   pose?: string;
   /** Parte da mídia que fica no quadro (object-position), ex.: '50% 25%' para manter o rosto. */
   foco?: string;
   /** Aproxima a mídia em volta do foco (1 = sem zoom), para o rosto ocupar o quadro. */
   zoom?: number;
+  /** Layout `palavra`: textura do fundo (meio-tom leve ou efeito de TV). */
+  textura?: 'halftone' | 'tv';
 };
 
-const TONS = { amarelo: C.yellow, vermelho: C.red, azul: C.blue };
+const TONS: Record<string, string> = { amarelo: C.yellow, vermelho: C.red, azul: C.blue, branco: C.white, verde: '#7CFF3A' };
+
+/** Layout `palavra`: cor da palavra (brilho) e um fundo liso que contrasta com ela. */
+const PALAVRA: Record<string, { word: string; glow: string; bg: [string, string] }> = {
+  amarelo: { word: '#FFE94D', glow: '#FFC400', bg: ['#4B1D9E', '#1A0838'] },
+  vermelho: { word: '#FF4655', glow: '#FF1030', bg: ['#0E3D6B', '#04121F'] },
+  azul: { word: '#7FD4FF', glow: '#1E90FF', bg: ['#A3102A', '#3A0410'] },
+  branco: { word: '#FFFFFF', glow: '#FFD0D6', bg: ['#E01B2F', '#5A0410'] },
+  verde: { word: '#C8FF4D', glow: '#5DFF1A', bg: ['#7A1491', '#26052E'] },
+};
+
+/**
+ * Palavra gigante brilhando atrás, o personagem "dentro" dela (na frente da palavra cheia e atrás de uma
+ * segunda camada só com o contorno fino, alinhada), fundo liso com meio-tom leve ou efeito de TV e o
+ * personagem do projeto grande num canto inferior, cortado na cintura.
+ */
+const PalavraLayout: React.FC<{ p: ThumbProps & { width: number; height: number }; humor?: Mood }> = ({ p, humor }) => {
+  const { width, height, midia, texto, lado = 'direita', tom = 'amarelo', textura = 'halftone', foco, zoom, pose, selo } = p;
+  const pal = PALAVRA[tom] || PALAVRA.amarelo;
+  const assets = useContext(Assets);
+  const asset = midia ? assets[midia.startsWith('media:') ? midia.slice(6) : midia] : null;
+  const cutout = Boolean(asset && /\.png($|\?)/i.test(asset.src));
+  const lines = texto.replace(/\*/g, '').split('\n').map(l => l.trim()).filter(Boolean);
+  const main = lines.at(-1) || '';
+  const top = lines.slice(0, -1).join(' ');
+  // Anton é condensada (~0,5 em por letra): a palavra ocupa quase toda a largura, alongada na vertical.
+  const size = Math.min(height * 0.6, (width * 0.94) / Math.max(1, main.length * 0.5));
+  const stretch = 1.18;
+  const wordBox: React.CSSProperties = { position: 'absolute', left: 0, right: 0, top: height * (top ? 0.56 : 0.5), transform: `translateY(-50%) scaleY(${stretch})`, textAlign: 'center', fontFamily: ANTON, fontSize: size, lineHeight: 1, letterSpacing: size * 0.01, textTransform: 'uppercase', whiteSpace: 'nowrap' };
+  const topBox: React.CSSProperties = { ...wordBox, top: height * 0.56 - (size * stretch) / 2 - size * 0.26, fontSize: size * 0.3, transform: 'translateY(-50%)' };
+  const glow = `0 0 ${size * 0.04}px ${pal.glow}, 0 0 ${size * 0.12}px ${pal.glow}, 0 0 ${size * 0.3}px ${pal.glow}`;
+  const stroke = Math.max(3, size * 0.012);
+  const left = lado === 'esquerda';
+  const noxH = height * 1.08;
+  const fade = 'radial-gradient(ellipse 48% 70% at 50% 45%, #000 50%, transparent 100%)';
+  const dots = 'radial-gradient(circle, rgba(255,255,255,.22) 28%, transparent 31%)';
+  return (
+    <AbsoluteFill style={{ background: `radial-gradient(ellipse 75% 70% at 50% 48%, ${pal.bg[0]} 0%, ${pal.bg[1]} 100%)`, overflow: 'hidden' }}>
+      {textura === 'halftone' ? (
+        <AbsoluteFill style={{ backgroundImage: dots, backgroundSize: `${height * 0.022}px ${height * 0.022}px`, maskImage: 'radial-gradient(ellipse 70% 70% at 50% 50%, transparent 25%, #000 100%)', WebkitMaskImage: 'radial-gradient(ellipse 70% 70% at 50% 50%, transparent 25%, #000 100%)' } as React.CSSProperties} />
+      ) : (
+        <>
+          <AbsoluteFill style={{ backgroundImage: 'repeating-linear-gradient(0deg, rgba(0,0,0,.32) 0px, rgba(0,0,0,.32) 2px, transparent 2px, transparent 5px)' }} />
+          <AbsoluteFill style={{ backgroundImage: 'repeating-linear-gradient(90deg, rgba(255,0,60,.07) 0px, rgba(0,255,120,.07) 2px, rgba(40,90,255,.07) 4px, transparent 6px)' }} />
+          <AbsoluteFill style={{ background: 'linear-gradient(180deg, transparent 38%, rgba(255,255,255,.07) 40%, transparent 46%)' }} />
+        </>
+      )}
+      {/* camada de trás: a palavra cheia, brilhando */}
+      {top && <div style={{ ...topBox, color: pal.word, textShadow: glow }}>{top}</div>}
+      <div style={{ ...wordBox, color: pal.word, textShadow: glow }}>{main}</div>
+      {/* o personagem, dentro da palavra */}
+      <div style={{ position: 'absolute', top: 0, bottom: 0, left: width * 0.15, width: width * 0.7, ...(cutout ? { filter: `drop-shadow(0 0 ${height * 0.03}px rgba(0,0,0,.7))` } : { maskImage: fade, WebkitMaskImage: fade }) } as React.CSSProperties}>
+        <Subject id={midia} fit={cutout ? 'contain' : 'cover'} foco={foco || (cutout ? '50% 0%' : '50% 25%')} zoom={zoom ?? (cutout ? 1.6 : 1)} />
+      </div>
+      {/* camada da frente: só o contorno fino, alinhado com a palavra de trás */}
+      {top && <div style={{ ...topBox, color: 'transparent', WebkitTextStroke: `${stroke * 0.7}px ${C.white}` }}>{top}</div>}
+      <div style={{ ...wordBox, color: 'transparent', WebkitTextStroke: `${stroke}px ${C.white}` }}>{main}</div>
+      <AbsoluteFill style={{ boxShadow: `inset 0 0 ${height * 0.22}px rgba(0,0,0,.6)` }} />
+      {humor && <Figura pose={pose} humor={humor} seed="thumb" height={noxH} x={left ? -width * 0.07 : width - figW(noxH) + width * 0.07} y={height * 0.42} flip={!left} />}
+      {selo && <div style={{ position: 'absolute', top: height * 0.05, [left ? 'right' : 'left']: width * 0.04, background: pal.word, color: C.ink, fontFamily: ANTON, fontSize: height * 0.06, padding: '2px 16px', textTransform: 'uppercase' } as React.CSSProperties}>{selo}</div>}
+    </AbsoluteFill>
+  );
+};
 
 const Subject: React.FC<{ id?: string; style?: React.CSSProperties; fit?: 'cover' | 'contain'; foco?: string; zoom?: number }> = ({ id, style, fit = 'cover', foco, zoom = 1 }) => {
   const assets = useContext(Assets);
@@ -71,6 +135,13 @@ export const Thumbnail: React.FC<ThumbProps> = (raw) => {
   const size = Math.round(height * (words <= 2 ? 0.25 : words <= 3 ? 0.21 : 0.18) * (humor && !midiaB ? 0.88 : 1));
   const left = lado === 'esquerda';
   const versus = Boolean(midiaB);
+  if (layout === 'palavra') {
+    return (
+      <Assets.Provider value={assets}><PersonagemCtx.Provider value={personagem}>
+        <PalavraLayout p={{ ...(resolvePublic(raw) as ThumbProps), width, height }} humor={humor} />
+      </PersonagemCtx.Provider></Assets.Provider>
+    );
+  }
   if (layout === 'centro' && !versus) {
     // Limpa e centrada: fundo liso, o rosto do personagem grande no meio fundindo no fundo, a palavra enorme na
     // frente dele (embaixo) e o personagem do projeto no canto (lado escolhido), com a expressão do vídeo.

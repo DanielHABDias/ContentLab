@@ -270,7 +270,7 @@ export class ProductionOperations {
       if (!text) throw new Error('Informe o texto curto de cada thumbnail (até 4 palavras)');
       if (text.replace(/\*/g, '').split(/\s+/).filter(Boolean).length > 4) throw Object.assign(new Error(`Texto da thumbnail ${variant.label || index + 1} tem mais de 4 palavras: "${text}"`), { code: 'THUMB_TEXT_LONG' });
       const media = variant.mediaId || content[index % Math.max(1, content.length)]?.id;
-      return { label: variant.label === 'B' || index === 1 ? 'B' : 'A', texto: text.toUpperCase().replace(/\s*\/\s*/g, '\n'), midia: media ? `media:${media}` : undefined, midiaB: variant.mediaIdB ? `media:${variant.mediaIdB}` : undefined, humor: variant.humor, lado: variant.side, tom: variant.tone, selo: variant.badge, fundo: variant.background, layout: variant.layout, foco: variant.focus, pose: variant.pose, zoom: variant.zoom };
+      return { label: variant.label === 'B' || index === 1 ? 'B' : 'A', texto: text.toUpperCase().replace(/\s*\/\s*/g, '\n'), midia: media ? `media:${media}` : undefined, midiaB: variant.mediaIdB ? `media:${variant.mediaIdB}` : undefined, humor: variant.humor, lado: variant.side, tom: variant.tone, selo: variant.badge, fundo: variant.background, layout: variant.layout, foco: variant.focus, pose: variant.pose, zoom: variant.zoom, textura: variant.texture };
     });
     const refs = kit.flatMap(item => [item.midia, item.midiaB]).filter(Boolean).map(ref => ref.slice(6));
     const missing = refs.filter(id => !project.media.some(item => item.id === id));
