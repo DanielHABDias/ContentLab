@@ -151,7 +151,7 @@ export const timelineSchema = z.object({
  * Tempos em segundos; props das cenas são JSON e citam mídia como `media:<id>`.
  */
 const motionValue = z.lazy(() => z.union([z.string().max(2000), z.number().finite(), z.boolean(), z.null(), z.array(motionValue).max(40), z.record(z.string().max(64), motionValue)]));
-export const MOTION_SCENES = ['titulo', 'frase', 'personagem', 'evidencia', 'pagina', 'numero', 'ficha', 'formula', 'lista', 'comparacao', 'cta', 'aparte', 'paineis3d'];
+export const MOTION_SCENES = ['titulo', 'frase', 'personagem', 'evidencia', 'pagina', 'numero', 'ficha', 'formula', 'lista', 'comparacao', 'cta', 'aparte', 'paineis3d', 'telafinal'];
 /** Nomes de SFX do kit (lista `sfx` de src/motion/kit/catalog.json; o arquivo fica em assets/kit/sfx). */
 export const MOTION_SFX = kitCatalog.sfx;
 export const motionBeatSchema = z.object({
@@ -175,7 +175,12 @@ export const motionPlanSchema = z.object({
   beats: z.array(motionBeatSchema).min(1).max(600),
   narration: z.boolean().default(true),
   captions: z.boolean().default(true),
-  music: z.object({ volume: z.number().min(0).max(1).default(0.5), duck: z.number().min(0).max(1).default(0.25) }).nullable().default({ volume: 0.5, duck: 0.25 }),
+  // mediaId escolhe a trilha (padrão: a última importada); pausa = volume sob o áudio original; fade = saída no fim (s).
+  music: z.object({ volume: z.number().min(0).max(1).default(0.5), duck: z.number().min(0).max(1).default(0.25), mediaId: z.string().max(80).optional(), pausa: z.number().min(0).max(1).optional(), fade: z.number().min(0).max(15).optional(), inicio: z.number().min(0).max(3600).optional(),
+    // Trechos da trilha no vídeo: { at (vídeo), inicio (trilha), duracao? }. Sem trechos, a trilha toca do início (em loop).
+    trechos: z.array(z.object({ at: z.number().min(0).max(7200), inicio: z.number().min(0).max(3600).default(0), duracao: z.number().min(0.5).max(7200).optional() })).max(12).optional() }).nullable().default({ volume: 0.5, duck: 0.25 }),
+  // Pausas na narração para trechos com o áudio original da obra: `em` no tempo da narração montada.
+  pausas: z.array(z.object({ em: z.number().min(0).max(7200), duracao: z.number().min(0.2).max(60) })).max(40).optional(),
   source: z.enum(['auto', 'agent', 'user']).default('agent'),
 }).superRefine((plan, ctx) => {
   const ids = new Set();

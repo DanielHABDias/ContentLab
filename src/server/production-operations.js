@@ -10,6 +10,10 @@ import { readProjectDirectory } from './project-registry.js';
 import { NarrationStore, scenesFromScript } from '../audio/narration-service.js';
 import { TranscriptStore, validWordTimings } from '../media/transcript-store.js';
 import { impact, planMotion } from './motion-planner.js';
+import { narrationToVideo } from '../motion/kit/pausas.js';
+
+/** Trilha da composição: a escolhida no plano (music.mediaId) ou a última importada com papel música. */
+const musicFor = project => (project.motion?.music?.mediaId && project.media.find(item => item.id === project.motion.music.mediaId && item.role === 'music')) || project.media.filter(item => item.role === 'music').at(-1) || null;
 import { MotionRenderer, mediaRefs as mediaRefsPlan } from '../render/motion-renderer.js';
 import { motionPlanSchema } from '../core/contracts.js';
 import { MOTION_KIT } from '../motion/kit-catalog.js';
@@ -534,7 +538,9 @@ export class ProductionOperations {
       if (seen.has(window.scene.chapterId)) return false;
       seen.add(window.scene.chapterId); return true;
     });
-    const chapters = starts.map((window, index) => ({ time: index === 0 ? 0 : window.start, stamp: stamp(index === 0 ? 0 : window.start), title: window.scene.chapterTitle || headline(window.scene.text, 48).replace(/[.!?…]+$/, '') }));
+    // Pausas da composição (trechos com áudio original) empurram os capítulos para frente no vídeo final.
+    const at = window => (window.start ? narrationToVideo(window.start, project.motion?.pausas) : 0);
+    const chapters = starts.map((window, index) => ({ time: index === 0 ? 0 : at(window), stamp: stamp(index === 0 ? 0 : at(window)), title: window.scene.chapterTitle || headline(window.scene.text, 48).replace(/[.!?…]+$/, '') }));
     return { chapters, verified: true };
   }
 
@@ -647,7 +653,7 @@ export class ProductionOperations {
     const session = await new NarrationStore(directory).read().catch(() => ({}));
     const narration = session.assembled?.mediaId && project.media.find(item => item.id === session.assembled.mediaId);
     const words = narration ? await this.#narrationWords(directory, narration) : [];
-    const music = project.motion?.music ? project.media.filter(item => item.role === 'music').at(-1) : null;
+    const music = project.motion?.music ? musicFor(project) : null;
     return { narration: narration ? (await this.app.resolveMediaPath(narration)) || narration.uri : null, narrationSeconds: narration?.metadata?.durationSeconds || 0, words, music: music ? (await this.app.resolveMediaPath(music)) || music.uri : null };
   }
 
@@ -740,7 +746,7 @@ export class ProductionOperations {
   /** Trilha final precisa de licença registrada; a trilha sintetizada serve só de rascunho. */
   #musicCheck(project) {
     const ids = new Set(project.timeline.tracks.flatMap(track => track.clips).map(clip => clip.sourceId));
-    const music = project.motion?.beats?.length ? (project.motion.music ? project.media.filter(item => item.role === 'music').slice(-1) : []) : project.media.filter(item => item.role === 'music' && ids.has(item.id));
+    const music = project.motion?.beats?.length ? (project.motion.music ? [musicFor(project)].filter(Boolean) : []) : project.media.filter(item => item.role === 'music' && ids.has(item.id));
     if (!music.length) return { id: 'music', label: 'Trilha licenciada', ok: false, detail: 'sem trilha: importe uma faixa licenciada (ex.: YouTube Audio Library) com papel música' };
     const generated = music.filter(item => item.source?.type === 'generated');
     return { id: 'music', label: 'Trilha licenciada', ok: !generated.length, detail: generated.length ? 'trilha sintetizada é rascunho: troque por faixa licenciada antes de publicar' : `${music.length} faixa(s) com licença registrada` };

@@ -49,14 +49,15 @@ export const Camera: React.FC<{ children: React.ReactNode; push?: number; from?:
 };
 
 /** Mídia (imagem ou vídeo sem áudio) cobrindo a caixa, com Ken Burns: entrar, sair ou panorâmica. */
-export const Media: React.FC<{ asset: Asset | null; len: number; motion?: 'entrar' | 'sair' | 'panoramica'; fit?: 'cover' | 'contain'; style?: React.CSSProperties }> = ({ asset, len, motion = 'entrar', fit = 'cover', style: extra }) => {
-  const f = useCurrentFrame();
+export const Media: React.FC<{ asset: Asset | null; len: number; motion?: 'entrar' | 'sair' | 'panoramica'; fit?: 'cover' | 'contain'; style?: React.CSSProperties; inicio?: number; som?: boolean; volume?: number; zoom?: number }> = ({ asset, len, motion = 'entrar', fit = 'cover', style: extra, inicio = 0, som = false, volume = 1, zoom = 1 }) => {
+  const f = useCurrentFrame(); const { fps } = useVideoConfig();
   if (!asset) return <AbsoluteFill style={{ background: C.ink }} />;
   const t = f / Math.max(1, len);
-  const scale = motion === 'sair' ? 1.18 - 0.14 * t : 1.04 + 0.14 * t;
+  const scale = (motion === 'sair' ? 1.18 - 0.14 * t : 1.04 + 0.14 * t) * zoom;
   const x = motion === 'panoramica' ? interpolate(t, [0, 1], [-4, 4]) : 0;
   const style: React.CSSProperties = { width: '100%', height: '100%', objectFit: fit, transform: `scale(${scale}) translateX(${x}%)`, ...extra };
-  return asset.kind === 'video' ? <OffthreadVideo src={asset.src} muted style={style} /> : <Img src={asset.src} style={style} />;
+  // Vídeo: `inicio` escolhe o trecho da fonte; `som` deixa ouvir o áudio original (trecho com pausa na narração).
+  return asset.kind === 'video' ? <OffthreadVideo src={asset.src} muted={!som} volume={som ? volume : 0} trimBefore={Math.max(0, Math.round(inicio * fps))} style={style} /> : <Img src={asset.src} style={style} />;
 };
 
 /** Palavras gigantes em cortes secos, distribuídas pela duração do beat. */
@@ -119,7 +120,7 @@ export const PersonagemCena: React.FC<Base & { humor?: Mood; texto?: string; sub
 };
 
 /** Evidência da obra: imagem/vídeo num painel HQ com Ken Burns, etiqueta, legenda e reação opcional do personagem (só a parte de cima, num canto). */
-export const Evidencia: React.FC<Base & { midia: string; rotulo?: string; legenda?: string; humor?: Mood; movimento?: 'entrar' | 'sair' | 'panoramica'; fundo?: Bg; tom?: string; tela?: boolean; cheia?: boolean }> = ({ len, midia, rotulo, legenda, humor, movimento = 'entrar', fundo = 'papel', tom, tela = false, cheia }) => {
+export const Evidencia: React.FC<Base & { midia: string; rotulo?: string; legenda?: string; humor?: Mood; movimento?: 'entrar' | 'sair' | 'panoramica'; fundo?: Bg; tom?: string; tela?: boolean; cheia?: boolean; inicio?: number; som?: boolean; volume?: number; zoom?: number }> = ({ len, midia, rotulo, legenda, humor, movimento = 'entrar', fundo = 'papel', tom, tela = false, cheia, inicio, som, volume, zoom }) => {
   const f = useCurrentFrame(); const { W, H, V } = useStage();
   const asset = useAsset(midia);
   const full = cheia ?? false;
@@ -131,7 +132,7 @@ export const Evidencia: React.FC<Base & { midia: string; rotulo?: string; legend
     <Camera from={1.1}>
       <Background kind={fundo} tint={tom} />
       <Panel x={box.x} y={box.y} w={box.w} h={box.h} rotate={full ? 0 : -1.2} bg={C.ink} style={tela ? { borderRadius: 30 } : full ? { border: 'none', boxShadow: 'none' } : undefined}>
-        <Media asset={asset} len={len} motion={movimento} />
+        <Media asset={asset} len={len} motion={movimento} inicio={inicio} som={som} volume={volume} zoom={zoom} />
         {tela && <AbsoluteFill style={{ background: 'repeating-linear-gradient(to bottom, rgba(0,0,0,.18) 0 2px, transparent 2px 5px)', boxShadow: 'inset 0 0 120px rgba(0,0,0,.8)' }} />}
         {rotulo && <div style={{ position: 'absolute', left: 0, top: 0, background: C.yellow, borderRight: `7px solid ${C.ink}`, borderBottom: `7px solid ${C.ink}`, padding: '8px 22px', fontFamily: ANTON, fontSize: V ? 56 : 52, color: C.ink, transform: `translateX(${(1 - slide(f, 4, 8)) * -400}px)` }}>{rotulo}</div>}
       </Panel>
@@ -149,7 +150,7 @@ export const Evidencia: React.FC<Base & { midia: string; rotulo?: string; legend
  * em stop motion: troca seca de desenho e de lugar, sem quadros intermediários, com uma tremidinha.
  * Um balão com ícone ou texto mostra o que ele diz. No fim ele sai de uma vez e o fundo volta nítido.
  */
-export const Aparte: React.FC<Base & { midia?: string; falas: Array<{ pose?: string; humor?: Mood; icone?: string; texto?: string }>; fundo?: Bg; tom?: string }> = ({ len, midia, falas, fundo = 'escuro', tom }) => {
+export const Aparte: React.FC<Base & { midia?: string; inicio?: number; falas: Array<{ pose?: string; humor?: Mood; icone?: string; texto?: string }>; fundo?: Bg; tom?: string }> = ({ len, midia, inicio, falas, fundo = 'escuro', tom }) => {
   const f = useCurrentFrame(); const { W, H, V } = useStage();
   const asset = useAsset(midia);
   const n = Math.max(1, Math.min(5, falas.length));
@@ -174,7 +175,7 @@ export const Aparte: React.FC<Base & { midia?: string; falas: Array<{ pose?: str
   return (
     <AbsoluteFill>
       <AbsoluteFill style={{ filter: blur > 0.3 ? `blur(${blur}px) brightness(${1 - blur / 45})` : undefined, transform: `scale(${1.04 + blur / 300})` }}>
-        {asset ? <Media asset={asset} len={len} motion="panoramica" /> : <Background kind={fundo} tint={tom} />}
+        {asset ? <Media asset={asset} len={len} motion="panoramica" inicio={inicio} /> : <Background kind={fundo} tint={tom} />}
       </AbsoluteFill>
       {shown > 0 && <PersonagemPose pose={fala.pose} humor={fala.humor || 'feliz'} height={nh} cx={cx} bottom={bottom} flip={flip} seed={`aparte${k}`} />}
       {bubbleOn && (
@@ -315,7 +316,7 @@ export const Lista: React.FC<Base & { titulo: string; subtitulo?: string; prefix
   return (
     <Camera>
       <Halftone bg="#1b2943" dot="rgba(255,255,255,.09)" />
-      <div style={{ position: 'absolute', left: V ? 60 : 110, right: V ? 60 : undefined, top: V ? H * 0.1 : 80, transform: `translateX(${(1 - slide(f, 0, 10)) * -400}px)` }}><Punch size={V ? 100 : 110} color={C.yellow}>{titulo}</Punch>{subtitulo && <div style={{ fontFamily: ROUND, fontWeight: 900, fontSize: 44, color: '#fff', marginTop: 8 }}>{subtitulo}</div>}</div>
+      <div style={{ position: 'absolute', left: V ? 60 : 110, right: V ? 60 : undefined, top: V ? H * 0.1 : 130, transform: `translateX(${(1 - slide(f, 0, 10)) * -400}px)` }}><Punch size={V ? 100 : 110} color={C.yellow}>{titulo}</Punch>{subtitulo && <div style={{ fontFamily: ROUND, fontWeight: 900, fontSize: 44, color: '#fff', marginTop: 8 }}>{subtitulo}</div>}</div>
       <div style={{ position: 'absolute', left: V ? 50 : 110, top: V ? H * 0.25 : 320, width: cardW + 80, perspective: 1600 }}>
         {itens.slice(0, n).map((item, i) => {
           const at = 14 + i * step; const p = slide(f, at, 10); const active = f >= at && (i === n - 1 || f < at + step);
@@ -339,7 +340,7 @@ export const Lista: React.FC<Base & { titulo: string; subtitulo?: string; prefix
 };
 
 /** Comparação (lado a lado no 16:9, em cima e embaixo no 9:16), com "VS" e veredito opcional. */
-export const Comparacao: React.FC<Base & { esquerda: { titulo: string; midia?: string; humor?: Mood; tom?: string }; direita: { titulo: string; midia?: string; humor?: Mood; tom?: string }; veredito?: string }> = ({ len, esquerda, direita, veredito }) => {
+export const Comparacao: React.FC<Base & { esquerda: { titulo: string; midia?: string; inicio?: number; humor?: Mood; tom?: string }; direita: { titulo: string; midia?: string; inicio?: number; humor?: Mood; tom?: string }; veredito?: string }> = ({ len, esquerda, direita, veredito }) => {
   const f = useCurrentFrame(); const { W, H, V } = useStage();
   const assets = useContext(Assets);
   const side = (s: typeof esquerda, i: number) => {
@@ -350,7 +351,7 @@ export const Comparacao: React.FC<Base & { esquerda: { titulo: string; midia?: s
     const inner = V ? '50px 60px 130px 60px' : '120px 90px 200px 90px';
     const nh = V ? H * 0.22 : 560;
     return f >= at && <div key={i} style={{ position: 'absolute', background: tone, ...box }}>
-      <div style={{ position: 'absolute', inset: inner, border: `8px solid ${C.ink}`, background: C.ink, overflow: 'hidden', transform: `rotate(${i ? 1.5 : -1.5}deg)` }}>{s.midia ? <Media asset={assets[s.midia.replace(/^media:/, '')] || null} len={len} motion={i ? 'sair' : 'entrar'} /> : <><SpeedBurst bg={tone} color="rgba(11,11,16,.25)" rays={20} /><Figura humor={s.humor || 'bravo'} height={nh} x={V ? (W - 120 - figW(nh)) / 2 : 230} y={V ? 10 : 60} /></>}</div>
+      <div style={{ position: 'absolute', inset: inner, border: `8px solid ${C.ink}`, background: C.ink, overflow: 'hidden', transform: `rotate(${i ? 1.5 : -1.5}deg)` }}>{s.midia ? <Media asset={assets[s.midia.replace(/^media:/, '')] || null} len={len} motion={i ? 'sair' : 'entrar'} inicio={s.inicio} /> : <><SpeedBurst bg={tone} color="rgba(11,11,16,.25)" rays={20} /><Figura humor={s.humor || 'bravo'} height={nh} x={V ? (W - 120 - figW(nh)) / 2 : 230} y={V ? 10 : 60} /></>}</div>
       <div style={{ position: 'absolute', bottom: V ? 26 : 70, width: '100%', textAlign: 'center' }}><Punch size={V ? 80 : 90}>{s.titulo}</Punch></div>
     </div>;
   };

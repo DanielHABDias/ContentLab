@@ -80,7 +80,14 @@ export function wordsFromWhisper(json) {
       words.push(last);
     }
   }
-  return words.filter(word => /[\p{L}\p{N}]/u.test(word.text));
+  // whisper.cpp às vezes devolve token com duração zero ou começando antes do anterior (fronteira de trecho):
+  // ajusta ao mínimo para a ordem e a duração ficarem válidas, sem descartar a narração inteira.
+  const kept = words.filter(word => /[\p{L}\p{N}]/u.test(word.text));
+  for (const [index, word] of kept.entries()) {
+    if (index && word.start < kept[index - 1].start) word.start = kept[index - 1].start;
+    if (!(word.end > word.start)) word.end = round(word.start + 0.02);
+  }
+  return kept;
 }
 
 export function toSrt(segments) {

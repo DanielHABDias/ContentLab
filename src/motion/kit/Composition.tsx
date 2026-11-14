@@ -6,6 +6,8 @@ import { SCENES_3D } from './three';
 import { Extra, Extras } from './overlays';
 import { Character, PersonagemCtx } from './Personagem';
 import { Asset, Assets, SCENES } from './scenes';
+import { TelaFinal } from './telafinal';
+import { narrationSegments, narrationToVideo, pauseWindows } from './pausas.js';
 
 /**
  * Composição única do roteiro em beats (contrato `contentlab-motion-v1`).
@@ -14,15 +16,15 @@ import { Asset, Assets, SCENES } from './scenes';
 export type Beat = { id: string; scene: string; at: number; duration: number; props?: Record<string, unknown>; sfx?: Array<{ name: string; at?: number; volume?: number }>; flash?: boolean; legenda?: boolean; extras?: Extra[] };
 export type Word = { start: number; end: number; text: string };
 export type MotionProps = {
-  plan: { fps: number; width: number; height: number; duration: number; beats: Beat[]; captions?: boolean; musicVolume?: number; duck?: number };
+  plan: { fps: number; width: number; height: number; duration: number; beats: Beat[]; captions?: boolean; musicVolume?: number; duck?: number; pausas?: Array<{ em: number; duracao: number }>; musicPause?: number; musicFade?: number; musicStart?: number; musicParts?: Array<{ at: number; inicio?: number; duracao?: number }> };
   assets: Record<string, Asset>;
   narration?: string | null; music?: string | null; words?: Word[];
   /** Personagem do projeto: arquivo da pose → PNG pronto (`pose` = nome sem o sufixo da variante) e os tons de cada pose. */
   personagem?: Character;
 };
 
-const NO_CAPTION = new Set(['titulo', 'cta']);
-const ALL_SCENES: Record<string, React.FC<any>> = { ...SCENES, ...SCENES_3D };
+const NO_CAPTION = new Set(['titulo', 'cta', 'telafinal']);
+const ALL_SCENES: Record<string, React.FC<any>> = { ...SCENES, ...SCENES_3D, telafinal: TelaFinal };
 
 /** Legenda palavra a palavra: blocos de até 3 palavras; a palavra falada fica amarela. */
 const Captions: React.FC<{ words: Word[]; fps: number; hidden: (t: number) => boolean; vertical?: boolean }> = ({ words, fps, hidden, vertical }) => {
@@ -50,11 +52,23 @@ const Captions: React.FC<{ words: Word[]; fps: number; hidden: (t: number) => bo
 
 export const MotionVideo: React.FC<MotionProps> = (raw) => {
   useAnton();
-  const { plan, assets, narration, music, words = [], personagem = { poses: {} } } = resolvePublic(raw) as MotionProps;
+  const { plan, assets, narration, music, words: spoken = [], personagem = { poses: {} } } = resolvePublic(raw) as MotionProps;
   const { fps, beats } = plan;
   const frames = (s: number) => Math.max(0, Math.round(s * fps));
+  // Pausas na narração (trechos com o áudio original da obra): a voz e as palavras andam para frente no vídeo.
+  const pausas = plan.pausas || [];
+  const words = pausas.length ? spoken.map(w => ({ ...w, start: narrationToVideo(w.start, pausas), end: narrationToVideo(w.end, pausas) })) : spoken;
+  const holes = pauseWindows(pausas);
   const speaking = (t: number) => words.some(w => t >= w.start - 0.15 && t <= w.end + 0.25);
-  const duck = plan.duck ?? 0.25; const base = plan.musicVolume ?? 0.5;
+  const inHole = (t: number) => holes.some(h => t >= h.start - 0.2 && t < h.end + 0.2);
+  const duck = plan.duck ?? 0.25; const base = plan.musicVolume ?? 0.5; const pauseLevel = plan.musicPause ?? 0.12;
+  const fadeOut = plan.musicFade ?? 3;
+  const musicVolume = (f: number) => {
+    const t = f / fps;
+    const level = inHole(t) ? pauseLevel : words.length && speaking(t) ? duck : 1;
+    const tail = fadeOut > 0 ? Math.min(1, Math.max(0, (plan.duration - t) / fadeOut)) : 1;
+    return base * level * tail;
+  };
   const captionHidden = (t: number) => beats.some(b => b.legenda === false || NO_CAPTION.has(b.scene) ? t >= b.at && t < b.at + b.duration && (b.legenda !== true) : false);
   return (
     <Assets.Provider value={assets}>
@@ -68,8 +82,14 @@ export const MotionVideo: React.FC<MotionProps> = (raw) => {
         {beats.filter(b => b.flash !== false && b.at > 0).map(b => <Flash key={`f${b.id}`} at={frames(b.at)} length={5} />)}
         <Film />
         {plan.captions !== false && words.length > 0 && <Captions words={words} fps={fps} hidden={captionHidden} vertical={plan.height > plan.width} />}
-        {narration && <Audio src={narration} />}
-        {music && <Audio src={music} volume={f => base * (words.length && speaking(f / fps) ? duck : 1)} />}
+        {narration && narrationSegments(pausas).map(seg => (
+          <Sequence key={`voz-${seg.from}`} from={frames(seg.at)} durationInFrames={seg.to === null ? undefined : Math.max(1, frames(seg.to - seg.from))}><Audio src={narration} trimBefore={frames(seg.from)} /></Sequence>
+        ))}
+        {music && !plan.musicParts?.length && <Audio src={music} loop trimBefore={frames(plan.musicStart || 0)} volume={musicVolume} />}
+        {music && (plan.musicParts || []).map((part, i, parts) => {
+          const end = part.duracao ? part.at + part.duracao : parts[i + 1]?.at ?? plan.duration;
+          return <Sequence key={`trilha-${i}`} from={frames(part.at)} durationInFrames={Math.max(1, frames(end - part.at))}><Audio src={music} trimBefore={frames(part.inicio || 0)} volume={f => musicVolume(f + frames(part.at))} /></Sequence>;
+        })}
         {beats.flatMap(beat => (beat.sfx || []).map((cue, i) => (
           <Sequence key={`${beat.id}-${i}`} from={frames(beat.at + (cue.at || 0))} durationInFrames={frames(3)}><Audio src={staticFile(`sfx/${cue.name}.wav`)} volume={cue.volume ?? 0.5} /></Sequence>
         )))}

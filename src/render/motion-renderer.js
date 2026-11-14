@@ -1,4 +1,5 @@
 import { copyFile, link, mkdir, mkdtemp, rm, stat } from 'node:fs/promises';
+import { pauseTotal } from '../motion/kit/pausas.js';
 import { execFile } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
@@ -104,8 +105,9 @@ export class MotionRenderer {
       let narration = null; let music = null;
       if (plan.narration !== false && inputs.narration) { await place(inputs.narration, path.join(publicDir, 'media', `narracao${path.extname(inputs.narration)}`)); narration = `public:media/narracao${path.extname(inputs.narration)}`; }
       if (plan.music && inputs.music) { await place(inputs.music, path.join(publicDir, 'media', `trilha${path.extname(inputs.music)}`)); music = `public:media/trilha${path.extname(inputs.music)}`; }
-      const end = Math.max(...plan.beats.map(beat => beat.at + beat.duration), inputs.narrationSeconds || 0);
-      const props = { plan: { fps, width: even(width * scale), height: even(height * scale), duration: end, beats: plan.beats, captions: plan.captions, musicVolume: plan.music?.volume, duck: plan.music?.duck }, assets, narration, music, personagem, words: plan.narration !== false ? inputs.words || [] : [] };
+      if (plan.beats.some(beat => beat.scene === 'telafinal')) await place(path.join(KIT_ASSETS, 'backgrounds/comic-page.png'), path.join(publicDir, 'assets/kit/backgrounds/comic-page.png'));
+      const end = Math.max(...plan.beats.map(beat => beat.at + beat.duration), (inputs.narrationSeconds || 0) + pauseTotal(plan.pausas));
+      const props = { plan: { fps, width: even(width * scale), height: even(height * scale), duration: end, beats: plan.beats, captions: plan.captions, musicVolume: plan.music?.volume, duck: plan.music?.duck, musicPause: plan.music?.pausa, musicFade: plan.music?.fade, musicStart: plan.music?.inicio, musicParts: plan.music?.trechos || [], pausas: plan.pausas || [] }, assets, narration, music, personagem, words: plan.narration !== false ? inputs.words || [] : [] };
       const scaled = scale === 1 ? props : { ...props, plan: { ...props.plan, width, height } };
 
       const { bundle } = await import('@remotion/bundler'); const { renderMedia, selectComposition, makeCancelSignal } = await import('@remotion/renderer');
