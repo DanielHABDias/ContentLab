@@ -10,6 +10,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { FLOW_STAGES } from '../core/contracts.js';
+import { registerMediaTools } from './mcp-media-tools.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const port = Number(process.env.CONTENTLAB_PORT || 4173);
@@ -163,6 +164,8 @@ export function createMcpServer() {
   });
 
   tool(server, 'stage_wait_decision', 'Espera a pessoa aprovar ou pedir mudança na etapa (no app). Retorna ao decidir ou após timeoutSeconds com waiting=true; chame de novo.', { path: projectPath, stageId: stageId.optional(), timeoutSeconds: z.number().int().min(1).max(600).default(50) }, async ({ path, stageId: wanted, timeoutSeconds }) => api('/production/wait', { path, stageId: wanted, timeoutSeconds }));
+
+  registerMediaTools(server, { tool, api, projectPath });
 
   tool(server, 'media_import_files', 'Importa arquivos locais (vídeo, áudio, imagem). rights: owned (é seu), licensed, authorized; nunca declare direitos que a pessoa não confirmou.', { path: projectPath, files: z.array(z.string()).min(1).max(200), rights: z.enum(['owned', 'licensed', 'authorized', 'pending']), role: z.enum(['content', 'music', 'sfx']).optional().describe('music para a trilha licenciada (ex.: YouTube Audio Library); content para imagens/vídeos do assunto') }, async ({ path, files, rights, role }) => { const job = await api('/media/import-files', { path, sources: files, rights, role }); return { jobId: job.id, hint: 'Use job_wait.' }; });
 
