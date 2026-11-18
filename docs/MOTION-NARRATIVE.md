@@ -104,3 +104,5 @@ Use mídias da obra nos itens e identifique a fonte. Estas composições não su
 - `rasgoCena`: transição irregular entre duas mídias em tela cheia; a segunda começa na `virada`, sem áudio original. O rasgo leva 42% da duração total, por isso `virada` deve ser no máximo 0,58.
 
 As cenas do personagem exigem `character_import`; o aplicativo permanece neutro, sem personagem de marca embutido. No Diazverso, o agente importa o Nox do plugin.
+
+Para montagens por encaixe, alternância de enquadramento, detalhe/contexto, faixas, anotações, retornos, personagem e transições de texto/cor, consultar [montagens e transições 2D](MOTION-EDITORIAL.md).

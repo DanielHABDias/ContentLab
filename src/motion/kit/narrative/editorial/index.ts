@@ -1,0 +1,5 @@
+import {MontagemEncaixe,FaixasSequenciais,FotogramasMudanca,RetornoImagem,DivisaoResolvida,RevelacaoRecortes} from './Montagens';
+import {EnquadramentoAlternado,DetalheContexto,JanelaMovel,AnotacaoCena} from './Enquadramentos';
+import {PersonagemPrimeiroPlano,PersonagemReacao,PersonagemAlternado} from './Personagem';
+import {PalavraRecortada,LegendaVirada,CorteCor} from './Tipografia';
+export const EDITORIAL_SCENES={montagemEncaixe:MontagemEncaixe,enquadramentoAlternado:EnquadramentoAlternado,detalheContexto:DetalheContexto,janelaMovel:JanelaMovel,faixasSequenciais:FaixasSequenciais,fotogramasMudanca:FotogramasMudanca,anotacaoCena:AnotacaoCena,retornoImagem:RetornoImagem,palavraRecortada:PalavraRecortada,personagemPrimeiroPlano:PersonagemPrimeiroPlano,personagemReacao:PersonagemReacao,personagemAlternado:PersonagemAlternado,legendaVirada:LegendaVirada,divisaoResolvida:DivisaoResolvida,corteCor:CorteCor,revelacaoRecortes:RevelacaoRecortes};

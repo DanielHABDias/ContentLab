@@ -1496,6 +1496,692 @@
           }
         ]
       }
+    },
+    "montagemEncaixe": {
+      "uso": "Recortes diagonais com bordas de tinta e contorno azul ou vermelho entram em sequência; o último cresce até tela cheia e o contorno desaparece na ampliação.",
+      "props": {
+        "len": "frames do beat (fornecido pelo render)",
+        "titulo": "título curto opcional",
+        "fundo": "estrelas | escuro | meio-tom | explosao",
+        "tom": "amarelo | vermelho | azul | #RRGGBB",
+        "cenas": "2–4 itens { midia: media:<id>, titulo?, fonte?, inicio?: segundos, foco?: object-position, zoom?: número, deslocamento?: { x,y } como frações do quadro }"
+      },
+      "exemplo": {
+        "titulo": "UMA HISTÓRIA, VÁRIAS PRESSÕES",
+        "cenas": [
+          {
+            "midia": "media:<id-a>",
+            "titulo": "ANTES",
+            "inicio": 0
+          },
+          {
+            "midia": "media:<id-b>",
+            "titulo": "DEPOIS",
+            "inicio": 0
+          },
+          {
+            "midia": "media:<id-c>",
+            "titulo": "A MUDANÇA",
+            "inicio": 0
+          }
+        ]
+      },
+      "som": {
+        "regra": "Recalcular com narrativeEvents para duração, props e fps reais e gravar a saída em sfx do beat. Fontes mudas sob a narração.",
+        "eventos": [
+          {
+            "name": "camera",
+            "fracao": 0,
+            "volume": 0.3
+          },
+          {
+            "name": "camera",
+            "fracao": 0.15833333333333333,
+            "volume": 0.3
+          },
+          {
+            "name": "camera",
+            "fracao": 0.31666666666666665,
+            "volume": 0.3
+          },
+          {
+            "name": "whoosh-lento",
+            "fracao": 0.7833333333333333,
+            "volume": 0.3
+          }
+        ]
+      }
+    },
+    "enquadramentoAlternado": {
+      "uso": "Cortes secos alternam imagens ou vídeos alinhados, com rótulo e foco configurável por fonte.",
+      "props": {
+        "len": "frames do beat (fornecido pelo render)",
+        "titulo": "título curto opcional",
+        "fundo": "estrelas | escuro | meio-tom | explosao",
+        "tom": "amarelo | vermelho | azul | #RRGGBB",
+        "cenas": "2–4 itens { midia: media:<id>, titulo?, fonte?, inicio?: segundos, foco?: object-position, zoom?: número, deslocamento?: { x,y } como frações do quadro }",
+        "ordem": "até 8 índices de cenas; padrão 0,1,...; intervalos iguais. Ajustar foco e zoom de cada fonte para alinhar."
+      },
+      "exemplo": {
+        "cenas": [
+          {
+            "midia": "media:<id-a>",
+            "titulo": "ANTES",
+            "inicio": 0
+          },
+          {
+            "midia": "media:<id-b>",
+            "titulo": "DEPOIS",
+            "inicio": 0
+          }
+        ],
+        "ordem": [
+          0,
+          1,
+          0,
+          1
+        ]
+      },
+      "som": {
+        "regra": "Recalcular com narrativeEvents para duração, props e fps reais e gravar a saída em sfx do beat. Fontes mudas sob a narração.",
+        "eventos": [
+          {
+            "name": "camera",
+            "fracao": 0,
+            "volume": 0.3
+          },
+          {
+            "name": "swish",
+            "fracao": 0.25,
+            "volume": 0.3
+          },
+          {
+            "name": "camera",
+            "fracao": 0.5,
+            "volume": 0.3
+          },
+          {
+            "name": "swish",
+            "fracao": 0.75,
+            "volume": 0.3
+          }
+        ]
+      }
+    },
+    "detalheContexto": {
+      "uso": "Começa ampliado em um ponto da imagem e abre até mostrar a imagem inteira; círculo preserva a referência.",
+      "props": {
+        "len": "frames do beat (fornecido pelo render)",
+        "titulo": "título curto opcional",
+        "fundo": "estrelas | escuro | meio-tom | explosao",
+        "tom": "amarelo | vermelho | azul | #RRGGBB",
+        "cena": "{ midia: media:<id>, titulo?, fonte?, inicio?: segundos, foco?: object-position, zoom?: número, deslocamento?: { x,y } como frações do quadro }",
+        "detalhe": "{ x, y, w?, h? }: frações 0–1 da imagem fonte, sem corte; padrão centro. Usar imagem com dimensões conhecidas.",
+        "zoom": "ampliação inicial, padrão 2,3; foco escolhido deve ter resolução suficiente"
+      },
+      "exemplo": {
+        "titulo": "OLHE O CONTEXTO",
+        "cena": {
+          "midia": "media:<id-a>",
+          "titulo": "ANTES",
+          "inicio": 0
+        },
+        "detalhe": {
+          "x": 0.83,
+          "y": 0.75,
+          "w": 0.22,
+          "h": 0.4
+        },
+        "zoom": 2.3
+      },
+      "som": {
+        "regra": "Recalcular com narrativeEvents para duração, props e fps reais e gravar a saída em sfx do beat. Fontes mudas sob a narração.",
+        "eventos": [
+          {
+            "name": "camera",
+            "fracao": 0,
+            "volume": 0.3
+          },
+          {
+            "name": "whoosh-lento",
+            "fracao": 0.15,
+            "volume": 0.3
+          }
+        ]
+      }
+    },
+    "janelaMovel": {
+      "uso": "Uma faixa revela outra mídia ao atravessar o quadro; abre até completar a troca.",
+      "props": {
+        "len": "frames do beat (fornecido pelo render)",
+        "titulo": "título curto opcional",
+        "fundo": "estrelas | escuro | meio-tom | explosao",
+        "tom": "amarelo | vermelho | azul | #RRGGBB",
+        "antes": "{ midia: media:<id>, titulo?, fonte?, inicio?: segundos, foco?: object-position, zoom?: número, deslocamento?: { x,y } como frações do quadro }",
+        "depois": "{ midia: media:<id>, titulo?, fonte?, inicio?: segundos, foco?: object-position, zoom?: número, deslocamento?: { x,y } como frações do quadro }"
+      },
+      "exemplo": {
+        "antes": {
+          "midia": "media:<id-a>",
+          "titulo": "ANTES",
+          "inicio": 0
+        },
+        "depois": {
+          "midia": "media:<id-b>",
+          "titulo": "DEPOIS",
+          "inicio": 0
+        }
+      },
+      "som": {
+        "regra": "Recalcular com narrativeEvents para duração, props e fps reais e gravar a saída em sfx do beat. Fontes mudas sob a narração.",
+        "eventos": [
+          {
+            "name": "swish",
+            "fracao": 0.03333333333333333,
+            "volume": 0.3
+          },
+          {
+            "name": "whoosh-lento",
+            "fracao": 0.5833333333333334,
+            "volume": 0.3
+          }
+        ]
+      }
+    },
+    "faixasSequenciais": {
+      "uso": "Até três fontes dividem a tela; a faixa ativa expande e toca, enquanto as outras congelam e escurecem.",
+      "props": {
+        "len": "frames do beat (fornecido pelo render)",
+        "titulo": "título curto opcional",
+        "fundo": "estrelas | escuro | meio-tom | explosao",
+        "tom": "amarelo | vermelho | azul | #RRGGBB",
+        "cenas": "2–3 itens { midia: media:<id>, titulo?, fonte?, inicio?: segundos, foco?: object-position, zoom?: número, deslocamento?: { x,y } como frações do quadro }; a duração é dividida igualmente entre as fontes"
+      },
+      "exemplo": {
+        "cenas": [
+          {
+            "midia": "media:<id-a>",
+            "titulo": "ANTES",
+            "inicio": 0
+          },
+          {
+            "midia": "media:<id-b>",
+            "titulo": "DEPOIS",
+            "inicio": 0
+          },
+          {
+            "midia": "media:<id-c>",
+            "titulo": "A MUDANÇA",
+            "inicio": 0
+          }
+        ]
+      },
+      "som": {
+        "regra": "Recalcular com narrativeEvents para duração, props e fps reais e gravar a saída em sfx do beat. Fontes mudas sob a narração.",
+        "eventos": [
+          {
+            "name": "swish",
+            "fracao": 0,
+            "volume": 0.3
+          },
+          {
+            "name": "swish",
+            "fracao": 0.3333333333333333,
+            "volume": 0.3
+          },
+          {
+            "name": "swish",
+            "fracao": 0.6666666666666666,
+            "volume": 0.3
+          }
+        ]
+      }
+    },
+    "fotogramasMudanca": {
+      "uso": "Três imagens congeladas entram sobrepostas e deslocadas; a última preenche o quadro.",
+      "props": {
+        "len": "frames do beat (fornecido pelo render)",
+        "titulo": "título curto opcional",
+        "fundo": "estrelas | escuro | meio-tom | explosao",
+        "tom": "amarelo | vermelho | azul | #RRGGBB",
+        "cenas": "2–3 itens { midia: media:<id>, titulo?, fonte?, inicio?: segundos, foco?: object-position, zoom?: número, deslocamento?: { x,y } como frações do quadro }; usa primeiro frame de cada inicio, mesmo se for vídeo"
+      },
+      "exemplo": {
+        "titulo": "O QUE MUDOU?",
+        "cenas": [
+          {
+            "midia": "media:<id-a>",
+            "titulo": "ANTES",
+            "inicio": 0
+          },
+          {
+            "midia": "media:<id-b>",
+            "titulo": "DEPOIS",
+            "inicio": 0
+          },
+          {
+            "midia": "media:<id-c>",
+            "titulo": "A MUDANÇA",
+            "inicio": 0
+          }
+        ]
+      },
+      "som": {
+        "regra": "Recalcular com narrativeEvents para duração, props e fps reais e gravar a saída em sfx do beat. Fontes mudas sob a narração.",
+        "eventos": [
+          {
+            "name": "camera",
+            "fracao": 0,
+            "volume": 0.3
+          },
+          {
+            "name": "camera",
+            "fracao": 0.2,
+            "volume": 0.3
+          },
+          {
+            "name": "camera",
+            "fracao": 0.4,
+            "volume": 0.3
+          },
+          {
+            "name": "whoosh-lento",
+            "fracao": 0.7916666666666666,
+            "volume": 0.3
+          }
+        ]
+      }
+    },
+    "anotacaoCena": {
+      "uso": "Vídeo pausa em um frame escolhido, recebe marca localizada e retoma do mesmo frame.",
+      "props": {
+        "len": "frames do beat (fornecido pelo render)",
+        "titulo": "título curto opcional",
+        "fundo": "estrelas | escuro | meio-tom | explosao",
+        "tom": "amarelo | vermelho | azul | #RRGGBB",
+        "cena": "{ midia: media:<id>, titulo?, fonte?, inicio?: segundos, foco?: object-position, zoom?: número, deslocamento?: { x,y } como frações do quadro }",
+        "em": "fração do beat, padrão 0,32",
+        "pausa": "fração do beat, padrão 0,35; não é segundo",
+        "ponto": "{ x, y, w?, h? } em frações 0–1 do quadro já recortado, conferido no frame da pausa",
+        "marca": "circulo (padrão) | seta | sublinhado",
+        "texto": "observação curta opcional"
+      },
+      "exemplo": {
+        "cena": {
+          "midia": "media:<id-a>",
+          "titulo": "ANTES",
+          "inicio": 0
+        },
+        "em": 0.32,
+        "pausa": 0.35,
+        "ponto": {
+          "x": 0.88,
+          "y": 0.75,
+          "w": 0.23,
+          "h": 0.35
+        },
+        "marca": "circulo",
+        "texto": "REPARA NA EXPRESSÃO"
+      },
+      "som": {
+        "regra": "Recalcular com narrativeEvents para duração, props e fps reais e gravar a saída em sfx do beat. Fontes mudas sob a narração.",
+        "eventos": [
+          {
+            "name": "tick",
+            "fracao": 0.31666666666666665,
+            "volume": 0.3
+          },
+          {
+            "name": "swish",
+            "fracao": 0.6666666666666666,
+            "volume": 0.3
+          }
+        ]
+      }
+    },
+    "retornoImagem": {
+      "uso": "Intercala uma lembrança breve em tela cheia; a fonte atual pausa durante o retorno e continua depois.",
+      "props": {
+        "len": "frames do beat (fornecido pelo render)",
+        "titulo": "título curto opcional",
+        "fundo": "estrelas | escuro | meio-tom | explosao",
+        "tom": "amarelo | vermelho | azul | #RRGGBB",
+        "atual": "{ midia: media:<id>, titulo?, fonte?, inicio?: segundos, foco?: object-position, zoom?: número, deslocamento?: { x,y } como frações do quadro }",
+        "lembranca": "{ midia: media:<id>, titulo?, fonte?, inicio?: segundos, foco?: object-position, zoom?: número, deslocamento?: { x,y } como frações do quadro }",
+        "em": "fração do beat, padrão 0,35",
+        "duracao": "fração do beat reservada à lembrança, padrão 0,2"
+      },
+      "exemplo": {
+        "atual": {
+          "midia": "media:<id-b>",
+          "titulo": "DEPOIS",
+          "inicio": 0
+        },
+        "lembranca": {
+          "midia": "media:<id-a>",
+          "titulo": "ANTES",
+          "inicio": 0
+        },
+        "em": 0.35,
+        "duracao": 0.2
+      },
+      "som": {
+        "regra": "Recalcular com narrativeEvents para duração, props e fps reais e gravar a saída em sfx do beat. Fontes mudas sob a narração.",
+        "eventos": [
+          {
+            "name": "camera",
+            "fracao": 0.35,
+            "volume": 0.3
+          },
+          {
+            "name": "swish",
+            "fracao": 0.55,
+            "volume": 0.3
+          }
+        ]
+      }
+    },
+    "palavraRecortada": {
+      "uso": "Palavra grande entra entre a obra de fundo e um recorte PNG transparente, sem modificar a figura.",
+      "props": {
+        "len": "frames do beat (fornecido pelo render)",
+        "titulo": "título curto opcional",
+        "fundo": "estrelas | escuro | meio-tom | explosao",
+        "tom": "amarelo | vermelho | azul | #RRGGBB",
+        "cena": "{ midia: media:<id>, titulo?, fonte?, inicio?: segundos, foco?: object-position, zoom?: número, deslocamento?: { x,y } como frações do quadro }",
+        "recorte": "media:<id> de PNG realmente transparente, fornecido pelo projeto",
+        "palavra": "palavra curta; evitar frases longas"
+      },
+      "exemplo": {
+        "cena": {
+          "midia": "media:<id-a>",
+          "titulo": "ANTES",
+          "inicio": 0
+        },
+        "recorte": "media:<recorte>",
+        "palavra": "ESCOLHA"
+      },
+      "som": {
+        "regra": "Recalcular com narrativeEvents para duração, props e fps reais e gravar a saída em sfx do beat. Fontes mudas sob a narração.",
+        "eventos": [
+          {
+            "name": "impact",
+            "fracao": 0.058333333333333334,
+            "volume": 0.3
+          }
+        ]
+      }
+    },
+    "personagemPrimeiroPlano": {
+      "uso": "PNG grande de um lado e obra do outro, separados por divisória inclinada; troca de poses a cada 0,8 s.",
+      "props": {
+        "len": "frames do beat (fornecido pelo render)",
+        "titulo": "título curto opcional",
+        "fundo": "estrelas | escuro | meio-tom | explosao",
+        "tom": "amarelo | vermelho | azul | #RRGGBB",
+        "cena": "{ midia: media:<id>, titulo?, fonte?, inicio?: segundos, foco?: object-position, zoom?: número, deslocamento?: { x,y } como frações do quadro }",
+        "poses": "nomes do pacote importado, alternados a cada 0,8 s",
+        "humor": "humor para seleção de pose se poses não for informado",
+        "texto": "frase curta opcional; exige character_import"
+      },
+      "exemplo": {
+        "cena": {
+          "midia": "media:<id-b>",
+          "titulo": "DEPOIS",
+          "inicio": 0
+        },
+        "texto": "O PREÇO DA ESCOLHA",
+        "humor": "determinado"
+      },
+      "som": {
+        "regra": "Recalcular com narrativeEvents para duração, props e fps reais e gravar a saída em sfx do beat. Fontes mudas sob a narração.",
+        "eventos": [
+          {
+            "name": "pop",
+            "fracao": 0,
+            "volume": 0.3
+          }
+        ]
+      }
+    },
+    "personagemReacao": {
+      "uso": "O personagem entra e sai por corte, depois do acontecimento; troca de PNG no meio da reação.",
+      "props": {
+        "len": "frames do beat (fornecido pelo render)",
+        "titulo": "título curto opcional",
+        "fundo": "estrelas | escuro | meio-tom | explosao",
+        "tom": "amarelo | vermelho | azul | #RRGGBB",
+        "cena": "{ midia: media:<id>, titulo?, fonte?, inicio?: segundos, foco?: object-position, zoom?: número, deslocamento?: { x,y } como frações do quadro }",
+        "poses": "dois nomes do pacote importado",
+        "humor": "padrão surpreso",
+        "texto": "comentário curto opcional",
+        "em": "entrada como fração do beat, padrão 0,28",
+        "ate": "saída como fração do beat, padrão 0,83; exige character_import"
+      },
+      "exemplo": {
+        "cena": {
+          "midia": "media:<id-a>",
+          "titulo": "ANTES",
+          "inicio": 0
+        },
+        "texto": "AÍ COMPLICOU.",
+        "humor": "surpreso",
+        "em": 0.28,
+        "ate": 0.83
+      },
+      "som": {
+        "regra": "Recalcular com narrativeEvents para duração, props e fps reais e gravar a saída em sfx do beat. Fontes mudas sob a narração.",
+        "eventos": [
+          {
+            "name": "pop",
+            "fracao": 0.2833333333333333,
+            "volume": 0.3
+          },
+          {
+            "name": "tick",
+            "fracao": 0.5583333333333333,
+            "volume": 0.25
+          }
+        ]
+      }
+    },
+    "personagemAlternado": {
+      "uso": "Personagem em destaque, corte para obra em tela cheia, retorno em outra posição e pose. Sem transição de corpo.",
+      "props": {
+        "len": "frames do beat (fornecido pelo render)",
+        "titulo": "título curto opcional",
+        "fundo": "estrelas | escuro | meio-tom | explosao",
+        "tom": "amarelo | vermelho | azul | #RRGGBB",
+        "cena": "{ midia: media:<id>, titulo?, fonte?, inicio?: segundos, foco?: object-position, zoom?: número, deslocamento?: { x,y } como frações do quadro }",
+        "poses": "nomes do pacote importado para troca seca a cada 0,8 s",
+        "humor": "padrão determinado",
+        "texto": "frase curta opcional; exige character_import"
+      },
+      "exemplo": {
+        "cena": {
+          "midia": "media:<id-b>",
+          "titulo": "DEPOIS",
+          "inicio": 0
+        },
+        "texto": "OLHA O QUE A CENA MOSTRA",
+        "humor": "determinado"
+      },
+      "som": {
+        "regra": "Recalcular com narrativeEvents para duração, props e fps reais e gravar a saída em sfx do beat. Fontes mudas sob a narração.",
+        "eventos": [
+          {
+            "name": "pop",
+            "fracao": 0,
+            "volume": 0.3
+          },
+          {
+            "name": "camera",
+            "fracao": 0.25,
+            "volume": 0.3
+          },
+          {
+            "name": "pop",
+            "fracao": 0.6166666666666667,
+            "volume": 0.3
+          }
+        ]
+      }
+    },
+    "legendaVirada": {
+      "uso": "Mesma mídia, expressão curta com palavra riscada e substituída no instante da virada.",
+      "props": {
+        "len": "frames do beat (fornecido pelo render)",
+        "titulo": "título curto opcional",
+        "fundo": "estrelas | escuro | meio-tom | explosao",
+        "tom": "amarelo | vermelho | azul | #RRGGBB",
+        "cena": "{ midia: media:<id>, titulo?, fonte?, inicio?: segundos, foco?: object-position, zoom?: número, deslocamento?: { x,y } como frações do quadro }",
+        "prefixo": "início da frase, opcional",
+        "antes": "palavra ou expressão inicial",
+        "depois": "substituição",
+        "sufixo": "fim da frase, opcional",
+        "virada": "fração do beat, padrão 0,42; reservar ao menos 18% para mostrar a correção"
+      },
+      "exemplo": {
+        "cena": {
+          "midia": "media:<id-b>",
+          "titulo": "DEPOIS",
+          "inicio": 0
+        },
+        "prefixo": "ISSO É",
+        "antes": "PODER",
+        "depois": "RESPONSABILIDADE",
+        "virada": 0.42
+      },
+      "som": {
+        "regra": "Recalcular com narrativeEvents para duração, props e fps reais e gravar a saída em sfx do beat. Fontes mudas sob a narração.",
+        "eventos": [
+          {
+            "name": "type",
+            "fracao": 0.4166666666666667,
+            "volume": 0.3
+          }
+        ]
+      }
+    },
+    "divisaoResolvida": {
+      "uso": "Duas fontes em tela dividida; a divisória se desloca até a escolhida preencher o quadro.",
+      "props": {
+        "len": "frames do beat (fornecido pelo render)",
+        "titulo": "título curto opcional",
+        "fundo": "estrelas | escuro | meio-tom | explosao",
+        "tom": "amarelo | vermelho | azul | #RRGGBB",
+        "cenas": "dois itens { midia: media:<id>, titulo?, fonte?, inicio?: segundos, foco?: object-position, zoom?: número, deslocamento?: { x,y } como frações do quadro }",
+        "escolhida": "índice 0 ou 1; padrão 1",
+        "virada": "fração em que a divisória começa a mover, padrão 0,33; reservar 45% da duração"
+      },
+      "exemplo": {
+        "cenas": [
+          {
+            "midia": "media:<id-a>",
+            "titulo": "ANTES",
+            "inicio": 0
+          },
+          {
+            "midia": "media:<id-b>",
+            "titulo": "DEPOIS",
+            "inicio": 0
+          }
+        ],
+        "escolhida": 1,
+        "virada": 0.33
+      },
+      "som": {
+        "regra": "Recalcular com narrativeEvents para duração, props e fps reais e gravar a saída em sfx do beat. Fontes mudas sob a narração.",
+        "eventos": [
+          {
+            "name": "whoosh-lento",
+            "fracao": 0.3333333333333333,
+            "volume": 0.3
+          }
+        ]
+      }
+    },
+    "corteCor": {
+      "uso": "Faixa diagonal com cor do kit atravessa rapidamente o quadro e revela a próxima mídia.",
+      "props": {
+        "len": "frames do beat (fornecido pelo render)",
+        "titulo": "título curto opcional",
+        "fundo": "estrelas | escuro | meio-tom | explosao",
+        "tom": "cor da faixa; padrão vermelho",
+        "antes": "{ midia: media:<id>, titulo?, fonte?, inicio?: segundos, foco?: object-position, zoom?: número, deslocamento?: { x,y } como frações do quadro }",
+        "depois": "{ midia: media:<id>, titulo?, fonte?, inicio?: segundos, foco?: object-position, zoom?: número, deslocamento?: { x,y } como frações do quadro }"
+      },
+      "exemplo": {
+        "antes": {
+          "midia": "media:<id-a>",
+          "titulo": "ANTES",
+          "inicio": 0
+        },
+        "depois": {
+          "midia": "media:<id-b>",
+          "titulo": "DEPOIS",
+          "inicio": 0
+        },
+        "tom": "vermelho"
+      },
+      "som": {
+        "regra": "Recalcular com narrativeEvents para duração, props e fps reais e gravar a saída em sfx do beat. Fontes mudas sob a narração.",
+        "eventos": [
+          {
+            "name": "whoosh-rapido",
+            "fracao": 0.25,
+            "volume": 0.3
+          }
+        ]
+      }
+    },
+    "revelacaoRecortes": {
+      "uso": "Quatro partes grandes revelam o frame inicial; depois a mídia completa começa a tocar.",
+      "props": {
+        "len": "frames do beat (fornecido pelo render)",
+        "titulo": "título curto opcional",
+        "fundo": "estrelas | escuro | meio-tom | explosao",
+        "tom": "amarelo | vermelho | azul | #RRGGBB",
+        "cena": "{ midia: media:<id>, titulo?, fonte?, inicio?: segundos, foco?: object-position, zoom?: número, deslocamento?: { x,y } como frações do quadro }"
+      },
+      "exemplo": {
+        "titulo": "A REVELAÇÃO",
+        "cena": {
+          "midia": "media:<id-b>",
+          "titulo": "DEPOIS",
+          "inicio": 0
+        }
+      },
+      "som": {
+        "regra": "Recalcular com narrativeEvents para duração, props e fps reais e gravar a saída em sfx do beat. Fontes mudas sob a narração.",
+        "eventos": [
+          {
+            "name": "camera",
+            "fracao": 0,
+            "volume": 0.3
+          },
+          {
+            "name": "swish",
+            "fracao": 0.16666666666666666,
+            "volume": 0.3
+          },
+          {
+            "name": "camera",
+            "fracao": 0.3416666666666667,
+            "volume": 0.3
+          },
+          {
+            "name": "swish",
+            "fracao": 0.5083333333333333,
+            "volume": 0.3
+          },
+          {
+            "name": "ding",
+            "fracao": 0.7166666666666667,
+            "volume": 0.3
+          }
+        ]
+      }
     }
   },
   "thumbnail": {

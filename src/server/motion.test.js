@@ -211,7 +211,7 @@ test('poses especiais só entram com gatilho e não são forçadas para completa
 
 test('as cenas narrativas têm exemplos aceitos pelo contrato e SFX existentes no tempo do beat', () => {
   const entries = Object.entries(MOTION_KIT.cenas).filter(([, c]) => c.som?.eventos);
-  expect(entries).toHaveLength(21);
+  expect(entries).toHaveLength(37);
   for (const [scene, c] of entries) {
     const beat = { id: scene, scene, at: 0, duration: 4, props: c.exemplo, sfx: c.som.eventos.map(e => ({ name: e.name, at: e.fracao * 4, volume: e.volume })) };
     expect(motionPlanSchema.safeParse({ schema: 'contentlab-motion-v1', beats: [beat] }).success, scene).toBe(true);
