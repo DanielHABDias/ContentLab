@@ -22,6 +22,9 @@ export function registerMediaTools(server, { tool, api, projectPath }) {
     return { mediaId, unit, total: items.length, offset, items: items.slice(offset, offset + limit), nextOffset: offset + limit < items.length ? offset + limit : null };
   });
   tool(server, 'media_search', 'Busca falas nas transcrições do projeto; resultados incluem mediaId e tempos da fonte.', { path: projectPath, query: z.string().trim().min(1) }, async args => api('/media/search', args));
+  tool(server, 'media_cut_remove', 'Remove do projeto um corte rejeitado, preservando a mídia original. Exige a revisão atual; não exclui o original.', {
+    path: projectPath, mediaId, cutId: z.string().min(1), baseRevision: z.number().int().min(0),
+  }, async args => api('/media/cut-remove', args));
   tool(server, 'media_cut', 'Cria um corte real de vídeo/áudio no app, preservando o original. start/end em segundos da fonte; baseRevision atual obrigatória. Confira fala completa e reação antes de escolher o intervalo.', {
     path: projectPath, mediaId, baseRevision: z.number().int().min(0), start: z.number().finite().min(0), end: z.number().finite().positive(), name: z.string().trim().min(1).max(80),
   }, async args => {

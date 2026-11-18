@@ -9,4 +9,6 @@ O agente usa as mesmas operações da interface, sem baixar ou transcrever por f
 5. Confira imagem e áudio do intervalo. A transcrição pode errar: preserve frases, respostas e reações completas.
 6. `media_cut {path, mediaId, baseRevision, start, end, name}`: crie o arquivo de corte no app, preservando a fonte. Tempos em segundos da fonte; releia a revisão depois de cada alteração. Em conflito, recalcule em vez de sobrescrever.
 
+`media_cut_remove {path, mediaId, cutId, baseRevision}` descarta do projeto um corte rejeitado sem remover a fonte.
+
 Os cortes não inserem automaticamente cenas ou áudio na montagem final. Registre sua correspondência com os blocos do roteiro e confira a edição. A transcrição de mídias segue a configuração atual do app em português; ela não traduz automaticamente áudio em inglês.

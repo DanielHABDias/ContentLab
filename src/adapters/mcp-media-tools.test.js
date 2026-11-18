@@ -33,6 +33,8 @@ test('exposes existing app media pipeline and preserves revision, provenance and
     const input = { path: '/project', mediaId: 'media_one', baseRevision: 4, start: 1.2, end: 8.5, name: 'Frase completa' };
     expect(await call('media_cut', input)).toMatchObject({ project: { revision: 5 } });
     expect(seen.at(-1)).toMatchObject({ url: expect.stringMatching(/\/media\/cut$/), body: input });
+    await call('media_cut_remove', { path: '/project', mediaId: 'media_one', cutId: 'cut_bad', baseRevision: 5 });
+    expect(seen.at(-1)).toMatchObject({ url: expect.stringMatching(/\/media\/cut-remove$/), body: { path: '/project', mediaId: 'media_one', cutId: 'cut_bad', baseRevision: 5 } });
     const count = seen.length;
     expect(await call('media_cut', { ...input, end: 1 })).toMatchObject({ isError: true });
     expect(seen).toHaveLength(count);
