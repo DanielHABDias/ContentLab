@@ -1,3 +1,7 @@
+import { TrilhaViva } from './TrilhaViva';
+import { PersonagemClose, PensamentoVivo } from './PersonagemIdeias';
+import { RasgoCena } from './RasgoCena';
+import { Vinculo, Memoria, DuplaVida } from './Historia';
 import { Dossie } from './Dossie';
 import { CronologiaRamos } from './CronologiaRamos';
 import { RevelacaoCamadas } from './RevelacaoCamadas';
@@ -12,4 +16,4 @@ import { BalancaCusto } from './BalancaCusto';
 import { EcoVisual } from './EcoVisual';
 import { PecaAusente } from './PecaAusente';
 import { Convergencia } from './Convergencia';
-export const NARRATIVE_SCENES = { dossie:Dossie, cronologiaRamos:CronologiaRamos, revelacaoCamadas:RevelacaoCamadas, contradicao:Contradicao, efeitoDomino:EfeitoDomino, constelacao:Constelacao, quadrosProfundidade:QuadrosProfundidade, lupaEvidencia:LupaEvidencia, bifurcacao:Bifurcacao, limiar:Limiar, balancaCusto:BalancaCusto, ecoVisual:EcoVisual, pecaAusente:PecaAusente, convergencia:Convergencia };
+export const NARRATIVE_SCENES = { dossie:Dossie, cronologiaRamos:CronologiaRamos, revelacaoCamadas:RevelacaoCamadas, contradicao:Contradicao, efeitoDomino:EfeitoDomino, constelacao:Constelacao, quadrosProfundidade:QuadrosProfundidade, lupaEvidencia:LupaEvidencia, bifurcacao:Bifurcacao, limiar:Limiar, balancaCusto:BalancaCusto, ecoVisual:EcoVisual, pecaAusente:PecaAusente, convergencia:Convergencia, vinculo:Vinculo, memoria:Memoria, duplaVida:DuplaVida, trilhaViva:TrilhaViva, personagemClose:PersonagemClose, pensamentoVivo:PensamentoVivo, rasgoCena:RasgoCena };

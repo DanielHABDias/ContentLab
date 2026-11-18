@@ -86,3 +86,21 @@ Comparar com `comparacao` (Versus) e com as entradas dos componentes HQ: desloca
 - Constelação expande e pulsa conexões; profundidade alterna foco entre planos; lupa se desloca do ponto observado e amplia a mesma fonte; escolha aproxima a opção selecionada e recua a alternativa.
 - Limiar tem preparação e impacto no cruzamento; balança recebe cargas e oscila com amortecimento; eco alinha recorrências; peça ausente encaixa a nova prova; convergência conduz sinais paralelos até o encontro.
 - Verificar 16:9 e 9:16, abertura, etapas intermediárias, virada, leitura final e preparação do corte. Repetir com limites de itens e com `revelar: false`/escolha aberta. Não aplicar explosões ou tremor constante: impactos são locais e não escondem a mídia ou a fonte.
+
+## Relações e passagem pela história
+
+- `vinculo`: duas pessoas permanecem em quadro enquanto o vínculo muda; `virada` define o instante.
+- `memoria`: abre uma lembrança em destaque sobre o presente desfocado e retorna ao presente.
+- `duplaVida`: alterna o foco entre responsabilidades em `trocas`, sem declarar vencedor.
+
+Use mídias da obra nos itens e identifique a fonte. Estas composições não substituem o áudio original: trechos emocionais continuam entrando como `evidencia` com `som:true` e pausa na narração.
+
+## Percurso, personagem em close e rasgo
+
+- `trilhaViva`: até quatro fragmentos em uma trilha sinuosa. Os inativos ficam cinza e congelados; somente o ativo toca colorido. O traço ganha cor até a posição atual. O último fragmento amplia até preencher o quadro (`mergulhar: true`). Cada `inicio` marca o tempo na fonte.
+- Continuidade do mergulho: para continuar com `evidencia`, usar a mesma mídia do último fragmento; `inicio` seguinte = `inicio` da fonte + (frames do beat − frame de ativação do último fragmento) / fps. A ativação vem de `trailSchedule`, em `src/motion/kit/narrative/trilha.js`. Em 30 fps e beat de 10 s com 2–4 fragmentos, o último ativa no frame 228; a continuação começa 2,4 s após o `inicio`. Sem áudio original na trilha; a continuação com som exige pausa na narração.
+- `personagemClose`: personagem importado ampliado, com pernas além da borda; balões únicos, ícones e poses ligados à fala. Um item de `ideias` por vez; preferir beats em que cada item dure 0,7–1 s.
+- `pensamentoVivo`: três pensamentos surgem e permanecem ao redor do personagem. `poses` troca a cada 0,8 s. Não usar para citar evidências que precisam aparecer em cena.
+- `rasgoCena`: transição irregular entre duas mídias em tela cheia; a segunda começa na `virada`, sem áudio original. O rasgo leva 42% da duração total, por isso `virada` deve ser no máximo 0,58.
+
+As cenas do personagem exigem `character_import`; o aplicativo permanece neutro, sem personagem de marca embutido. No Diazverso, o agente importa o Nox do plugin.

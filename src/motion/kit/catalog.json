@@ -1168,6 +1168,334 @@
           }
         ]
       }
+    },
+    "vinculo": {
+      "uso": "Mostrar como uma relação muda após um acontecimento, mantendo os dois personagens em quadro.",
+      "props": {
+        "titulo": "título curto opcional",
+        "fundo": "estrelas | escuro | meio-tom | explosao",
+        "tom": "amarelo | vermelho | azul | #RRGGBB",
+        "pessoas": "{ titulo, texto?, midia?: media:<id>, fonte?, tom? }[], 2 pessoas",
+        "antes": "vínculo inicial",
+        "depois": "vínculo após a virada",
+        "acontecimento": "causa da mudança",
+        "virada": "fração 0–1 (padrão 0,55)"
+      },
+      "exemplo": {
+        "titulo": "UMA RELAÇÃO MUDA",
+        "pessoas": [
+          {
+            "titulo": "O ALUNO"
+          },
+          {
+            "titulo": "O MENTOR"
+          }
+        ],
+        "antes": "CONFIANÇA",
+        "depois": "RUPTURA",
+        "acontecimento": "UMA ESCOLHA MUDA O VÍNCULO"
+      },
+      "som": {
+        "regra": "Eventos do exemplo em 4 s e 30 fps. Recalcular com narrativeEvents para duração, props e fps reais; traduzir at em sfx[].at. Prévia da Documentação muda.",
+        "eventos": [
+          {
+            "name": "camera",
+            "fracao": 0,
+            "volume": 0.4
+          },
+          {
+            "name": "camera",
+            "fracao": 0.11666666666666667,
+            "volume": 0.4
+          },
+          {
+            "name": "impact",
+            "fracao": 0.55,
+            "volume": 0.4
+          }
+        ]
+      }
+    },
+    "memoria": {
+      "uso": "Abrir uma lembrança sobre o momento presente e retornar a ele; identificar a fonte de cada cena.",
+      "props": {
+        "titulo": "título curto opcional",
+        "fundo": "estrelas | escuro | meio-tom | explosao",
+        "tom": "amarelo | vermelho | azul | #RRGGBB",
+        "presente": "{ titulo, texto?, midia?: media:<id>, fonte?, tom? }",
+        "lembranca": "{ titulo, texto?, midia?: media:<id>, fonte?, tom? }",
+        "retorno": "consequência percebida ao voltar ao presente"
+      },
+      "exemplo": {
+        "presente": {
+          "titulo": "O CONFRONTO"
+        },
+        "lembranca": {
+          "titulo": "A PROMESSA"
+        },
+        "retorno": "AGORA A PROMESSA TEM OUTRO PESO"
+      },
+      "som": {
+        "regra": "Eventos do exemplo em 4 s e 30 fps. Recalcular com narrativeEvents para duração, props e fps reais; traduzir at em sfx[].at. Prévia da Documentação muda.",
+        "eventos": [
+          {
+            "name": "camera",
+            "fracao": 0,
+            "volume": 0.4
+          },
+          {
+            "name": "swish",
+            "fracao": 0.21666666666666667,
+            "volume": 0.4
+          },
+          {
+            "name": "whoosh-lento",
+            "fracao": 0.7166666666666667,
+            "volume": 0.3
+          }
+        ]
+      }
+    },
+    "duplaVida": {
+      "uso": "Alternar o foco entre duas responsabilidades simultâneas sem escolher vencedor.",
+      "props": {
+        "titulo": "título curto opcional",
+        "fundo": "estrelas | escuro | meio-tom | explosao",
+        "tom": "amarelo | vermelho | azul | #RRGGBB",
+        "lados": "{ titulo, texto?, midia?: media:<id>, fonte?, tom? }[], 2 responsabilidades",
+        "trocas": "frações 0–1 em que o foco alterna; padrão [0.28,0.55,0.78]"
+      },
+      "exemplo": {
+        "titulo": "DOIS COMPROMISSOS",
+        "lados": [
+          {
+            "titulo": "A VIDA PESSOAL"
+          },
+          {
+            "titulo": "A RESPONSABILIDADE"
+          }
+        ]
+      },
+      "som": {
+        "regra": "Eventos do exemplo em 4 s e 30 fps. Recalcular com narrativeEvents para duração, props e fps reais; traduzir at em sfx[].at. Prévia da Documentação muda.",
+        "eventos": [
+          {
+            "name": "camera",
+            "fracao": 0,
+            "volume": 0.4
+          },
+          {
+            "name": "camera",
+            "fracao": 0.1,
+            "volume": 0.4
+          },
+          {
+            "name": "swish",
+            "fracao": 0.2833333333333333,
+            "volume": 0.3
+          },
+          {
+            "name": "swish",
+            "fracao": 0.55,
+            "volume": 0.3
+          },
+          {
+            "name": "swish",
+            "fracao": 0.7833333333333333,
+            "volume": 0.3
+          }
+        ]
+      }
+    },
+    "trilhaViva": {
+      "uso": "Percurso sinuoso com fragmentos: só o clipe atual toca em cores; anteriores e futuros ficam congelados em cinza. Mergulho no último clipe ao final.",
+      "props": {
+        "len": "frames do beat (fornecido pelo render)",
+        "fundo": "estrelas | escuro | meio-tom | explosao",
+        "tom": "amarelo | vermelho | azul | #RRGGBB",
+        "titulo": "título curto opcional",
+        "fragmentos": "1–4 objetos { titulo, midia: media:<id>, inicio?: segundos da fonte, fonte? }. Usar clipes/imagens reais; som original mudo.",
+        "mergulhar": "padrão true; amplia o último fragmento até tela cheia entre 84% e 99% do beat"
+      },
+      "exemplo": {
+        "titulo": "O PREÇO DE CADA ESCOLHA",
+        "fragmentos": [
+          {
+            "titulo": "A PROMESSA",
+            "midia": "media:<id-a>",
+            "inicio": 0
+          },
+          {
+            "titulo": "A RUPTURA",
+            "midia": "media:<id-b>",
+            "inicio": 0
+          },
+          {
+            "titulo": "A ESCOLHA",
+            "midia": "media:<id-c>",
+            "inicio": 0
+          }
+        ],
+        "mergulhar": true
+      },
+      "som": {
+        "regra": "Eventos do exemplo em 4 s e 30 fps. Recalcular com narrativeEvents para duração, props e fps reais; traduzir at em sfx[].at. Prévia da Documentação muda.",
+        "eventos": [
+          {
+            "name": "camera",
+            "fracao": 0.175,
+            "volume": 0.3
+          },
+          {
+            "name": "camera",
+            "fracao": 0.4666666666666667,
+            "volume": 0.3
+          },
+          {
+            "name": "camera",
+            "fracao": 0.7583333333333333,
+            "volume": 0.3
+          },
+          {
+            "name": "whoosh-lento",
+            "fracao": 0.8416666666666667,
+            "volume": 0.35
+          }
+        ]
+      }
+    },
+    "personagemClose": {
+      "uso": "Personagem do projeto muito grande, com recorte de pernas pela borda; balões de ícones/ideias e troca seca de pose. Requer character_import.",
+      "props": {
+        "len": "frames do beat (fornecido pelo render)",
+        "fundo": "estrelas | escuro | meio-tom | explosao",
+        "tom": "amarelo | vermelho | azul | #RRGGBB",
+        "ideias": "1–6 objetos { texto?, icone?, pose?, humor? }; um balão por vez, divide duração igualmente. Pose deve ser do pacote do projeto.",
+        "lado": "esquerda (padrão) | direita, no horizontal",
+        "midia": "media:<id> opcional para fundo desfocado",
+        "inicio": "segundos da mídia de fundo",
+        "poses": "nomes das poses do pacote para gesticular a cada 0,8 s, independentemente da duração de cada balão; opcional"
+      },
+      "exemplo": {
+        "ideias": [
+          {
+            "texto": "ELE PAGA O PREÇO",
+            "icone": "raio",
+            "humor": "determinado"
+          },
+          {
+            "texto": "E A VIDA PESSOAL?",
+            "icone": "relogio",
+            "humor": "confuso"
+          },
+          {
+            "texto": "ESSA É A ESCOLHA",
+            "icone": "coracao",
+            "humor": "triste"
+          }
+        ]
+      },
+      "som": {
+        "regra": "Eventos do exemplo em 4 s e 30 fps. Recalcular com narrativeEvents para duração, props e fps reais; traduzir at em sfx[].at. Prévia da Documentação muda.",
+        "eventos": [
+          {
+            "name": "pop",
+            "fracao": 0,
+            "volume": 0.3
+          },
+          {
+            "name": "pop",
+            "fracao": 0.3333333333333333,
+            "volume": 0.3
+          },
+          {
+            "name": "pop",
+            "fracao": 0.6666666666666666,
+            "volume": 0.3
+          }
+        ]
+      }
+    },
+    "pensamentoVivo": {
+      "uso": "Personagem grande com até três balões surgindo ao redor, mantendo os anteriores; ideias simultâneas, opinião e humor. Requer character_import.",
+      "props": {
+        "len": "frames do beat (fornecido pelo render)",
+        "fundo": "estrelas | escuro | meio-tom | explosao",
+        "tom": "amarelo | vermelho | azul | #RRGGBB",
+        "ideias": "1–3 objetos { texto?, icone? }",
+        "poses": "nomes das poses do projeto; alternam a cada 0,8 s. Escolher pelo sentido da fala.",
+        "conclusao": "frase curta opcional revelada em 76% do beat"
+      },
+      "exemplo": {
+        "ideias": [
+          {
+            "texto": "O DEVER",
+            "icone": "escudo"
+          },
+          {
+            "texto": "O AFETO",
+            "icone": "coracao"
+          },
+          {
+            "texto": "O TEMPO",
+            "icone": "relogio"
+          }
+        ],
+        "conclusao": "NÃO DÁ PARA ESTAR EM TODO LUGAR"
+      },
+      "som": {
+        "regra": "Eventos do exemplo em 4 s e 30 fps. Recalcular com narrativeEvents para duração, props e fps reais; traduzir at em sfx[].at. Prévia da Documentação muda.",
+        "eventos": [
+          {
+            "name": "pop",
+            "fracao": 0.08333333333333333,
+            "volume": 0.3
+          },
+          {
+            "name": "pop",
+            "fracao": 0.26666666666666666,
+            "volume": 0.3
+          },
+          {
+            "name": "pop",
+            "fracao": 0.4583333333333333,
+            "volume": 0.3
+          },
+          {
+            "name": "ding",
+            "fracao": 0.7583333333333333,
+            "volume": 0.3
+          }
+        ]
+      }
+    },
+    "rasgoCena": {
+      "uso": "Rasgo irregular atravessa a cena da obra e revela a próxima em tela cheia, com bordas de tinta discretas.",
+      "props": {
+        "len": "frames do beat (fornecido pelo render)",
+        "fundo": "estrelas | escuro | meio-tom | explosao",
+        "tom": "amarelo | vermelho | azul | #RRGGBB",
+        "antes": "media:<id> da cena inicial",
+        "depois": "media:<id> da cena revelada",
+        "inicioAntes": "segundos da primeira fonte, padrão 0",
+        "inicioDepois": "segundos da segunda fonte, padrão 0; toca a partir da virada",
+        "virada": "fração 0–0,58 para permitir rasgo completo; padrão 0,35"
+      },
+      "exemplo": {
+        "antes": "media:<id-a>",
+        "depois": "media:<id-b>",
+        "virada": 0.35
+      },
+      "som": {
+        "regra": "Eventos do exemplo em 4 s e 30 fps. Recalcular com narrativeEvents para duração, props e fps reais; traduzir at em sfx[].at. Prévia da Documentação muda.",
+        "eventos": [
+          {
+            "name": "whoosh",
+            "fracao": 0.35,
+            "volume": 0.35
+          }
+        ]
+      }
     }
   },
   "thumbnail": {

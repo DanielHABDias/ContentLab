@@ -35,7 +35,7 @@ const SFX_USE = {
 const SFX_ORIGIN = new Set(['clique', 'sino', 'explosao', 'tapa', 'tapa-eco', 'whoosh-rapido', 'whoosh-lento']);
 const NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 /** Cenas que dependem de mídia do projeto, do personagem ou de WebGL ficam fora das prévias da documentação. */
-const NO_PREVIEW = new Set(['evidencia', 'aparte', 'personagem', 'paineis3d']);
+const NO_PREVIEW = new Set(['evidencia', 'aparte', 'personagem', 'paineis3d', 'personagemClose', 'pensamentoVivo', 'rasgoCena']);
 const FILES = { font: { anton: 'fonts/Anton-Regular.ttf' } };
 
 export const CAPTION_RULES = [

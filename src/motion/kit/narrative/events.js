@@ -1,3 +1,4 @@
+import { trailSchedule } from './trilha.js';
 import { thresholdFrame } from './choreography.js';
 
 /** SFX for real events only; count, turn, duration and frame rate follow the configured scene. */
@@ -19,6 +20,13 @@ export function narrativeEvents(scene, props, duration, fps = 30) {
     case 'balancaCusto':add('camera',.08);add('swish',.28);add('impact',.4);add('sub',.4,.28);break;
     case 'ecoVisual':for(let i=0;i<count('ocorrencias',3);i++)add(i%2?'tick':'camera',i*.14,.32);add('swish',.55);add('impact',.76);break;
     case 'pecaAusente':for(let i=0;i<count('contexto',2);i++)add(i?'tick':'camera',i*.15);if(props.revelar!==false){add('whoosh',props.virada??.6);add('impact',(props.virada??.6)+Math.round(fps*.14)/len);}break;
+    case 'trilhaViva':for(const cue of trailSchedule(len,count('fragmentos',4)))if(count('fragmentos',4))add('camera',cue.start/len,.3);if(props.mergulhar!==false&&count('fragmentos',4))add('whoosh-lento',.84,.35);break;
+    case 'personagemClose':{const n=count('ideias',6);for(let i=0;i<n;i++)add('pop',i/n,.3);break;}
+    case 'pensamentoVivo':for(let i=0;i<count('ideias',3);i++)add('pop',.08+i*.19,.3);if(props.conclusao)add('ding',.76,.3);break;
+    case 'rasgoCena':add('whoosh',Math.max(0,Math.min(.58,props.virada??.35)),.35);break;
+    case 'vinculo':add('camera',0);if(count('pessoas',2)>1)add('camera',.12);add('impact',props.virada??.55);break;
+    case 'memoria':add('camera',0);add('swish',.22);add('whoosh-lento',.72,.3);break;
+    case 'duplaVida':for(let i=0;i<count('lados',2);i++)add('camera',i*.1);for(const t of (props.trocas??[.28,.55,.78]).filter(t=>t>=0&&t<1))add('swish',t,.3);break;
     case 'convergencia':for(let i=0;i<count('frentes',3);i++)add(i%2?'tick':'camera',i*.1,.32);add('whoosh-lento',.43,.3);add('impact',.65);add('sub',.65,.3);break;
   }
   return events.sort((a,b)=>a.at-b.at).filter(e=>e.at<duration);

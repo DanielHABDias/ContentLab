@@ -151,7 +151,7 @@ export const timelineSchema = z.object({
  * Tempos em segundos; props das cenas são JSON e citam mídia como `media:<id>`.
  */
 const motionValue = z.lazy(() => z.union([z.string().max(2000), z.number().finite(), z.boolean(), z.null(), z.array(motionValue).max(40), z.record(z.string().max(64), motionValue)]));
-export const MOTION_SCENES = ['titulo', 'frase', 'personagem', 'evidencia', 'pagina', 'numero', 'ficha', 'formula', 'lista', 'comparacao', 'cta', 'aparte', 'paineis3d', 'telafinal', 'dossie', 'cronologiaRamos', 'revelacaoCamadas', 'contradicao', 'efeitoDomino', 'constelacao', 'quadrosProfundidade', 'lupaEvidencia', 'bifurcacao', 'limiar', 'balancaCusto', 'ecoVisual', 'pecaAusente', 'convergencia'];
+export const MOTION_SCENES = ['titulo', 'frase', 'personagem', 'evidencia', 'pagina', 'numero', 'ficha', 'formula', 'lista', 'comparacao', 'cta', 'aparte', 'paineis3d', 'telafinal', 'dossie', 'cronologiaRamos', 'revelacaoCamadas', 'contradicao', 'efeitoDomino', 'constelacao', 'quadrosProfundidade', 'lupaEvidencia', 'bifurcacao', 'limiar', 'balancaCusto', 'ecoVisual', 'pecaAusente', 'convergencia', 'vinculo', 'memoria', 'duplaVida', 'trilhaViva', 'personagemClose', 'pensamentoVivo', 'rasgoCena'];
 /** Nomes de SFX do kit (lista `sfx` de src/motion/kit/catalog.json; o arquivo fica em assets/kit/sfx). */
 export const MOTION_SFX = kitCatalog.sfx;
 export const motionBeatSchema = z.object({

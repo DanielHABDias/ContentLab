@@ -558,3 +558,8 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-vi
 @media (max-width: 760px) { .processing-queue .home-header { align-items: stretch; flex-direction: column; } .processing-job-heading { flex-wrap: wrap; } }
 
 .recent-projects { display: flex; flex-wrap: wrap; gap: 10px; }.recent-projects button { max-width: 100%; overflow-wrap: anywhere; text-align: left; }.all-projects { margin-top: 32px; }.project-search { display: grid; gap: 8px; margin: 0 0 18px; font-size: 13px; }.project-search input { width: 100%; min-height: 44px; padding: 10px 12px; color: var(--ink); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; }
+
+.credit .creator-channel { display: inline-flex; align-items: center; gap: 7px; width: fit-content; margin-top: 3px; padding: 3px 0; text-decoration: none; color: #e54157; border-radius: 3px; }
+.credit .creator-channel span { font-size: 13px; font-weight: 800; letter-spacing: .035em; text-transform: none; background: linear-gradient(105deg, #e93850 12%, #aa4db5 48%, #337cf0 90%); color: transparent; background-clip: text; -webkit-background-clip: text; }
+.credit .creator-channel:hover { filter: brightness(1.2); }
+.credit .creator-channel:focus-visible { outline: 2px solid var(--blue); outline-offset: 4px; }
