@@ -1,4 +1,4 @@
-import { Player } from '@remotion/player';
+import { Player, Thumbnail } from '@remotion/player';
 import { AbsoluteFill } from 'remotion';
 import shield from '../../assets/kit/graphics/escudo.svg?url';
 import lamp from '../../assets/kit/graphics/lampada.svg?url';
@@ -35,7 +35,9 @@ export function ScenePlayer({ scene, props, vertical = false, seconds = 5 }) {
     controls loop autoPlay muted clickToPlay style={{ width: '100%', aspectRatio: vertical ? '9 / 16' : '16 / 9', maxHeight: vertical ? 560 : undefined }}/>;
 }
 
-export function BackgroundPlayer({ kind, tint }) {
-  return <Player component={BackgroundDemo} inputProps={{ kind, tint }} durationInFrames={10 * FPS} fps={FPS}
-    compositionWidth={1920} compositionHeight={1080} loop autoPlay muted style={{ width: '100%', aspectRatio: '16 / 9' }}/>;
+export function BackgroundPlayer({ kind, tint, playing = false }) {
+  // A small documentation swatch does not need to calculate a full-HD canvas every frame.
+  const props = { component: BackgroundDemo, inputProps: { kind, tint }, durationInFrames: 10 * FPS, fps: FPS,
+    compositionWidth: 640, compositionHeight: 360, style: { width: '100%', aspectRatio: '16 / 9' } };
+  return playing ? <Player {...props} loop autoPlay muted/> : <Thumbnail {...props} frameToDisplay={60}/>;
 }

@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { Pause, Play, X } from 'lucide-react';
+import { VisiblePreview } from './VisiblePreview.jsx';
 import { localApi } from './local-api.js';
 
 const ScenePlayer = lazy(() => import('./KitPreview.jsx').then(module => ({ default: module.ScenePlayer })));
@@ -19,6 +20,7 @@ function useKitFont() {
 /** Documentação do kit de motion: cenas tocando ao vivo, fundos com cor, sons e regras. */
 export function DocsScreen({ onBack }) {
   const [docs, setDocs] = useState(null); const [error, setError] = useState(''); const [playing, setPlaying] = useState(null); const audio = useRef(null);
+  const [animatedBackground, setAnimatedBackground] = useState(null);
   const [scene, setScene] = useState(null); const [vertical, setVertical] = useState(false); const [tint, setTint] = useState('amarelo');
   useKitFont();
   useEffect(() => { localApi.brandDocs().then(value => { setDocs(value); setScene(value.scenes.find(item => item.example)?.id || null); }).catch(issue => setError(issue.message)); return () => audio.current?.pause(); }, []);
@@ -45,7 +47,7 @@ export function DocsScreen({ onBack }) {
         <div className="tone-list" role="group" aria-label="Cena de exemplo">{previews.map(item => <button key={item.id} type="button" className={`mini-button ${item.id === scene ? 'active' : ''}`} aria-pressed={item.id === scene} onClick={() => setScene(item.id)} translate="no">{item.id}</button>)}</div>
         <label className="check"><input type="checkbox" checked={vertical} onChange={event => setVertical(event.target.checked)}/> Short (9:16)</label>
       </div>
-      {current && <div className="docs-player" aria-label={`Prévia da cena ${current.id}`}><Suspense fallback={loading}><ScenePlayer key={`${current.id}-${vertical}`} scene={current.id} props={current.example} vertical={vertical}/></Suspense></div>}
+      {current && <div className="docs-player" aria-label={`Prévia da cena ${current.id}`}><VisiblePreview vertical={vertical}><Suspense fallback={loading}><ScenePlayer key={`${current.id}-${vertical}`} scene={current.id} props={current.example} vertical={vertical}/></Suspense></VisiblePreview></div>}
       <dl className="docs-list">{docs.scenes.map(item => <div key={item.id}><dt translate="no">{item.id}</dt><dd>{item.use}</dd></div>)}</dl>
       <h3>Humores</h3><p className="hint">Escolhem a pose do personagem do projeto pelo tom da fala.</p><p className="tone-list">{docs.moods.map(mood => <span key={mood} className="tone" translate="no">{mood}</span>)}</p>
       {docs.character && <><h3>Pacote de personagem</h3><p className="hint">{docs.character.pacote}</p></>}
@@ -56,7 +58,8 @@ export function DocsScreen({ onBack }) {
         {docs.colors.map(color => <label key={color} className="check"><input type="radio" name="kit-color" value={color} checked={tint === color} onChange={() => setTint(color)}/> {COLOR_LABELS[color] || color}</label>)}
         <label className="check">Outra <input type="color" aria-label="Outra cor" value={/^#[0-9a-f]{6}$/i.test(tint) ? tint : '#2676e8'} onChange={event => setTint(event.target.value)}/></label>
       </fieldset>
-      <ul className="background-grid">{docs.backgrounds.map(kind => <li key={kind}><Suspense fallback={loading}><BackgroundPlayer kind={kind} tint={TINTED.has(kind) ? tint : undefined}/></Suspense><strong translate="no">{kind}</strong></li>)}</ul>
+      <p className="hint">As prévias começam paradas. Anime um fundo por vez para conferir o movimento.</p>
+      <ul className="background-grid">{docs.backgrounds.map(kind => <li key={kind}><VisiblePreview><Suspense fallback={loading}><BackgroundPlayer kind={kind} tint={TINTED.has(kind) ? tint : undefined} playing={animatedBackground === kind}/></Suspense></VisiblePreview><strong translate="no">{kind === 'halftone' ? 'Half-Tone' : kind}</strong><button type="button" className="mini-button" aria-pressed={animatedBackground === kind} aria-label={`${animatedBackground === kind ? 'Pausar' : 'Animar'} fundo ${kind}`} onClick={() => setAnimatedBackground(current => current === kind ? null : kind)}>{animatedBackground === kind ? <Pause size={14} aria-hidden="true"/> : <Play size={14} aria-hidden="true"/>} {animatedBackground === kind ? 'Pausar' : 'Animar'}</button></li>)}</ul>
     </section>
 
     <section className="workflow-card" aria-labelledby="docs-sfx"><div className="section-title"><h2 id="docs-sfx">Sons do kit</h2><span>{docs.sfx.length} sons</span></div>

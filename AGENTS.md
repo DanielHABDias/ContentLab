@@ -21,3 +21,7 @@ A aba **Fila de processamento** reúne render, transcrição, voz de IA, montage
 ## Conteúdo e verificação
 
 O Content Lab é neutro: marca, regras editoriais e personagens vêm do projeto ou plugin do criador. Importe mídias e trilha com direitos confirmados; personagem entra por `character_import`. Cena no roteiro é planejamento, não clipe/áudio pronto. Confira imagem, som, sincronismo e legibilidade no render antes de declarar a entrega concluída. Em conflito de revisão, releia e recalcule; não sobrescreva mudanças da pessoa.
+
+## Fundos do kit
+
+**Half-Tone** (`halftone`) é o fundo pontilhado anteriormente chamado de papel. Os IDs atuais `papel`, `papel-dobras`, `papel-hq` e `papel-sutil` são os fundos de papel amassado gerados por código. Preservar essa distinção ao editar a documentação e as prévias.
