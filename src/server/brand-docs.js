@@ -23,6 +23,7 @@ const SFX_USE = {
   type: 'Texto sendo digitado.',
   camera: 'Painel da HQ ou frame da obra entrando.',
   riser: 'Tensão antes da revelação; termina no corte.',
+  'riser-reverso': 'Prato invertido que cresce até o corte; comece ~2,9 s antes da revelação.',
   glitch: 'Erro, “não é bem assim”.',
   error: 'Erro, “não é bem assim”.',
   clique: 'Caixinha de inscrição ou like sendo clicada.',
@@ -32,7 +33,9 @@ const SFX_USE = {
   'tapa-eco': 'Tapa de meme, com eco. No máximo 1 a cada 1–2 min.',
 };
 
-const SFX_ORIGIN = new Set(['clique', 'sino', 'explosao', 'tapa', 'tapa-eco', 'whoosh-rapido', 'whoosh-lento']);
+const SFX_ORIGIN = new Set(['clique', 'sino', 'explosao', 'tapa', 'tapa-eco', 'whoosh-rapido', 'whoosh-lento', 'pop', 'whoosh', 'swish', 'camera', 'sub', 'impact']);
+/** Sons escolhidos pelo criador do canal (Pixabay gratuito e acervo próprio); ver licenses/THIRD_PARTY.md. */
+const SFX_CREATOR = new Set(['ding', 'riser', 'riser-reverso', 'error', 'type']);
 const NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 /** Cenas que dependem de mídia do projeto, do personagem ou de WebGL ficam fora das prévias da documentação. */
 const NO_PREVIEW = new Set(['evidencia', 'aparte', 'personagem', 'paineis3d', 'personagemClose', 'pensamentoVivo', 'rasgoCena', 'montagemEncaixe', 'enquadramentoAlternado', 'detalheContexto', 'janelaMovel', 'faixasSequenciais', 'fotogramasMudanca', 'anotacaoCena', 'retornoImagem', 'palavraRecortada', 'personagemPrimeiroPlano', 'personagemReacao', 'personagemAlternado', 'legendaVirada', 'divisaoResolvida', 'corteCor', 'revelacaoRecortes']);
@@ -59,7 +62,7 @@ export class BrandDocs {
   constructor({ root = KIT_ROOT, kit = MOTION_KIT } = {}) { this.root = root; this.kit = kit; }
 
   async docs() {
-    const sfx = await Promise.all((this.kit.sfx || []).map(async name => ({ name, use: SFX_USE[name] || '', origin: SFX_ORIGIN.has(name) ? 'CC0 (Freesound/Openverse)' : 'Original (procedural)', available: await exists(path.join(this.root, 'sfx', `${name}.wav`)) })));
+    const sfx = await Promise.all((this.kit.sfx || []).map(async name => ({ name, use: SFX_USE[name] || '', origin: SFX_ORIGIN.has(name) ? 'CC0 (Freesound)' : SFX_CREATOR.has(name) ? 'Pixabay / acervo do criador' : 'Original (procedural)', available: await exists(path.join(this.root, 'sfx', `${name}.wav`)) })));
     return {
       schema: 'contentlab-brand-docs-v2',
       scenes: Object.entries(this.kit.cenas || {}).map(([id, scene]) => ({ id, use: scene.uso, ...(NO_PREVIEW.has(id) || !scene.exemplo ? {} : { example: withoutMedia(scene.exemplo) }) })),

@@ -24,7 +24,7 @@ export const Board: React.FC<Common & { children:React.ReactNode; impactos?:numb
     <AbsoluteFill style={{transform:shake(b.f,impactos.map(t=>hit(len,t)),9)}}>
       <div style={{position:'absolute',left:b.x,top:b.y,width:b.w,height:b.h,transform:`scale(${b.scale})`,transformOrigin:'top left'}}>
         <div style={{position:'absolute',inset:0,transform:`translate(${camera.x||0}px,${(camera.y||0)-out*12}px) scale(${(camera.zoom||1)+out*.025})`,transformOrigin:'50% 48%',opacity:1-out*.2}}>{children}</div>
-        <div style={{position:'absolute',left:0,top:-10,width:10,height:67,background:color(tom,C.yellow),transform:`scaleY(${enter})`,transformOrigin:'top'}}/>
+        {titulo && <div style={{position:'absolute',left:0,top:-10,width:10,height:67,background:color(tom,C.yellow),transform:`scaleY(${enter})`,transformOrigin:'top'}}/>}
         <div data-motion-heading style={{position:'absolute',left:30,top:0,width:b.w-60,height:110,clipPath:`inset(0 ${100-enter*100}% 0 0)`,transform:`translateX(${(1-enter)*-70}px)`}}><Caption text={titulo} w={b.w-60} size={68} lines={1} style={{whiteSpace:'nowrap'}}/></div>
       </div>
     </AbsoluteFill>
@@ -40,7 +40,7 @@ export const Card: React.FC<{ item:Item; len:number; x:number;y:number;w:number;
       <div style={{position:'absolute',inset:0,background:'#171d2b',border:`5px solid ${C.ink}`,outline:`2px solid ${accent}`,boxShadow:`9px 9px 0 ${C.red},-4px -3px 0 ${C.blue}`,transform:`rotate(${rotate}deg)`,overflow:'hidden'}}>
         {asset ? <div style={{position:'absolute',inset:0,opacity:.9}}><Media asset={asset} len={len}/><AbsoluteFill style={{background:'linear-gradient(transparent 18%,#0b0b10 94%)'}}/></div> : <div style={{position:'absolute',inset:0,opacity:.16,backgroundImage:'radial-gradient(#fff 18%,transparent 22%)',backgroundSize:'17px 17px'}}/>}
         <div style={{position:'absolute',left:22,right:22,bottom:18,display:'flex',flexDirection:'column',gap:Math.min(10,h*.035)}}>
-          <Caption text={item.titulo} w={w-44} size={Math.min(76,h*(item.texto ? .22 : .36))} tone={accent} style={{position:'relative',width:'100%'}}/>
+          <Caption text={item.titulo} w={w-44} size={Math.min(76,h*(item.texto ? .22 : .36))} tone={accent} style={{position:'relative',width:'100%',textShadow:`3px 3px 0 ${C.ink},0 0 14px rgba(0,0,0,.85)`}}/>
           <Caption text={item.texto} w={w-44} size={Math.min(34,h*.12)} style={{position:'relative',width:'100%'}}/>
           <Caption text={item.fonte} w={w-44} size={Math.min(20,h*.09)} tone="#c2c9dc" style={{position:'relative',width:'100%'}}/>
         </div>
@@ -60,17 +60,24 @@ export const Wire: React.FC<{x1:number;y1:number;x2:number;y2:number;progress:nu
   </svg>;
 };
 
-/** Localized impact, rather than a flash that hides the evidence. */
+/**
+ * Localized impact, rather than a flash that hides the evidence: four corner brackets snap onto the point,
+ * like a camera locking focus. Replaces the radial starburst, a stock motion-template cliché.
+ */
 export const Impact:React.FC<{at:number;x:number;y:number;size?:number;tone?:string}> = ({at,x,y,size=260,tone=C.yellow}) => {
-  const f=useCurrentFrame()-at; const {fps}=useVideoConfig(); const t=clamp01(f/(fps*.38));
-  if(f<0||t>=1)return null;
-  return <svg style={{position:'absolute',left:x-size/2,top:y-size/2,width:size,height:size,pointerEvents:'none',overflow:'visible',opacity:(1-t)**2}} viewBox="-100 -100 200 200">
-    <circle r={12+t*85} fill="none" stroke={tone} strokeWidth={9*(1-t)}/>
-    {Array.from({length:10},(_,i)=>{const a=i*Math.PI/5;return <path key={i} d={`M ${Math.cos(a)*(18+t*45)} ${Math.sin(a)*(18+t*45)} L ${Math.cos(a)*(38+t*70)} ${Math.sin(a)*(38+t*70)}`} stroke={i%2?C.white:tone} strokeWidth={4}/>})}
+  const f=useCurrentFrame()-at; const {fps}=useVideoConfig(); const life=fps*.5;
+  if(f<0||f>=life)return null;
+  const snap=interpolate(f,[0,4],[1.35,1],{extrapolateRight:'clamp'}); const fade=interpolate(f,[life*.55,life],[1,0],{extrapolateLeft:'clamp',extrapolateRight:'clamp'});
+  const r=size*.36*snap, arm=size*.12;
+  return <svg style={{position:'absolute',left:x-size/2,top:y-size/2,width:size,height:size,pointerEvents:'none',overflow:'visible',opacity:fade}} viewBox={`${-size/2} ${-size/2} ${size} ${size}`}>
+    {[[-1,-1],[1,-1],[1,1],[-1,1]].map(([sx,sy],i)=><path key={i} d={`M ${sx*r} ${sy*(r-arm)} L ${sx*r} ${sy*r} L ${sx*(r-arm)} ${sy*r}`} fill="none" stroke={tone} strokeWidth={6} strokeLinecap="square"/>)}
   </svg>;
 };
 export const Seal:React.FC<{text?:string;len:number;at?:number;y:number;w:number;tone?:string}> = ({text,len,at=.76,y,w,tone=C.yellow}) => {
   const b=useBoard(); const age=b.f-hit(len,at); if(!text||age<0)return null;
-  const s=interpolate(age,[0,4,9,14],[1.65,.94,1.025,1],{extrapolateLeft:'clamp',extrapolateRight:'clamp'});
-  return <div style={{position:'absolute',top:y,left:30,width:w-60,textAlign:'center',transform:`scale(${s}) rotate(-2deg)`,background:C.ink,padding:'12px 20px',boxSizing:'border-box',border:`5px solid ${tone}`,boxShadow:`10px 10px 0 ${C.red}`,opacity:Math.min(1,age/2)}}><Punch size={fit(text,w-120,82,2)} color={tone}>{text}</Punch></div>;
+  // Stamp entrance, softened: smaller overshoot and tilt than the original 1.65x bounce.
+  const s=interpolate(age,[0,4,9,14],[1.25,.97,1.01,1],{extrapolateLeft:'clamp',extrapolateRight:'clamp'});
+  // Red on red loses the chromatic split, so a red seal keeps red only in its frame and shadow.
+  const ink=tone===C.red?C.white:tone;
+  return <div style={{position:'absolute',top:y,left:30,width:w-60,textAlign:'center',transform:`scale(${s}) rotate(-1deg)`,background:C.ink,padding:'12px 20px',boxSizing:'border-box',border:`5px solid ${tone}`,boxShadow:`7px 7px 0 ${C.red}`,opacity:Math.min(1,age/2)}}><Punch size={fit(text,w-120,78,2)} color={ink}>{text}</Punch></div>;
 };

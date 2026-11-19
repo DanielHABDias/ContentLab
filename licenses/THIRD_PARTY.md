@@ -7,7 +7,16 @@ O pacote do Content Lab inclui:
 - **Fontes Inter e Barlow Condensed** (`@fontsource`) — SIL Open Font License 1.1.
 - **Fonte Anton** (`app/assets/kit/fonts/`) — SIL Open Font License 1.1, aviso em `OFL.txt` ao lado.
 - **Cenas HQ, kit de motion, página HQ e ícones** (`app/src/timeline/components/hq/`, `app/src/motion/kit/`, `app/assets/kit/`) — do Content Lab.
-- **SFX** (`app/assets/kit/sfx/`) — `clique`, `sino`, `explosao`, `tapa`, `tapa-eco`, `whoosh-rapido` e `whoosh-lento` vêm do Freesound em CC0, pelo Openverse; os demais são procedurais, gerados pelo Content Lab.
+- **SFX** (`app/assets/kit/sfx/`) — gravações do Freesound em CC0 (domínio público; crédito por cortesia), recortadas e niveladas pelo Content Lab:
+  - `clique`, `sino`, `explosao`, `tapa`, `tapa-eco`, `whoosh-rapido` e `whoosh-lento`, pelo Openverse;
+  - `pop` — "Pop 01", LilMati (antes MATRIXXX_), https://freesound.org/s/506546/
+  - `whoosh` — "Whoosh #1", Kinoton, https://freesound.org/s/427823/
+  - `swish` — "swosh-08 (stick cutting air)", qubodup, https://freesound.org/s/59995/
+  - `camera` — "Camera Shutter", roachpowder, https://freesound.org/s/170229/
+  - `sub` — "sub bass 3 seconds", uzerx, https://freesound.org/s/59539/
+  - `impact` — "Bass Impact - Ki_01", Kievinay, https://freesound.org/s/512389/ (primeiros 2 s)
+
+  `ding`, `error`, `riser`, `riser-reverso` e `type` (uma tecla recortada de uma gravação de digitação) foram escolhidos pelo criador do canal na área gratuita do Pixabay (Pixabay Content License, sem atribuição obrigatória) e no acervo dele. Os demais (`tick`, `glitch`) são procedurais, gerados pelo Content Lab.
 
 Não incluídos (instalados pelo sistema ou baixados sob demanda em Dependências, com origem, licença e tamanho mostrados antes):
 

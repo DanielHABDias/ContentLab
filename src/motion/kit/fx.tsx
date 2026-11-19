@@ -24,7 +24,7 @@ export const ease = Easing.bezier(0.16, 1, 0.3, 1);
 export const pop = (frame: number, at: number, length = 8) => interpolate(frame - at, [0, length * 0.6, length], [0, 1.12, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.quad) });
 export const slide = (frame: number, at: number, length = 10) => interpolate(frame - at, [0, length], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: ease });
 
-/** Texto de impacto com aberração cromática (vermelho/azul deslocados), como nos títulos do RunnyIA. */
+/** Texto de impacto com aberração cromática (vermelho/azul deslocados): conversa com o glitch do personagem do canal. */
 export const Punch: React.FC<{ children: React.ReactNode; size: number; color?: string; split?: number; style?: React.CSSProperties }> = ({ children, size, color = C.white, split = 6, style }) => (
   <div style={{ fontFamily: ANTON, fontSize: size, lineHeight: 0.95, color, textTransform: 'uppercase', letterSpacing: size * 0.01, textShadow: `${split}px 0 0 rgba(230,57,70,.85), ${-split}px 0 0 rgba(38,118,232,.85), 0 ${size * 0.06}px 0 rgba(0,0,0,.55)`, ...style }}>{children}</div>
 );
@@ -60,10 +60,12 @@ export const Stars: React.FC<{ speed?: number }> = ({ speed = 1 }) => {
 
 /** Explosão de linhas de velocidade (mangá) girando devagar atrás do assunto. */
 export const SpeedBurst: React.FC<{ color?: string; bg?: string; rays?: number }> = ({ color = C.ink, bg = C.yellow, rays = 36 }) => {
-  const frame = useCurrentFrame();
+  const frame = useCurrentFrame(); const { width, height } = useVideoConfig();
+  // A square as wide as the frame's diagonal: rotating it never exposes a corner, in 16:9 or 9:16.
+  const side = Math.ceil(Math.hypot(width, height)) + 4;
   return (
     <AbsoluteFill style={{ background: bg, overflow: 'hidden' }}>
-      <svg viewBox="-960 -540 1920 1080" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" style={{ transform: `rotate(${frame * 0.4}deg) scale(1.6)` }}>
+      <svg viewBox="-1000 -1000 2000 2000" width={side} height={side} style={{ position: 'absolute', left: '50%', top: '50%', transform: `translate(-50%, -50%) rotate(${frame * 0.4}deg)` }}>
         {Array.from({ length: rays }, (_, i) => { const a = (i / rays) * Math.PI * 2; const w = 0.025 + random(`r${i}`) * 0.05; return <polygon key={i} fill={color} points={`0,0 ${Math.cos(a - w) * 1500},${Math.sin(a - w) * 1500} ${Math.cos(a + w) * 1500},${Math.sin(a + w) * 1500}`} />; })}
       </svg>
       <AbsoluteFill style={{ background: `radial-gradient(circle at center, ${bg} 0%, ${bg} 22%, transparent 45%)` }} />

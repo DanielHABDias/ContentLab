@@ -1,6 +1,7 @@
 import React, { createContext, useContext } from 'react';
 import { AbsoluteFill, Img, OffthreadVideo, interpolate, useCurrentFrame, useVideoConfig } from 'remotion';
 import { C, Halftone, SpeedBurst, Stars, ease } from './fx';
+import { PapelDobrasHQ, PapelDobrasReal, PapelDobrasSutil, PapelFacetado } from './papel';
 
 export const clamp = { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' } as const;
 export type Asset = { src: string; kind: 'image' | 'video'; w?: number; h?: number };
@@ -9,7 +10,7 @@ export const isPortrait = (asset?: Asset | null) => Boolean(asset && asset.kind 
 export const Assets = createContext<Record<string, Asset>>({});
 export const useAsset = (ref?: string): Asset | null => { const assets = useContext(Assets); if (!ref) return null; const id = ref.startsWith('media:') ? ref.slice(6) : ref; return assets[id] || null; };
 export type Base = { len: number };
-export type Bg = 'estrelas' | 'explosao' | 'meio-tom' | 'branco' | 'papel' | 'escuro';
+export type Bg = 'estrelas' | 'explosao' | 'meio-tom' | 'branco' | 'papel' | 'papel-dobras' | 'papel-hq' | 'papel-sutil' | 'halftone' | 'escuro';
 const COLORS: Record<string, string> = { branco: C.white, amarelo: C.yellow, vermelho: C.red, azul: C.blue, tinta: C.ink };
 export const color = (name?: string, fallback = C.white) => (name && (COLORS[name] || (/^#[0-9a-f]{6}$/i.test(name) ? name : null))) || fallback;
 
@@ -28,7 +29,12 @@ export const fit = (text: string, width: number, max: number, lines = 3) => {
 export const Background: React.FC<{ kind?: Bg; tint?: string }> = ({ kind = 'estrelas', tint }) => {
   if (kind === 'explosao') return <SpeedBurst bg={color(tint, C.yellow)} />;
   if (kind === 'meio-tom') return <Halftone bg={color(tint, C.blue)} dot="rgba(255,255,255,.12)" />;
-  if (kind === 'papel') return <Halftone />;
+  // Paper drawn in code, four modes (see papel.tsx); `papel` is the faceted one.
+  if (kind === 'papel') return <PapelFacetado />;
+  if (kind === 'papel-dobras') return <PapelDobrasReal />;
+  if (kind === 'papel-hq') return <PapelDobrasHQ />;
+  if (kind === 'papel-sutil') return <PapelDobrasSutil />;
+  if (kind === 'halftone') return <Halftone />;
   if (kind === 'branco') return <AbsoluteFill style={{ background: '#fff' }} />;
   if (kind === 'escuro') return <AbsoluteFill style={{ background: '#121219' }} />;
   return <Stars />;

@@ -38,6 +38,7 @@
     "sub",
     "glitch",
     "riser",
+    "riser-reverso",
     "ding",
     "error",
     "camera",
@@ -55,6 +56,10 @@
     "meio-tom",
     "branco",
     "papel",
+    "papel-dobras",
+    "papel-hq",
+    "papel-sutil",
+    "halftone",
     "escuro"
   ],
   "cenas": {
@@ -80,7 +85,7 @@
         "riscar": "palavra a riscar",
         "destaque": "frase final gigante",
         "humor": "personagem pequeno reagindo (se houver)",
-        "fundo": "estrelas | explosao | meio-tom | branco | papel | escuro (variar a cada uso)",
+        "fundo": "estrelas | explosao | meio-tom | branco | papel (amassado facetado) | papel-dobras | papel-hq | papel-sutil | halftone (pontilhado em tom de papel) | escuro (variar a cada uso)",
         "tom": "cor do fundo: amarelo, vermelho, azul..."
       },
       "exemplo": {
@@ -117,7 +122,7 @@
         "legenda": "frase curta embaixo",
         "humor": "reação do personagem no canto (só a parte de cima); usar pouco",
         "movimento": "entrar, sair ou panoramica",
-        "fundo": "fundo (padrão papel)",
+        "fundo": "fundo (padrão halftone)",
         "tela": "true para moldura de TV",
         "cheia": "true = a mídia ocupa a tela inteira (sem painel)",
         "inicio": "vídeo: segundo da fonte em que o trecho começa (evita abrir no logo do estúdio)",
@@ -309,7 +314,7 @@
         ],
         "conclusao": "TUDO MUDOU."
       },
-      "render": "precisa de WebGL; só imagens (vídeo não vira textura); 2–3 s por painel"
+      "render": "precisa de WebGL; imagem ou vídeo (vídeo vira textura quadro a quadro, sem som); 2–3 s por painel"
     },
     "aparte": {
       "uso": "Aparte do personagem do projeto (momentos cômicos, opinião; precisa de personagem): a cena da obra desfoca e o personagem aparece INTEIRO subindo pela borda de baixo (pernas fora do quadro); cada fala é uma pose nova em stop motion (troca seca, sem animação entre poses), com balão de ícone ou texto; depois ele sai de uma vez e o fundo volta nítido",
@@ -417,32 +422,17 @@
           },
           {
             "name": "pop",
-            "fracao": 0.13333333333333333,
+            "fracao": 0.133,
             "volume": 0.4
-          },
-          {
-            "name": "camera",
-            "fracao": 0.25833333333333336,
-            "volume": 0.4
-          },
-          {
-            "name": "type",
-            "fracao": 0.5,
-            "volume": 0.32
           },
           {
             "name": "ding",
-            "fracao": 0.5416666666666666,
-            "volume": 0.32
-          },
-          {
-            "name": "tick",
-            "fracao": 0.5833333333333334,
+            "fracao": 0.542,
             "volume": 0.32
           },
           {
             "name": "impact",
-            "fracao": 0.7583333333333333,
+            "fracao": 0.758,
             "volume": 0.4
           }
         ]
@@ -486,17 +476,12 @@
           },
           {
             "name": "pop",
-            "fracao": 0.18333333333333332,
-            "volume": 0.4
-          },
-          {
-            "name": "camera",
-            "fracao": 0.25,
+            "fracao": 0.183,
             "volume": 0.4
           },
           {
             "name": "swish",
-            "fracao": 0.43333333333333335,
+            "fracao": 0.433,
             "volume": 0.4
           }
         ]
@@ -529,18 +514,13 @@
         "regra": "Eventos do exemplo de 4 s a 30 fps. Recalcular pelo conteúdo, duração e virada; narrativeEvents em src/motion/kit/narrative/events.js produz SFX em segundos, alinhados ao frame. A prévia visual da Documentação é muda.",
         "eventos": [
           {
-            "name": "swish",
-            "fracao": 0.11666666666666667,
-            "volume": 0.4
-          },
-          {
             "name": "whoosh",
-            "fracao": 0.30833333333333335,
+            "fracao": 0.308,
             "volume": 0.4
           },
           {
             "name": "whoosh-rapido",
-            "fracao": 0.49166666666666664,
+            "fracao": 0.492,
             "volume": 0.4
           },
           {
@@ -550,7 +530,7 @@
           },
           {
             "name": "sub",
-            "fracao": 0.8166666666666667,
+            "fracao": 0.817,
             "volume": 0.4
           }
         ]
@@ -590,17 +570,12 @@
           },
           {
             "name": "error",
-            "fracao": 0.4166666666666667,
+            "fracao": 0.417,
             "volume": 0.4
           },
           {
-            "name": "sub",
-            "fracao": 0.4166666666666667,
-            "volume": 0.3
-          },
-          {
             "name": "impact",
-            "fracao": 0.7583333333333333,
+            "fracao": 0.758,
             "volume": 0.4
           }
         ]
@@ -637,28 +612,23 @@
         "regra": "Eventos do exemplo de 4 s a 30 fps. Recalcular pelo conteúdo, duração e virada; narrativeEvents em src/motion/kit/narrative/events.js produz SFX em segundos, alinhados ao frame. A prévia visual da Documentação é muda.",
         "eventos": [
           {
-            "name": "tick",
-            "fracao": 0.15833333333333333,
-            "volume": 0.4
-          },
-          {
             "name": "impact",
-            "fracao": 0.30833333333333335,
+            "fracao": 0.308,
             "volume": 0.4
           },
           {
             "name": "sub",
-            "fracao": 0.4583333333333333,
+            "fracao": 0.458,
             "volume": 0.4
           },
           {
             "name": "impact",
-            "fracao": 0.6083333333333333,
+            "fracao": 0.608,
             "volume": 0.4
           },
           {
             "name": "sub",
-            "fracao": 0.7583333333333333,
+            "fracao": 0.758,
             "volume": 0.4
           }
         ]
@@ -707,27 +677,17 @@
         "eventos": [
           {
             "name": "pop",
-            "fracao": 0.08333333333333333,
+            "fracao": 0.083,
             "volume": 0.3
           },
           {
             "name": "tick",
-            "fracao": 0.15833333333333333,
+            "fracao": 0.158,
             "volume": 0.3
           },
           {
             "name": "pop",
-            "fracao": 0.24166666666666667,
-            "volume": 0.3
-          },
-          {
-            "name": "tick",
-            "fracao": 0.31666666666666665,
-            "volume": 0.3
-          },
-          {
-            "name": "swish",
-            "fracao": 0.6,
+            "fracao": 0.242,
             "volume": 0.3
           },
           {
@@ -774,22 +734,17 @@
           },
           {
             "name": "camera",
-            "fracao": 0.11666666666666667,
+            "fracao": 0.117,
             "volume": 0.4
           },
           {
             "name": "camera",
-            "fracao": 0.24166666666666667,
+            "fracao": 0.242,
             "volume": 0.4
           },
           {
             "name": "swish",
             "fracao": 0.35,
-            "volume": 0.3
-          },
-          {
-            "name": "swish",
-            "fracao": 0.6916666666666667,
             "volume": 0.3
           }
         ]
@@ -832,7 +787,7 @@
           },
           {
             "name": "ding",
-            "fracao": 0.48333333333333334,
+            "fracao": 0.483,
             "volume": 0.4
           }
         ]
@@ -876,7 +831,7 @@
           },
           {
             "name": "swish",
-            "fracao": 0.31666666666666665,
+            "fracao": 0.317,
             "volume": 0.4
           },
           {
@@ -886,7 +841,7 @@
           },
           {
             "name": "sub",
-            "fracao": 0.7583333333333333,
+            "fracao": 0.758,
             "volume": 0.4
           }
         ]
@@ -922,18 +877,13 @@
         "eventos": [
           {
             "name": "tick",
-            "fracao": 0.11666666666666667,
+            "fracao": 0.117,
             "volume": 0.4
           },
           {
             "name": "error",
             "fracao": 0.45,
             "volume": 0.4
-          },
-          {
-            "name": "impact",
-            "fracao": 0.45,
-            "volume": 0.32
           },
           {
             "name": "ding",
@@ -973,12 +923,12 @@
         "eventos": [
           {
             "name": "camera",
-            "fracao": 0.08333333333333333,
+            "fracao": 0.083,
             "volume": 0.4
           },
           {
             "name": "swish",
-            "fracao": 0.2833333333333333,
+            "fracao": 0.283,
             "volume": 0.4
           },
           {
@@ -1031,22 +981,17 @@
           },
           {
             "name": "tick",
-            "fracao": 0.14166666666666666,
+            "fracao": 0.142,
             "volume": 0.32
           },
           {
             "name": "camera",
-            "fracao": 0.2833333333333333,
+            "fracao": 0.283,
             "volume": 0.32
           },
           {
-            "name": "swish",
-            "fracao": 0.55,
-            "volume": 0.4
-          },
-          {
             "name": "impact",
-            "fracao": 0.7583333333333333,
+            "fracao": 0.758,
             "volume": 0.4
           }
         ]
@@ -1094,13 +1039,8 @@
             "volume": 0.4
           },
           {
-            "name": "whoosh",
-            "fracao": 0.6,
-            "volume": 0.4
-          },
-          {
             "name": "impact",
-            "fracao": 0.6333333333333333,
+            "fracao": 0.633,
             "volume": 0.4
           }
         ]
@@ -1142,18 +1082,8 @@
             "volume": 0.32
           },
           {
-            "name": "tick",
-            "fracao": 0.1,
-            "volume": 0.32
-          },
-          {
-            "name": "camera",
-            "fracao": 0.2,
-            "volume": 0.32
-          },
-          {
             "name": "whoosh-lento",
-            "fracao": 0.43333333333333335,
+            "fracao": 0.433,
             "volume": 0.3
           },
           {
@@ -1205,7 +1135,7 @@
           },
           {
             "name": "camera",
-            "fracao": 0.11666666666666667,
+            "fracao": 0.117,
             "volume": 0.4
           },
           {
@@ -1245,12 +1175,12 @@
           },
           {
             "name": "swish",
-            "fracao": 0.21666666666666667,
+            "fracao": 0.217,
             "volume": 0.4
           },
           {
             "name": "whoosh-lento",
-            "fracao": 0.7166666666666667,
+            "fracao": 0.717,
             "volume": 0.3
           }
         ]
@@ -1291,75 +1221,76 @@
           },
           {
             "name": "swish",
-            "fracao": 0.2833333333333333,
+            "fracao": 0.283,
             "volume": 0.3
           },
           {
             "name": "swish",
             "fracao": 0.55,
             "volume": 0.3
-          },
-          {
-            "name": "swish",
-            "fracao": 0.7833333333333333,
-            "volume": 0.3
           }
         ]
       }
     },
     "trilhaViva": {
-      "uso": "Percurso sinuoso com fragmentos: só o clipe atual toca em cores; anteriores e futuros ficam congelados em cinza. Mergulho no último clipe ao final.",
+      "uso": "Linha do tempo navegável para contar uma história em capítulos (5, 20, 40, quantos forem). A câmera corre de lado pela linha; cada beat é um movimento: de um capítulo a outro, entrando num deles (tela cheia, a mídia toca) ou saindo de um para voltar à linha. Para trás, rebobina: tela escurece, ícone de voltar no alto e linhas de fita. Reutilize a mesma lista de capítulos em beats diferentes ao longo do vídeo para voltar à linha depois de outras cenas.",
       "props": {
         "len": "frames do beat (fornecido pelo render)",
-        "fundo": "estrelas | escuro | meio-tom | explosao",
+        "fundo": "estrelas | escuro | meio-tom | halftone | papel | papel-dobras | papel-hq | papel-sutil | explosao",
         "tom": "amarelo | vermelho | azul | #RRGGBB",
         "titulo": "título curto opcional",
-        "fragmentos": "1–4 objetos { titulo, midia: media:<id>, inicio?: segundos da fonte, fonte? }. Usar clipes/imagens reais; som original mudo.",
-        "mergulhar": "padrão true; amplia o último fragmento até tela cheia entre 84% e 99% do beat"
+        "capitulos": "lista ordenada de { titulo, midia?: media:<id>, inicio?: segundos da fonte, rotulo?: texto do selo (padrão CAP. 01), fonte? }. Repita a mesma lista em todos os beats da mesma linha.",
+        "de": "capítulo onde a câmera começa (1 = primeiro; padrão 1)",
+        "ate": "capítulo onde termina (padrão o último). Menor que de = rebobinar",
+        "entrar": "true: no fim, entra no capítulo ate até tela cheia e a mídia dele toca",
+        "sair": "true: começa dentro do capítulo de em tela cheia e volta para a linha",
+        "fragmentos": "nome antigo de capitulos; sem de/ate percorre tudo e entra no último (mergulhar)"
       },
       "exemplo": {
-        "titulo": "O PREÇO DE CADA ESCOLHA",
-        "fragmentos": [
+        "titulo": "A JORNADA DO HERÓI",
+        "capitulos": [
           {
-            "titulo": "A PROMESSA",
-            "midia": "media:<id-a>",
-            "inicio": 0
+            "titulo": "A ORIGEM",
+            "midia": "media:<id-a>"
           },
           {
-            "titulo": "A RUPTURA",
-            "midia": "media:<id-b>",
-            "inicio": 0
+            "titulo": "O PRIMEIRO TESTE",
+            "midia": "media:<id-b>"
           },
           {
-            "titulo": "A ESCOLHA",
-            "midia": "media:<id-c>",
-            "inicio": 0
+            "titulo": "A QUEDA",
+            "midia": "media:<id-c>"
+          },
+          {
+            "titulo": "A VOLTA",
+            "midia": "media:<id-a>"
+          },
+          {
+            "titulo": "O LEGADO",
+            "midia": "media:<id-b>"
           }
         ],
-        "mergulhar": true
+        "de": 1,
+        "ate": 2,
+        "entrar": true
       },
       "som": {
         "regra": "Eventos do exemplo em 4 s e 30 fps. Recalcular com narrativeEvents para duração, props e fps reais; traduzir at em sfx[].at. Prévia da Documentação muda.",
         "eventos": [
           {
-            "name": "camera",
-            "fracao": 0.175,
-            "volume": 0.3
-          },
-          {
-            "name": "camera",
-            "fracao": 0.4666666666666667,
-            "volume": 0.3
-          },
-          {
-            "name": "camera",
-            "fracao": 0.7583333333333333,
+            "name": "whoosh",
+            "fracao": 0.058,
             "volume": 0.3
           },
           {
             "name": "whoosh-lento",
-            "fracao": 0.8416666666666667,
-            "volume": 0.35
+            "fracao": 0.683,
+            "volume": 0.32
+          },
+          {
+            "name": "camera",
+            "fracao": 0.958,
+            "volume": 0.3
           }
         ]
       }
@@ -1405,12 +1336,12 @@
           },
           {
             "name": "pop",
-            "fracao": 0.3333333333333333,
+            "fracao": 0.333,
             "volume": 0.3
           },
           {
             "name": "pop",
-            "fracao": 0.6666666666666666,
+            "fracao": 0.667,
             "volume": 0.3
           }
         ]
@@ -1448,22 +1379,22 @@
         "eventos": [
           {
             "name": "pop",
-            "fracao": 0.08333333333333333,
+            "fracao": 0.083,
             "volume": 0.3
           },
           {
             "name": "pop",
-            "fracao": 0.26666666666666666,
+            "fracao": 0.267,
             "volume": 0.3
           },
           {
             "name": "pop",
-            "fracao": 0.4583333333333333,
+            "fracao": 0.458,
             "volume": 0.3
           },
           {
             "name": "ding",
-            "fracao": 0.7583333333333333,
+            "fracao": 0.758,
             "volume": 0.3
           }
         ]
@@ -1536,17 +1467,17 @@
           },
           {
             "name": "camera",
-            "fracao": 0.15833333333333333,
+            "fracao": 0.158,
             "volume": 0.3
           },
           {
             "name": "camera",
-            "fracao": 0.31666666666666665,
+            "fracao": 0.317,
             "volume": 0.3
           },
           {
             "name": "whoosh-lento",
-            "fracao": 0.7833333333333333,
+            "fracao": 0.783,
             "volume": 0.3
           }
         ]
@@ -1677,12 +1608,12 @@
         "eventos": [
           {
             "name": "swish",
-            "fracao": 0.03333333333333333,
+            "fracao": 0.033,
             "volume": 0.3
           },
           {
             "name": "whoosh-lento",
-            "fracao": 0.5833333333333334,
+            "fracao": 0.583,
             "volume": 0.3
           }
         ]
@@ -1726,12 +1657,12 @@
           },
           {
             "name": "swish",
-            "fracao": 0.3333333333333333,
+            "fracao": 0.333,
             "volume": 0.3
           },
           {
             "name": "swish",
-            "fracao": 0.6666666666666666,
+            "fracao": 0.667,
             "volume": 0.3
           }
         ]
@@ -1786,7 +1717,7 @@
           },
           {
             "name": "whoosh-lento",
-            "fracao": 0.7916666666666666,
+            "fracao": 0.792,
             "volume": 0.3
           }
         ]
@@ -1828,12 +1759,12 @@
         "eventos": [
           {
             "name": "tick",
-            "fracao": 0.31666666666666665,
+            "fracao": 0.317,
             "volume": 0.3
           },
           {
             "name": "swish",
-            "fracao": 0.6666666666666666,
+            "fracao": 0.667,
             "volume": 0.3
           }
         ]
@@ -1906,7 +1837,7 @@
         "eventos": [
           {
             "name": "impact",
-            "fracao": 0.058333333333333334,
+            "fracao": 0.058,
             "volume": 0.3
           }
         ]
@@ -1974,12 +1905,12 @@
         "eventos": [
           {
             "name": "pop",
-            "fracao": 0.2833333333333333,
+            "fracao": 0.283,
             "volume": 0.3
           },
           {
             "name": "tick",
-            "fracao": 0.5583333333333333,
+            "fracao": 0.558,
             "volume": 0.25
           }
         ]
@@ -2021,7 +1952,7 @@
           },
           {
             "name": "pop",
-            "fracao": 0.6166666666666667,
+            "fracao": 0.617,
             "volume": 0.3
           }
         ]
@@ -2057,7 +1988,7 @@
         "eventos": [
           {
             "name": "type",
-            "fracao": 0.4166666666666667,
+            "fracao": 0.417,
             "volume": 0.3
           }
         ]
@@ -2095,7 +2026,7 @@
         "eventos": [
           {
             "name": "whoosh-lento",
-            "fracao": 0.3333333333333333,
+            "fracao": 0.333,
             "volume": 0.3
           }
         ]
@@ -2162,22 +2093,17 @@
           },
           {
             "name": "swish",
-            "fracao": 0.16666666666666666,
+            "fracao": 0.167,
             "volume": 0.3
           },
           {
             "name": "camera",
-            "fracao": 0.3416666666666667,
-            "volume": 0.3
-          },
-          {
-            "name": "swish",
-            "fracao": 0.5083333333333333,
+            "fracao": 0.342,
             "volume": 0.3
           },
           {
             "name": "ding",
-            "fracao": 0.7166666666666667,
+            "fracao": 0.717,
             "volume": 0.3
           }
         ]

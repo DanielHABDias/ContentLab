@@ -1,5 +1,5 @@
 import { entryCues, reactionState } from './editorial/timing.js';
-import { trailSchedule } from './trilha.js';
+import { passageFrames, timelineSchedule } from './trilha.js';
 import { thresholdFrame } from './choreography.js';
 
 /** SFX for real events only; count, turn, duration and frame rate follow the configured scene. */
@@ -37,7 +37,13 @@ export function narrativeEvents(scene, props, duration, fps = 30) {
     case 'balancaCusto':add('camera',.08);add('swish',.28);add('impact',.4);add('sub',.4,.28);break;
     case 'ecoVisual':for(let i=0;i<count('ocorrencias',3);i++)add(i%2?'tick':'camera',i*.14,.32);add('swish',.55);add('impact',.76);break;
     case 'pecaAusente':for(let i=0;i<count('contexto',2);i++)add(i?'tick':'camera',i*.15);if(props.revelar!==false){add('whoosh',props.virada??.6);add('impact',(props.virada??.6)+Math.round(fps*.14)/len);}break;
-    case 'trilhaViva':for(const cue of trailSchedule(len,count('fragmentos',4)))if(count('fragmentos',4))add('camera',cue.start/len,.3);if(props.mergulhar!==false&&count('fragmentos',4))add('whoosh-lento',.84,.35);break;
+    case 'trilhaViva':{const tl=timelineSchedule(props);if(!tl.n)break;
+      if(tl.rewind){add('glitch',tl.blackout*.3,.3);add('whoosh-rapido',tl.travelStart,.35);}
+      else if(tl.exit)add('swish',0,.3);
+      if(tl.from!==tl.to&&!tl.rewind)add(Math.abs(tl.to-tl.from)>2?'whoosh-lento':'whoosh',tl.travelStart,.3);
+      for(const pass of passageFrames(len,props))add('tick',pass.frame/len,.22);
+      if(tl.enter){add('whoosh-lento',tl.enterStart,.32);add('camera',.96,.3);}
+      break;}
     case 'personagemClose':{const n=count('ideias',6);for(let i=0;i<n;i++)add('pop',i/n,.3);break;}
     case 'pensamentoVivo':for(let i=0;i<count('ideias',3);i++)add('pop',.08+i*.19,.3);if(props.conclusao)add('ding',.76,.3);break;
     case 'rasgoCena':add('whoosh',Math.max(0,Math.min(.58,props.virada??.35)),.35);break;
@@ -46,5 +52,22 @@ export function narrativeEvents(scene, props, duration, fps = 30) {
     case 'duplaVida':for(let i=0;i<count('lados',2);i++)add('camera',i*.1);for(const t of (props.trocas??[.28,.55,.78]).filter(t=>t>=0&&t<1))add('swish',t,.3);break;
     case 'convergencia':for(let i=0;i<count('frentes',3);i++)add(i%2?'tick':'camera',i*.1,.32);add('whoosh-lento',.43,.3);add('impact',.65);add('sub',.65,.3);break;
   }
-  return events.sort((a,b)=>a.at-b.at).filter(e=>e.at<duration);
+  return thin(events.filter(e=>e.at<duration),duration);
+}
+
+/**
+ * Keeps the sound design sparse: a sound on every card entrance is what makes a montage feel machine-made.
+ * Turning points (impact, error, sub) win; other cues need 0.3 s of room and the scene keeps about one per second.
+ * A sub may layer under the impact it reinforces.
+ */
+const PRIORITY={impact:3,error:3,sub:3,ding:2,'whoosh-lento':2,'whoosh-rapido':2,whoosh:2};
+export function thin(events,duration,gap=.3){
+  const ranked=events.map((e,i)=>({e,i,p:PRIORITY[e.name]||1})).sort((a,b)=>b.p-a.p||a.e.at-b.e.at||a.i-b.i);
+  const cap=Math.max(2,Math.round(duration*1.1)); const kept=[];
+  for(const r of ranked){
+    if(kept.length>=cap)break;
+    const clash=kept.some(k=>Math.abs(k.e.at-r.e.at)<gap&&!(r.e.name==='sub'&&k.e.name==='impact'||r.e.name==='impact'&&k.e.name==='sub'));
+    if(!clash)kept.push(r);
+  }
+  return kept.sort((a,b)=>a.e.at-b.e.at||a.i-b.i).map(r=>r.e);
 }

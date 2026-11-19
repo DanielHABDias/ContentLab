@@ -64,7 +64,7 @@ A tela inicial cria, abre, importa e retoma projetos locais reais. Não são ins
 
 ### Documentação
 
-A aba **Documentação**, na barra lateral, mostra o que todo projeto traz do kit de motion do Content Lab. Nela as cenas de exemplo tocam ao vivo no navegador (16:9 ou 9:16), os fundos (estrelas, meio-tom, explosão, papel…) aparecem com seletor de cor, cada SFX toca com um clique e há as regras de legenda e de som. Os dados vêm de `GET /api/v1/brand/docs` e os arquivos de `GET /api/v1/brand/file?kind=sfx|font&name=…`, que só servem nomes do kit. Pelo MCP, use `kit_docs`.
+A aba **Documentação**, na barra lateral, mostra o que todo projeto traz do kit de motion do Content Lab. Nela as cenas de exemplo tocam ao vivo no navegador (16:9 ou 9:16), os fundos (estrelas, meio-tom, explosão, halftone e o papel amassado em quatro modos: papel, papel-dobras, papel-hq e papel-sutil) aparecem com seletor de cor, cada SFX toca com um clique e há as regras de legenda e de som. Os dados vêm de `GET /api/v1/brand/docs` e os arquivos de `GET /api/v1/brand/file?kind=sfx|font&name=…`, que só servem nomes do kit. Pelo MCP, use `kit_docs`.
 
 ### Minha voz
 

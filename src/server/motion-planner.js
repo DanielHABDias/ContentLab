@@ -152,7 +152,7 @@ export function planMotion({ windows, words = [], media = [], title = '', questi
   const pool = all.filter(item => !isCut(item)); const cutouts = all.filter(isCut);
   const cutFor = text => { const said = new Set(fold(text).split(/[^a-z0-9]+/).filter(word => word.length >= 3)); return cutouts.find(item => item.key.split(/[^a-z0-9]+/).some(word => word.length >= 3 && !['recorte', 'png'].includes(word) && said.has(word))); };
   // Fundos sempre variando: nunca o mesmo de um beat para o outro.
-  const BGS = [['papel'], ['meio-tom', 'azul'], ['escuro'], ['explosao', 'amarelo'], ['meio-tom', 'vermelho'], ['estrelas'], ['explosao', 'vermelho'], ['branco']];
+  const BGS = [['papel'], ['halftone'], ['meio-tom', 'azul'], ['escuro'], ['explosao', 'amarelo'], ['meio-tom', 'vermelho'], ['estrelas'], ['explosao', 'vermelho'], ['branco']];
   let bgTurn = 0; const nextBg = (allowed = BGS) => { const options = allowed.filter(([kind, tone]) => `${kind}${tone || ''}` !== lastBg); const [kind, tone] = options[bgTurn++ % options.length]; lastBg = `${kind}${tone || ''}`; return tone ? { fundo: kind, tom: tone } : { fundo: kind }; };
   let lastBg = '';
   let next = 0; const recent = []; let lastMedia = null;
@@ -212,7 +212,7 @@ export function planMotion({ windows, words = [], media = [], title = '', questi
           else {
             // Metade das evidências é só a cena, em tela cheia, sem moldura; a outra metade ganha painel e fundo variado.
             const plain = (index + p) % 2 === 0;
-            push('evidencia', at, len, { midia: `media:${asset.id}`, rotulo: tag(asset), humor: !plain && (index + p) % 6 === 3 ? moodOf(text) : undefined, movimento: ['entrar', 'sair', 'panoramica'][(index + p) % 3], ...(plain ? { cheia: true } : nextBg([['papel'], ['meio-tom', 'azul'], ['escuro'], ['meio-tom', 'vermelho'], ['branco']])) }, { flash: false });
+            push('evidencia', at, len, { midia: `media:${asset.id}`, rotulo: tag(asset), humor: !plain && (index + p) % 6 === 3 ? moodOf(text) : undefined, movimento: ['entrar', 'sair', 'panoramica'][(index + p) % 3], ...(plain ? { cheia: true } : nextBg([['halftone'], ['papel'], ['meio-tom', 'azul'], ['escuro'], ['meio-tom', 'vermelho'], ['branco']])) }, { flash: false });
           }
           continue;
         }

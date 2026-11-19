@@ -75,7 +75,7 @@ export const PersonagemCena: React.FC<Base & { humor?: Mood; texto?: string; sub
 };
 
 /** Evidência da obra: imagem/vídeo num painel HQ com Ken Burns, etiqueta, legenda e reação opcional do personagem (só a parte de cima, num canto). */
-export const Evidencia: React.FC<Base & { ajuste?: 'cover' | 'contain'; midia: string; rotulo?: string; legenda?: string; humor?: Mood; movimento?: 'entrar' | 'sair' | 'panoramica'; fundo?: Bg; tom?: string; tela?: boolean; cheia?: boolean; inicio?: number; som?: boolean; volume?: number; zoom?: number; foco?: string }> = ({ len, midia, rotulo, legenda, humor, ajuste = 'cover', movimento = 'entrar', fundo = 'papel', tom, tela = false, cheia, inicio, som, volume, zoom, foco }) => {
+export const Evidencia: React.FC<Base & { ajuste?: 'cover' | 'contain'; midia: string; rotulo?: string; legenda?: string; humor?: Mood; movimento?: 'entrar' | 'sair' | 'panoramica'; fundo?: Bg; tom?: string; tela?: boolean; cheia?: boolean; inicio?: number; som?: boolean; volume?: number; zoom?: number; foco?: string }> = ({ len, midia, rotulo, legenda, humor, ajuste = 'cover', movimento = 'entrar', fundo = 'halftone', tom, tela = false, cheia, inicio, som, volume, zoom, foco }) => {
   const f = useCurrentFrame(); const { W, H, V } = useStage();
   const asset = useAsset(midia);
   const full = cheia ?? false;
@@ -180,23 +180,23 @@ export const Pagina: React.FC<Base & { paineis: Array<{ midia?: string; humor?: 
 /** Número que conta até o valor, com gráfico de linha subindo ou descendo (marcar fonte ou "simulação"). */
 export const Numero: React.FC<Base & { valor: number; de?: number; sufixo?: string; rotulo: string; tendencia?: 'sobe' | 'desce'; fonte?: string; humor?: Mood; marcos?: string[] }> = ({ len, valor, de = 0, sufixo = '', rotulo, tendencia, fonte = 'simulação', humor, marcos = [] }) => {
   const f = useCurrentFrame(); const { W, H, V } = useStage();
-  const up = tendencia ? tendencia === 'sobe' : valor >= de; const good = up ? '#3ddc84' : C.red;
+  const up = tendencia ? tendencia === 'sobe' : valor >= de; const good = up ? C.yellow : C.red;
   const p = slide(f, 6, Math.max(12, len * 0.7));
   const shown = de + (valor - de) * p; const digits = Math.abs(valor) < 10 && !Number.isInteger(valor) ? 1 : 0;
-  const cw = V ? W - 120 : 1100; const top = V ? H * 0.12 : 80;
+  const cw = V ? W - 120 : humor ? 1100 : 1680; const top = V ? H * 0.12 : 80;
   const curve = (t: number) => (up ? 520 - t * 380 : 140 + (1 - Math.exp(-t * 3.2)) * 380) + Math.sin(t * 11) * 18;
   const pts = Array.from({ length: Math.max(2, Math.round(p * 50)) }, (_, i) => [40 + (i / 49) * (cw - 80), curve(i / 49)]);
   return (
     <Camera>
-      <AbsoluteFill style={{ background: up ? '#101a14' : '#121219' }} />
-      <div style={{ position: 'absolute', left: V ? 60 : 120, right: V ? 60 : undefined, top, fontFamily: ROUND, fontWeight: 800, fontSize: V ? 44 : 40, color: up ? '#8fb59a' : '#9aa0b4' }}>{rotulo}{fonte ? ` · ${fonte}` : ''}</div>
+      <AbsoluteFill style={{ background: '#121219' }} />
+      <div style={{ position: 'absolute', left: V ? 60 : 120, right: V ? 60 : undefined, top, fontFamily: ROUND, fontWeight: 800, fontSize: V ? 44 : 40, color: '#9aa0b4' }}>{rotulo}{fonte ? ` · ${fonte}` : ''}</div>
       <div style={{ position: 'absolute', left: V ? 60 : 120, top: top + (V ? 110 : 60), display: 'flex', alignItems: 'center', gap: 26 }}>
-        <div style={{ width: 120, height: 120, borderRadius: 60, background: good, color: '#fff', fontFamily: ANTON, fontSize: 86, textAlign: 'center', lineHeight: '120px' }}>{up ? '↑' : '↓'}</div>
+        <div style={{ width: 120, height: 120, borderRadius: 60, background: good, color: C.ink, fontFamily: ANTON, fontSize: 86, textAlign: 'center', lineHeight: '120px' }}>{up ? '↑' : '↓'}</div>
         <Punch size={V ? 200 : 180} color={good} split={3}>{shown.toFixed(digits)}{sufixo}</Punch>
       </div>
       <svg style={{ position: 'absolute', left: V ? 60 : 100, top: V ? top + 420 : 420 }} width={cw} height={620}>
         {[0, 1, 2, 3].map(i => <line key={i} x1={40} x2={cw - 40} y1={120 + i * 130} y2={120 + i * 130} stroke="#2a2a36" strokeWidth={2} />)}
-        <polyline points={pts.map(([x, y]) => `${x},${y}`).join(' ')} fill="none" stroke={good} strokeWidth={10} strokeLinecap="round" strokeLinejoin="round" style={{ filter: `drop-shadow(0 0 14px ${good})` }} />
+        <polyline points={pts.map(([x, y]) => `${x},${y}`).join(' ')} fill="none" stroke={good} strokeWidth={10} strokeLinecap="round" strokeLinejoin="round" />
         {marcos.map((label, i) => { const t = (i + 1) / (marcos.length + 1); return p >= t && <g key={label} transform={`translate(${40 + t * (cw - 80)} ${curve(t)}) scale(${pop(f, 6 + t * len * 0.7)})`}><circle r={20} fill={[C.blue, C.yellow, C.red][i % 3]} stroke={C.ink} strokeWidth={6} /><rect x={-140} y={-150} width={280} height={96} fill={C.paper} stroke={C.ink} strokeWidth={7} /><text y={-80} textAnchor="middle" fontFamily="Anton" fontSize={60} fill={C.ink}>{label}</text></g>; })}
       </svg>
       {humor && !V && <Figura humor={humor} height={540} x={1460} y={460} tilt={Math.sin(f / 9) * 3} />}

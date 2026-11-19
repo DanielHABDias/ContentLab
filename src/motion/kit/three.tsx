@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { ThreeCanvas } from '@remotion/three';
+import { ThreeCanvas, useOffthreadVideoTexture } from '@remotion/three';
 import { useThree } from '@react-three/fiber';
 import { AbsoluteFill, continueRender, delayRender, interpolate, useCurrentFrame, useVideoConfig, Easing } from 'remotion';
 import * as THREE from 'three';
@@ -37,9 +37,8 @@ const useImageTexture = (src?: string) => {
   return texture;
 };
 
-const Panel3D: React.FC<{ src?: string; position: [number, number, number]; rotation: [number, number, number]; tint: string }> = ({ src, position, rotation, tint }) => {
-  const texture = useImageTexture(src);
-  const aspect = texture?.image ? (texture.image as HTMLImageElement).width / (texture.image as HTMLImageElement).height : 16 / 9;
+type PanelProps = { position: [number, number, number]; rotation: [number, number, number]; tint: string };
+const PanelMesh: React.FC<PanelProps & { texture: THREE.Texture | null; aspect: number }> = ({ texture, aspect, position, rotation, tint }) => {
   const h = 2.6; const w = Math.min(4.8, h * aspect);
   return (
     <group position={position} rotation={rotation}>
@@ -49,10 +48,26 @@ const Panel3D: React.FC<{ src?: string; position: [number, number, number]; rota
     </group>
   );
 };
+const ImagePanel: React.FC<PanelProps & { src?: string }> = ({ src, ...rest }) => {
+  const texture = useImageTexture(src);
+  const image = texture?.image as HTMLImageElement | undefined;
+  return <PanelMesh texture={texture} aspect={image?.width ? image.width / image.height : 16 / 9} {...rest} />;
+};
+/** Vídeo da obra como textura, quadro a quadro (o painel antes ficava vazio com vídeo). */
+const VideoPanel: React.FC<PanelProps & { src: string; w?: number; h?: number }> = ({ src, w, h, ...rest }) => {
+  const texture = useOffthreadVideoTexture({ src });
+  const advance = useThree(state => state.advance);
+  if (texture) texture.colorSpace = THREE.SRGBColorSpace;
+  // Como na imagem: o canvas só desenha quando o frame muda, então desenhar assim que o quadro do vídeo chega.
+  React.useLayoutEffect(() => { if (texture) advance(performance.now()); }, [texture, advance]);
+  return <PanelMesh texture={texture} aspect={w && h ? w / h : 16 / 9} {...rest} />;
+};
+const Panel3D: React.FC<PanelProps & { asset?: { src: string; kind: 'image' | 'video'; w?: number; h?: number } }> = ({ asset, ...rest }) =>
+  asset?.kind === 'video' ? <VideoPanel src={asset.src} w={asset.w} h={asset.h} {...rest} /> : <ImagePanel src={asset?.src} {...rest} />;
 
 /**
  * Voo de câmera por painéis HQ no espaço: cada painel é uma mídia da obra, em zigue-zague e
- * profundidade; a câmera para em cada um enquanto o rótulo entra. Só imagens.
+ * profundidade; a câmera para em cada um enquanto o rótulo entra. Aceita imagem ou vídeo.
  */
 export const Paineis3D: React.FC<Base & { paineis: Array<{ midia?: string; rotulo?: string }>; conclusao?: string; fundo?: 'estrelas' | 'meio-tom' | 'escuro'; tom?: string }> = ({ len, paineis, conclusao, fundo = 'estrelas', tom }) => {
   const frame = useCurrentFrame(); const { width, height } = useVideoConfig();
@@ -75,7 +90,7 @@ export const Paineis3D: React.FC<Base & { paineis: Array<{ midia?: string; rotul
         <Rig position={cam} target={[cam[0] * 0.9, cam[1], cam[2] - 6]} />
         {paineis.map((panel, k) => {
           const id = panel.midia?.startsWith('media:') ? panel.midia.slice(6) : panel.midia;
-          return <Panel3D key={k} src={id ? assets[id]?.src : undefined} position={place(k)} rotation={[0, (k % 2 ? -1 : 1) * 0.22, (k % 2 ? 1 : -1) * 0.04]} tint={tints[k % 3]} />;
+          return <Panel3D key={k} asset={id ? assets[id] : undefined} position={place(k)} rotation={[0, (k % 2 ? -1 : 1) * 0.22, (k % 2 ? 1 : -1) * 0.04]} tint={tints[k % 3]} />;
         })}
       </ThreeCanvas>
       {current?.rotulo && local > step * 0.3 && (
