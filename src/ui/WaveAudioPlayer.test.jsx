@@ -108,3 +108,14 @@ test('salva os cortes aplicados com uma nova seleção fracionária ativa, sem z
   fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
   await waitFor(() => expect(onSave).toHaveBeenCalledWith({ name: 'Take', segments: [{ start: 0, end: 2 }, { start: 4, end: 10 }] }));
 });
+
+test.each([[8, 8, 6], [3, 4, 2], [1, 1, 1]])('corte preserva posição de escuta da fonte %s', async (position, sourcePosition, editedPosition) => {
+  const view = render(<WaveAudioPlayer src={source} label="Corte" duration={10}/>);
+  await waitFor(() => expect(screen.queryByText('Carregando ondas…')).not.toBeInTheDocument());
+  const audio = view.container.querySelector('audio');
+  audio.currentTime = position;
+  fireEvent.timeUpdate(audio);
+  view.rerender(<WaveAudioPlayer src={source} label="Corte" duration={10} segments={[{ start: 0, end: 2 }, { start: 4, end: 10 }]}/>);
+  expect(audio.currentTime).toBe(sourcePosition);
+  expect(screen.getByRole('slider', { name: 'Posição: Corte' })).toHaveValue(String(editedPosition));
+});

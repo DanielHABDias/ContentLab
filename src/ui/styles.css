@@ -576,3 +576,5 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-vi
 
 .docs-preview-viewport { display: grid; place-items: center; overflow: hidden; background: #0b0b10; }
 .docs-preview-viewport > .hint { padding: 12px; text-align: center; }
+
+.assembly-progress { width: 100%; min-width: 240px; display: grid; gap: 7px; }

@@ -194,12 +194,12 @@ export class NarrationOperations {
     const ids = takeIds?.length ? takeIds : session.takes.map(take => take.id);
     const parts = this.#parts(store, session, ids);
     return this.jobs.start({ kind: 'narration.assemble', projectPath: directory, label: `Montar narração (${ids.length} take${ids.length === 1 ? '' : 's'})`, run: ({ signal, progress }) => this.app.activities.track(directory, 'montagem de narração', async activitySignal => {
-      progress({ phase: 'Montando e tratando', done: 0, total: 3 });
-      const { target: output } = await treatParts(this.tools.ffmpeg, parts, path.join(store.root, 'assembled', `narracao-${Date.now()}.wav`), settings, { signal: AbortSignal.any([signal, activitySignal]), ai });
-      progress({ phase: 'Medindo', done: 1 });
+      let treatmentSteps = 0;
+      const { target: output } = await treatParts(this.tools.ffmpeg, parts, path.join(store.root, 'assembled', `narracao-${Date.now()}.wav`), settings, { signal: AbortSignal.any([signal, activitySignal]), ai, onProgress: value => { treatmentSteps = value.total; progress({ ...value, total: value.total + 2 }); } });
+      progress({ phase: 'Medindo áudio final', done: treatmentSteps });
       const measures = await measureAudio(this.tools, output);
       if (!measures.wav48kMono) throw new Error('A montagem não saiu em WAV 48 kHz mono');
-      progress({ phase: 'Vinculando ao projeto', done: 2 });
+      progress({ phase: 'Vinculando ao projeto', done: treatmentSteps + 1 });
       const attached = await this.app.mediaOps.attach(directory, await this.app.media.importFile(output), { rights: 'owned', source: { type: 'file', value: output }, name: 'Narração montada', role: 'narration' });
       const previous = (await store.read()).assembled;
       // O tratamento salvo é o da gravação própria; a montagem da voz de IA não o sobrescreve.
@@ -208,7 +208,7 @@ export class NarrationOperations {
       if (previous?.file && previous.file !== path.relative(store.root, output)) await rm(store.resolve(previous.file), { force: true });
       const current = await readProjectDirectory(directory);
       await this.app.runProjectAction({ path: directory, baseRevision: current.revision, action: { type: 'narration.set', mediaId: attached.mediaId } });
-      progress({ phase: 'Narração montada', done: 3, total: 3 });
+      progress({ phase: 'Narração montada', done: treatmentSteps + 2, total: treatmentSteps + 2 });
       // A transcrição não começa sozinha: a pessoa pode tratar o áudio fora antes e só então transcrever.
       return { mediaId: attached.mediaId, measures, transcription: await this.transcriptionState(directory, await readProjectDirectory(directory), await store.read()) };
     }, { cancellable: true }) });

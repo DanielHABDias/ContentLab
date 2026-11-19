@@ -522,7 +522,7 @@ test('etapa aprovada abre só para ver: conteúdo visível, nada salvo e sem apr
 });
 
 
-test('áudio final libera aprovação mesmo com transcrição pendente e segue para Edição', async () => {
+test('áudio final sem transcrição bloqueia aprovação da Narração', async () => {
   const base = realDetails();
   const stages = base.project.stages.map((stage, index) => ({ ...stage, state: index < 4 ? 'approved' : index === 4 ? 'active' : 'pending' }));
   const media = [{ id: 'media_voice', kind: 'audio', role: 'narration', transcript: null }];
@@ -534,9 +534,8 @@ test('áudio final libera aprovação mesmo com transcrição pendente e segue p
   localApi.runProjectAction.mockResolvedValue(advanced);
   render(<App/>);
   fireEvent.click(await screen.findByRole('button', { name: /abrir meu projeto/i }));
-  expect(await screen.findByRole('button', { name: /aprovar e seguir/i })).toBeEnabled();
-  fireEvent.click(screen.getByRole('button', { name: /aprovar e seguir/i }));
-  await waitFor(() => expect(localApi.runProjectAction).toHaveBeenCalledWith({ path: '/tmp/meu_projeto', baseRevision: 1, action: { type: 'stage.approve', stageId: 'narration', expectedRevision: 0 } }));
+  expect(await screen.findByRole('button', { name: /aprovar e seguir/i })).toBeDisabled();
+  expect(localApi.runProjectAction).not.toHaveBeenCalled();
   expect(await screen.findByText('Para aprovar, falta: transcrição palavra por palavra da narração.')).toBeInTheDocument();
 });
 

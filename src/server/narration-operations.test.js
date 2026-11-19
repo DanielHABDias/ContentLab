@@ -314,10 +314,11 @@ test('falha de transcrição preserva o áudio aprovado, bloqueia conclusão da 
   const details = await service.inspectProject(project.path);
   const creative = { ...details.project.creative, brief: { thesis: 'Tese', audience: 'Público', promise: 'Promessa', notes: '' }, packaging: { ...details.project.creative.packaging, titleA: 'Título' }, script: { ...details.project.creative.script, hook: 'Abertura', development: 'Corpo', payoff: 'Final' } };
   let current = await service.runProjectAction({ path: project.path, baseRevision: details.project.revision, action: { type: 'creative.update', creative } });
-  for (const stageId of ['brief', 'packaging', 'script', 'media', 'narration']) {
+  for (const stageId of ['brief', 'packaging', 'script', 'media']) {
     current = await service.runProjectAction({ path: project.path, baseRevision: current.project.revision, action: { type: 'stage.approve', stageId, expectedRevision: current.project.stages.find(stage => stage.id === stageId).revision } });
   }
-  expect(current.project.stages.find(stage => stage.id === 'edit').state).toBe('active');
+  expect(current.project.stages.find(stage => stage.id === 'narration').state).toBe('active');
+  await expect(service.runProjectAction({ path: project.path, baseRevision: current.project.revision, action: { type: 'stage.approve', stageId: 'narration', expectedRevision: current.project.stages.find(stage => stage.id === 'narration').revision } })).rejects.toMatchObject({ code: 'WORDS_MISSING' });
   await expect(service.runProjectAction({ path: project.path, baseRevision: current.project.revision, action: { type: 'stage.approve', stageId: 'edit', expectedRevision: 0 } })).rejects.toMatchObject({ code: 'WORDS_MISSING' });
   await expect(service.productionNarrationTranscript({ path: project.path })).rejects.toMatchObject({ code: 'WORDS_MISSING' });
   fail = false;
@@ -325,6 +326,9 @@ test('falha de transcrição preserva o áudio aprovado, bloqueia conclusão da 
   expect((await service.mediaOps.jobs.waitFor(retried.jobId)).state).toBe('completed');
   state = await service.narrationState({ path: project.path });
   expect(state.transcription).toMatchObject({ status: 'ready', words: 3 });
+  current = await service.inspectProject(project.path);
+  const approved = await service.runProjectAction({ path: project.path, baseRevision: current.project.revision, action: { type: 'stage.approve', stageId: 'narration', expectedRevision: current.project.stages.find(stage => stage.id === 'narration').revision } });
+  expect(approved.project.stages.find(stage => stage.id === 'edit').state).toBe('active');
   expect(state.narration.assembled.mediaId).toBe(details.project.narrationMediaId);
 });
 

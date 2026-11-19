@@ -251,9 +251,11 @@ function TreatmentSection({ hideFinal = false, takeIds, projectPath, narration, 
 /** Feedback junto ao clique, desde o envio até a montagem e a transcrição terminarem. */
 function AssemblyButton({ assembled, disabled, assembly, onClick }) {
   const busy = assembly.requesting || Boolean(assembly.job);
+  const progress = assembly.job?.progress;
+  const percent = Number.isFinite(progress?.done) && Number.isFinite(progress?.total) && progress.total > 0 ? Math.max(0, Math.min(100, Math.round(100 * progress.done / progress.total))) : null;
   return <div className="assembly-control">
     <button type="button" className="button primary" disabled={disabled || busy} aria-busy={busy} onClick={onClick}>{busy ? <Loader2 size={17} className="spin" aria-hidden="true"/> : <Wand2 size={17} aria-hidden="true"/>} {assembly.requesting ? 'Iniciando montagem…' : assembly.job ? 'Montando narração…' : assembled ? 'Montar de novo' : 'Montar narração final'}</button>
-    {busy && <p role="status">{assembly.requesting ? 'Solicitando a montagem da narração…' : assembly.job.progress?.phase || 'Montagem iniciada. Preparando o áudio e a transcrição.'}</p>}
+    {busy && <div className="assembly-progress"><div className={`voice-progress-bar ${percent === null ? 'indeterminate' : ''}`} role="progressbar" aria-label="Montagem da narração" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent ?? undefined}><i style={percent === null ? undefined : { width: `${percent}%` }}/></div><p role="status">{assembly.requesting ? 'Solicitando a montagem da narração…' : progress?.phase || 'Aguardando montagem do áudio.'}{percent !== null && ` · ${percent}%`}</p></div>}
     {assembly.error && <p className="missing" role="alert">{assembly.error}</p>}
   </div>;
 }

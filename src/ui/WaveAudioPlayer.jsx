@@ -84,7 +84,7 @@ export const WaveAudioPlayer = forwardRef(function WaveAudioPlayer({ src, label,
   const length = editDuration(spans);
   const peaks = useMemo(() => displayPeaks(wave, spans, length, Math.min(4000, 480 * zoom)), [wave, spans, length, zoom]);
   const seek = time => { if (audio.current && length > 0) { const at = Math.max(0, Math.min(length, time)); audio.current.currentTime = sourceTime(spans, at); setPosition(at); } };
-  useEffect(() => { if (audio.current) { if (!audio.current.paused) audio.current.pause(); setPlaying(false); seek(0); } }, [signature]);
+  useEffect(() => { if (audio.current) { if (!audio.current.paused) audio.current.pause(); setPlaying(false); seek(editedTime(spans, audio.current.currentTime)); } }, [signature]);
   const toggle = async () => {
     setError('');
     if (!audio.current) return;

@@ -124,31 +124,52 @@ async function applyEdit(ffmpeg, source, target, plan, { signal }) {
  * limpa com IA, corta pausas e respiros pelo VAD, dá forma à voz e acerta o volume.
  * `ai`: { deepFilter, vad: { binary, model } } — caminhos dos modelos locais.
  */
-export async function treatParts(ffmpeg, parts, output, settingsInput, { rawOutput, limitSeconds = null, signal, ai = {} } = {}) {
+export async function treatParts(ffmpeg, parts, output, settingsInput, { rawOutput, limitSeconds = null, signal, ai = {}, onProgress = () => {} } = {}) {
   const settings = normalizeTreatment(settingsInput);
   const target = path.resolve(output);
   const raw = path.resolve(rawOutput || `${target}.bruto.wav`);
   const temp = name => `${target}.${name}.wav`;
   const temps = [temp('limpo'), temp('editado'), temp('forma')];
+  const total = 4 + Number(settings.aiDenoise) + Number(settings.trimPauses || settings.removeBreaths) + Number(settings.normalize);
+  let done = 0;
+  const report = phase => onProgress({ phase, done, total });
   try {
+    report('Juntando takes');
     await renderParts(ffmpeg, parts, raw, { limitSeconds, signal });
+    done++;
     let current = raw;
     if (settings.aiDenoise) {
+      report('Removendo ruído');
       if (!ai.deepFilter) throw Object.assign(new Error('Limpeza por IA indisponível: instale “Limpeza de voz com IA” em Dependências'), { code: 'DEPENDENCY_MISSING' });
-      await aiDenoise(ai.deepFilter, current, temps[0], { signal }); current = temps[0];
+      await aiDenoise(ai.deepFilter, current, temps[0], { signal }); current = temps[0]; done++;
     }
     let plan = null;
     if (settings.trimPauses || settings.removeBreaths) {
+      report('Detectando e ajustando pausas');
       if (!ai.vad?.binary || !ai.vad?.model) throw Object.assign(new Error('Detecção de pausas indisponível: instale “Whisper large-v3” em Dependências'), { code: 'DEPENDENCY_MISSING' });
       const duration = (await measureAudio({ ffmpeg, ffprobe: ai.ffprobe || 'ffprobe' }, current)).durationSeconds;
       plan = editPlan(await speechSegments(ai.vad, current, { signal }), duration, settings);
       if (plan) { await applyEdit(ffmpeg, current, temps[1], plan, { signal }); current = temps[1]; }
+      done++;
     }
+    report('Analisando voz');
     const analysis = await analyzeVoice(ffmpeg, current, { signal });
+    done++;
+    report('Ajustando voz');
     const shaping = treatmentFilters(settings, analysis);
     if (shaping.length) { await ffmpegRun(ffmpeg, ['-i', current, '-af', shaping.join(','), ...WAV_OUT, '-y', temps[2]], { signal, target: temps[2] }); current = temps[2]; }
-    const finish = finishFilters(settings, settings.normalize ? (await analyzeVoice(ffmpeg, current, { signal })).integratedLufs : null);
+    done++;
+    let integratedLufs = null;
+    if (settings.normalize) {
+      report('Medindo volume');
+      integratedLufs = (await analyzeVoice(ffmpeg, current, { signal })).integratedLufs;
+      done++;
+    }
+    report('Exportando áudio final');
+    const finish = finishFilters(settings, integratedLufs);
     await ffmpegRun(ffmpeg, ['-i', current, '-af', finish.length ? finish.join(',') : 'anull', ...WAV_OUT, '-y', target], { signal, target });
+    done++;
+    report('Tratamento concluído');
     return { target, analysis, removedSeconds: plan?.removedSeconds || 0 };
   } finally {
     await Promise.all(temps.map(file => rm(file, { force: true })));

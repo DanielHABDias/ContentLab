@@ -295,7 +295,11 @@ test.each(['creator', 'ai'])('montagem em %s confirma o clique antes da resposta
   await act(async () => { resolveRequest(job); });
   const assembling = await screen.findByRole('button', { name: 'Montando narração…' });
   expect(assembling).toBeDisabled();
-  expect(within(assembling.parentElement).getByRole('status')).toHaveTextContent('Montando e tratando');
+  expect(screen.getByRole('progressbar', { name: 'Montagem da narração' })).toHaveAttribute('aria-valuenow', '0');
+  localApi.jobs.mockResolvedValue({ jobs: [{ ...job, progress: { phase: 'Medindo volume', done: 2, total: 4 } }] });
+  await waitFor(() => expect(screen.getByRole('progressbar', { name: 'Montagem da narração' })).toHaveAttribute('aria-valuenow', '50'), { timeout: 3000 });
+  expect(within(assembling.parentElement).getByRole('status')).toHaveTextContent('50%');
+  expect(within(assembling.parentElement).getByRole('status')).toHaveTextContent('Medindo volume');
   localApi.jobs.mockResolvedValue({ jobs: [{ ...job, state: 'completed' }] });
   await waitFor(() => expect(screen.getByRole('button', { name: 'Montar narração final' })).toBeEnabled(), { timeout: 3000 });
 });

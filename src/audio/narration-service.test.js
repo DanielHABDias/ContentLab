@@ -27,7 +27,12 @@ test('tratamento valida parâmetros, aceita o formato antigo e mede loudness e p
   expect(treatmentFilters({ ...off, aiDenoise: true, compress: true }).join(',')).toMatch(/^highpass=f=70:poles=2,acompressor=/);
   expect(finishFilters({ normalize: true, targetLufs: -16 }, -26)).toEqual(['volume=10dB', expect.stringMatching(/^alimiter/)]);
   await expect(treatParts('ffmpeg', [{ file: a }], path.join(root, 'x.wav'), { aiDenoise: true })).rejects.toMatchObject({ code: 'DEPENDENCY_MISSING' });
-  const { target: treated } = await treatParts('ffmpeg', [{ file: a }], path.join(root, 'tratado.wav'), { ...off, compress: true, normalize: true, targetLufs: -16 });
+  const progress = [];
+  const { target: treated } = await treatParts('ffmpeg', [{ file: a }], path.join(root, 'tratado.wav'), { ...off, compress: true, normalize: true, targetLufs: -16 }, { onProgress: value => progress.push(value) });
+  expect(progress[0]).toMatchObject({ done: 0, phase: 'Juntando takes' });
+  expect(progress.at(-1).done).toBe(progress.at(-1).total);
+  expect(progress.find(value => value.phase === 'Exportando áudio final').done).toBeLessThan(progress.at(-1).total);
+  expect(progress.every((value, index) => !index || value.done >= progress[index - 1].done)).toBe(true);
   const measures = await measureAudio({}, treated);
   expect(measures.integratedLufs).toBeCloseTo(-16, 0);
   expect(measures.truePeakDb).toBeLessThanOrEqual(-1);
