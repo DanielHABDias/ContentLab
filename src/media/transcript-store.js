@@ -144,3 +144,14 @@ export function parseSrt(text) {
 export function validWordTimings(words) {
   return Array.isArray(words) && words.length > 0 && words.every((word, index) => word.text?.trim() && Number.isFinite(word.start) && Number.isFinite(word.end) && word.start >= 0 && word.end > word.start && (!index || word.start >= words[index - 1].start));
 }
+
+/** Reject decoder loops; never cut the recording or silently delete spoken words. */
+export function hasRunawayRepetition(words) {
+  const text = words.map(word => String(word.text).toLowerCase().replace(/[^\p{L}\p{N}]/gu, ''));
+  for (let size = 4; size <= 12; size++) for (let i = 0; i + size * 6 <= text.length; i++) {
+    let matches = true;
+    for (let j = size; j < size * 6; j++) if (text[i + j] !== text[i + j % size]) { matches = false; break; }
+    if (matches) return true;
+  }
+  return false;
+}

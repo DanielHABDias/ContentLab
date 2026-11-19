@@ -6,6 +6,7 @@ import { afterEach, expect, test } from 'vitest';
 import { LocalApplicationService } from './local-application-service.js';
 import { createContentLabServer } from './http-server.js';
 import { PortugueseTranscriber } from '../media/media-service.js';
+import { TranscriptStore } from '../media/transcript-store.js';
 
 const roots = [];
 afterEach(async () => Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true }))));
@@ -170,7 +171,7 @@ test('transcrição sem runtime é bloqueada; whisper-cli reporta progresso e po
 while [ $# -gt 0 ]; do [ "$1" = "-of" ] && out="$2"; shift; done
 echo "whisper_print_progress_callback: progress =  40%" >&2
 [ -n "$WHISPER_SLOW" ] && sleep 30
-printf '%s' '${JSON.stringify(whisperJson)}' > "$out.json"
+printf '%s' '${JSON.stringify({ transcription: ['Olá', 'mundo'].map((text, i) => ({ text, offsets: { from: i * 400, to: (i + 1) * 400 }, tokens: [{ text: ' ' + text, offsets: { from: i * 400, to: (i + 1) * 400 } }] })) })}' > "$out.json"
 printf '1\\n00:00:00,000 --> 00:00:01,500\\nOlá mundo\\n' > "$out.srt"
 `, { mode: 0o755 });
   const transcriber = new PortugueseTranscriber({ binary, modelPath: model });
@@ -219,3 +220,32 @@ test('personagem: importa a pasta de poses com direitos confirmados, guarda o ca
   // As poses não viram cena da obra.
   expect(auto.plan.beats.flatMap(beat => JSON.stringify(beat.props).match(/media:[\w-]+/g) || []).every(ref => !Object.values(again.character.files).includes(ref.slice(6)))).toBe(true);
 }, 60_000);
+
+
+test('cache com frase em loop é refeito em vez de reaproveitado', async () => {
+  const calls = []; const { root, service, project } = await setup({ transcriber: fakeTranscriber(calls) });
+  const details = await service.importMedia({ path: project.path, baseRevision: 1, source: tone(root, 'cache.wav'), rights: 'owned' });
+  const media = details.project.media[0]; const store = new TranscriptStore(project.path);
+  const repeated = Array.from({ length: 8 }, () => 'Ele está aqui para ser o melhor'.split(' ')).flat().map((text, i) => ({ start: i * .1, end: i * .1 + .08, text }));
+  await store.saveRaw(media.id, { segments: repeated, words: repeated, srt: '', key: { sha256: media.sha256, model: 'whisper-large-v3', language: 'pt' } });
+  const job = await service.transcribeMedia({ path: project.path, mediaId: media.id });
+  expect(job.id).toBeTruthy();
+  await expect(service.mediaOps.jobs.waitFor(job.id)).resolves.toMatchObject({ state: 'completed' });
+  expect(calls).toHaveLength(1);
+  expect((await store.read(media.id)).raw[0].text).toBe('Olá mundo');
+});
+
+test('saída repetitiva falha sem gravar transcrição pronta nem alterar áudio', async () => {
+  const words = Array.from({ length: 8 }, () => 'Ele está aqui para ser o melhor'.split(' ')).flat();
+  const json = { transcription: words.map((text, i) => ({ text, offsets: { from: i * 100, to: i * 100 + 80 }, tokens: [{ text: ' ' + text, offsets: { from: i * 100, to: i * 100 + 80 } }] })) };
+  const { root, service, project } = await setup({ transcriber: async () => ({ transcribe: async () => ({ json, srt: '' }) }) });
+  const source = tone(root, 'preservar.wav'); const original = await readFile(source);
+  const details = await service.importMedia({ path: project.path, baseRevision: 1, source, rights: 'owned' });
+  const mediaId = details.project.media[0].id;
+  const job = await service.transcribeMedia({ path: project.path, mediaId, requireWords: true });
+  const result = await service.mediaOps.jobs.waitFor(job.id);
+  expect(result.state).toBe('failed'); expect(result.error).toMatch(/repetiu uma frase/);
+  expect(await new TranscriptStore(project.path).read(mediaId)).toBeNull();
+  expect((await inspect(service, project)).media[0].transcript).toBeNull();
+  expect(await readFile(source)).toEqual(original);
+});

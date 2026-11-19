@@ -49,3 +49,45 @@ test('transcritor mantém modelo único e diagnostica instalação ausente', asy
   expect(result.ready).toBe(false);
   expect(result.issues.join(' ')).toMatch(/ausente/i);
 });
+
+test('áudio longo usa janelas independentes com sobreposição e tempos absolutos sem duplicar a borda', async () => {
+  const directory = await root(); const source = path.join(directory, 'fala.wav');
+  execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'anullsrc=r=16000:cl=mono', '-t', '65', '-c:a', 'pcm_s16le', source]);
+  const original = await readFile(source); const commands = []; const progress = []; let window = 0;
+  const samples = [
+    [{ text: 'Primeira', start: 1, end: 1.4 }, { text: 'borda', start: 29.8, end: 30.4 }],
+    [{ text: 'borda', start: 1.8, end: 2.4 }, { text: 'meio', start: 12, end: 12.5 }, { text: 'limite', start: 31.9, end: 32.2 }],
+    [{ text: 'limite', start: 1.9, end: 2.2 }, { text: 'fim', start: 6, end: 6.5 }],
+  ];
+  const execute = async (binary, args, options) => {
+    commands.push({ binary, args });
+    if (binary === 'fake-whisper') {
+      const prefix = args[args.indexOf('-of') + 1];
+      await writeFile(`${prefix}.json`, JSON.stringify({ transcription: samples[window++].map(w => ({ text: w.text, offsets: { from: w.start * 1000, to: w.end * 1000 }, tokens: [{ text: ` ${w.text}`, offsets: { from: w.start * 1000, to: w.end * 1000 } }] })) }));
+      options.onStderr('progress = 50%');
+    } else await writeFile(args.at(-1), args.includes('-vn') ? original : Buffer.alloc(0));
+  };
+  const transcriber = new PortugueseTranscriber({ binary: 'fake-whisper', execute });
+  transcriber.diagnose = async () => ({ ready: true });
+  const output = await transcriber.transcribe(source, { onProgress: p => progress.push(p.percent) });
+  const { wordsFromWhisper } = await import('./transcript-store.js');
+  const words = wordsFromWhisper(output.json);
+  expect(words.map(w => w.text)).toEqual(['Primeira', 'borda', 'meio', 'limite', 'fim']);
+  expect(words.map(w => w.start)).toEqual([1, 29.8, 40, 59.9, 64]);
+  expect(output.srt).toContain('00:01:04,000');
+  expect(commands.filter(c => c.binary === 'fake-whisper')).toHaveLength(3);
+  expect(commands.filter(c => c.binary === 'fake-whisper').every(c => c.args[c.args.indexOf('-mc') + 1] === '0')).toBe(true);
+  expect(commands.filter(c => c.args.includes('-ss')).map(c => c.args[c.args.indexOf('-ss') + 1])).toEqual(['0', '28', '58']);
+  expect(progress.at(-1)).toBe(100); expect(progress).toEqual([...progress].sort((a, b) => a - b));
+  expect(await readFile(source)).toEqual(original);
+  const temporary = commands[0].args.at(-1);
+  await expect(stat(temporary)).rejects.toMatchObject({ code: 'ENOENT' });
+});
+
+test('reconhecimento em loop é sinalizado sem aceitar uma transcrição pronta', async () => {
+  const { hasRunawayRepetition } = await import('./transcript-store.js');
+  const phrase = 'Ele está aqui para ser o melhor'.split(' ').map(text => ({ text }));
+  expect(hasRunawayRepetition(Array.from({ length: 10 }, () => phrase).flat())).toBe(true);
+  expect(hasRunawayRepetition([...phrase, ...phrase])).toBe(false);
+  expect(hasRunawayRepetition([{ text: 'Não.' }, { text: 'Não.' }])).toBe(false);
+});

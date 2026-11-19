@@ -10,7 +10,7 @@ import os from 'node:os';
 import { processAlive, readLock, withProjectLock } from '../core/project-lock.js';
 import { LifecycleError } from './project-lifecycle.js';
 import { readProjectDirectory } from './project-registry.js';
-import { TranscriptStore, validWordTimings } from '../media/transcript-store.js';
+import { TranscriptStore, validWordTimings, hasRunawayRepetition } from '../media/transcript-store.js';
 
 const AUDIO_EXTENSIONS = ['.wav', '.mp3', '.m4a', '.aac', '.flac', '.ogg', '.opus', '.webm', '.mp4', '.mov', '.mkv'];
 const MAX_UPLOAD = 2 * 1024 ** 3;
@@ -63,7 +63,7 @@ export class NarrationOperations {
     const media = project.media.find(item => item.id === session.assembled?.mediaId);
     if (!media) return { status: 'missing', words: 0 };
     const transcript = await new TranscriptStore(directory).read(media.id);
-    const ready = !session.assembled.outdated && transcript?.meta?.sha256 === media.sha256 && transcript.meta.model === 'whisper-large-v3' && validWordTimings(transcript.words) && media.transcript?.model === 'whisper-large-v3' && media.transcript.words === transcript.words.length;
+    const ready = !session.assembled.outdated && transcript?.meta?.sha256 === media.sha256 && transcript.meta.model === 'whisper-large-v3' && validWordTimings(transcript.words) && !hasRunawayRepetition(transcript.words) && media.transcript?.model === 'whisper-large-v3' && media.transcript.words === transcript.words.length;
     const job = this.jobs.list({ projectPath: directory }).find(item => item.kind === 'transcription' && item.label.endsWith(media.id));
     return { status: ready ? 'ready' : ['queued', 'running'].includes(job?.state) ? job.state : job?.state === 'failed' ? 'failed' : 'pending', mediaId: media.id, model: 'whisper-large-v3', words: ready ? transcript.words.length : 0, error: ready ? null : job?.error || null };
   }

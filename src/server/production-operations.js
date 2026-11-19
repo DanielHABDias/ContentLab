@@ -8,7 +8,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { readProjectDirectory } from './project-registry.js';
 import { NarrationStore, scenesFromScript } from '../audio/narration-service.js';
-import { TranscriptStore, validWordTimings } from '../media/transcript-store.js';
+import { TranscriptStore, validWordTimings, hasRunawayRepetition } from '../media/transcript-store.js';
 import { alignWindows, impact, planMotion } from './motion-planner.js';
 import { narrationToVideo } from '../motion/kit/pausas.js';
 
@@ -547,7 +547,7 @@ export class ProductionOperations {
     const meta = await store.meta(narration.id).catch(() => null);
     if (!meta || meta.sha256 !== narration.sha256 || meta.model !== 'whisper-large-v3') return [];
     const words = (await store.read(narration.id))?.words;
-    return validWordTimings(words) ? words : [];
+    return validWordTimings(words) && !hasRunawayRepetition(words) ? words : [];
   }
 
   /** Transcreve a narração montada (Whisper) para legendas palavra a palavra. Devolve jobId. */

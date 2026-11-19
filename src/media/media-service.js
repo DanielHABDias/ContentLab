@@ -1,10 +1,11 @@
-import { copyFile, mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, open, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import { createHash, randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { createReadStream } from 'node:fs';
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
+import { wordsFromWhisper, toSrt, hasRunawayRepetition } from './transcript-store.js';
 
 const run = promisify(execFile);
 
@@ -83,7 +84,7 @@ export class MediaService {
 
 export class PortugueseTranscriber {
   static model = 'whisper-large-v3';
-  constructor({ binary = 'whisper-cli', modelPath, ffmpeg = 'ffmpeg', threads = Math.max(1, os.cpus().length - 2) } = {}) { this.binary = binary; this.modelPath = modelPath; this.ffmpeg = ffmpeg; this.threads = threads; }
+  constructor({ binary = 'whisper-cli', modelPath, ffmpeg = 'ffmpeg', threads = Math.max(1, os.cpus().length - 2), execute = runAbortable } = {}) { this.execute = execute; this.binary = binary; this.modelPath = modelPath; this.ffmpeg = ffmpeg; this.threads = threads; }
 
   async diagnose() {
     const issues = [];
@@ -100,12 +101,35 @@ export class PortugueseTranscriber {
     try {
       onProgress({ phase: 'Preparando áudio', percent: 0 });
       const wav = path.join(work, 'audio.wav');
-      await runAbortable(this.ffmpeg, ['-hide_banner', '-loglevel', 'error', '-i', path.resolve(mediaPath), '-vn', '-ac', '1', '-ar', '16000', '-c:a', 'pcm_s16le', wav], { signal });
-      onProgress({ phase: 'Transcrevendo', percent: 0 });
-      const prefix = path.join(work, 'transcript');
-      await runAbortable(this.binary, ['-m', this.modelPath, '-f', wav, '-l', 'pt', '-t', String(this.threads), '-pp', '-ml', '1', '-sow', '-ojf', '-osrt', '-of', prefix], { signal, onStderr: text => { const match = [...text.matchAll(/progress\s*=\s*(\d+)%/g)].at(-1); if (match) onProgress({ phase: 'Transcrevendo', percent: Number(match[1]) }); } });
-      const json = JSON.parse(await readFile(`${prefix}.json`, 'utf8'));
-      return { model: PortugueseTranscriber.model, language: 'pt', json, srt: await readFile(`${prefix}.srt`, 'utf8') };
+      await this.execute(this.ffmpeg, ['-hide_banner', '-loglevel', 'error', '-i', path.resolve(mediaPath), '-vn', '-ac', '1', '-ar', '16000', '-c:a', 'pcm_s16le', wav], { signal });
+      const duration = await pcmDuration(wav);
+      const words = [];
+      // Each fresh decoder sees two seconds on both sides of its 30s ownership window.
+      // Context cannot carry a hallucinated sentence into the rest of a long recording.
+      for (let start = 0; start < duration; start += 30) {
+        const end = Math.min(duration, start + 30);
+        const from = Math.max(0, start - 2); const to = Math.min(duration, end + 2);
+        const chunk = path.join(work, 'chunk.wav'); const prefix = path.join(work, 'transcript');
+        await this.execute(this.ffmpeg, ['-hide_banner', '-loglevel', 'error', '-ss', String(from), '-i', wav, '-t', String(to - from), '-c:a', 'pcm_s16le', '-y', chunk], { signal });
+        const progress = percent => onProgress({ phase: 'Transcrevendo', percent: Math.min(100, Math.round(100 * (start + (end - start) * percent / 100) / duration)) });
+        progress(0);
+        await this.execute(this.binary, ['-m', this.modelPath, '-f', chunk, '-l', 'pt', '-mc', '0', '-t', String(this.threads), '-pp', '-ml', '1', '-sow', '-ojf', '-of', prefix], { signal, onStderr: text => { const match = [...text.matchAll(/progress\s*=\s*(\d+)%/g)].at(-1); if (match) progress(Number(match[1])); } });
+        const json = JSON.parse(await readFile(`${prefix}.json`, 'utf8'));
+        const local = wordsFromWhisper(json);
+        if (hasRunawayRepetition(local)) throw Object.assign(new Error('O reconhecimento repetiu uma frase de forma suspeita. O áudio foi preservado; tente transcrever novamente.'), { code: 'TRANSCRIPTION_REPETITION' });
+        for (const word of local) {
+          const shifted = { ...word, start: word.start + from, end: Math.min(duration, word.end + from) };
+          const middle = (shifted.start + shifted.end) / 2;
+          if (middle < start || middle >= end || shifted.end <= shifted.start) continue;
+          const last = words.at(-1);
+          if (last && last.end > shifted.start && cleanWord(last.text) === cleanWord(shifted.text)) { last.end = Math.max(last.end, shifted.end); continue; }
+          if (last && shifted.start < last.start) shifted.start = last.start;
+          words.push(shifted);
+        }
+        progress(100);
+      }
+      const transcription = words.map(word => ({ text: word.text, offsets: { from: Math.round(word.start * 1000), to: Math.round(word.end * 1000) }, tokens: [{ text: ` ${word.text}`, offsets: { from: Math.round(word.start * 1000), to: Math.round(word.end * 1000) } }] }));
+      return { model: PortugueseTranscriber.model, language: 'pt', json: { transcription }, srt: toSrt(words) };
     } finally { await rm(work, { recursive: true, force: true }); }
   }
 }
@@ -131,3 +155,20 @@ export async function sha256File(file) { const hash = createHash('sha256'); for 
 async function exists(file) { try { await stat(file); return true; } catch { return false; } }
 function safeExtension(file) { const extension = path.extname(file).toLowerCase(); return /^\.[a-z0-9]{1,8}$/.test(extension) ? extension : '.bin'; }
 function sanitize(value) { return value.normalize('NFKD').replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-|-$/g, '').slice(0, 48) || 'cut'; }
+
+/** FFmpeg writes a seekable, mono 16kHz s16 WAV; inspect only its RIFF header. */
+async function pcmDuration(file) {
+  const handle = await open(file, 'r');
+  try {
+    const header = Buffer.alloc(65536); const { bytesRead } = await handle.read(header, 0, header.length, 0);
+    let byteRate = 0;
+    for (let offset = 12; offset + 8 <= bytesRead;) {
+      const tag = header.toString('ascii', offset, offset + 4); const size = header.readUInt32LE(offset + 4);
+      if (tag === 'fmt ' && offset + 20 <= bytesRead) byteRate = header.readUInt32LE(offset + 16);
+      if (tag === 'data' && byteRate) return Math.min(size, (await handle.stat()).size - offset - 8) / byteRate;
+      offset += 8 + size + (size % 2);
+    }
+    throw new Error('Não foi possível ler a duração do áudio preparado para transcrição.');
+  } finally { await handle.close(); }
+}
+const cleanWord = text => String(text).toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
