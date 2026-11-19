@@ -9,7 +9,13 @@ export function AudioTakeEditor({ take, src, onClose, onSave }) {
   const [history, setHistory] = useState([takeSegments(take)]); const [cursor, setCursor] = useState(0);
   const [selection, setSelection] = useState({ start: 0, end: 0 }); const [zoom, setZoom] = useState(1);
   const [busy, setBusy] = useState(false); const [error, setError] = useState('');
-  const ref = useDialogFocus(onClose, busy); const player = useRef(null);
+  const close = async () => {
+    setBusy(true); setError('');
+    try { await onClose(); }
+    catch (issue) { setError(issue.message); }
+    finally { setBusy(false); }
+  };
+  const ref = useDialogFocus(close, busy); const player = useRef(null);
   const segments = history[cursor]; const duration = editDuration(segments);
   const selected = selection.end - selection.start >= 0.01;
   const apply = next => {
@@ -27,7 +33,7 @@ export function AudioTakeEditor({ take, src, onClose, onSave }) {
   return <div className="dialog-backdrop" role="presentation"><form ref={ref} className="dialog audio-take-editor" role="dialog" aria-modal="true" aria-label="Editar take" onSubmit={save} onKeyDown={event => {
     if (event.key === 'Delete' && !busy && !['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)) { event.preventDefault(); remove(); }
   }}>
-    <div className="section-title"><div><span className="eyebrow">Estúdio de áudio</span><h2>Editar gravação</h2></div><button type="button" className="icon-button" aria-label="Fechar" disabled={busy} onClick={onClose}><X/></button></div>
+    <div className="section-title"><div><span className="eyebrow">Estúdio de áudio</span><h2>Editar gravação</h2></div><button type="button" className="icon-button" aria-label="Fechar" disabled={busy} onClick={close}><X/></button></div>
     <label>Nome<input required value={name} onChange={event => setName(event.target.value)} disabled={busy}/></label>
     <p className="hint">Arraste sobre a onda para selecionar um erro e excluí-lo. Os trechos se juntam; o original fica preservado. Clique na onda para posicionar a reprodução.</p>
     <fieldset disabled={busy} className="audio-editor-workspace">
@@ -43,6 +49,6 @@ export function AudioTakeEditor({ take, src, onClose, onSave }) {
       <div className="audio-selection-info"><output aria-label="Duração da seleção">{Math.max(0, selection.end - selection.start).toFixed(2)} s selecionados</output><button type="button" className="mini-button" disabled={!selected} onClick={() => { if (player.current) player.current.currentTime = selectSegments(segments, selection.start, selection.end)[0]?.start || 0; player.current?.play().catch(() => {}); }}>Ouvir a partir da seleção</button><small>Selecionar não altera o áudio. Salvar guarda os cortes já aplicados.</small></div>
     </fieldset>
     {error && <p className="notice error" role="alert">{error}</p>}
-    <div className="dialog-actions"><span className="hint">{duration.toFixed(2)} s após os cortes · original {take.durationSeconds.toFixed(2)} s</span><button type="button" className="button quiet" disabled={busy} onClick={onClose}>Cancelar</button><button className="button primary" disabled={busy}>{busy ? 'Salvando…' : 'Salvar'}</button></div>
+    <div className="dialog-actions"><span className="hint">{duration.toFixed(2)} s após os cortes · original {take.durationSeconds.toFixed(2)} s</span><button type="button" className="button quiet" disabled={busy} onClick={close}>Cancelar</button><button className="button primary" disabled={busy}>{busy ? 'Salvando…' : 'Salvar'}</button></div>
   </form></div>;
 }

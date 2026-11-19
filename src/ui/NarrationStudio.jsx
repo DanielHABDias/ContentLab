@@ -121,17 +121,27 @@ function NarratorChoice({ project, profiles, path, onUpdated, onOpenVoice }) {
 
 function TakesSection({ projectPath, narration, act, base }) {
   const [editing, setEditing] = useState(null); const [deleting, setDeleting] = useState(null);
+  const [pendingRecordingId, setPendingRecordingId] = useState(null);
+  const takes = narration.takes.filter(take => take.id !== pendingRecordingId);
+  const closeEditor = async () => {
+    if (editing.id === pendingRecordingId) {
+      const result = await act(() => localApi.deleteTake({ ...base, takeId: editing.id }), 'Gravação descartada.');
+      if (!result) throw new Error('Não foi possível descartar a gravação. Tente cancelar novamente.');
+      setPendingRecordingId(null);
+    }
+    setEditing(null);
+  };
   const importFiles = async () => { const choice = await act(() => localApi.chooseMedia('Importar áudio para a narração', true)); if (!choice?.paths?.length) return; const result = await act(() => localApi.narrationImport({ path: projectPath, sources: choice.paths })); if (result) await act(async () => null, result.failed ? `${result.imported} importado(s); falharam: ${result.results.filter(item => item.error).map(item => item.error).join('; ')}` : `${result.imported} take(s) importado(s).`); };
   const move = (index, delta) => { const order = narration.takes.map(take => take.id); const [item] = order.splice(index, 1); order.splice(index + delta, 0, item); return act(() => localApi.reorderTakes({ ...base, order })); };
   return <section className="workflow-card" aria-labelledby="takes-title">
     <div className="section-title"><div><span className="eyebrow">Takes</span><h2 id="takes-title">Gravações e áudios</h2></div><button className="button quiet" onClick={importFiles}><Upload size={17}/> Importar áudio</button></div>
     <div className="recording-script-shortcut"><div><strong>Roteiro na segunda tela</strong><small>Deixe as falas abertas enquanto grava aqui.</small></div><NarrationReaderLink projectPath={projectPath}/></div>
-    <Recorder projectPath={projectPath} onDone={async take => { await act(async () => null, 'Gravação salva como take.'); if (take) setEditing(take); }}/>
-    {narration.takes.length ? <ol className="media-list take-list">{narration.takes.map((take, index) => <li key={take.id}>
+    <Recorder projectPath={projectPath} onDone={async take => { if (take) setPendingRecordingId(take.id); await act(async () => null); if (take) setEditing(take); }}/>
+    {takes.length ? <ol className="media-list take-list">{takes.map((take, index) => <li key={take.id}>
       <span><strong>{take.name}</strong><small>{ORIGINS[take.origin]} · {clock(editDuration(takeSegments(take)))}{take.trim ? ` · usa ${clock(take.trim.start)}–${clock(take.trim.end)}` : ''}{take.stale ? ' · texto da cena mudou' : ''}</small><WaveAudioPlayer src={fileUrl(projectPath, { take: take.id })} label={`Ouvir ${take.name}`} duration={take.durationSeconds} segments={takeSegments(take)}/></span>
-      <span className="take-actions"><button className="icon-button" aria-label={`Subir ${take.name}`} disabled={index === 0} onClick={() => move(index, -1)}><ArrowUp size={16}/></button><button className="icon-button" aria-label={`Descer ${take.name}`} disabled={index === narration.takes.length - 1} onClick={() => move(index, 1)}><ArrowDown size={16}/></button><button className="mini-button" onClick={() => setEditing(take)}>Editar</button><button className="icon-button" aria-label={`Excluir ${take.name}`} onClick={() => setDeleting(take)}><Trash2 size={16}/></button></span>
+      <span className="take-actions"><button className="icon-button" aria-label={`Subir ${take.name}`} disabled={index === 0} onClick={() => move(index, -1)}><ArrowUp size={16}/></button><button className="icon-button" aria-label={`Descer ${take.name}`} disabled={index === takes.length - 1} onClick={() => move(index, 1)}><ArrowDown size={16}/></button><button className="mini-button" onClick={() => setEditing(take)}>Editar</button><button className="icon-button" aria-label={`Excluir ${take.name}`} onClick={() => setDeleting(take)}><Trash2 size={16}/></button></span>
     </li>)}</ol> : <div className="empty-state"><strong>Nenhum take ainda.</strong><span>Grave pelo microfone ou importe um áudio. Os originais nunca são alterados.</span></div>}
-    {editing && <AudioTakeEditor src={fileUrl(projectPath, { take: editing.id })} take={editing} onClose={() => setEditing(null)} onSave={async values => { const result = await act(() => localApi.updateTake({ ...base, takeId: editing.id, ...values }), 'Take atualizado.'); if (result) setEditing(null); else throw new Error('Não foi possível salvar. Confira o aviso da narração e tente novamente.'); }}/>}
+    {editing && <AudioTakeEditor src={fileUrl(projectPath, { take: editing.id })} take={editing} onClose={closeEditor} onSave={async values => { const result = await act(() => localApi.updateTake({ ...base, takeId: editing.id, ...values }), 'Take atualizado.'); if (result) { setPendingRecordingId(null); setEditing(null); } else throw new Error('Não foi possível salvar. Confira o aviso da narração e tente novamente.'); }}/>}
     {deleting && <ConfirmDialog title="Excluir take" message={`“${deleting.name}” e o arquivo dele serão apagados deste projeto.`} confirm="Excluir take" onClose={() => setDeleting(null)} onConfirm={async () => { await act(() => localApi.deleteTake({ ...base, takeId: deleting.id }), 'Take excluído.'); setDeleting(null); }}/>}
   </section>;
 }

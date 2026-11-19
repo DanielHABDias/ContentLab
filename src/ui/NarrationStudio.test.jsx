@@ -392,3 +392,46 @@ test('estimativa só aparece com progresso suficiente', () => {
   expect(transcriptionTiming({ startedAt: '2026-11-13T12:00:00Z', progress: { done: 2, total: 100 } }, now).remaining).toBeNull();
   expect(transcriptionTiming(undefined, now)).toEqual({ elapsed: 0, percent: null, remaining: null });
 });
+
+test.each(['Cancelar', 'Fechar', 'Escape', 'Salvar'])('nova gravação fica fora da lista até salvar; saída %s', async action => {
+  const previous = globalThis.MediaRecorder;
+  Object.defineProperty(navigator, 'mediaDevices', { value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [{ stop: vi.fn() }] }) }, configurable: true });
+  globalThis.MediaRecorder = class {
+    mimeType = 'audio/webm'; static isTypeSupported() { return true; }
+    start() { this.ondataavailable({ data: new Blob(['fala']) }); }
+    stop() { this.onstop(); }
+  };
+  const initial = state(); const recording = take('take_new123', 'Nova gravação');
+  const uploaded = { ...initial.narration, revision: 4, takes: [...initial.narration.takes, recording] };
+  localApi.uploadTake.mockImplementation(async () => { localApi.narration.mockResolvedValue({ ...initial, narration: uploaded }); return { take: recording }; });
+  localApi.deleteTake.mockResolvedValue({ narration: { ...initial.narration, revision: 5 } });
+  localApi.updateTake.mockResolvedValue({ narration: { ...uploaded, revision: 5 } });
+  const view = render(<NarrationStudio details={details('creator')} setup={setup()}/>);
+  try {
+    fireEvent.click(await screen.findByRole('button', { name: 'Permitir microfone' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Gravar' }));
+    fireEvent.click(screen.getByRole('button', { name: /Parar e salvar/ }));
+    const dialog = await screen.findByRole('dialog', { name: 'Editar take' });
+    expect(screen.queryByRole('button', { name: 'Excluir Nova gravação' })).not.toBeInTheDocument();
+    if (action === 'Escape') fireEvent.keyDown(dialog, { key: 'Escape' });
+    else fireEvent.click(within(dialog).getByRole('button', { name: action, exact: true }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Editar take' })).not.toBeInTheDocument());
+    if (action === 'Salvar') {
+      expect(localApi.deleteTake).not.toHaveBeenCalled();
+      expect(await screen.findByRole('button', { name: 'Excluir Nova gravação' })).toBeInTheDocument();
+    } else {
+      expect(localApi.deleteTake).toHaveBeenCalledWith({ path: '/p', baseRevision: 4, takeId: recording.id });
+      expect(screen.queryByRole('button', { name: 'Excluir Nova gravação' })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Gravar' })).toBeEnabled();
+    }
+  } finally { view.unmount(); globalThis.MediaRecorder = previous; }
+});
+
+test('cancelar edição de take existente preserva a gravação', async () => {
+  render(<NarrationStudio details={details('creator')} setup={setup()}/>);
+  fireEvent.click((await screen.findAllByRole('button', { name: 'Editar', exact: true }))[0]);
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'Editar take' })).getByRole('button', { name: 'Cancelar' }));
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Editar take' })).not.toBeInTheDocument());
+  expect(localApi.deleteTake).not.toHaveBeenCalled();
+  expect(screen.getByRole('button', { name: 'Excluir Abertura' })).toBeInTheDocument();
+});
