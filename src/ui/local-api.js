@@ -19,6 +19,15 @@ async function request(pathname, options = {}) {
 const post = (pathname, input) => request(pathname, { method: 'POST', body: JSON.stringify(input) });
 
 export const localApi = {
+  googleArchive: input => post('/google/archive', input || {}),
+  googleConnector: () => request('/google/connector'),
+  googleStatus: () => request('/google/status'),
+  googleConfigure: input => post('/google/configure', input),
+  googleConnect: input => post('/google/connect', input),
+  googleDisconnect: () => post('/google/disconnect', {}),
+  googleInspect: input => post('/google/inspect', input),
+  googlePrepare: input => post('/google/prepare', input),
+  googleSync: input => post('/google/sync', input || {}),
   health: () => request('/health'),
   listProjects: () => request('/projects'),
   diagnostics: () => request('/diagnostics'),

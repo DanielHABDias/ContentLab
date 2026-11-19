@@ -4,6 +4,10 @@
 
 Ferramenta audiovisual local para organizar um vídeo da ideia ao pacote final. A interface e agentes trabalham sobre o mesmo projeto versionado: roteiro, títulos A/B, thumbnails, mídia, narração, timeline, revisão e render.
 
+## Google Drive e planilha
+
+Conexão pessoal por JSON em **Configurações → Google Drive**: pasta com o nome do canal, planilha compatível com o Diazverso, Backgrounds, Thumbnails e Roteiros. Sincronização automática, numeração VD/SH e acervo pesquisável mesmo sem arquivos locais. [Configuração e limites](docs/GOOGLE-DRIVE.md).
+
 ## Requisitos e instalação
 
 **Para usar (Linux x64, sem npm):** baixe `contentlab-<versão>-linux-x64.tar.gz`, extraia e rode `./install.sh`. Atualizar, voltar versão e desinstalar sem perder projetos: [docs/DISTRIBUICAO.md](docs/DISTRIBUICAO.md). Para executar a pasta do projeto, use as instruções abaixo.

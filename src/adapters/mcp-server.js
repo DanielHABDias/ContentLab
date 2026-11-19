@@ -130,6 +130,12 @@ export function createMcpServer() {
     return { revision: updated.project.revision, currentStage: (await summary(path)).currentStage };
   });
 
+  tool(server, 'google_archive', 'Consulta os metadados e links do acervo da planilha do canal, mesmo sem arquivos locais. Somente leitura.', { query:z.string().optional(),type:z.enum(['LONGO','SHORT']).optional(),status:z.string().optional() }, input => api('/google/archive',input));
+  tool(server, 'google_status', 'Lê conexão Google, estrutura vinculada e estado de sincronização. Nunca retorna credenciais.', {}, () => api('/google/status'));
+  tool(server, 'google_inspect', 'Valida pasta e planilha Google autorizadas, sem criar nem sobrescrever dados.', { rootId: z.string().optional(), spreadsheetId: z.string().optional() }, input => api('/google/inspect', input));
+  tool(server, 'google_prepare', 'Prepara a estrutura autorizada em Configurações: reutiliza identidades e cria só pastas/abas ausentes; bloqueia cabeçalhos incompatíveis.', { rootId: z.string().optional(), spreadsheetId: z.string().optional() }, input => api('/google/prepare', input));
+  tool(server, 'google_sync', 'Sincroniza dados e Docs dos projetos com a conta configurada. Preserva publicação/aprovação manual e bloqueia conflitos remotos.', { path: projectPath.optional() }, input => api('/google/sync', input));
+
   tool(server, 'script_get', 'Lê só o roteiro em capítulos/blocos, fontes e revisão. Use antes de script_edit; evita buscar o projeto inteiro. Títulos não são fala.', { path: projectPath }, async ({ path }) => {
     const { project } = await openProject(path);
     return { revision: project.revision, chapters: scriptChapters(project.creative.script), sources: project.creative.script.sources };

@@ -1,3 +1,4 @@
+import { GoogleSync } from '../integrations/google-sync.js';
 import { VOICE_MODES } from '../core/voice-modes.js';
 import { lstat, mkdir, readFile, rename, rm, stat } from 'node:fs/promises';
 import { MIGRATABLE, ROOT_KINDS, SettingsStore, StorageService, sizeOf, validateFolder } from './storage-service.js';
@@ -39,6 +40,7 @@ export class LocalApplicationService {
     this.dataDirectory = path.resolve(dataDirectory);
     this.projectsDirectory = path.resolve(projectsDirectory || path.join(this.dataDirectory, 'projects'));
     this.updater = updater;
+    this.google = new GoogleSync(this);
     this.registry = new ProjectRegistry(this.dataDirectory, { scanRoots: () => [this.projectsDirectory] });
     this.injected = { media: Boolean(media), renderer: Boolean(renderer), setup: Boolean(setup) };
     this.defaults = { roots: { projects: this.projectsDirectory, media: path.join(this.dataDirectory, 'media'), renderCache: path.resolve(renderCacheDirectory || path.join(this.dataDirectory, 'render')), tools: path.resolve(toolsDirectory || path.join(this.dataDirectory, 'tools')), renderOutput: null }, limits: { cacheMaxBytes: null, minFreeBytes: 2 * 1024 ** 3 } };
@@ -68,7 +70,7 @@ export class LocalApplicationService {
   }
 
   /** Carrega as configurações uma vez e aplica as raízes aos serviços. */
-  ready() { this.readyPromise ||= this.settingsStore.read().then(async settings => { this.#apply(settings); await this.#prepareComponents(); await this.mediaOps.jobs.restore(); await this.renderQueue.restore(); for (const job of this.renderQueue.jobs) if (job.payload?.options?.output) this.renderOutputReservations.add(job.payload.options.output); return this.settings; }); return this.readyPromise; }
+  ready() { this.readyPromise ||= this.settingsStore.read().then(async settings => { this.#apply(settings); await this.#prepareComponents(); this.google.start(); await this.mediaOps.jobs.restore(); await this.renderQueue.restore(); for (const job of this.renderQueue.jobs) if (job.payload?.options?.output) this.renderOutputReservations.add(job.payload.options.output); return this.settings; }); return this.readyPromise; }
 
   /** Registra (ou atualiza, se a fonte mudou) as cenas embutidas do catálogo. */
   async #prepareComponents() {
@@ -93,6 +95,16 @@ export class LocalApplicationService {
   }
 
   // ---- Configurações e armazenamento (F15) ----
+
+  googleStatus() { return this.google.status(); }
+  googleConfigure(input) { return this.google.configure(input); }
+  googleConnect(input) { return this.google.connect(input); }
+  googleDisconnect() { return this.google.disconnect(); }
+  googleInspect(input) { return this.google.inspect(input); }
+  googlePrepare(input) { return this.google.prepare(input); }
+  googleSync(input) { return this.google.sync(input); }
+  googleArchive(input) { return this.google.archive(input); }
+  async googleConnector() { return { code: await readFile(new URL('../../assets/google-connector/Code.gs',import.meta.url),'utf8'), manifest: await readFile(new URL('../../assets/google-connector/appsscript.json',import.meta.url),'utf8') }; }
 
   async getSettings() {
     await this.ready();
@@ -206,6 +218,7 @@ export class LocalApplicationService {
     if (!title?.trim()) throw new Error('Informe o título do projeto');
     if (narrationBy) await this.#requireNarrationChoice(narrationBy);
     await this.ready();
+    title = await this.google.reserveTitle(title,type,randomUUID());
     const id = await this.#availableId(parentDirectory || this.projectsDirectory, slug(title));
     const root = path.resolve(parentDirectory || this.projectsDirectory);
     const project = {
@@ -218,7 +231,9 @@ export class LocalApplicationService {
       ] },
     };
     await new ProjectStore(root).create(project);
-    return await this.registerProject(path.join(root, id));
+    const result = await this.registerProject(path.join(root, id));
+    this.google.schedule();
+    return result;
   }
 
   async inspectPackage({ packagePath, parentDirectory }) {
@@ -276,7 +291,9 @@ export class LocalApplicationService {
       const store = new ProjectStore(path.dirname(absolute));
       const agent = new AgentService(store);
       await agent.run({ schema: 'contentlab-operation-v1', operationId: `op_${randomUUID().replaceAll('-', '')}`, projectId: project.id, baseRevision, dryRun: false, actions: actions || [action] });
-      return await this.registerProject(absolute);
+      const result = await this.registerProject(absolute);
+      this.google.schedule();
+      return result;
     });
   }
 
@@ -512,6 +529,7 @@ export class LocalApplicationService {
     await this.ready();
     const running = state => ['running', 'queued', 'paused', 'downloading'].includes(state);
     const items = [
+      ...(this.google.running ? [{ kind: 'google', label: 'sincronização Google em andamento' }] : []),
       ...this.mediaOps.jobs.list().filter(job => running(job.state)).map(job => ({ kind: job.kind, label: job.label })),
       ...this.renderQueue.list().filter(job => ['running', 'queued'].includes(job.state)).map(job => ({ kind: 'render', label: `Render ${job.projectId}`, resumes: true })),
       ...this.setup.jobs().filter(job => running(job.state)).map(job => ({ kind: 'setup', label: job.label || job.id })),
@@ -524,6 +542,7 @@ export class LocalApplicationService {
 
   /** Cancela o que está rodando para que os processos filhos (FFmpeg, voz, downloads) terminem junto. */
   async prepareShutdown() {
+    this.google.close();
     for (const job of this.mediaOps.jobs.list()) if (['queued', 'running'].includes(job.state)) { try { this.mediaOps.jobs.cancel(job.id); } catch { /* já terminou */ } }
     for (const job of this.setup.jobs()) if (['running', 'downloading'].includes(job.state)) { try { this.setup.cancel(job.id); } catch { /* já terminou */ } }
     for (const job of this.storage.jobs()) if (job.state === 'running') { try { this.storage.cancel(job.id); } catch { /* já terminou */ } }

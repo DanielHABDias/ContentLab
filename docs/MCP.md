@@ -130,3 +130,8 @@ Para 5 Shorts: repetir o fluxo com `type: short`, `mode: autonomous` e `stage_ap
 Use `narration_transcript({ path, offset: 0, limit: 500 })`. A resposta contém `mediaId`, `model`, `language`, `total`, `nextOffset` e `words: [{ text, start, end }]`, em segundos. Continue com `offset: nextOffset` até `null`. Leia antes de colocar imagens, cortes e legendas; use os tempos reais, não a duração estimada do roteiro.
 
 Se o Whisper falhar ou faltar dependência, a montagem de áudio permanece salva. Resolva a dependência e use `narration_transcribe` + `job_wait` para retomar, sem gerar ou gravar tudo novamente. Títulos, cenas e direção não são narrados; a tela de gravação apresenta só as falas organizadas por capítulo.
+
+
+## Google Drive
+
+`google_status`, `google_inspect`, `google_prepare`, `google_sync` e `google_archive` operam a integração configurada na interface, sem expor credenciais. Veja [Google Drive e planilha](GOOGLE-DRIVE.md).

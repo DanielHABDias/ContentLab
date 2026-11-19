@@ -1,3 +1,4 @@
+import { GoogleSettings } from './GoogleSettings.jsx';
 import { VoiceModeSettings, saveVoiceMode } from './VoiceModeSettings.jsx';
 import { useCallback, useEffect, useState } from 'react';
 import { Check, FolderOpen, HardDrive, RefreshCw, Trash2, X } from 'lucide-react';
@@ -50,6 +51,8 @@ export function SettingsScreen({ onBack, onOpenSetup, onChanged }) {
     {error && <div className="notice error" role="alert"><X size={16}/>{error}</div>}
     <div aria-live="polite">{status && <div className="notice" role="status"><Check size={16}/>{status}</div>}</div>
     {(settings.recoveredFrom || settings.registryRecovery) && <div className="notice error" role="alert">{settings.recoveredFrom && 'As configurações estavam corrompidas e foram restauradas do backup. '}{settings.registryRecovery && `O registro de projetos estava corrompido e foi recuperado (${settings.registryRecovery.source === 'backup' ? 'do backup' : 'varrendo a pasta de projetos'}, ${settings.registryRecovery.recovered} projetos). O arquivo original foi preservado em ${settings.registryRecovery.corrupted}.`}</div>}
+
+    <GoogleSettings/>
 
     <VoiceModeSettings settings={settings} busy={busy} onOpenSetup={onOpenSetup} onSave={mode => act(async () => { await saveVoiceMode(settings, mode); await onChanged?.(); }, 'Modo de voz salvo.')}/>
 

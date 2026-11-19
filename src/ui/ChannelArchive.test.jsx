@@ -1,0 +1,6 @@
+import {render,screen,fireEvent} from '@testing-library/react';
+import {expect,test,vi} from 'vitest';
+import {ChannelArchive} from './ChannelArchive.jsx';
+import {localApi} from './local-api.js';
+vi.mock('./local-api.js',()=>({localApi:{googleStatus:vi.fn(async()=>({connected:true,prepared:true})),googleArchive:vi.fn(async()=>({channelName:'Diazverso',next:{VD:16,SH:8},records:[{id:'VD_0015',title:'Um vídeo antigo',type:'LONGO',status:'PUBLICADO',scriptUrl:'https://docs.google.com/document/d/script/edit',localPath:null},{id:'SH_0007',title:'Short antigo',type:'SHORT',status:'PRONTO',localPath:null}]}))}}));
+test('acervo funciona sem arquivo local e permite recuperar link e pesquisar',async()=>{render(<ChannelArchive/>);await screen.findByText('Um vídeo antigo');expect(screen.getByText('VD_0016')).toBeInTheDocument();expect(screen.getByText('SH_0008')).toBeInTheDocument();expect(screen.getByRole('link',{name:/Roteiro/})).toHaveAttribute('href','https://docs.google.com/document/d/script/edit');fireEvent.change(screen.getByRole('searchbox'),{target:{value:'SH_0007'}});expect(screen.queryByText('Um vídeo antigo')).not.toBeInTheDocument();expect(screen.getByText('Short antigo')).toBeInTheDocument();});

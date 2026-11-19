@@ -36,6 +36,11 @@ export function createContentLabServer({ dataDirectory = roots.dataDirectory, st
         if (!closing) { closing = true; setImmediate(() => shutdown(server, application, onShutdown)); }
         return;
       }
+      if (request.method === 'GET' && url.pathname === '/api/v1/google/status') return json(response, 200, await application.googleStatus());
+      if (request.method === 'GET' && url.pathname === '/api/v1/google/connector') return json(response, 200, await application.googleConnector());
+      const googleRoutes = { configure: 'googleConfigure', connect: 'googleConnect', disconnect: 'googleDisconnect', inspect: 'googleInspect', prepare: 'googlePrepare', sync: 'googleSync', archive: 'googleArchive' };
+      const googleMatch = request.method === 'POST' && url.pathname.match(/^\/api\/v1\/google\/([a-z]+)$/);
+      if (googleMatch && googleRoutes[googleMatch[1]]) return json(response, 200, await application[googleRoutes[googleMatch[1]]](await readJson(request)));
       if (request.method === 'GET' && url.pathname === '/api/v1/health') return json(response, 200, await application.health());
       if (request.method === 'GET' && url.pathname === '/api/v1/projects') return json(response, 200, { projects: await application.listProjects() });
       if (request.method === 'GET' && url.pathname === '/api/v1/about') return json(response, 200, await application.about());
