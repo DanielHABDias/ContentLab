@@ -18,13 +18,6 @@ export const DetalheContexto:React.FC<Props&{cena:Clip;detalhe?:{x:number;y:numb
  </AbsoluteFill><Tag text={p.titulo} top/></Stage>;
 };
 
-export const JanelaMovel:React.FC<Props&{antes:Clip;depois:Clip}>=p=>{
- const {f,W,H,V}=useCanvas(),travel=smooth(progress(f,p.len,.03,.59)),expand=smooth(progress(f,p.len,.58,.39)),size=.17+.83*expand,center=(-.1+1.2*travel)*(1-expand)+.5*expand,lo=Math.max(0,center-size/2),hi=Math.min(1,center+size/2);
- return <Stage {...p}><Fill item={p.antes} len={p.len}/><AbsoluteFill style={{clipPath:V?`inset(${lo*100}% 0 ${(1-hi)*100}% 0)`:`inset(0 ${(1-hi)*100}% 0 ${lo*100}%)`}}><Source item={p.depois} len={p.len}/></AbsoluteFill>
-  {expand<1&&[lo,hi].map((v,i)=><div key={i} style={{position:'absolute',left:V?0:W*v,top:V?H*v:0,width:V?W:4,height:V?4:H,background:i?C.blue:C.red,boxShadow:`0 0 0 3px ${C.ink}`}}/>)}
- </Stage>;
-};
-
 export const AnotacaoCena:React.FC<Props&{cena:Clip;em?:number;pausa?:number;ponto?:{x:number;y:number;w?:number;h?:number};marca?:'circulo'|'seta'|'sublinhado';texto?:string}>=p=>{
  const {f,W,H}=useCanvas(),state=pauseFrame(f,p.len,p.em??.32,p.pausa??.35),d=p.ponto||{x:.5,y:.5,w:.18,h:.2},x=d.x*W,y=d.y*H,w=(d.w||.18)*W,h=(d.h||.2)*H,q=smooth(progress(f-state.start,p.len,0,.08));
  return <Stage {...p}><Fill item={p.cena} len={p.len} frame={state.frame}/>{state.holding&&<div data-editorial-annotation>

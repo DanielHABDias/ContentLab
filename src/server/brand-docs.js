@@ -38,7 +38,7 @@ const SFX_ORIGIN = new Set(['clique', 'sino', 'explosao', 'tapa', 'tapa-eco', 'w
 const SFX_CREATOR = new Set(['ding', 'riser', 'riser-reverso', 'error', 'type']);
 const NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 /** Cenas que dependem de mídia do projeto, do personagem ou de WebGL ficam fora das prévias da documentação. */
-const NO_PREVIEW = new Set(['evidencia', 'aparte', 'personagem', 'paineis3d', 'personagemClose', 'pensamentoVivo', 'rasgoCena', 'montagemEncaixe', 'enquadramentoAlternado', 'detalheContexto', 'janelaMovel', 'faixasSequenciais', 'fotogramasMudanca', 'anotacaoCena', 'retornoImagem', 'palavraRecortada', 'personagemPrimeiroPlano', 'personagemReacao', 'personagemAlternado', 'legendaVirada', 'divisaoResolvida', 'corteCor', 'revelacaoRecortes']);
+const NO_PREVIEW = new Set(['evidencia', 'aparte', 'personagem', 'paineis3d', 'personagemClose', 'pensamentoVivo', 'montagemEncaixe', 'enquadramentoAlternado', 'detalheContexto', 'faixasSequenciais', 'fotogramasMudanca', 'anotacaoCena', 'retornoImagem', 'palavraRecortada', 'personagemPrimeiroPlano', 'personagemReacao', 'personagemAlternado', 'legendaVirada', 'divisaoResolvida']);
 const FILES = { font: { anton: 'fonts/Anton-Regular.ttf' } };
 
 export const CAPTION_RULES = [

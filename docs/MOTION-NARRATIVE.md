@@ -101,7 +101,6 @@ Use mídias da obra nos itens e identifique a fonte. Estas composições não su
 - Continuidade da entrada: para seguir com `evidencia` na mesma mídia, `inicio` seguinte = `inicio` do capítulo + (frames do beat − frame da entrada) / fps. O frame da entrada vem de `timelineSchedule(props).enterStart × (frames − 1)`, em `src/motion/kit/narrative/trilha.js` (fração 0,68 do beat). Os SFX saem de `narrativeEvents` com o mesmo cronograma.
 - `personagemClose`: personagem importado ampliado, com pernas além da borda; balões únicos, ícones e poses ligados à fala. Um item de `ideias` por vez; preferir beats em que cada item dure 0,7–1 s.
 - `pensamentoVivo`: três pensamentos surgem e permanecem ao redor do personagem. `poses` troca a cada 0,8 s. Não usar para citar evidências que precisam aparecer em cena.
-- `rasgoCena`: transição irregular entre duas mídias em tela cheia; a segunda começa na `virada`, sem áudio original. O rasgo leva 42% da duração total, por isso `virada` deve ser no máximo 0,58.
 
 As cenas do personagem exigem `character_import`; o aplicativo permanece neutro, sem personagem de marca embutido. No Diazverso, o agente importa o Nox do plugin.
 

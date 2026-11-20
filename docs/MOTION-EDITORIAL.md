@@ -11,7 +11,6 @@ O personagem troca o PNG inteiro em cortes secos. Não há articulação de memb
 | `montagemEncaixe` | Recortes diagonais com bordas de tinta e contorno azul ou vermelho entram em sequência; o último cresce até tela cheia e o contorno desaparece na ampliação. |
 | `enquadramentoAlternado` | Cortes secos alternam imagens ou vídeos alinhados, com rótulo e foco configurável por fonte. |
 | `detalheContexto` | Começa ampliado em um ponto da imagem e abre até mostrar a imagem inteira; círculo preserva a referência. |
-| `janelaMovel` | Uma faixa revela outra mídia ao atravessar o quadro; abre até completar a troca. |
 | `faixasSequenciais` | Até três fontes dividem a tela; a faixa ativa expande e toca, enquanto as outras congelam e escurecem. |
 | `fotogramasMudanca` | Três imagens congeladas entram sobrepostas e deslocadas; a última preenche o quadro. |
 | `anotacaoCena` | Vídeo pausa em um frame escolhido, recebe marca localizada e retoma do mesmo frame. |
@@ -22,8 +21,6 @@ O personagem troca o PNG inteiro em cortes secos. Não há articulação de memb
 | `personagemAlternado` | Personagem em destaque, corte para obra em tela cheia, retorno em outra posição e pose. Sem transição de corpo. |
 | `legendaVirada` | Mesma mídia, expressão curta com palavra riscada e substituída no instante da virada. |
 | `divisaoResolvida` | Duas fontes em tela dividida; a divisória se desloca até a escolhida preencher o quadro. |
-| `corteCor` | Faixa diagonal com cor do kit atravessa rapidamente o quadro e revela a próxima mídia. |
-| `revelacaoRecortes` | Quatro partes grandes revelam o frame inicial; depois a mídia completa começa a tocar. |
 
 ## Fontes e tempos
 

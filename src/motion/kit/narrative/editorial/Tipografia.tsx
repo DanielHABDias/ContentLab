@@ -19,10 +19,3 @@ export const LegendaVirada:React.FC<Props&{cena:Clip;prefixo?:string;antes:strin
  </div></Stage>;
 };
 
-export const CorteCor:React.FC<Props&{antes:Clip;depois:Clip}>=p=>{
- const {f,W,H}=useCanvas(),q=smooth(progress(f,p.len,.25,.46)),edge=-.4+q*1.8,band=.14,accent=color(p.tom,C.red);
- const mask=`polygon(0 0,${(edge+.12)*100}% 0,${(edge-.12)*100}% 100%,0 100%)`;
- return <Stage {...p}><Fill item={p.antes} len={p.len}/><AbsoluteFill style={{clipPath:q>=1?'none':mask}}><Source item={p.depois} len={p.len} from={cueFrame(p.len,.25)}/></AbsoluteFill>
-  {q>0&&q<1&&<svg style={{position:'absolute',inset:0,width:W,height:H}}><polygon points={`${(edge+.12-band)*W},0 ${(edge+.12)*W},0 ${(edge-.12)*W},${H} ${(edge-.12-band)*W},${H}`} fill={accent}/><path d={`M ${(edge+.12)*W} 0 L ${(edge-.12)*W} ${H}`} stroke={C.ink} strokeWidth={12}/><path d={`M ${(edge+.12-band)*W} 0 L ${(edge-.12-band)*W} ${H}`} stroke={C.blue} strokeWidth={6}/></svg>}
- </Stage>;
-};

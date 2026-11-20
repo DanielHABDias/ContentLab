@@ -122,7 +122,7 @@ export class MotionRenderer {
       if (plan.music && inputs.music) { await place(inputs.music, path.join(publicDir, 'media', `trilha${path.extname(inputs.music)}`)); music = `public:media/trilha${path.extname(inputs.music)}`; }
       if (plan.beats.some(beat => beat.scene === 'telafinal')) await place(path.join(KIT_ASSETS, 'backgrounds/comic-page.png'), path.join(publicDir, 'assets/kit/backgrounds/comic-page.png'));
       const end = Math.max(...plan.beats.map(beat => beat.at + beat.duration), (inputs.narrationSeconds || 0) + pauseTotal(plan.pausas));
-      const props = { plan: { fps, width: even(width * scale), height: even(height * scale), duration: end, beats: plan.beats, captions: plan.captions, musicVolume: plan.music?.volume, duck: plan.music?.duck, musicPause: plan.music?.pausa, musicFade: plan.music?.fade, musicStart: plan.music?.inicio, musicParts: plan.music?.trechos || [], pausas: plan.pausas || [] }, assets, narration, music, personagem, words: plan.narration !== false ? inputs.words || [] : [] };
+      const props = { plan: { fps, width: even(width * scale), height: even(height * scale), duration: end, beats: plan.beats, captions: plan.captions, musicVolume: plan.music?.volume, duck: plan.music?.duck, musicPause: plan.music?.pausa, musicFade: plan.music?.fade, musicStart: plan.music?.inicio, musicParts: plan.music?.trechos || [], pausas: plan.pausas || [], voiceVolume: plan.voz?.volume }, assets, narration, music, personagem, words: plan.narration !== false ? inputs.words || [] : [] };
       const scaled = scale === 1 ? props : { ...props, plan: { ...props.plan, width, height } };
 
       const { bundle } = await import('@remotion/bundler'); const { renderMedia, selectComposition, makeCancelSignal } = await import('@remotion/renderer');
@@ -141,7 +141,7 @@ export class MotionRenderer {
       await renderMedia({ serveUrl, composition, codec: 'h264', crf: 18, outputLocation: raw, inputProps, scale, chromiumOptions, ...renderResources(), logLevel: 'error', cancelSignal: cancel, onProgress: ({ progress }) => onProgress({ phase: 'Renderizando a composição', progress: 0.05 + progress * 0.85 }) });
       onProgress({ phase: 'Ajustando o volume', progress: 0.92 });
       const temporary = `${output}.partial.mp4`;
-      await this.#loudness(raw, temporary);
+      await this.#loudness(raw, temporary, plan.loudness ?? LOUDNESS_TARGET);
       onProgress({ phase: 'Tirando os metadados', progress: 0.96 });
       await cleanMetadata(this, temporary, output); await rm(temporary, { force: true });
       onProgress({ phase: 'Conferindo o arquivo', progress: 0.98 });
@@ -152,12 +152,12 @@ export class MotionRenderer {
     } finally { await rm(work, { recursive: true, force: true }); }
   }
 
-  /** Ganho para −14 LUFS (medido) e limitador de pico; sem áudio, só copia. */
-  async #loudness(input, output) {
+  /** Ganho para o alvo (padrão −14 LUFS, medido) e limitador de pico; sem áudio, só copia. */
+  async #loudness(input, output, target = LOUDNESS_TARGET) {
     const probe = await run(this.ffmpeg, ['-hide_banner', '-nostats', '-i', input, '-af', 'ebur128', '-f', 'null', '-'], { maxBuffer: 64 * 1024 * 1024 }).catch(error => error);
     const measured = Number(String(probe.stderr || '').match(/I:\s+(-?[\d.]+) LUFS/g)?.at(-1)?.match(/-?[\d.]+/)?.[0]);
     if (!Number.isFinite(measured) || measured < -70) { await copyFile(input, output); return; }
-    const gain = Math.max(-12, Math.min(18, LOUDNESS_TARGET - measured));
+    const gain = Math.max(-12, Math.min(18, target - measured));
     await run(this.ffmpeg, ['-hide_banner', '-loglevel', 'error', '-y', '-i', input, '-c:v', 'copy', '-af', `volume=${gain.toFixed(2)}dB,alimiter=limit=0.7:attack=1:release=60:level=false`, '-ar', '48000', '-c:a', 'aac', '-b:a', '192k', output], { maxBuffer: 16 * 1024 * 1024 });
   }
 

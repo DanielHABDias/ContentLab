@@ -47,9 +47,3 @@ export const DivisaoResolvida:React.FC<Props&{cenas:Clip[];escolhida?:number;vir
  </Stage>;
 };
 
-export const RevelacaoRecortes:React.FC<Props&{cena:Clip}>=p=>{
- const {f,W,H,V}=useCanvas(),cuts=4,start=cueFrame(p.len,.72),q=smooth(progress(f,p.len,.72,.18));
- return <Stage {...p}>{Array.from({length:cuts},(_,i)=>{const enter=smooth(progress(f,p.len,i*.17,.15)),x=V?0:i*W/4,y=V?H*(.13+i*.14):H*.1,w=V?W:W/4,h=V?H*.14:H*.8;
-  return <div key={i} style={{position:'absolute',inset:0,clipPath:V?`polygon(0 ${y/H*100}%,100% ${y/H*100+2}%,100% ${(y+h)/H*100}%,0 ${(y+h)/H*100-2}%)`:`polygon(${x/W*100}% 10%,${(x+w)/W*100}% 13%,${(x+w)/W*100}% 90%,${x/W*100}% 87%)`,opacity:enter,transform:`translate(${(1-enter)*(i%2?-80:80)}px,${(1-enter)*50}px)`}}><Source item={p.cena} len={p.len} frame={0}/></div>;
- })}{q>0&&<AbsoluteFill style={{opacity:q}}><Source item={p.cena} len={p.len} from={start}/></AbsoluteFill>}<Tag text={q<.5?p.titulo:undefined} top/></Stage>;
-};

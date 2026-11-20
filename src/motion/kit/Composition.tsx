@@ -16,7 +16,7 @@ import { narrationSegments, narrationToVideo, pauseWindows } from './pausas.js';
 export type Beat = { id: string; scene: string; at: number; duration: number; props?: Record<string, unknown>; sfx?: Array<{ name: string; at?: number; volume?: number }>; flash?: boolean; legenda?: boolean; extras?: Extra[] };
 export type Word = { start: number; end: number; text: string };
 export type MotionProps = {
-  plan: { fps: number; width: number; height: number; duration: number; beats: Beat[]; captions?: boolean; musicVolume?: number; duck?: number; pausas?: Array<{ em: number; duracao: number }>; musicPause?: number; musicFade?: number; musicStart?: number; musicParts?: Array<{ at: number; inicio?: number; duracao?: number }> };
+  plan: { fps: number; width: number; height: number; duration: number; beats: Beat[]; captions?: boolean; musicVolume?: number; duck?: number; pausas?: Array<{ em: number; duracao: number }>; musicPause?: number; musicFade?: number; musicStart?: number; musicParts?: Array<{ at: number; inicio?: number; duracao?: number }>; voiceVolume?: number };
   assets: Record<string, Asset>;
   narration?: string | null; music?: string | null; words?: Word[];
   /** Personagem do projeto: arquivo da pose → PNG pronto (`pose` = nome sem o sufixo da variante) e os tons de cada pose. */
@@ -41,7 +41,7 @@ const Captions: React.FC<{ words: Word[]; fps: number; hidden: (t: number) => bo
   const current = blocks.find((b, i) => t >= b[0].start - 0.05 && t < (blocks[i + 1]?.[0].start ?? b[b.length - 1].end + 0.4));
   if (!current || t > current[current.length - 1].end + 0.12) return null;
   return (
-    <AbsoluteFill style={{ justifyContent: 'flex-end', alignItems: 'center', paddingBottom: vertical ? '24%' : 70, pointerEvents: 'none' }}>
+    <AbsoluteFill style={{ justifyContent: 'flex-end', alignItems: 'center', paddingBottom: vertical ? '24%' : 70, pointerEvents: 'none', zIndex: 1000 }}>
       <div style={{ fontFamily: ANTON, fontSize: vertical ? 78 : 66, background: 'rgba(11,11,16,.88)', padding: '4px 26px', borderRadius: 10, boxShadow: `6px 6px 0 ${C.red}`, textTransform: 'uppercase', letterSpacing: 1 }}>
         {current.map((w, i) => <span key={i} style={{ color: t >= w.start && t < w.end + 0.1 ? C.yellow : '#fff' }}>{w.text}{i < current.length - 1 ? ' ' : ''}</span>)}
       </div>
@@ -59,13 +59,21 @@ export const MotionVideo: React.FC<MotionProps> = (raw) => {
   const pausas = plan.pausas || [];
   const words = pausas.length ? spoken.map(w => ({ ...w, start: narrationToVideo(w.start, pausas), end: narrationToVideo(w.end, pausas) })) : spoken;
   const holes = pauseWindows(pausas);
-  const speaking = (t: number) => words.some(w => t >= w.start - 0.15 && t <= w.end + 0.25);
+  // A trilha fica num nível constante sob toda a narração (sem subir nos respiros entre frases);
+  // só volta ao volume cheio depois da última palavra, numa rampa curta.
+  const lastWordEnd = words.length ? Math.max(...words.map(w => w.end)) : 0;
+  const RISE = 1.5;
   const inHole = (t: number) => holes.some(h => t >= h.start - 0.2 && t < h.end + 0.2);
   const duck = plan.duck ?? 0.25; const base = plan.musicVolume ?? 0.5; const pauseLevel = plan.musicPause ?? 0.12;
   const fadeOut = plan.musicFade ?? 3;
+  const underVoice = (t: number) => {
+    if (!words.length) return 1;
+    const after = t - (lastWordEnd + 0.3);
+    return after <= 0 ? duck : after >= RISE ? 1 : duck + (1 - duck) * (after / RISE);
+  };
   const musicVolume = (f: number) => {
     const t = f / fps;
-    const level = inHole(t) ? pauseLevel : words.length && speaking(t) ? duck : 1;
+    const level = inHole(t) ? pauseLevel : underVoice(t);
     const tail = fadeOut > 0 ? Math.min(1, Math.max(0, (plan.duration - t) / fadeOut)) : 1;
     return base * level * tail;
   };
@@ -77,13 +85,13 @@ export const MotionVideo: React.FC<MotionProps> = (raw) => {
         {beats.map(beat => {
           const Scene = ALL_SCENES[beat.scene];
           const len = Math.max(1, frames(beat.duration));
-          return Scene ? <Sequence key={beat.id} from={frames(beat.at)} durationInFrames={len}><Scene len={len} {...(beat.props || {})} />{beat.extras?.length ? <Extras extras={beat.extras} fps={fps} beatLen={len} /> : null}</Sequence> : null;
+          return Scene ? <Sequence key={beat.id} from={frames(beat.at)} durationInFrames={len} style={{ isolation: 'isolate', zIndex: 0 }}><Scene len={len} {...(beat.props || {})} />{beat.extras?.length ? <Extras extras={beat.extras} fps={fps} beatLen={len} /> : null}</Sequence> : null;
         })}
         {beats.filter(b => b.flash !== false && b.at > 0).map(b => <Flash key={`f${b.id}`} at={frames(b.at)} length={5} />)}
         <Film />
         {plan.captions !== false && words.length > 0 && <Captions words={words} fps={fps} hidden={captionHidden} vertical={plan.height > plan.width} />}
         {narration && narrationSegments(pausas).map(seg => (
-          <Sequence key={`voz-${seg.from}`} from={frames(seg.at)} durationInFrames={seg.to === null ? undefined : Math.max(1, frames(seg.to - seg.from))}><Audio src={narration} trimBefore={frames(seg.from)} /></Sequence>
+          <Sequence key={`voz-${seg.from}`} from={frames(seg.at)} durationInFrames={seg.to === null ? undefined : Math.max(1, frames(seg.to - seg.from))}><Audio src={narration} trimBefore={frames(seg.from)} volume={plan.voiceVolume ?? 1} /></Sequence>
         ))}
         {music && !plan.musicParts?.length && <Audio src={music} loop trimBefore={frames(plan.musicStart || 0)} volume={musicVolume} />}
         {music && (plan.musicParts || []).map((part, i, parts) => {

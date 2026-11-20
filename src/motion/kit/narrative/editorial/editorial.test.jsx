@@ -28,8 +28,8 @@ test('media outside its interval freezes at a real source frame and all video st
  clock.frame=90;view.rerender(wrap());expect(view.container.querySelector('[data-from]').dataset.from).toBe('60');expect(view.container.querySelector('video').muted).toBe(true);
  clock.frame=200;view.rerender(wrap());expect(view.container.querySelector('[data-frozen-frame]').dataset.frozenFrame).toBe('59');
 });
-test('all sixteen scenes render finite layouts before, during and after transitions in both formats',()=>{
- expect(Object.keys(EDITORIAL_SCENES)).toHaveLength(16);
+test('all thirteen scenes render finite layouts before, during and after transitions in both formats',()=>{
+ expect(Object.keys(EDITORIAL_SCENES)).toHaveLength(13);
  for(const V of [false,true])for(const frame of [0,150,299])for(const [id,Scene] of Object.entries(EDITORIAL_SCENES)){
   Object.assign(clock,{frame,width:V?1080:1920,height:V?1920:1080});
   const view=render(<PersonagemCtx.Provider value={{poses:{parado:{src:'pose.png',w:800,h:1500}}}}><Scene len={300} {...catalog.cenas[id].exemplo}/></PersonagemCtx.Provider>);

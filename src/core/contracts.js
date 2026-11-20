@@ -151,7 +151,7 @@ export const timelineSchema = z.object({
  * Tempos em segundos; props das cenas são JSON e citam mídia como `media:<id>`.
  */
 const motionValue = z.lazy(() => z.union([z.string().max(2000), z.number().finite(), z.boolean(), z.null(), z.array(motionValue).max(40), z.record(z.string().max(64), motionValue)]));
-export const MOTION_SCENES = ['titulo', 'frase', 'personagem', 'evidencia', 'pagina', 'numero', 'ficha', 'formula', 'lista', 'comparacao', 'cta', 'aparte', 'paineis3d', 'telafinal', 'dossie', 'cronologiaRamos', 'revelacaoCamadas', 'contradicao', 'efeitoDomino', 'constelacao', 'quadrosProfundidade', 'lupaEvidencia', 'bifurcacao', 'limiar', 'balancaCusto', 'ecoVisual', 'pecaAusente', 'convergencia', 'vinculo', 'memoria', 'duplaVida', 'trilhaViva', 'personagemClose', 'pensamentoVivo', 'rasgoCena', 'montagemEncaixe', 'enquadramentoAlternado', 'detalheContexto', 'janelaMovel', 'faixasSequenciais', 'fotogramasMudanca', 'anotacaoCena', 'retornoImagem', 'palavraRecortada', 'personagemPrimeiroPlano', 'personagemReacao', 'personagemAlternado', 'legendaVirada', 'divisaoResolvida', 'corteCor', 'revelacaoRecortes'];
+export const MOTION_SCENES = ['titulo', 'frase', 'personagem', 'evidencia', 'pagina', 'numero', 'ficha', 'formula', 'lista', 'comparacao', 'cta', 'aparte', 'paineis3d', 'telafinal', 'dossie', 'cronologiaRamos', 'revelacaoCamadas', 'contradicao', 'efeitoDomino', 'constelacao', 'quadrosProfundidade', 'lupaEvidencia', 'bifurcacao', 'limiar', 'balancaCusto', 'ecoVisual', 'pecaAusente', 'convergencia', 'vinculo', 'memoria', 'duplaVida', 'trilhaViva', 'personagemClose', 'pensamentoVivo', 'montagemEncaixe', 'enquadramentoAlternado', 'detalheContexto', 'faixasSequenciais', 'fotogramasMudanca', 'anotacaoCena', 'retornoImagem', 'palavraRecortada', 'personagemPrimeiroPlano', 'personagemReacao', 'personagemAlternado', 'legendaVirada', 'divisaoResolvida'];
 /** Nomes de SFX do kit (lista `sfx` de src/motion/kit/catalog.json; o arquivo fica em assets/kit/sfx). */
 export const MOTION_SFX = kitCatalog.sfx;
 export const motionBeatSchema = z.object({
@@ -181,6 +181,9 @@ export const motionPlanSchema = z.object({
     trechos: z.array(z.object({ at: z.number().min(0).max(7200), inicio: z.number().min(0).max(3600).default(0), duracao: z.number().min(0.5).max(7200).optional() })).max(12).optional() }).nullable().default({ volume: 0.5, duck: 0.25 }),
   // Pausas na narração para trechos com o áudio original da obra: `em` no tempo da narração montada.
   pausas: z.array(z.object({ em: z.number().min(0).max(7200), duracao: z.number().min(0.2).max(60) })).max(40).optional(),
+  // Ganho da narração na mixagem (1 = original) e alvo de loudness do render final (padrão −14 LUFS).
+  voz: z.object({ volume: z.number().min(0).max(2).default(1) }).optional(),
+  loudness: z.number().min(-20).max(-10).optional(),
   source: z.enum(['auto', 'agent', 'user']).default('agent'),
 }).superRefine((plan, ctx) => {
   const ids = new Set();

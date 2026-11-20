@@ -6,7 +6,6 @@ const clock=vi.hoisted(()=>({frame:0,width:1920,height:1080}));
 vi.mock('remotion',async original=>({...await original(),Img:(props)=><img {...props}/>,Sequence:({children})=>children,Freeze:({children})=>children,useCurrentFrame:()=>clock.frame,useVideoConfig:()=>({...clock,fps:30,durationInFrames:300})}));
 import {passageFrames,timelineProps,timelineState} from './trilha';
 import {TrilhaViva} from './TrilhaViva';
-import {RasgoCena} from './RasgoCena';
 import {PersonagemClose,PensamentoVivo} from './PersonagemIdeias';
 import {PersonagemCtx} from '../Personagem';
 import {narrativeEvents} from './events';
@@ -53,8 +52,8 @@ test('a long timeline only draws the chapters near the camera, and entering fill
  const back=render(<TrilhaViva len={300} capitulos={chapters(5)} de={4} ate={1}/>);
  expect(back.container.querySelector('[data-timeline-rewind]')).toBeTruthy();back.unmount();
 });
-test('the reveal completes and character scenes preserve imported PNGs without drawing features',()=>{
- clock.frame=299;const view=render(<RasgoCena len={300} antes="a" depois="b"/>);expect(view.container.querySelector('[data-reveal-progress]').style.clipPath).toBe('none');view.unmount();
+test('character scenes preserve imported PNGs without drawing features',()=>{
+ clock.frame=299;
  for(const Component of [PersonagemClose,PensamentoVivo]){
   const screen=render(<PersonagemCtx.Provider value={{poses:{parado:{src:'data:image/png;base64,AA==',w:800,h:1500}}}}><Component len={300} ideias={[{texto:'UMA IDEIA',icone:'raio'}]}/></PersonagemCtx.Provider>);
   expect(screen.container.querySelector('img')).toBeTruthy();expect(screen.getByText('UMA IDEIA')).toBeTruthy();screen.unmount();

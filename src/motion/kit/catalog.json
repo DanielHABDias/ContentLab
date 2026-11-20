@@ -1400,34 +1400,6 @@
         ]
       }
     },
-    "rasgoCena": {
-      "uso": "Rasgo irregular atravessa a cena da obra e revela a próxima em tela cheia, com bordas de tinta discretas.",
-      "props": {
-        "len": "frames do beat (fornecido pelo render)",
-        "fundo": "estrelas | escuro | meio-tom | explosao",
-        "tom": "amarelo | vermelho | azul | #RRGGBB",
-        "antes": "media:<id> da cena inicial",
-        "depois": "media:<id> da cena revelada",
-        "inicioAntes": "segundos da primeira fonte, padrão 0",
-        "inicioDepois": "segundos da segunda fonte, padrão 0; toca a partir da virada",
-        "virada": "fração 0–0,58 para permitir rasgo completo; padrão 0,35"
-      },
-      "exemplo": {
-        "antes": "media:<id-a>",
-        "depois": "media:<id-b>",
-        "virada": 0.35
-      },
-      "som": {
-        "regra": "Eventos do exemplo em 4 s e 30 fps. Recalcular com narrativeEvents para duração, props e fps reais; traduzir at em sfx[].at. Prévia da Documentação muda.",
-        "eventos": [
-          {
-            "name": "whoosh",
-            "fracao": 0.35,
-            "volume": 0.35
-          }
-        ]
-      }
-    },
     "montagemEncaixe": {
       "uso": "Recortes diagonais com bordas de tinta e contorno azul ou vermelho entram em sequência; o último cresce até tela cheia e o contorno desaparece na ampliação.",
       "props": {
@@ -1576,44 +1548,6 @@
           {
             "name": "whoosh-lento",
             "fracao": 0.15,
-            "volume": 0.3
-          }
-        ]
-      }
-    },
-    "janelaMovel": {
-      "uso": "Uma faixa revela outra mídia ao atravessar o quadro; abre até completar a troca.",
-      "props": {
-        "len": "frames do beat (fornecido pelo render)",
-        "titulo": "título curto opcional",
-        "fundo": "estrelas | escuro | meio-tom | explosao",
-        "tom": "amarelo | vermelho | azul | #RRGGBB",
-        "antes": "{ midia: media:<id>, titulo?, fonte?, inicio?: segundos, foco?: object-position, zoom?: número, deslocamento?: { x,y } como frações do quadro }",
-        "depois": "{ midia: media:<id>, titulo?, fonte?, inicio?: segundos, foco?: object-position, zoom?: número, deslocamento?: { x,y } como frações do quadro }"
-      },
-      "exemplo": {
-        "antes": {
-          "midia": "media:<id-a>",
-          "titulo": "ANTES",
-          "inicio": 0
-        },
-        "depois": {
-          "midia": "media:<id-b>",
-          "titulo": "DEPOIS",
-          "inicio": 0
-        }
-      },
-      "som": {
-        "regra": "Recalcular com narrativeEvents para duração, props e fps reais e gravar a saída em sfx do beat. Fontes mudas sob a narração.",
-        "eventos": [
-          {
-            "name": "swish",
-            "fracao": 0.033,
-            "volume": 0.3
-          },
-          {
-            "name": "whoosh-lento",
-            "fracao": 0.583,
             "volume": 0.3
           }
         ]
@@ -2027,83 +1961,6 @@
           {
             "name": "whoosh-lento",
             "fracao": 0.333,
-            "volume": 0.3
-          }
-        ]
-      }
-    },
-    "corteCor": {
-      "uso": "Faixa diagonal com cor do kit atravessa rapidamente o quadro e revela a próxima mídia.",
-      "props": {
-        "len": "frames do beat (fornecido pelo render)",
-        "titulo": "título curto opcional",
-        "fundo": "estrelas | escuro | meio-tom | explosao",
-        "tom": "cor da faixa; padrão vermelho",
-        "antes": "{ midia: media:<id>, titulo?, fonte?, inicio?: segundos, foco?: object-position, zoom?: número, deslocamento?: { x,y } como frações do quadro }",
-        "depois": "{ midia: media:<id>, titulo?, fonte?, inicio?: segundos, foco?: object-position, zoom?: número, deslocamento?: { x,y } como frações do quadro }"
-      },
-      "exemplo": {
-        "antes": {
-          "midia": "media:<id-a>",
-          "titulo": "ANTES",
-          "inicio": 0
-        },
-        "depois": {
-          "midia": "media:<id-b>",
-          "titulo": "DEPOIS",
-          "inicio": 0
-        },
-        "tom": "vermelho"
-      },
-      "som": {
-        "regra": "Recalcular com narrativeEvents para duração, props e fps reais e gravar a saída em sfx do beat. Fontes mudas sob a narração.",
-        "eventos": [
-          {
-            "name": "whoosh-rapido",
-            "fracao": 0.25,
-            "volume": 0.3
-          }
-        ]
-      }
-    },
-    "revelacaoRecortes": {
-      "uso": "Quatro partes grandes revelam o frame inicial; depois a mídia completa começa a tocar.",
-      "props": {
-        "len": "frames do beat (fornecido pelo render)",
-        "titulo": "título curto opcional",
-        "fundo": "estrelas | escuro | meio-tom | explosao",
-        "tom": "amarelo | vermelho | azul | #RRGGBB",
-        "cena": "{ midia: media:<id>, titulo?, fonte?, inicio?: segundos, foco?: object-position, zoom?: número, deslocamento?: { x,y } como frações do quadro }"
-      },
-      "exemplo": {
-        "titulo": "A REVELAÇÃO",
-        "cena": {
-          "midia": "media:<id-b>",
-          "titulo": "DEPOIS",
-          "inicio": 0
-        }
-      },
-      "som": {
-        "regra": "Recalcular com narrativeEvents para duração, props e fps reais e gravar a saída em sfx do beat. Fontes mudas sob a narração.",
-        "eventos": [
-          {
-            "name": "camera",
-            "fracao": 0,
-            "volume": 0.3
-          },
-          {
-            "name": "swish",
-            "fracao": 0.167,
-            "volume": 0.3
-          },
-          {
-            "name": "camera",
-            "fracao": 0.342,
-            "volume": 0.3
-          },
-          {
-            "name": "ding",
-            "fracao": 0.717,
             "volume": 0.3
           }
         ]
