@@ -148,6 +148,8 @@ export function toCard(project, directory, openedAt = null, extra = {}) {
     stage: active?.id || 'brief',
     progress: Math.round((approved / Math.max(1, project.stages.length)) * 100),
     mediaCount: project.media.length,
+    published: Boolean(project.publication?.published),
+    publishedAt: project.publication?.publishedAt || null,
     path: directory,
     openedAt,
     status: 'ready',

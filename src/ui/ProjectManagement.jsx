@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { AlertTriangle, ChevronRight, Clock3, Copy, Download, FolderOpen, FolderSearch, MoreHorizontal, Pencil, Trash2, X, XCircle } from 'lucide-react';
+import { AlertTriangle, Check, ChevronRight, Clock3, Copy, Download, FolderOpen, FolderSearch, MoreHorizontal, Pencil, Rocket, Trash2, Undo2, X, XCircle } from 'lucide-react';
+import { PublishedBadge } from './Publication.jsx';
 import { localApi } from './local-api.js';
 
 const stageLabels = { brief: 'Ideia e brief', script: 'Roteiro', packaging: 'Embalagem', media: 'Mídia', narration: 'Narração', edit: 'Edição', review: 'Revisão e render' };
@@ -20,13 +21,14 @@ export function formatDate(value) {
 
 export function ProjectCard({ project, onOpen, onAction }) {
   const ready = project.status !== 'missing' && project.status !== 'invalid';
-  return <article className={`project-card ${ready ? '' : 'unavailable'}`} aria-label={project.title}>
+  const published = ready && project.published;
+  return <article className={`project-card ${ready ? '' : 'unavailable'} ${published ? 'is-published' : ''}`} aria-label={project.title}>
     <button className="project-open" onClick={() => onOpen(project)} disabled={!ready} title={ready ? '' : `${project.problem}. Remova dos Recentes ou abra a pasta em outro local.`} aria-label={`Abrir ${project.title}`}>
-      <span className="poster poster-blue" aria-hidden="true"><span>{ready ? project.progress : '!'}</span></span>
+      <span className={`poster ${published ? 'poster-published' : 'poster-blue'}`} aria-hidden="true"><span>{published ? <Check size={22} strokeWidth={3}/> : ready ? project.progress : '!'}</span></span>
       <span className="project-copy">
         {ready ? <span className="eyebrow">{typeLabels[project.type]} · {project.aspectRatio}</span> : <span className="eyebrow missing"><AlertTriangle size={13}/> {project.problem}</span>}
         <strong>{project.title}</strong>
-        {ready && <><span className="step"><Clock3 size={14}/> {stageLabels[project.stage]}</span><span className="progress"><i style={{ width: `${project.progress}%` }}/></span></>}
+        {published ? <PublishedBadge at={project.publishedAt} compact/> : ready && <><span className="step"><Clock3 size={14}/> {stageLabels[project.stage]}</span><span className="progress"><i style={{ width: `${project.progress}%` }}/></span></>}
         <small className="project-meta">{ready ? <>{project.progress}% · revisão {project.revision} · {formatBytes(project.sizeBytes)} · modificado {formatDate(project.modifiedAt)} · aberto {formatDate(project.openedAt)}</> : <span className="project-path">{project.path}</span>}</small>
       </span>
       {ready && <ChevronRight className="project-arrow" aria-hidden="true"/>}
@@ -41,6 +43,7 @@ function ActionsMenu({ project, ready, onAction }) {
   const items = [
     ['open', 'Abrir', FolderOpen, ready],
     ['reveal', 'Revelar pasta', FolderSearch, ready],
+    ['publication', project.published ? 'Voltar para Em produção' : 'Marcar como publicado', project.published ? Undo2 : Rocket, ready],
     ['rename', 'Renomear', Pencil, ready],
     ['duplicate', 'Duplicar', Copy, ready],
     ['export-contentlab', 'Exportar .contentlab', Download, ready],

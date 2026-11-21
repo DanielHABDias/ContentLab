@@ -4,6 +4,7 @@ import { localApi } from './local-api.js';
 import { mediaUrl } from './MediaLibrary.jsx';
 import { outputUrl } from './MotionStudio.jsx';
 import { packagingVariants } from '../core/workflow.js';
+import { PublicationControl, PublishedBadge } from './Publication.jsx';
 
 /** O projeto chegou ao fim da edição: a tela de apresentação substitui o fluxo ao abrir. */
 export const isProjectFinished = project => project.stages.some(stage => stage.id === 'edit' && stage.state === 'approved');
@@ -42,7 +43,7 @@ function useLatestRender(projectPath, revision) {
  * Apresentação do vídeo pronto: as thumbnails com os títulos (A e B no vídeo longo; no Short, um título e uma thumbnail), a descrição, as tags e o vídeo final,
  * tudo com um botão de copiar. Só leitura; "Editar projeto" volta ao fluxo de etapas.
  */
-export function PublishView({ details, onBack, onEdit }) {
+export function PublishView({ details, busy = false, onSetPublication, onBack, onEdit }) {
   const { project, path } = details;
   const packaging = project.creative?.packaging || {};
   const media = project.media || [];
@@ -59,9 +60,10 @@ export function PublishView({ details, onBack, onEdit }) {
       <div>
         <span className="eyebrow">{vertical ? 'Short · 9:16' : `Vídeo longo · ${project.aspectRatio}`}</span>
         <h1>{project.title}</h1>
-        <span className={`publish-status ${reviewed ? 'ready' : ''}`}><Check size={14} aria-hidden="true"/> {reviewed ? 'Pronto para publicar' : 'Edição concluída'}</span>
+        {project.publication?.published ? <PublishedBadge at={project.publication.publishedAt}/> : <span className={`publish-status ${reviewed ? 'ready' : ''}`}><Check size={14} aria-hidden="true"/> {reviewed ? 'Pronto para publicar' : 'Edição concluída'}</span>}
       </div>
       <div className="publish-actions">
+        {onSetPublication && <PublicationControl project={project} busy={busy} onSet={onSetPublication} showBadge={false}/>}
         <OpenFolder projectPath={path} folder="output" label="Pasta do vídeo"/>
         <button type="button" className="button primary" onClick={onEdit}><PencilLine size={17} aria-hidden="true"/> Editar projeto</button>
       </div>

@@ -48,6 +48,12 @@ function applyActions(project, actions, operationId) {
       if (action.pauseAt !== undefined) draft.pauseAt = [...new Set(action.pauseAt)];
       if (action.narrationBy !== undefined) draft.narrationBy = action.narrationBy;
     }
+    else if (action.type === 'publication.set') {
+      const previous = draft.publication || {};
+      draft.publication = action.published
+        ? { published: true, publishedAt: action.publishedAt !== undefined ? action.publishedAt : previous.publishedAt || new Date().toISOString(), url: action.url !== undefined ? action.url : previous.url ?? null }
+        : { published: false, publishedAt: null, url: null };
+    }
     else if (action.type === 'narration.set') {
       if (!draft.media.some(item => item.id === action.mediaId && item.kind === 'audio' && item.role === 'narration')) throw new Error('Narração montada não encontrada');
       draft.narrationMediaId = action.mediaId;

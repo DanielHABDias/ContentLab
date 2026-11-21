@@ -113,6 +113,12 @@ export function createMcpServer() {
     return { revision: updated.project.revision, ...flowOf(updated.project) };
   });
 
+  tool(server, 'project_publication_set', 'Marca ou desmarca o projeto como publicado (a pessoa publica; o Content Lab nunca publica). Só use quando a pessoa disser que o vídeo já está no ar. Publicados somem do filtro “Em produção”. publishedAt AAAA-MM-DD; null = data desconhecida.', { path: projectPath, published: z.boolean(), publishedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(), url: z.string().url().nullable().optional() }, async ({ path, ...value }) => {
+    const { project } = await openProject(path);
+    const updated = await api('/projects/action', { path, baseRevision: project.revision, action: { type: 'publication.set', ...value } });
+    return { revision: updated.project.revision, publication: updated.project.publication };
+  });
+
   tool(server, 'project_get', 'Resumo do projeto: etapa atual e o que falta, estados das etapas, pedidos de mudança, textos, mídias e timeline.', { path: projectPath }, async ({ path }) => summary(path));
 
   tool(server, 'creative_write', 'Escreve/atualiza ideia (brief), roteiro (script) e embalagem (packaging). Campos omitidos são mantidos.', {

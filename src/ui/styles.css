@@ -578,3 +578,40 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-vi
 .docs-preview-viewport > .hint { padding: 12px; text-align: center; }
 
 .assembly-progress { width: 100%; min-width: 240px; display: grid; gap: 7px; }
+
+/* Publicação: selo, botão de marcar, passo final do fluxo e filtro da lista de projetos */
+:root { --published: #72e5ae; --published-strong: #2ecc8a; --published-bg: #172b25; --published-line: #39765e; }
+.published-badge { display: inline-flex; align-items: center; gap: 6px; justify-self: start; padding: 6px 12px; border: 1px solid var(--published-line); border-radius: 999px; background: var(--published-bg); color: var(--published); font: 700 13px/1 Inter; letter-spacing: .01em; }
+.published-badge.compact { padding: 4px 10px; font-size: 12px; gap: 5px; }
+.published-badge .published-date { color: #a8eccb; font-weight: 600; }
+.poster-published { background-color: var(--published-strong); }
+.poster-published span { display: grid; place-items: center; padding: 4px 8px; }
+.project-card.is-published { background: linear-gradient(90deg, rgba(46,204,138,.07), rgba(21,21,29,.76) 38%); }
+.project-card.is-published .project-copy strong { color: #dcdbe3; }
+.button.publish-mark { color: #b7f5d6; border-color: var(--published-line); background: linear-gradient(180deg, #1f3a30, var(--published-bg)); box-shadow: 0 0 0 1px rgba(114,229,174,.08), 0 8px 24px rgba(46,204,138,.12); }
+.button.publish-mark:not(:disabled):hover { border-color: #52b48a; background: linear-gradient(180deg, #24473a, #1b3329); transform: translateY(-1px); box-shadow: 0 0 0 1px rgba(114,229,174,.18), 0 10px 30px rgba(46,204,138,.2); }
+.button.publish-confirm { color: #04130c; border-color: var(--published-strong); background: var(--published-strong); font-weight: 800; }
+.button.publish-confirm:not(:disabled):hover { background: #47e0a2; border-color: #47e0a2; }
+.publication-control { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.publication-control.compact .button.publish-mark { min-height: 36px; padding: 0 14px; font-size: 13px; }
+.publication-control .mini-button { font-size: 13px; }
+.workflow-list .publication-step { margin-top: 6px; border-top: 1px dashed #3a3a49; color: #b9b8c6; }
+.workflow-list .publication-step .step-index { border-style: dashed; color: var(--published); border-color: var(--published-line); }
+.workflow-list .publication-step.done { color: #c9c8d6; }
+.workflow-list .publication-step.done .step-index { border-style: solid; background: var(--published-strong); border-color: var(--published-strong); color: #04130c; box-shadow: 0 0 0 5px rgba(46,204,138,.14); }
+.publication-dialog .publication-target { display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 12px; border-radius: 10px; background: #20202a; color: #dcdbe3; font-weight: 600; overflow-wrap: anywhere; }
+.publication-dialog .publication-target svg { color: var(--published); flex-shrink: 0; }
+.publication-dialog .optional { color: var(--muted); font-weight: 400; }
+.project-filter { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; margin: 0 0 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.project-filter button { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 0 14px; border: 0; border-radius: 9px; background: none; color: var(--muted); font: 600 13px Inter; cursor: pointer; }
+.project-filter button:not(.active):hover { color: var(--ink); background: #1e1e28; }
+.project-filter button.active { color: var(--ink); background: var(--panel-2); box-shadow: inset 0 0 0 1px #3b3b49; }
+.project-filter button[aria-checked="true"] svg { color: var(--published); }
+.project-filter .count { min-width: 22px; padding: 2px 7px; border-radius: 999px; background: #262631; color: #c9c8d0; font: 700 11px/1.3 Inter; text-align: center; }
+.project-filter button.active .count { background: var(--lime); color: #0b0b10; }
+.project-filter button:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+@media (max-width: 760px) { .workflow-list .publication-step { grid-template-columns: 38px 1fr; } .workflow-list .publication-step .stage-actions { grid-column: 1 / -1; padding-bottom: 12px; } .project-filter { display: flex; } .project-filter button { flex: 1; justify-content: center; } }
+/* Com o botão de publicação, o título ganha prioridade: as ações quebram para baixo quando falta largura. */
+.publish-hero { flex-wrap: wrap; }
+.publish-hero > div:first-child { flex: 1 1 380px; }
+.publish-hero .publish-actions { flex: 0 1 auto; justify-content: flex-end; }

@@ -34,6 +34,18 @@ test('modo autônomo cria job idempotente e para na aprovação humana', async (
   expect(project.stages[0].state).toBe('active');
 });
 
+test('marca e desmarca a publicação sem mexer nas etapas', async () => {
+  const { service } = await setup();
+  const before = await service.inspect('agent_demo', { compact: false });
+  expect(before.publication).toEqual({ published: false, publishedAt: null, url: null });
+  await service.run({ schema: 'contentlab-operation-v1', operationId: 'op_pub', projectId: 'agent_demo', baseRevision: 1, dryRun: false, actions: [{ type: 'publication.set', published: true, publishedAt: '2026-11-20', url: 'https://youtu.be/abc' }] });
+  const published = await service.inspect('agent_demo', { compact: false });
+  expect(published.publication).toEqual({ published: true, publishedAt: '2026-11-20', url: 'https://youtu.be/abc' });
+  expect(published.stages).toEqual(before.stages);
+  await service.run({ schema: 'contentlab-operation-v1', operationId: 'op_unpub', projectId: 'agent_demo', baseRevision: 2, dryRun: false, actions: [{ type: 'publication.set', published: false }] });
+  expect((await service.inspect('agent_demo', { compact: false })).publication).toEqual({ published: false, publishedAt: null, url: null });
+});
+
 test('conflito de revisão é estruturado para recarregar e comparar', async () => {
   const { service } = await setup();
   await expect(service.run({ schema: 'contentlab-operation-v1', operationId: 'op_stale', projectId: 'agent_demo', baseRevision: 9, dryRun: false, actions: [{ type: 'project.update', title: 'Outro' }] })).rejects.toMatchObject({ code: 'REVISION_CONFLICT', details: { expected: 9, actual: 1 } });

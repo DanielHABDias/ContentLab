@@ -238,6 +238,8 @@ export const projectSchema = z.object({
   timeline: timelineSchema,
   motion: motionPlanSchema.nullable().default(null),
   character: characterSchema.nullable().default(null),
+  // Marcado pela pessoa depois de publicar (o Content Lab nunca publica). Não é etapa de aprovação: reabrir etapas não desfaz.
+  publication: z.object({ published: z.boolean().default(false), publishedAt: z.string().max(40).nullable().default(null), url: z.string().max(500).nullable().default(null) }).default({ published: false, publishedAt: null, url: null }),
   creative: z.object({
     brief: z.object({ thesis: z.string(), audience: z.string(), promise: z.string(), notes: z.string() }),
     script: z.object({ hook: z.string().default(''), development: z.string().default(''), payoff: z.string().default(''), visual: z.string().default(''), sources: z.string().default(''), chapters: scriptChaptersSchema.nullable().default(null) }),
@@ -265,6 +267,7 @@ export const operationSchema = z.object({
     z.object({ type: z.literal('workflow.run'), stageId: idSchema.optional(), jobId: idSchema, author: z.string().min(1).max(120).default('Content Lab') }),
     z.object({ type: z.literal('project.update'), title: z.string().min(1).optional(), projectType: z.enum(['long', 'short', 'custom']).optional(), aspectRatio: aspectRatioSchema.optional(), mode: z.enum(['review', 'autonomous']).optional(), pauseAt: z.array(z.enum(FLOW_STAGES)).optional(), narrationBy: z.enum(['ai', 'creator']).nullable().optional() }),
     z.object({ type: z.literal('narration.set'), mediaId: idSchema }),
+    z.object({ type: z.literal('publication.set'), published: z.boolean(), publishedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}/).max(40).nullable().optional(), url: z.string().url().max(500).nullable().optional() }),
     z.object({ type: z.literal('creative.update'), creative: projectSchema.shape.creative }),
     z.object({ type: z.literal('motion.set'), motion: motionPlanSchema.nullable() }),
     z.object({ type: z.literal('character.set'), character: characterSchema.nullable() }),
