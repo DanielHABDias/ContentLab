@@ -38,6 +38,8 @@ export type ThumbProps = {
   midiaFundo?: string;
   /** Layout `palavra`: altura do centro do texto (0 = topo, 1 = base; padrão 0,5). */
   alturaTexto?: number;
+  /** Layout `palavra`: contorno da camada da frente — na cor da palavra, com brilho neon (padrão), ou branco. */
+  contorno?: 'branco' | 'cor';
 };
 
 const TONS: Record<string, string> = { amarelo: C.yellow, vermelho: C.red, azul: C.blue, branco: C.white, verde: '#7CFF3A' };
@@ -66,7 +68,7 @@ const PALAVRA_CLARA: Record<string, { word: string; glow: string; bg: [string, s
  * inferior, cortado na cintura. A mídia principal deve ser um recorte PNG inteiro, em alta resolução.
  */
 const PalavraLayout: React.FC<{ p: ThumbProps & { width: number; height: number }; humor?: Mood }> = ({ p, humor }) => {
-  const { width, height, midia, midiaFundo, texto, lado = 'direita', tom = 'amarelo', foco, zoom, pose, selo, alturaTexto } = p;
+  const { width, height, midia, midiaFundo, texto, lado = 'direita', tom = 'amarelo', foco, zoom, pose, selo, alturaTexto, contorno = 'cor' } = p;
   const light = p.fundo === 'branco';
   // No fundo claro as linhas de TV sujam a imagem: o padrão vira o meio-tom suave.
   const textura = p.textura ?? (light ? 'halftone' : 'tv');
@@ -115,7 +117,7 @@ const PalavraLayout: React.FC<{ p: ThumbProps & { width: number; height: number 
         <Subject id={midia} fit={cutout ? 'contain' : 'cover'} foco={foco || (cutout ? '50% 0%' : '50% 25%')} zoom={zoom ?? (cutout ? (portrait ? 1.1 : 1.6) : 1)} />
       </div>
       {/* camada da frente: só o contorno fino, alinhado com a palavra de trás */}
-      {lines.map((line, i) => <div key={`f${i}`} style={{ ...box(i), color: 'transparent', WebkitTextStroke: `${stroke}px ${C.white}` }}>{line}</div>)}
+      {lines.map((line, i) => <div key={`f${i}`} style={{ ...box(i), color: 'transparent', ...(contorno === 'cor' ? { WebkitTextStroke: `${stroke * 1.6}px ${pal.word}`, filter: `drop-shadow(0 0 ${size * 0.012}px ${pal.glow}) drop-shadow(0 0 ${size * 0.03}px ${pal.glow})` } : { WebkitTextStroke: `${stroke}px ${C.white}` }) }}>{line}</div>)}
       <AbsoluteFill style={{ boxShadow: vignette }} />
       {humor && <Figura pose={pose} humor={humor} seed="thumb" height={noxH} x={left ? -width * 0.07 : width - figW(noxH) + width * 0.07} y={noxY} flip={!left} />}
       {selo && <div style={{ position: 'absolute', top: height * 0.05, [left ? 'right' : 'left']: width * 0.04, background: pal.word, color: C.ink, fontFamily: ANTON, fontSize: height * 0.06, padding: '2px 16px', textTransform: 'uppercase' } as React.CSSProperties}>{selo}</div>}
