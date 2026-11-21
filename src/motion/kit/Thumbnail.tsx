@@ -117,7 +117,7 @@ const PalavraLayout: React.FC<{ p: ThumbProps & { width: number; height: number 
         <Subject id={midia} fit={cutout ? 'contain' : 'cover'} foco={foco || (cutout ? '50% 0%' : '50% 25%')} zoom={zoom ?? (cutout ? (portrait ? 1.1 : 1.6) : 1)} />
       </div>
       {/* camada da frente: só o contorno fino, alinhado com a palavra de trás */}
-      {lines.map((line, i) => <div key={`f${i}`} style={{ ...box(i), color: 'transparent', ...(contorno === 'cor' ? { WebkitTextStroke: `${stroke * 1.6}px ${pal.word}`, filter: `drop-shadow(0 0 ${size * 0.012}px ${pal.glow}) drop-shadow(0 0 ${size * 0.03}px ${pal.glow})` } : { WebkitTextStroke: `${stroke}px ${C.white}` }) }}>{line}</div>)}
+      {lines.map((line, i) => <div key={`f${i}`} style={{ ...box(i), color: 'transparent', ...(contorno === 'cor' ? { WebkitTextStroke: `${Math.max(1, size * 0.0038)}px ${pal.word}`, filter: `drop-shadow(0 0 ${size * 0.006}px ${pal.glow})` } : { WebkitTextStroke: `${stroke}px ${C.white}` }) }}>{line}</div>)}
       <AbsoluteFill style={{ boxShadow: vignette }} />
       {humor && <Figura pose={pose} humor={humor} seed="thumb" height={noxH} x={left ? -width * 0.07 : width - figW(noxH) + width * 0.07} y={noxY} flip={!left} />}
       {selo && <div style={{ position: 'absolute', top: height * 0.05, [left ? 'right' : 'left']: width * 0.04, background: pal.word, color: C.ink, fontFamily: ANTON, fontSize: height * 0.06, padding: '2px 16px', textTransform: 'uppercase' } as React.CSSProperties}>{selo}</div>}
