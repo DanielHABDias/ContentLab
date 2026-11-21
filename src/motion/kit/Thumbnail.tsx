@@ -22,7 +22,7 @@ export type ThumbProps = {
   lado?: 'esquerda' | 'direita';
   tom?: 'amarelo' | 'vermelho' | 'azul' | 'branco' | 'verde';
   selo?: string;
-  /** preto (padrão) ou branco: fundo liso e limpo, personagem em destaque; cena: a mídia ocupa a imagem toda. */
+  /** preto (padrão) ou branco: fundo liso e limpo, personagem em destaque (no layout `palavra`, branco é a versão clara); cena: a mídia ocupa a imagem toda. */
   fundo?: 'preto' | 'branco' | 'cena';
   /** centro: personagem grande no meio, a palavra na frente dele embaixo e o personagem do projeto no canto. */
   layout?: 'lado' | 'centro' | 'palavra';
@@ -50,6 +50,14 @@ const PALAVRA: Record<string, { word: string; glow: string; bg: [string, string]
   branco: { word: '#FFFFFF', glow: '#C9D4FF', bg: ['#16141F', '#030305'] },
   verde: { word: '#C8FF4D', glow: '#5DFF1A', bg: ['#111A0C', '#030502'] },
 };
+/** Layout `palavra` com `fundo: 'branco'`: fundo claro com leve tom da cor e palavra saturada, ainda brilhante. */
+const PALAVRA_CLARA: Record<string, { word: string; glow: string; bg: [string, string] }> = {
+  amarelo: { word: '#FFB800', glow: '#FFD84D', bg: ['#FFFFFF', '#FFF1C2'] },
+  vermelho: { word: '#FF1F3D', glow: '#FF7A8A', bg: ['#FFFFFF', '#FFDCE1'] },
+  azul: { word: '#1673FF', glow: '#6BB8FF', bg: ['#FFFFFF', '#D3E8FF'] },
+  branco: { word: '#16141F', glow: '#9AA0B8', bg: ['#FFFFFF', '#E6E8F0'] },
+  verde: { word: '#25C400', glow: '#8CFF4D', bg: ['#FFFFFF', '#DDF9D2'] },
+};
 
 /**
  * Palavra (ou frase curta, até 2 linhas) gigante brilhando atrás, o personagem "dentro" dela (na frente da
@@ -58,8 +66,11 @@ const PALAVRA: Record<string, { word: string; glow: string; bg: [string, string]
  * inferior, cortado na cintura. A mídia principal deve ser um recorte PNG inteiro, em alta resolução.
  */
 const PalavraLayout: React.FC<{ p: ThumbProps & { width: number; height: number }; humor?: Mood }> = ({ p, humor }) => {
-  const { width, height, midia, midiaFundo, texto, lado = 'direita', tom = 'amarelo', textura = 'tv', foco, zoom, pose, selo, alturaTexto } = p;
-  const pal = PALAVRA[tom] || PALAVRA.amarelo;
+  const { width, height, midia, midiaFundo, texto, lado = 'direita', tom = 'amarelo', foco, zoom, pose, selo, alturaTexto } = p;
+  const light = p.fundo === 'branco';
+  // No fundo claro as linhas de TV sujam a imagem: o padrão vira o meio-tom suave.
+  const textura = p.textura ?? (light ? 'halftone' : 'tv');
+  const pal = (light ? PALAVRA_CLARA[tom] || PALAVRA_CLARA.amarelo : PALAVRA[tom] || PALAVRA.amarelo);
   const assets = useContext(Assets);
   const asset = midia ? assets[midia.startsWith('media:') ? midia.slice(6) : midia] : null;
   const cutout = Boolean(asset && /\.png($|\?)/i.test(asset.src));
@@ -80,10 +91,14 @@ const PalavraLayout: React.FC<{ p: ThumbProps & { width: number; height: number 
   const noxY = portrait ? height - noxH * 0.74 : height * 0.42;
   const subjectBox: React.CSSProperties = portrait ? { top: 0, height: height * 0.78, left: 0, width } : { top: 0, bottom: 0, left: width * 0.15, width: width * 0.7 };
   const fade = 'radial-gradient(ellipse 48% 70% at 50% 45%, #000 50%, transparent 100%)';
-  const dots = 'radial-gradient(circle, rgba(255,255,255,.14) 28%, transparent 31%)';
+  const dots = light ? `radial-gradient(circle, ${pal.glow}55 28%, transparent 31%)` : 'radial-gradient(circle, rgba(255,255,255,.14) 28%, transparent 31%)';
+  // Fundo claro: halo do recorte mais suave, palavra com sombra de profundidade e vinheta leve.
+  const halo = light ? `drop-shadow(0 ${height * 0.012}px ${height * 0.035}px rgba(10,12,30,.55))` : `drop-shadow(0 0 ${height * 0.04}px rgba(0,0,0,.85))`;
+  const wordShadow = light ? `${glow}, 0 ${size * 0.03}px ${size * 0.05}px rgba(10,12,30,.25)` : glow;
+  const vignette = light ? `inset 0 0 ${height * 0.22}px ${pal.bg[1]}` : `inset 0 0 ${height * 0.25}px rgba(0,0,0,.75)`;
   return (
     <AbsoluteFill style={{ background: `radial-gradient(ellipse 75% 70% at 50% 48%, ${pal.bg[0]} 0%, ${pal.bg[1]} 100%)`, overflow: 'hidden' }}>
-      {midiaFundo && <AbsoluteFill style={{ transform: 'scale(1.12)', filter: `blur(${height * 0.018}px) brightness(.32) saturate(.8)` }}><Subject id={midiaFundo} fit="cover" /></AbsoluteFill>}
+      {midiaFundo && <AbsoluteFill style={{ transform: 'scale(1.12)', filter: light ? `blur(${height * 0.018}px) brightness(1.15) saturate(.6)` : `blur(${height * 0.018}px) brightness(.32) saturate(.8)`, opacity: light ? 0.28 : 1 }}><Subject id={midiaFundo} fit="cover" /></AbsoluteFill>}
       {textura === 'halftone' ? (
         <AbsoluteFill style={{ backgroundImage: dots, backgroundSize: `${height * 0.022}px ${height * 0.022}px`, maskImage: 'radial-gradient(ellipse 70% 70% at 50% 50%, transparent 25%, #000 100%)', WebkitMaskImage: 'radial-gradient(ellipse 70% 70% at 50% 50%, transparent 25%, #000 100%)' } as React.CSSProperties} />
       ) : textura === 'tv' ? (
@@ -94,14 +109,14 @@ const PalavraLayout: React.FC<{ p: ThumbProps & { width: number; height: number 
         </>
       ) : null}
       {/* camada de trás: a palavra cheia, brilhando */}
-      {lines.map((line, i) => <div key={`b${i}`} style={{ ...box(i), color: pal.word, textShadow: glow }}>{line}</div>)}
+      {lines.map((line, i) => <div key={`b${i}`} style={{ ...box(i), color: pal.word, textShadow: wordShadow }}>{line}</div>)}
       {/* o personagem, dentro da palavra */}
-      <div style={{ position: 'absolute', ...subjectBox, ...(cutout ? { filter: `drop-shadow(0 0 ${height * 0.04}px rgba(0,0,0,.85))` } : { maskImage: fade, WebkitMaskImage: fade }) } as React.CSSProperties}>
+      <div style={{ position: 'absolute', ...subjectBox, ...(cutout ? { filter: halo } : { maskImage: fade, WebkitMaskImage: fade }) } as React.CSSProperties}>
         <Subject id={midia} fit={cutout ? 'contain' : 'cover'} foco={foco || (cutout ? '50% 0%' : '50% 25%')} zoom={zoom ?? (cutout ? (portrait ? 1.1 : 1.6) : 1)} />
       </div>
       {/* camada da frente: só o contorno fino, alinhado com a palavra de trás */}
       {lines.map((line, i) => <div key={`f${i}`} style={{ ...box(i), color: 'transparent', WebkitTextStroke: `${stroke}px ${C.white}` }}>{line}</div>)}
-      <AbsoluteFill style={{ boxShadow: `inset 0 0 ${height * 0.25}px rgba(0,0,0,.75)` }} />
+      <AbsoluteFill style={{ boxShadow: vignette }} />
       {humor && <Figura pose={pose} humor={humor} seed="thumb" height={noxH} x={left ? -width * 0.07 : width - figW(noxH) + width * 0.07} y={noxY} flip={!left} />}
       {selo && <div style={{ position: 'absolute', top: height * 0.05, [left ? 'right' : 'left']: width * 0.04, background: pal.word, color: C.ink, fontFamily: ANTON, fontSize: height * 0.06, padding: '2px 16px', textTransform: 'uppercase' } as React.CSSProperties}>{selo}</div>}
     </AbsoluteFill>
