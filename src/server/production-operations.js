@@ -1,3 +1,4 @@
+import { thumbnailVariantSchema, thumbnailProps } from '../core/thumbnail.js';
 import { scriptMarkdown } from '../core/script.js';
 import { randomUUID } from 'node:crypto';
 import { execFile } from 'node:child_process';
@@ -26,7 +27,7 @@ import { BUNDLED_COMPONENTS } from '../timeline/components/catalog.js';
 const run = promisify(execFile);
 const FONTS = ['/usr/share/fonts/truetype/inter-zorin-os/Inter-Bold.ttf', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', '/usr/share/fonts/TTF/DejaVuSans-Bold.ttf', '/Library/Fonts/Arial Bold.ttf', '/System/Library/Fonts/Supplemental/Arial Bold.ttf', 'C:\\Windows\\Fonts\\arialbd.ttf'];
 const SIZES = { '16:9': [1920, 1080], '9:16': [1080, 1920], '1:1': [1080, 1080], '4:5': [1080, 1350] };
-const THUMB_SIZES = { '16:9': [1280, 720], '9:16': [1080, 1920], '1:1': [1080, 1080], '4:5': [1080, 1350] };
+const THUMB_SIZES = { '16:9': [1920, 1080], '9:16': [1080, 1920], '1:1': [1080, 1080], '4:5': [1080, 1350] };
 const round2 = value => Math.round(value * 100) / 100;
 const fold = text => String(text).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const PALETTE = ['#15151d', '#0f2a3d', '#2a1420', '#1d2a10', '#22182e'];
@@ -273,14 +274,16 @@ export class ProductionOperations {
     // Sem variantes: as palavras de impacto de cada título (até 3), a última em amarelo.
     const fromTitle = title => { const words = impact(title || '', 3); return words.length ? [...words.slice(0, -1), `*${words.at(-1)}*`].join(' ') : ''; };
     const humor = mood => (project.character ? mood : undefined);
-    const list = singleVariant(project, variants?.length ? variants : defaultVariants(project, [{ label: 'A', text: fromTitle(packaging.titleA), humor: humor('surpreso') }, { label: 'B', text: fromTitle(packaging.titleB || packaging.titleA), humor: humor('determinado'), side: 'direita' }]));
-    const kit = list.map((variant, index) => {
+    const saved = packaging.thumbnailVariants || [];
+    const list = singleVariant(project, (variants?.length ? variants : saved.length ? saved : defaultVariants(project, [{ label: 'A', text: fromTitle(packaging.titleA), humor: humor('surpreso') }, { label: 'B', text: fromTitle(packaging.titleB || packaging.titleA), humor: humor('determinado'), side: 'direita' }])).map(v => thumbnailVariantSchema.parse(v)));
+    const recipes = list.map((variant, index) => {
       const text = String(variant.text || variant.title || '').trim();
       if (!text) throw new Error('Informe o texto curto de cada thumbnail (até 4 palavras)');
-      if (text.replace(/\*/g, '').split(/\s+/).filter(Boolean).length > 4) throw Object.assign(new Error(`Texto da thumbnail ${variant.label || index + 1} tem mais de 4 palavras: "${text}"`), { code: 'THUMB_TEXT_LONG' });
-      const media = variant.mediaId || content[index % Math.max(1, content.length)]?.id;
-      return { label: variant.label === 'B' || index === 1 ? 'B' : 'A', texto: text.toUpperCase().replace(/\s*\/\s*/g, '\n'), midia: media ? `media:${media}` : undefined, midiaB: variant.mediaIdB ? `media:${variant.mediaIdB}` : undefined, humor: variant.humor, lado: variant.side, tom: variant.tone, selo: variant.badge, fundo: variant.background, layout: variant.layout, foco: variant.focus, pose: variant.pose, zoom: variant.zoom, textura: variant.texture, midiaFundo: variant.backgroundMediaId ? `media:${variant.backgroundMediaId}` : undefined, alturaTexto: variant.textY, contorno: variant.outline };
+      const words = [text, variant.foregroundText?.text || ''].join(' ').replace(/\*/g, '').split(/[\s/]+/).filter(Boolean);
+      if (words.length > 4) throw Object.assign(new Error('A thumbnail deve ter até 4 palavras, incluindo o texto frontal.'), { code: 'THUMB_TEXT_LONG' });
+      return { ...variant, mediaId: variant.mediaId || content[index % Math.max(1, content.length)]?.id };
     });
+    const kit = recipes.map(thumbnailProps);
     const refs = kit.flatMap(item => [item.midia, item.midiaB, item.midiaFundo]).filter(Boolean).map(ref => ref.slice(6));
     const missing = refs.filter(id => !project.media.some(item => item.id === id));
     if (missing.length) throw Object.assign(new Error(`Mídia não está no projeto: ${missing.join(', ')}`), { code: 'MEDIA_MISSING' });
@@ -306,7 +309,9 @@ export class ProductionOperations {
       }
     } finally { await rm(staging, { recursive: true, force: true }); }
     const fresh = await readProjectDirectory(directory);
-    const next = { ...fresh.creative, packaging: { ...fresh.creative.packaging, ...result, thumbnailMediaId: result.thumbnailA || fresh.creative.packaging.thumbnailMediaId } };
+    const byLabel = new Map((fresh.creative.packaging.thumbnailVariants || []).map(v => [v.label, v]));
+    for (const recipe of recipes) byLabel.set(recipe.label, recipe);
+    const next = { ...fresh.creative, packaging: { ...fresh.creative.packaging, ...result, thumbnailVariants: [...byLabel.values()].filter(v => project.type !== 'short' || v.label === 'A'), thumbnailMediaId: result.thumbnailA || fresh.creative.packaging.thumbnailMediaId } };
     const updated = await this.app.runProjectAction({ path: directory, baseRevision: fresh.revision, action: { type: 'creative.update', creative: next } });
     return { ...result, phonePreviews: previews, revision: updated.project.revision, hint: 'Abra as versões de celular (320 px) e confira se o assunto e o texto se leem em 1 segundo.' };
   }

@@ -60,7 +60,8 @@
     "papel-hq",
     "papel-sutil",
     "halftone",
-    "escuro"
+    "escuro",
+    "quadrinhos"
   ],
   "cenas": {
     "titulo": {
@@ -1979,16 +1980,23 @@
       "lado": "esquerda | direita — lado do texto",
       "tom": "amarelo | vermelho | azul",
       "selo": "selo curto (até 18 caracteres)",
-      "fundo": "preto (padrão) | branco | cena — limpo: fundo liso e o personagem em destaque; cena: mídia na imagem toda",
-      "layout": "lado (padrão: texto de um lado, assunto do outro) | centro: rosto do personagem grande no meio, a palavra enorme na frente dele embaixo, o personagem do projeto no canto (lado = canto)",
-      "foco": "parte da mídia no quadro (object-position), ex.: '50% 25%' para manter o rosto"
+      "fundo": "preto | branco | cena | quadrinhos (colagem original do kit, combinável com textura halftone)",
+      "layout": "lado | centro | palavra (preenchimento atrás do recorte, contorno fino na frente, texto complementar frontal, personagem do projeto acima da borda)",
+      "foco": "parte da mídia no quadro (object-position), ex.: '50% 25%' para manter o rosto",
+      "backgroundEffects": "{blur,brightness,saturation,vignette}; blur relativo à altura720, outros fatores0–1 (brilho/saturação até2)",
+      "halftone": "{spacing,radius,opacity,color,full}; spacing empx/720, radius0.05–0.45; full=true cobre todo o fundo",
+      "border": "{width,radius,colors,angle,stops}; largura e raio interno empx/720, coreshex, stops em%; atrás do personagem do projeto",
+      "subject": "{x,y,width,height} em coordenadas1280×720, escaladas à saída; somente a caixa do recorte",
+      "textStyle": "{size,letterSpacing} em coordenadas1280×720",
+      "foregroundText": "{text,x,y,width,size,letterSpacing,stretch,tone}; Anton sólida apenas na frente; conta no limite4 palavras"
     },
     "regras": [
       "limpa: fundo preto ou branco e o personagem grande (PNG transparente vira recorte)",
       "um assunto dominante",
       "até 4 palavras; texto complementa o título, não repete",
       "A e B com ângulos diferentes",
-      "conferir no tamanho do celular (320 px)"
+      "conferir no tamanho do celular (320 px)",
+      "thumbnails_generate salva thumbnailVariants na embalagem; sem variants, reutiliza a receita; para alterar sóB envie sóB e preserveA."
     ],
     "exemplo": {
       "midia": "media:batman-1986",

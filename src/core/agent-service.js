@@ -75,7 +75,11 @@ function applyActions(project, actions, operationId) {
       const usages = mediaUsages(draft, action.mediaId);
       if (!draft.media.some(item => item.id === action.mediaId)) throw new Error(`Mídia desconhecida: ${action.mediaId}`);
       if (usages.total && !action.detachUsages) throw Object.assign(new Error(`Mídia em uso: ${describeUsages(usages)}. Confirme para desassociar.`), { code: 'MEDIA_IN_USE', details: { usages } });
-      if (usages.thumbnail) draft.creative.packaging.thumbnailMediaId = null;
+      if (usages.thumbnail) {
+        const packaging = draft.creative.packaging;
+        for (const key of ['thumbnailMediaId','thumbnailA','thumbnailB']) if (packaging[key] === action.mediaId) packaging[key] = null;
+        packaging.thumbnailVariants = (packaging.thumbnailVariants || []).map(recipe => Object.fromEntries(Object.entries(recipe).filter(([key,value]) => !(['mediaId','mediaIdB','backgroundMediaId'].includes(key) && value === action.mediaId))));
+      }
       for (const track of draft.timeline.tracks) track.clips = track.clips.filter(clip => clip.sourceId !== action.mediaId);
       draft.media = draft.media.filter(item => item.id !== action.mediaId);
       if (draft.character) draft.character = withoutCharacterMedia(draft.character, action.mediaId);
@@ -123,7 +127,8 @@ function applyActions(project, actions, operationId) {
 
 /** Onde uma mídia é usada no projeto (thumbnail e clips da timeline). */
 export function mediaUsages(project, mediaId) {
-  const thumbnail = project.creative?.packaging?.thumbnailMediaId === mediaId;
+  const packaging = project.creative?.packaging;
+  const thumbnail = Boolean(packaging && ([packaging.thumbnailMediaId,packaging.thumbnailA,packaging.thumbnailB].includes(mediaId) || (packaging.thumbnailVariants || []).some(v => [v.mediaId,v.mediaIdB,v.backgroundMediaId].includes(mediaId))));
   const clips = project.timeline.tracks.flatMap(track => track.clips.filter(clip => clip.sourceId === mediaId).map(clip => ({ trackId: track.id, clipId: clip.id })));
   return { thumbnail, clips, total: clips.length + (thumbnail ? 1 : 0) };
 }

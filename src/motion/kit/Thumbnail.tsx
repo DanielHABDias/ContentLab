@@ -2,7 +2,10 @@ import React, { useContext } from 'react';
 import { AbsoluteFill, Img, OffthreadVideo, CalculateMetadataFunction } from 'remotion';
 import { ANTON, C, Halftone, SpeedBurst, resolvePublic, useAnton } from './fx';
 import { Figura, Mood, PersonagemCtx, Character, figW } from './Personagem';
-import { Asset, Assets } from './scenes';
+import { Asset, Assets, Background } from './scenes';
+import type { z } from 'zod';
+import type { thumbnailVariantSchema } from '../../core/thumbnail';
+type Recipe = z.infer<typeof thumbnailVariantSchema>;
 
 /**
  * Thumbnail do vídeo (contrato `contentlab-thumb-v1`), renderizada como still 1280×720.
@@ -23,7 +26,7 @@ export type ThumbProps = {
   tom?: 'amarelo' | 'vermelho' | 'azul' | 'branco' | 'verde';
   selo?: string;
   /** preto (padrão) ou branco: fundo liso e limpo, personagem em destaque (no layout `palavra`, branco é a versão clara); cena: a mídia ocupa a imagem toda. */
-  fundo?: 'preto' | 'branco' | 'cena';
+  fundo?: 'preto' | 'branco' | 'cena' | 'quadrinhos';
   /** centro: personagem grande no meio, a palavra na frente dele embaixo e o personagem do projeto no canto. */
   layout?: 'lado' | 'centro' | 'palavra';
   /** Pose exata do personagem do projeto (nome do catálogo); sem ela, a pose sai do humor. */
@@ -40,6 +43,8 @@ export type ThumbProps = {
   alturaTexto?: number;
   /** Layout `palavra`: contorno da camada da frente — na cor da palavra, com brilho neon (padrão), ou branco. */
   contorno?: 'branco' | 'cor';
+  backgroundEffects?: Recipe['backgroundEffects']; halftone?: Recipe['halftone']; border?: Recipe['border'];
+  subject?: Recipe['subject']; textStyle?: Recipe['textStyle']; foregroundText?: Recipe['foregroundText'];
 };
 
 const TONS: Record<string, string> = { amarelo: C.yellow, vermelho: C.red, azul: C.blue, branco: C.white, verde: '#7CFF3A' };
@@ -80,29 +85,33 @@ const PalavraLayout: React.FC<{ p: ThumbProps & { width: number; height: number 
   const longest = Math.max(1, ...lines.map(l => l.length));
   const stretch = 1.15;
   // Anton é condensada (~0,5 em por letra): a linha mais longa ocupa quase toda a largura, alongada na vertical.
-  const size = Math.min(height * (lines.length > 1 ? 0.36 : 0.6), (width * 0.94) / (longest * 0.5));
+  const scaleX = width / 1280; const scaleY = height / 720;
+  const size = p.textStyle?.size ? p.textStyle.size * scaleY : Math.min(height * (lines.length > 1 ? 0.36 : 0.6), (width * 0.94) / (longest * 0.5));
   const lineH = size * 0.95 * stretch;
   // Vertical (Shorts): o personagem ocupa a parte de cima, a palavra cruza o peito dele e o Nox fica no canto de baixo.
   const portrait = height > width;
   const center = height * (alturaTexto ?? (portrait ? 0.4 : 0.5));
-  const box = (i: number): React.CSSProperties => ({ position: 'absolute', left: 0, right: 0, top: center + (i - (lines.length - 1) / 2) * lineH, transform: `translateY(-50%) scaleY(${stretch})`, textAlign: 'center', fontFamily: ANTON, fontSize: size, lineHeight: 1, letterSpacing: size * 0.01, textTransform: 'uppercase', whiteSpace: 'nowrap' });
+  const box = (i: number): React.CSSProperties => ({ position: 'absolute', left: 0, right: 0, top: center + (i - (lines.length - 1) / 2) * lineH, transform: `translateY(-50%) scaleY(${stretch})`, textAlign: 'center', fontFamily: ANTON, fontSize: size, lineHeight: 1, letterSpacing: p.textStyle?.letterSpacing !== undefined ? p.textStyle.letterSpacing * scaleX : size * 0.01, textTransform: 'uppercase', whiteSpace: 'nowrap' });
   const glow = `0 0 ${size * 0.03}px ${pal.glow}, 0 0 ${size * 0.1}px ${pal.glow}, 0 0 ${size * 0.25}px ${pal.glow}`;
   const stroke = Math.max(1.5, size * 0.0055);
   const left = lado === 'esquerda';
   const noxH = portrait ? height * 0.56 : height * 1.08;
   const noxY = portrait ? height - noxH * 0.74 : height * 0.42;
-  const subjectBox: React.CSSProperties = portrait ? { top: 0, height: height * 0.78, left: 0, width } : { top: 0, bottom: 0, left: width * 0.15, width: width * 0.7 };
+  const subjectBox: React.CSSProperties = p.subject ? {left:p.subject.x*scaleX,top:p.subject.y*scaleY,width:p.subject.width*scaleX,height:p.subject.height*scaleY} : portrait ? { top: 0, height: height * 0.78, left: 0, width } : { top: 0, bottom: 0, left: width * 0.15, width: width * 0.7 };
   const fade = 'radial-gradient(ellipse 48% 70% at 50% 45%, #000 50%, transparent 100%)';
-  const dots = light ? `radial-gradient(circle, ${pal.glow}55 28%, transparent 31%)` : 'radial-gradient(circle, rgba(255,255,255,.14) 28%, transparent 31%)';
+  const h = p.halftone || (p.fundo === 'quadrinhos' ? {spacing:9,radius:.3,opacity:.595,color:'#000000',full:true} : undefined);
+  const e = p.backgroundEffects || (p.fundo === 'quadrinhos' ? {blur:3,brightness:.7,saturation:.65,vignette:.75} : undefined);
+  const customDots = h ? `radial-gradient(circle, ${h.color || '#000000'} ${100*(h.radius ?? .3)}%, transparent ${100*(h.radius ?? .3)+3}%)` : undefined;
+  const dots = customDots || (light ? `radial-gradient(circle, ${pal.glow}55 28%, transparent 31%)` : 'radial-gradient(circle, rgba(255,255,255,.14) 28%, transparent 31%)');
   // Fundo claro: halo do recorte mais suave, palavra com sombra de profundidade e vinheta leve.
   const halo = light ? `drop-shadow(0 ${height * 0.012}px ${height * 0.035}px rgba(10,12,30,.55))` : `drop-shadow(0 0 ${height * 0.04}px rgba(0,0,0,.85))`;
   const wordShadow = light ? `${glow}, 0 ${size * 0.03}px ${size * 0.05}px rgba(10,12,30,.25)` : glow;
-  const vignette = light ? `inset 0 0 ${height * 0.22}px ${pal.bg[1]}` : `inset 0 0 ${height * 0.25}px rgba(0,0,0,.75)`;
+  const vignette = light ? `inset 0 0 ${height * 0.22}px ${pal.bg[1]}` : `inset 0 0 ${height * 0.25}px rgba(0,0,0,${e?.vignette ?? .75})`;
   return (
     <AbsoluteFill style={{ background: `radial-gradient(ellipse 75% 70% at 50% 48%, ${pal.bg[0]} 0%, ${pal.bg[1]} 100%)`, overflow: 'hidden' }}>
-      {midiaFundo && <AbsoluteFill style={{ transform: 'scale(1.12)', filter: light ? `blur(${height * 0.018}px) brightness(1.15) saturate(.6)` : `blur(${height * 0.018}px) brightness(.32) saturate(.8)`, opacity: light ? 0.28 : 1 }}><Subject id={midiaFundo} fit="cover" /></AbsoluteFill>}
+      {(midiaFundo || p.fundo === 'quadrinhos') && <AbsoluteFill style={{ transform: 'scale(1.12)', filter: e ? `blur(${(e.blur ?? 3)*scaleY}px) brightness(${e.brightness ?? .7}) saturate(${e.saturation ?? .65})` : light ? `blur(${height*.018}px) brightness(1.15) saturate(.6)` : `blur(${height*.018}px) brightness(.32) saturate(.8)`, opacity:light ? .28 : 1 }}>{midiaFundo ? <Subject id={midiaFundo} fit="cover"/> : <Background kind="quadrinhos"/>}</AbsoluteFill>}
       {textura === 'halftone' ? (
-        <AbsoluteFill style={{ backgroundImage: dots, backgroundSize: `${height * 0.022}px ${height * 0.022}px`, maskImage: 'radial-gradient(ellipse 70% 70% at 50% 50%, transparent 25%, #000 100%)', WebkitMaskImage: 'radial-gradient(ellipse 70% 70% at 50% 50%, transparent 25%, #000 100%)' } as React.CSSProperties} />
+        <AbsoluteFill style={{ backgroundImage: dots, backgroundSize: `${h?.spacing ? h.spacing*scaleY : height*.022}px ${h?.spacing ? h.spacing*scaleY : height*.022}px`, opacity:h?.opacity ?? 1, maskImage: h?.full ? undefined : 'radial-gradient(ellipse 70% 70% at 50% 50%, transparent 25%, #000 100%)', WebkitMaskImage:h?.full ? undefined : 'radial-gradient(ellipse 70% 70% at 50% 50%, transparent 25%, #000 100%)' } as React.CSSProperties} />
       ) : textura === 'tv' ? (
         <>
           <AbsoluteFill style={{ backgroundImage: 'repeating-linear-gradient(0deg, rgba(0,0,0,.38) 0px, rgba(0,0,0,.38) 2px, transparent 2px, transparent 5px)' }} />
@@ -119,10 +128,25 @@ const PalavraLayout: React.FC<{ p: ThumbProps & { width: number; height: number 
       {/* camada da frente: só o contorno fino, alinhado com a palavra de trás */}
       {lines.map((line, i) => <div key={`f${i}`} style={{ ...box(i), color: 'transparent', ...(contorno === 'cor' ? { WebkitTextStroke: `${Math.max(1, size * 0.0038)}px ${pal.word}`, filter: `drop-shadow(0 0 ${size * 0.006}px ${pal.glow})` } : { WebkitTextStroke: `${stroke}px ${C.white}` }) }}>{line}</div>)}
       <AbsoluteFill style={{ boxShadow: vignette }} />
-      {humor && <Figura pose={pose} humor={humor} seed="thumb" height={noxH} x={left ? -width * 0.07 : width - figW(noxH) + width * 0.07} y={noxY} flip={!left} />}
+      {p.foregroundText && <ForegroundWord value={p.foregroundText} width={width} height={height}/>}
+      <ThumbnailBorder value={p.border} width={width} height={height}/>
+      {humor && <Figura pose={pose} humor={humor} seed="thumb" style={{zIndex:2}} height={noxH} x={left ? -width * 0.07 : width - figW(noxH) + width * 0.07} y={noxY} flip={!left} />}
       {selo && <div style={{ position: 'absolute', top: height * 0.05, [left ? 'right' : 'left']: width * 0.04, background: pal.word, color: C.ink, fontFamily: ANTON, fontSize: height * 0.06, padding: '2px 16px', textTransform: 'uppercase' } as React.CSSProperties}>{selo}</div>}
     </AbsoluteFill>
   );
+};
+
+export const ThumbnailBorder: React.FC<{value?:Recipe['border'];width:number;height:number}> = ({value,width,height}) => {
+  if (!value?.width) return null;
+  const scale = height / 720; const w=value.width*scale; const r=Math.min((value.radius ?? 0)*scale,(width-2*w)/2,(height-2*w)/2);
+  const d=`M0 0H${width}V${height}H0Z M${w+r} ${w}H${width-w-r}Q${width-w} ${w} ${width-w} ${w+r}V${height-w-r}Q${width-w} ${height-w} ${width-w-r} ${height-w}H${w+r}Q${w} ${height-w} ${w} ${height-w-r}V${w+r}Q${w} ${w} ${w+r} ${w}Z`;
+  const mask=`url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><path fill="white" fill-rule="evenodd" d="${d}"/></svg>`)}")`;
+  const colors=value.colors.map((c,i)=>`${c}${value.stops ? ` ${value.stops[i]}%` : ''}`).join(',');
+  return <AbsoluteFill data-testid="thumbnail-border" style={{pointerEvents:'none',background:value.colors.length===1?value.colors[0]:`linear-gradient(${value.angle ?? 115}deg,${colors})`,maskImage:mask,WebkitMaskImage:mask}}/>;
+};
+const ForegroundWord:React.FC<{value:NonNullable<Recipe['foregroundText']>;width:number;height:number}>=({value:v,width,height})=>{
+  const sx=width/1280,sy=height/720,pal=PALAVRA[v.tone || 'verde'];
+  return <div style={{position:'absolute',left:v.x*sx,top:v.y*sy,width:v.width*sx,fontFamily:ANTON,fontWeight:400,fontSize:v.size*sy,lineHeight:1,letterSpacing:(v.letterSpacing ?? v.size*.01)*sx,transform:`scaleY(${v.stretch ?? 1.15})`,transformOrigin:'center top',color:pal.word,textTransform:'uppercase',textShadow:`0 0 ${5*sy}px ${pal.word},0 0 ${16*sy}px ${pal.glow},0 ${5*sy}px ${12*sy}px #000`,filter:`drop-shadow(0 0 ${5*sy}px #070B04)`}}>{v.text}</div>;
 };
 
 const Subject: React.FC<{ id?: string; style?: React.CSSProperties; fit?: 'cover' | 'contain'; foco?: string; zoom?: number }> = ({ id, style, fit = 'cover', foco, zoom = 1 }) => {

@@ -1,3 +1,4 @@
+import quadrinhos from '../../../assets/kit/backgrounds/quadrinhos.png';
 import React, { createContext, useContext } from 'react';
 import { AbsoluteFill, Img, OffthreadVideo, interpolate, useCurrentFrame, useVideoConfig } from 'remotion';
 import { C, Halftone, SpeedBurst, Stars, ease } from './fx';
@@ -10,7 +11,7 @@ export const isPortrait = (asset?: Asset | null) => Boolean(asset && asset.kind 
 export const Assets = createContext<Record<string, Asset>>({});
 export const useAsset = (ref?: string): Asset | null => { const assets = useContext(Assets); if (!ref) return null; const id = ref.startsWith('media:') ? ref.slice(6) : ref; return assets[id] || null; };
 export type Base = { len: number };
-export type Bg = 'estrelas' | 'explosao' | 'meio-tom' | 'branco' | 'papel' | 'papel-dobras' | 'papel-hq' | 'papel-sutil' | 'halftone' | 'escuro';
+export type Bg = 'estrelas' | 'explosao' | 'meio-tom' | 'branco' | 'papel' | 'papel-dobras' | 'papel-hq' | 'papel-sutil' | 'halftone' | 'escuro' | 'quadrinhos';
 const COLORS: Record<string, string> = { branco: C.white, amarelo: C.yellow, vermelho: C.red, azul: C.blue, tinta: C.ink };
 export const color = (name?: string, fallback = C.white) => (name && (COLORS[name] || (/^#[0-9a-f]{6}$/i.test(name) ? name : null))) || fallback;
 
@@ -27,6 +28,7 @@ export const fit = (text: string, width: number, max: number, lines = 3) => {
 
 /** Fundo por nome. */
 export const Background: React.FC<{ kind?: Bg; tint?: string }> = ({ kind = 'estrelas', tint }) => {
+  if (kind === 'quadrinhos') return <AbsoluteFill><Img src={quadrinhos} style={{width:'100%',height:'100%',objectFit:'cover'}}/></AbsoluteFill>;
   if (kind === 'explosao') return <SpeedBurst bg={color(tint, C.yellow)} />;
   if (kind === 'meio-tom') return <Halftone bg={color(tint, C.blue)} dot="rgba(255,255,255,.12)" />;
   // Paper drawn in code, four modes (see papel.tsx); `papel` is the faceted one.

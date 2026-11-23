@@ -1,3 +1,4 @@
+import { thumbnailVariantSchema } from './thumbnail.js';
 import { scriptChaptersSchema } from './script.js';
 import { z } from 'zod';
 import kitCatalog from '../motion/kit/catalog.json' with { type: 'json' };
@@ -243,7 +244,7 @@ export const projectSchema = z.object({
   creative: z.object({
     brief: z.object({ thesis: z.string(), audience: z.string(), promise: z.string(), notes: z.string() }),
     script: z.object({ hook: z.string().default(''), development: z.string().default(''), payoff: z.string().default(''), visual: z.string().default(''), sources: z.string().default(''), chapters: scriptChaptersSchema.nullable().default(null) }),
-    packaging: z.object({ titleA: z.string(), titleB: z.string(), description: z.string(), tags: z.string(), seo: z.string(), thumbnailMediaId: idSchema.nullable(), thumbnailA: idSchema.nullable().default(null), thumbnailB: idSchema.nullable().default(null) }),
+    packaging: z.object({ titleA: z.string(), titleB: z.string(), description: z.string(), tags: z.string(), seo: z.string(), thumbnailMediaId: idSchema.nullable(), thumbnailA: idSchema.nullable().default(null), thumbnailB: idSchema.nullable().default(null), thumbnailVariants: z.array(thumbnailVariantSchema).max(2).default([]) }),
   }).default({
     brief: { thesis: '', audience: '', promise: '', notes: '' },
     script: { hook: '', development: '', payoff: '', visual: '', sources: '' },

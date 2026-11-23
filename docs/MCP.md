@@ -75,7 +75,7 @@ Um servidor MCP não inicia mensagens no chat por conta própria. Depois de envi
 | `audio_library` | Efeitos sonoros **originais** (whoosh, ding, boom, riser) e uma trilha sintetizada que é só rascunho |
 | `timeline_auto_assemble` | Coloca a narração no áudio, distribui as mídias pela duração e cria legendas sincronizadas por cena. Opcionalmente: cenas HQ (`scenes: "auto"` ou lista), trilha com ducking (`music`), SFX nas trocas (`sfx`). Em 9:16 aplica as áreas seguras de Shorts |
 | `chapters_get` | Capítulos a partir dos tempos reais da narração |
-| `thumbnails_generate` | Gera as thumbnails A e B (título sobre um frame do vídeo, ou sobre um degradê) e grava na embalagem |
+| `thumbnails_generate` | Gera A/B (só A no Short) pelo kit; fundo quadrinhos, meio-tom, vinheta, borda e texto frontal parametrizados; salva receitas e prévias de 320px. Consulte docs/MOTION.md |
 | `render_start` | Envia o render à fila persistente; o agente avisa e encerra a resposta |
 | `queue_list` | Fila global de processamento, posições e histórico; um trabalho por vez entre todos os projetos |
 | `queue_cancel`, `queue_cancel_all` | Cancela um trabalho ou todos os ativos e aguardando |

@@ -27,3 +27,5 @@ Não incluídos (instalados pelo sistema ou baixados sob demanda em Dependência
 - VoxCPM2 — Apache-2.0; PyTorch — BSD-3-Clause.
 
 Detalhes e riscos: `docs/SEGURANCA_E_PRIVACIDADE.md` no código-fonte.
+
+- **Fundo quadrinhos** (`assets/kit/backgrounds/quadrinhos.png`) — colagem original gerada por IA sob direção do criador: revistas e painéis genéricos, sem personagens ou títulos identificáveis. Asset selecionado pelo criador para integrar o kit.

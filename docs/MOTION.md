@@ -83,14 +83,14 @@ O pacote é uma pasta com os PNGs das poses e um `catalogo.json` (na pasta ou em
 
 ## Thumbnail
 
-`thumbnails_generate` usa o mesmo kit (composição `KitThumb`, 1280×720; 1080×1920 no Short, com o layout `palavra` diagramado na vertical). Por padrão, a thumbnail é limpa: fundo preto ou branco e o personagem grande; um PNG com fundo transparente aparece como recorte. Cada variante A/B tem:
+`thumbnails_generate` usa o mesmo kit (composição `KitThumb`,1920×1080; 1080×1920 no Short, com o layout `palavra` diagramado na vertical). Por padrão, a thumbnail é limpa: fundo preto ou branco e o personagem grande; um PNG com fundo transparente aparece como recorte. Cada variante A/B tem:
 
 - `mediaId`: a obra, assunto dominante;
 - `text`: até 4 palavras, com a palavra-chave entre `*asteriscos*`;
 - `humor`: o personagem do projeto na pose desse humor, opcional;
 - opcionais: `background` (`preto`, `branco` ou `cena`), `side` (lado do texto), `tone` (cor de destaque), `badge` (selo) e `mediaIdB` (layout VS).
 
-O Short não tem teste A/B: um título e uma thumbnail, a A (pedir a B num Short é recusado). Sem variantes, as palavras de impacto dos títulos viram o texto. Versões de 320 px ficam em `output/previas/` para conferir no tamanho do celular. A thumbnail antiga, com o título sobre um frame, continua disponível com `style: "simple"`.
+O Short não tem teste A/B: um título e uma thumbnail, a A (pedir a B num Short é recusado). Sem variantes, reutiliza a receita salva; sem receita, as palavras de impacto dos títulos viram o texto. Versões de 320 px ficam em `output/previas/` para conferir no tamanho do celular. A thumbnail antiga, com o título sobre um frame, continua disponível com `style: "simple"`.
 
 ## Roteiro em beats (`contentlab-motion-v1`)
 
@@ -141,3 +141,18 @@ O kit é código do Content Lab: cenas em `src/motion/kit/`, catálogo em `src/m
 ## Cenas narrativas
 
 Investigação, ramificações e revelações usam [as cenas narrativas](MOTION-NARRATIVE.md). Props, exemplos e eventos de som ficam no catálogo do kit. A escolha de poses segue o contexto; `posesFaltando` é apenas inventário, sem obrigação de completar o catálogo.
+
+## Composição de thumbnails pelo kit
+
+`thumbnails_generate` gera 1920×1080 no longo e 1080×1920 no Short, salva os PNGs, prévias de 320px e a receita em `creative.packaging.thumbnailVariants`. Omitir `variants` reutiliza as receitas salvas; para alterar somente B, enviar apenas a variante B. Títulos, descrição, tags e a outra thumbnail são preservados. Na aba Título e thumbnail, **Ajustar composição da thumbnail** oferece os mesmos controles e **Gerar somente A/B**.
+
+No layout `palavra`, `background: "quadrinhos"` seleciona a colagem original do catálogo sem importar mídia. Ela também aparece em Documentação → Fundos e pode ser usada como `fundo: "quadrinhos"` nas cenas. `backgroundMediaId` substitui o fundo por uma mídia do projeto com direitos conferidos. `texture: "halftone"` adiciona o pontilhado entre o fundo e o recorte.
+
+- `backgroundEffects: {blur, brightness, saturation, vignette}`: desfoque, luminosidade, saturação e intensidade da vinheta. Blur usa pixels proporcionais à altura720.
+- `halftone: {spacing, radius, opacity, color, full}`: espaçamento em pixels/720, raio como fração do espaçamento, opacidade, corhex e cobertura completa.
+- `border: {width, radius, colors, angle, stops}`: espessura e raio interno em pixels/720, lista de coreshex, ângulo e posições percentuais do gradiente (uma por cor, crescentes). O contorno externo ocupa o retângulo da imagem; a abertura interna tem as quinas arredondadas. O personagem do projeto fica acima da borda.
+- `subject: {x,y,width,height}`: caixa do recorte, em coordenadas de referência 1280×720, escalada proporcionalmente à saída. Ajustar para preservar rostos, mãos e o preenchimento da palavra. `zoom` e `focus` continuam disponíveis.
+- `textStyle: {size,letterSpacing}`: tamanho e espaçamento da palavra principal.
+- `foregroundText: {text,x,y,width,size,letterSpacing,stretch,tone}`: palavra complementar sólida em Anton, somente na frente do recorte. O limite de quatro palavras conta os dois textos juntos.
+
+A interface mantém estes parâmetros por variante. Marca, paleta e escolha editorial de arte ficam a cargo do criador ou plugin, sem impor uma identidade a todos os projetos.
